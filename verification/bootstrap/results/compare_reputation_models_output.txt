@@ -1,0 +1,57 @@
+====================================================================================================
+COMPARACIÓN DE MODELOS DE REPUTACIÓN
+====================================================================================================
+
+N_EPOCHS=500, N_MAX=100, N_INIT=10
+R_GAIN_BASE=0.01, ACTIVITY_SIGMA=0.7
+Parámetros específicos: MU_NET=0.05, K_MICHAELIS=1.0, GAMMA_POWER=0.5, A_MIN_THRESHOLD=0.5
+
+====================================================================================================
+MÉTRICAS FINALES
+====================================================================================================
+Modelo           R_mean    R_med    R_std    R_max     Gini    Top10   S_f_med  S_f_red  corr(a,R)
+----------------------------------------------------------------------------------------------------
+lineal           0.9926   0.9934   0.0040   0.9989   0.0021   0.1005    0.6013   0.3987     0.1128
+decreciente      0.8329   0.8339   0.0146   0.8723   0.0098   0.1030    0.6362   0.3638     0.1015
+net_gain         0.1638   0.1632   0.0282   0.2231   0.0982   0.1312    0.8878   0.1122     0.7599
+michaelis        0.9053   0.9072   0.0166   0.9382   0.0100   0.1026    0.6195   0.3805     0.0816
+power            0.9914   0.9920   0.0033   0.9968   0.0017   0.1004    0.6016   0.3984     0.0914
+threshold        0.9227   0.9299   0.0349   0.9873   0.0206   0.1053    0.6145   0.3855     0.1076
+
+====================================================================================================
+CRITERIOS DE SELECCIÓN
+====================================================================================================
+
+Un modelo es adecuado si cumple simultáneamente:
+  1. Heterogeneidad persistente:  R_std > 0.05
+  2. Sin captura:                 Gini < 0.30
+  3. Reducción de stake real:     S_f_reduction > 0.10
+  4. Reputación refleja contribución: corr(a,R) > 0.5
+
+====================================================================================================
+VEREDICTO POR MODELO
+====================================================================================================
+  lineal         het=N capture=Y reduction=Y corr=N  → PARTIAL (2/4)
+  decreciente    het=N capture=Y reduction=Y corr=N  → PARTIAL (2/4)
+  net_gain       het=N capture=Y reduction=Y corr=Y  → GOOD (3/4)
+  michaelis      het=N capture=Y reduction=Y corr=N  → PARTIAL (2/4)
+  power          het=N capture=Y reduction=Y corr=N  → PARTIAL (2/4)
+  threshold      het=N capture=Y reduction=Y corr=N  → PARTIAL (2/4)
+
+====================================================================================================
+LECTURA ESPERADA
+====================================================================================================
+
+1. Modelos lineales (lineal, decreciente, power, threshold):
+   R converge a 1 para todos. R_std ≈ 0, Gini ≈ 0, correlación baja.
+   No producen heterogeneidad. La reputación no discrimina.
+
+2. Modelos con estado estacionario (net_gain, michaelis):
+   R* depende de activity. R_std > 0, Gini > 0,
+   correlación alta con activity. La reputación discrimina.
+
+3. Criterio de diseño:
+   El modelo debe tener un estado estacionario que dependa
+   de la contribución, no un límite universal.
+
+====================================================================================================

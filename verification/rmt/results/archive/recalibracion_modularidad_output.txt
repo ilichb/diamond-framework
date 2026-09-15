@@ -1,0 +1,40 @@
+Ejecutando calibración de Monte Carlo con tamaño de muestra riguroso...
+  Simulando H0 (2000 réplicas)...
+  Simulando H1 k=1 m=20 (500 réplicas)...
+  Simulando H1 k=3 m=20 (500 réplicas)...
+  Simulando H1 k=5 m=20 (500 réplicas)...
+  Simulando H1 k=3 m=40 (500 réplicas)...
+  Simulando H1 k=1 m=40 (500 réplicas)...
+==============================================================================
+CALIBRACIÓN CON MATRIZ DE MODULARIDAD B = W - dd^T/(2m)
+==============================================================================
+N=500, d̄=20, bulk edge teórico de B: 2√d̄ = 8.9443
+
+1. DISTRIBUCIÓN NULA (H0)
+------------------------------------------------------------------------------
+   λ₂(B):    media = 8.6082, std = 0.0925
+   -λ_min(B): media = 8.8601, std = 0.1101
+
+2. UMBRALES EMPÍRICOS
+------------------------------------------------------------------------------
+   α=0.01: λ₂(B) > 8.8372  o  -λ_min(B) > 9.1371
+   α=0.05: λ₂(B) > 8.7614  o  -λ_min(B) > 9.0428
+
+3. DISTRIBUCIONES BAJO H1 Y POTENCIA DEL TEST (cola derecha)
+------------------------------------------------------------------------------
+   Configuración       λ₂(B) media   TPR@α=0.01   TPR@α=0.05
+   ------------------ ------------ ------------ ------------
+   H1 k=1 m=20              8.7643       0.2480       0.5060
+   H1 k=3 m=20              9.7564       1.0000       1.0000
+   H1 k=5 m=20             10.1206       1.0000       1.0000
+   H1 k=3 m=40             15.5124       1.0000       1.0000
+   H1 k=1 m=40              8.9516       0.8000       0.9580
+
+4. COMPARACIÓN CON A_sym Y W CRUDA
+------------------------------------------------------------------------------
+   Si un clique m=20 con densidad 10× es detectable aquí (TPR > 0.9
+   a α=0.01) pero era indetectable en A_sym, la modularidad
+   resuelve el problema. Si además el bulk de B es estable bajo H0
+   (std pequeño), la calibración es fiable.
+
+==============================================================================

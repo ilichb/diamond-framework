@@ -1,0 +1,64 @@
+==============================================================================
+COSTO REAL DE SOUNDNESS — DIAMOND FRAMEWORK ZK CIRCUIT
+==============================================================================
+
+1. EXPLOIT DEL DISEÑO ACTUAL
+------------------------------------------------------------------------------
+   ||T_real||_F  = 0.223607  (¿pasa umbral 0.5? False)
+   ||T_hat||_F   = 1.000000  (¿pasa umbral 0.5? True)
+
+   El prover elige los factores Tucker para producir un T̂ con
+   norma alta, sin que exista actividad real detrás. El circuito
+   verifica una propiedad sobre el tensor fabricado, no sobre el
+   tensor de reputación real. El exploit es trivial.
+
+2. CONSTRAINTS R1CS POR DISEÑO
+------------------------------------------------------------------------------
+   Diseño                                     Sound              R1CS     Prueba
+   ------------------------------------------ ------- --------------- ----------
+   Actual (Prover elige T̂)                   NO                  573     0.20 KB
+   Opción A (Merkle + apertura total)         sí            1,080,501     0.20 KB
+   Opción A' (Poseidon del tensor completo)   sí              240,261     0.20 KB
+   Opción B (Pedersen + Bulletproofs)         sí                    0     0.72 KB
+
+3. ANÁLISIS
+------------------------------------------------------------------------------
+   El '146 constraints' del paper es solo la parte de Tucker.
+   El circuito real (573 constraints) no es sound.
+
+   Añadir soundness via Merkle (Opción A) cuesta
+   1,080,501 constraints, un factor de
+   1886× sobre el diseño actual.
+
+   Añadir soundness via Poseidon (Opción A') cuesta
+   240,261 constraints, un factor de
+   419× sobre el diseño actual.
+
+   Opción B (Bulletproofs) no usa R1CS. Prueba de
+   0.72 KB, verificación O(N) fuera de cadena.
+
+   Conclusión: el ahorro del 70.8% del paper es real como
+   ahorro de almacenamiento del tensor, pero no como ahorro
+   del circuito ZK en la ruta de seguridad. La compresión Tucker
+   no puede vivir dentro del circuito sound sin pagar O(N·log N)
+   constraints de apertura, o sin abandonar Groth16 por Bulletproofs.
+
+4. VEREDICTO
+------------------------------------------------------------------------------
+   Diseño recomendado: Opción B (Pedersen + Bulletproofs).
+
+   Razones:
+   - Sound sin necesidad de comprometer la totalidad del tensor
+     dentro de un circuito R1CS.
+   - Prueba sub-lineal: O(log N) elementos de grupo.
+   - Verificación O(N) off-chain, recursible a O(1) on-chain
+     vía un SNARK envolvente.
+   - Tucker se conserva como herramienta de almacenamiento y
+     transmisión off-chain, no como claim de seguridad.
+
+   El paper debe reescribir la Proposición 5.4 como:
+   'Tucker reduce el tamaño del tensor transmitido en un 70.8%',
+   'pero no reduce el costo del circuito ZK sound. La prueba de'
+   'umbral se realiza vía Bulletproofs sobre el tensor crudo.'
+
+==============================================================================

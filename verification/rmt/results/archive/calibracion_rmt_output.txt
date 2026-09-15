@@ -1,0 +1,52 @@
+==============================================================================
+CALIBRACIÓN RMT — TEST DE COLUSIÓN DEL DIAMOND FRAMEWORK
+==============================================================================
+
+Parámetros: N=500, d̄=20, replicaciones=30
+Bulk edge teórico (A_sym): 2/√d̄ = 0.4472
+
+Ejecutando Monte Carlo...
+
+1. DISTRIBUCIÓN NULA (H0)
+------------------------------------------------------------------------------
+   τ⁺ (cola derecha): media=-0.0463, std=0.0096
+   τ⁻ (cola izquierda): media=-0.0405, std=0.0094
+
+2. UMBRALES EMPÍRICOS (α = 0.01, 0.05)
+------------------------------------------------------------------------------
+   α=0.01: τ⁺ > -0.0255  |  τ⁻ < -0.0581
+   α=0.05: τ⁺ > -0.0332  |  τ⁻ < -0.0545
+
+3. ROC Y AUC (cola derecha, cliques)
+------------------------------------------------------------------------------
+   Configuración                     AUC    TPR@FPR=0.01    TPR@FPR=0.05
+   ---------------------------- -------- --------------- ---------------
+   H1 clique k=1 m=20             0.4711          0.0333          0.1333
+   H1 clique k=3 m=20             0.6456          0.0333          0.3000
+   H1 clique k=5 m=20             0.6867          0.0333          0.2000
+   H1 clique k=3 m=40             1.0000          0.0333          1.0000
+
+4. COMPARACIÓN CONTRA TRACY-WIDOM TEÓRICO
+------------------------------------------------------------------------------
+   TW1 teórico: F⁻¹(0.99) ≈ 0.45, F⁻¹(0.95) ≈ -0.23
+   Empírico α=0.01: τ̂ = -0.0255
+   Empírico α=0.05: τ̂ = -0.0332
+
+   Nota: los umbrales empíricos están normalizados por (1 - bulk_edge),
+   no por la fluctuación Tracy-Widom. Para comparación directa,
+   habría que reescalar por σ_n = n^{-2/3} · factor de corrección.
+
+==============================================================================
+5. VEREDICTO
+==============================================================================
+   H1 clique k=1 m=20           AUC=0.4711  →  INDETECTABLE
+   H1 clique k=3 m=20           AUC=0.6456  →  INDETECTABLE
+   H1 clique k=5 m=20           AUC=0.6867  →  INDETECTABLE
+   H1 clique k=3 m=40           AUC=1.0000  →  DETECTABLE
+
+   Los cliques con k·m²/n grande son detectables; los pequeños,
+   no. El teorema de imposibilidad Kesten-Stigum fija el límite
+   inferior. La colusión furtiva por debajo de ese límite debe
+   abordarse en la capa económica, no en el test espectral.
+
+==============================================================================

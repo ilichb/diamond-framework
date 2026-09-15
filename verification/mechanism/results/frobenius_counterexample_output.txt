@@ -1,0 +1,13 @@
+=== Contraejemplo T1 (diversificado) vs T2 (concentrado en 1 cadena) ===
+Dimensiones: C=20, D=5, H=5, norma objetivo: 1.0
+
+T1: 500 celdas activas, valor por celda = 0.044721
+T2: 25 celdas activas (1 cadena), valor por celda = 0.200000
+
+||T1||_F = 1.000000
+||T2||_F = 1.000000
+-> Si son iguales, la norma de Frobenius NO distingue diversificacion de concentracion (el punto de la Regla 3).
+
+C_R log-aggregator(T1) = 21.875104
+C_R log-aggregator(T2) = 4.558039
+-> El agregador log SI penaliza la concentracion (T1 > T2), consistente con lo que afirma el Fix 3.

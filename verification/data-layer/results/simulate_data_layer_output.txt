@@ -1,0 +1,79 @@
+==============================================================================
+SIMULACIÓN DE LA CAPA DE DATOS — EQUILIBRIO DE INCENTIVOS
+==============================================================================
+
+Parámetros:
+  N_VALIDATORS         = 100
+  N_ATTESTATIONS/epoch = 500
+  N_EPOCHS             = 1000
+  N_VERIFIERS          = 20
+  β adversarial        = 0.2
+  P(fake|adversarial)  = 0.5
+  V_FRAUD              = 1.0
+  S_SLASH              = 10.0
+  C_AUDIT              = 0.1
+
+Bounty de indiferencia B* = C_AUDIT / (β·p_fake) = 1.0000
+
+Escenarios:
+------------------------------------------------------------------------------
+Escenario                   Fraude/ép   Detec/ép   Tasa det  Profit att  Integridad
+------------------------------------------------------------------------------
+Sin bounty (B=0)                 50.0        0.0      0.000       49.97      0.9001
+B bajo (B=0.25)                  50.0        0.0      0.000       49.97      0.9001
+B óptimo (B*)                    50.1       31.7      0.633     -298.74      0.9632
+B medio (B=1.0)                  50.1       31.7      0.633     -298.74      0.9632
+B alto (B=2.0)                   50.1       31.7      0.633     -298.74      0.9632
+B excesivo (B=10)                50.1       31.7      0.633     -298.74      0.9632
+
+Barrido de sensibilidad sobre B:
+------------------------------------------------------------------------------
+     B   Fraude/ép   Detec/ép   Tasa det  Auditores  Profit att  Integridad
+------------------------------------------------------------------------------
+  0.00        49.7        0.0      0.000       0.00       49.69      0.9006
+  0.25        49.7        0.0      0.000       0.00       49.69      0.9006
+  0.50        50.3       16.1      0.320       0.47     -126.60      0.9315
+  0.75        50.0       31.5      0.630       1.00     -296.55      0.9630
+  1.00        50.0       31.5      0.630       1.00     -296.55      0.9630
+  1.25        50.0       31.5      0.630       1.00     -296.55      0.9630
+  1.50        50.0       31.5      0.630       1.53     -296.55      0.9630
+  1.75        50.0       31.5      0.630       1.95     -296.55      0.9630
+  2.00        50.0       31.5      0.630       2.00     -296.55      0.9630
+  2.25        50.0       31.5      0.630       2.08     -296.55      0.9630
+  2.50        50.0       31.5      0.630       2.46     -296.55      0.9630
+  2.75        50.0       31.5      0.630       2.87     -296.55      0.9630
+  3.00        50.0       31.5      0.630       2.99     -296.55      0.9630
+
+Efecto de la frescura γ sobre la propagación de fraude:
+------------------------------------------------------------------------------
+     γ    Épocas para 50%    Épocas para 90%  Fracción residual
+------------------------------------------------------------------------------
+  0.01              68.97             229.11           0.904382
+  0.05              13.51              44.89           0.598737
+  0.10               6.58              21.85           0.348678
+  0.20               3.11              10.32           0.107374
+  0.50               1.00               3.32           0.000977
+
+==============================================================================
+LECTURA DE RESULTADOS
+==============================================================================
+
+1. El umbral B* = C_AUDIT / p_fraud marca la frontera entre
+   'nadie audita' y 'al menos un auditor está dispuesto'.
+
+2. Para B < B*, la detección es nula y el atacante opera sin
+   riesgo. Para B ≈ B*, la detección empieza a activarse.
+
+3. Para B >> B*, múltiples verificadores compiten por el mismo
+   bounty, y el beneficio individual se diluye. Este es el
+   problema de la carrera (race), análogo al de los MEV bots.
+
+4. La frescura γ actúa como segunda línea de defensa: incluso
+   si el fraude no se detecta, su propagación entre épocas está
+   acotada. γ=0.1 da decaimiento a 50% en ~7 épocas, γ=0.01 en
+   ~69 épocas.
+
+5. El diseño recomendado: B ≈ 2·B* con un período de gracia
+   para reportes, y γ moderado (0.05-0.1) para limitar daño.
+
+==============================================================================

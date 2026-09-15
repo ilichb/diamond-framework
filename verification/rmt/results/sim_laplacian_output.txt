@@ -1,0 +1,29 @@
+=== Comparación completa del Espectro: L_sym vs A_sym bajo H0 ===
+
+--- Erdos-Renyi homogeneo, grado~20 ---
+grado promedio real: 19.76, grado max: 36
+L_sym -> lambda_max: 1.4384  |  lambda_min: 0.0000  |  media: 1.0000
+A_sym -> mu_max: 1.0000 (siempre 1.0)  |  mu_min: -0.4384  |  2do mu_max: 0.4232
+Relación matemática: L_sym = I - A_sym => lambda_max(L_sym) = 1 - mu_min(A_sym)
+# autovalores L_sym > 1.9 de 500: 0
+ancho del bulk L_sym (p99 - p1): 0.8108
+
+--- Chung-Lu heavy-tailed, grado~20 ---
+grado promedio real: 17.88, grado max: 366
+L_sym -> lambda_max: 1.4445  |  lambda_min: 0.0000  |  media: 1.0000
+A_sym -> mu_max: 1.0000 (siempre 1.0)  |  mu_min: -0.4445  |  2do mu_max: 0.4323
+Relación matemática: L_sym = I - A_sym => lambda_max(L_sym) = 1 - mu_min(A_sym)
+# autovalores L_sym > 1.9 de 500: 0
+ancho del bulk L_sym (p99 - p1): 0.8234
+
+--- Erdos-Renyi homogeneo, grado~60 (mas denso) ---
+grado promedio real: 59.59, grado max: 87
+L_sym -> lambda_max: 1.2401  |  lambda_min: -0.0000  |  media: 1.0000
+A_sym -> mu_max: 1.0000 (siempre 1.0)  |  mu_min: -0.2401  |  2do mu_max: 0.2391
+Relación matemática: L_sym = I - A_sym => lambda_max(L_sym) = 1 - mu_min(A_sym)
+# autovalores L_sym > 1.9 de 500: 0
+ancho del bulk L_sym (p99 - p1): 0.4531
+
+Conclusión: Para L_sym, lambda_max = 1 - mu_min(A_sym). Salvo en grafos bipartitos perfectos
+(donde mu_min = -1 y lambda_max = 2), en grafos aleatorios honestos mu_min > -0.5,
+haciendo que lambda_max(L_sym) caiga muy por debajo de 2.
