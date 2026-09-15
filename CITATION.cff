@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software or framework, please cite it as below."
+authors:
+  - family-names: "Blanco"
+    given-names: "Ilich"
+    affiliation: "Andromeda Computer"
+  - name: "Andromeda Core Research Team"
+    affiliation: "Andromeda Computer"
+title: "Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation"
+version: 0.1.0
+date-released: 2026-09-14
+url: "https://github.com/ilichb/diamond-framework"
+license: MIT
+keywords:
+  - blockchain
+  - proof-of-stake
+  - reputation
+  - zero-knowledge-proofs
+  - cryptoeconomics
