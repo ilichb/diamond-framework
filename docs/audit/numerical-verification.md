@@ -51,7 +51,8 @@ claim that fails its test is corrected or removed, not quietly reworded.
 - **Verdict:** **Refuted.** Collapsing the type to a scalar destroys the information needed
   for incentive compatibility.
 - **Resolution:** Myerson is applied only to the capital cost type; the remaining
-  dimensions are handled separately. The full payment rule is still **pending**.
+  dimensions are handled separately. The payment rule is a saturated uniform posted price,
+  not a Myerson auction. See `fee_specification.py`.
 
 ### F-005 — Direction of μ in the net_gain model
 
@@ -64,12 +65,20 @@ claim that fails its test is corrected or removed, not quietly reworded.
 - **Sample:** μ sweep with g = 0.01, N_SEEDS = 5 (seeds 42–46), N_EPOCHS = 500;
   R_std = 0.0424 at μ/g = 1.5, 0.0405 at 1.0, 0.0383 at 0.8, 0.0190 at 0.2.
 
+### F-006 — Myerson rule for the payment
+
+- **Claim as originally made:** the payment follows Myerson's optimal auction rule.
+- **Test:** `verification/mechanism/fee_specification.py`
+- **Verdict:** **Misapplied.** With `S_f*(T)` independent of the private capital cost ω, there is no revelation game. The optimal payment is a uniform posted price `F₀* = π_val(R) − ω̄·Θ`, saturated at the highest-cost type.
+- **Resolution:** Section 6 reports the posted price. Myerson applies only if the allocation depends on the private type.
+- **Sample:** N_VALIDATORS=1000, ω ~ U[0.01, 0.10], seed 42. IR holds for all types; F0=1.2·F0* breaks IR for 0.2% of sampled types.
+
 ## Open items
 
 | Item | Owner component | Status |
 |------|-----------------|--------|
 | `mu` sweep over bootstrap dynamics | `verification/bootstrap/` | **Done** — see F-005 (μ/g ∈ [1, 2]) |
-| Myerson payment rule specification | `verification/mechanism/` | Pending |
+| Payment rule specification | `verification/mechanism/` | **Done** — posted price F0*, not Myerson |
 | Gas and latency benchmarks | `integrations/avalanche/` | Pending |
 | Sections 6, 8 and 9 of the paper | `docs/paper/` | Open items |
 | External security review | whole protocol | Not started |

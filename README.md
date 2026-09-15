@@ -64,7 +64,7 @@ The core insight is an opportunity-cost argument:
 | RMT collusion detection | Modularity matrix; TPR characterized for cliques | [`verification/rmt/`](verification/rmt) |
 | Data layer / fraud proofs | Equilibrium `n* = floor(B/B*)`; attacker profit `-502` | [`verification/data-layer/`](verification/data-layer) |
 | Bootstrap dynamics | Verified | μ sweep done: band μ/g ∈ [1, 2]; argmax R_std = 0.0424 at μ/g = 1.5 — [`verification/bootstrap/`](verification/bootstrap) |
-| Mechanism design (payment) | **Pending** — Myerson rule to be specified | [`verification/mechanism/`](verification/mechanism) |
+| Mechanism design (payment) | Fee rule specified: posted price F0* = π_val − ω̄·Θ, saturated at highest-cost type | [`verification/mechanism/`](verification/mechanism) |
 | Avalanche integration | **Pending** — gas and latency benchmarks pending | [`integrations/avalanche/`](integrations/avalanche) |
 
 Rows without a **Partial**/**Pending** marker carry numerical backing in the paper's
@@ -176,7 +176,7 @@ has **not** been audited.
 | Item | Component | Status |
 |------|-----------|--------|
 | `mu` sweep over bootstrap dynamics | Bootstrap | **Done** (μ/g ∈ [1, 2]; F-005) |
-| Myerson payment rule specification | Mechanism design | Pending |
+| Payment rule specification | Mechanism design | **Done** (posted price F0*, IR verified) |
 | Gas and latency benchmarks | Avalanche integration | Pending |
 | Sections 6, 8 and 9 of the paper | Paper | Open items |
 | External security review | Whole protocol | Not started |
