@@ -158,6 +158,8 @@ def main():
     mu_fixed = 0.010
     g_values = [0.002, 0.005, 0.010, 0.020, 0.050]
 
+    best_g = None
+
     print(f"{'g':>7} {'mu/g':>6} {'R_mean':>8} {'R_std':>8} {'Gini':>8} "
           f"{'S_f_red':>8} {'corr':>8} {'Score':>6}")
     print("-" * 100)
@@ -172,6 +174,26 @@ def main():
         print(f"{g_test:>7.3f} {mu_fixed/g_test:>6.2f} {r['R_mean']:>8.4f} "
               f"{r['R_std']:>8.4f} {r['gini']:>8.4f} "
               f"{r['s_f_reduction']:>8.4f} {r['corr']:>8.4f} {score:>6d}")
+
+        objective = r["R_std"] if score == 4 else -1
+        if best_g is None or objective > best_g[1]:
+            best_g = (g_test, objective, r)
+
+    print()
+    print("=" * 100)
+    print("MEJOR CONFIGURACION DE g (maximiza R_std con score=4/4)")
+    print("=" * 100)
+    if best_g and best_g[1] >= 0:
+        g_best, _, r = best_g
+        print(f"  g = {g_best:.3f}  (mu/g = {mu_fixed/g_best:.2f})")
+        print(f"  R_mean = {r['R_mean']:.4f}")
+        print(f"  R_std  = {r['R_std']:.4f}")
+        print(f"  Gini   = {r['gini']:.4f}")
+        print(f"  S_f_reduction = {r['s_f_reduction']:.4f}")
+        print(f"  corr(a, R) = {r['corr']:.4f}")
+    else:
+        print("  Ninguna configuracion del barrido satisface los 4 criterios.")
+        print("  Hay que relajar algun criterio o ampliar el barrido.")
 
     print()
     print("=" * 100)

@@ -53,11 +53,22 @@ claim that fails its test is corrected or removed, not quietly reworded.
 - **Resolution:** Myerson is applied only to the capital cost type; the remaining
   dimensions are handled separately. The full payment rule is still **pending**.
 
+### F-005 — Direction of μ in the net_gain model
+
+- **Claim as originally made:** increasing μ increases reputation dispersion.
+- **Verdict:** **Partially refuted.** Increasing μ reduces R* and dispersion.
+  The correct direction is to decrease μ toward the band μ/g ∈ [1, 2].
+- **Resolution:** The paper reports μ/g = 1.5 as the argmax of R_std. The
+  optimum is a band, not a point.
+- **Test:** `verification/bootstrap/sweep_net_gain.py`
+- **Sample:** μ sweep with g = 0.01, N_SEEDS = 5 (seeds 42–46), N_EPOCHS = 500;
+  R_std = 0.0424 at μ/g = 1.5, 0.0405 at 1.0, 0.0383 at 0.8, 0.0190 at 0.2.
+
 ## Open items
 
 | Item | Owner component | Status |
 |------|-----------------|--------|
-| `mu` sweep over bootstrap dynamics | `verification/bootstrap/` | Pending |
+| `mu` sweep over bootstrap dynamics | `verification/bootstrap/` | **Done** — see F-005 (μ/g ∈ [1, 2]) |
 | Myerson payment rule specification | `verification/mechanism/` | Pending |
 | Gas and latency benchmarks | `integrations/avalanche/` | Pending |
 | Sections 6, 8 and 9 of the paper | `docs/paper/` | Open items |

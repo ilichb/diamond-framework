@@ -63,7 +63,7 @@ The core insight is an opportunity-cost argument:
 | ZK threshold proof | Bulletproofs: 0 R1CS constraints, 0.72 KB proof | [`verification/zk/`](verification/zk) |
 | RMT collusion detection | Modularity matrix; TPR characterized for cliques | [`verification/rmt/`](verification/rmt) |
 | Data layer / fraud proofs | Equilibrium `n* = floor(B/B*)`; attacker profit `-502` | [`verification/data-layer/`](verification/data-layer) |
-| Bootstrap dynamics | **Partial** — `net_gain` model selected; `mu` sweep pending | [`verification/bootstrap/`](verification/bootstrap) |
+| Bootstrap dynamics | Verified | μ sweep done: band μ/g ∈ [1, 2]; argmax R_std = 0.0424 at μ/g = 1.5 — [`verification/bootstrap/`](verification/bootstrap) |
 | Mechanism design (payment) | **Pending** — Myerson rule to be specified | [`verification/mechanism/`](verification/mechanism) |
 | Avalanche integration | **Pending** — gas and latency benchmarks pending | [`integrations/avalanche/`](integrations/avalanche) |
 
@@ -175,7 +175,7 @@ has **not** been audited.
 
 | Item | Component | Status |
 |------|-----------|--------|
-| `mu` sweep over bootstrap dynamics | Bootstrap | Pending |
+| `mu` sweep over bootstrap dynamics | Bootstrap | **Done** (μ/g ∈ [1, 2]; F-005) |
 | Myerson payment rule specification | Mechanism design | Pending |
 | Gas and latency benchmarks | Avalanche integration | Pending |
 | Sections 6, 8 and 9 of the paper | Paper | Open items |
