@@ -73,6 +73,95 @@ claim that fails its test is corrected or removed, not quietly reworded.
 - **Resolution:** Section 6 reports the posted price. Myerson applies only if the allocation depends on the private type.
 - **Sample:** N_VALIDATORS=1000, ω ~ U[0.01, 0.10], seed 42. IR holds for all types; F0=1.2·F0* breaks IR for 0.2% of sampled types.
 
+### F-007 — Whitewashing bound tightness
+
+- **Claim as originally made:** the analytical bound on the whitewashing
+  first-passage time is superexponential and therefore vacuous.
+- **Test:** `verification/stochastics/mfpt_bound_explicit.py`,
+  `verification/stochastics/dt_convergence.py`,
+  `verification/stochastics/mfpt_bound.py`
+- **Verdict:** **Refuted.** The claim that the analytical bound
+  is vacuous was based on a C*=1 normalization that is not
+  universal. With the corrected MFPT (11.2203 for scenario 2.2,
+  443.7374 for scenario D4) and the C*=1 bound (19.965 and
+  1.415×10¹⁰), the ratio bound/MFPT is 1.78 in scenario 2.2 and
+  3.19×10⁷ in D4 (7.5 orders of magnitude). The bound with C*=1
+  is invalid in both regimes: the implicit C* is 0.562 and
+  3.14×10⁻⁸ respectively.
+- **Resolution:** Section 2.3 reports the bound with C* specified
+  per regime, not with C*=1. The paper reports the exact MFPT
+  from numerical integration as the primary quantity.
+- **Sample:** `mfpt_bound_explicit.py` (numerical integration,
+  error < 1e-7) and `dt_convergence.py` (N=5000 S2.2, N=2000 D4,
+  seeds 42).
+
+### F-008 — KS test in stationary_stats.py
+
+- **Claim as originally made:** the stationary distribution of the CIR
+  process was tested against Gamma(k, θ) and rejected.
+- **Test:** `verification/stochastics/stationary_stats.py`
+- **Verdict:** **Mis-tested.** The original script computed
+  `max|sorted_emp - sorted_theory|/std`, which is a difference of order
+  statistics, not an ECDF difference. The correct two-sample KS gives
+  D=0.00354, p=0.557 (scenario 1) and D=0.00479, p=0.201 (scenario 2).
+  Neither rejects Gamma at 95%.
+- **Resolution:** The script is patched with a standard two-sample KS.
+  The paper reports the moments (E, Var) as primary evidence and the KS
+  as supplementary.
+- **Caveat:** samples are autocorrelated (50k paths × 2500 steps), so
+  the KS p-value is indicative, not strictly valid. Effective sample
+  size is smaller than the raw count.
+
+### F-009 — Catastrophic cancellation in mfpt_bound_explicit.py
+
+- **Claim as originally made:** the explicit MFPT integral evaluates to
+  -84905 (scenario 1) and 2.68e119 (scenario 2).
+- **Test:** `verification/stochastics/mfpt_bound_explicit.py`
+- **Verdict:** **Refuted.** The scale function s(x) = ∫_ε^x u^{−κ}e^{βu}du
+  diverges at 0 for κ > 1. Computing s(R₀) − s(y) subtracts two nearly
+  equal large numbers, losing all significant digits.
+- **Resolution:** the script is rewritten using the well-conditioned
+  form g(y) = (2/σ₀²)∫_1^{b/y} s^{−κ}e^{βy(s−1)}ds. The exact MFPT is
+  11.220298 (scenario 1) and 443.737421 (scenario 2). C* implicit is
+  0.561998 and 3.135455e-08 respectively.
+
+### F-010 — Euler discretization bias in simulated MFPT
+
+- **Claim as originally made:** the simulated MFPT from CIR paths is
+  an unbiased estimate of the true mean first-passage time.
+- **Test:** `verification/stochastics/dt_convergence.py`
+- **Verdict:** **Refuted.** The Euler scheme with max(R, 0)
+  truncation introduces a systematic bias that depends on both
+  dt and T_max (through right-censoring). For scenario 2.2
+  (N=5000, T_max=200, no censoring): MFPT at dt=0.02 is 12.31
+  (+9.7% over exact 11.22); at dt=0.0005 it is 11.2453 (+0.22%);
+  at dt=0.001 it is 11.3334 (+1.01%).
+  For scenario D4 (N=2000, T_max=2000, ~95% hit fraction): MFPT
+  at dt=0.02 is +27.6% over exact 443.7; at dt=0.001 it is
+  +4.1% (N=2000). Reducing T_max to 1000 introduces right-censoring bias
+  that dominates the Euler bias in the opposite direction.
+- **Resolution:** The paper reports the exact MFPT from numerical
+  integration. Simulated values are reported with explicit dt and
+  T_max. Where T_max induces right-censoring above 5% of paths,
+  the simulated value is reported as a lower bound on the true
+  MFPT.
+
+### F-011 — Factor of 2 in mfpt_bound_explicit.py
+
+- **Claim as originally made:** the exact MFPT integral evaluates to
+  22.4406 (scenario 1) and 887.4748 (scenario 2).
+- **Test:** `verification/stochastics/dt_convergence.py`
+- **Verdict:** **Refuted.** The script computed
+  2∫(s(b)−s(y))·m(y)dy with m(y) = 2m'(y), which by the identity
+  ∫(s(b)−s(y))m'(y)dy = ∫s'M evaluates to 4∫s'M = 2×E_correct.
+  The correct values are 11.220298 and 443.737421.
+- **Resolution:** the constant in g_outer is changed from 2/σ₀²
+  to 1/σ₀², giving E = 2∫s'M. The dt_convergence test confirms
+  convergence to the corrected values.
+- **Sample:** `dt_convergence.py` with N_PATHS=5000 (S2.2,
+  T_max=200) and 2000 (D4, T_max=2000), dt in {0.02, 0.005,
+  0.001, 0.0005}, seeds 42.
+
 ## Open items
 
 | Item | Owner component | Status |

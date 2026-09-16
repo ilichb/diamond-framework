@@ -1,0 +1,40 @@
+==============================================================================
+MFPT BOUND — SECCION 2.3 DEL PAPER
+==============================================================================
+
+R0_target = 2.2, eps = 0.001, dt = 0.01, N_PATHS = 10000
+
+--- Escenario 1: Section 2.2 parameters (alpha=0.5, sigma0=0.8) ---
+
+  alpha=0.5, Rbar=1.0, sigma0=0.8
+  Feller: 1.0000 >= 0.6400 = True
+  kappa = 1.5625, beta = 1.5625
+  Cota: 1.9965e+01
+  Trayectorias que alcanzan R0 en T_max=20.0: 8336/10000 (83.36%)
+  MFPT (media):   8.3712
+  MFPT (mediana): 7.3900
+  Ratio cota/MFPT: 2.3850e+00 (0.38 ordenes)
+  Diagnostico: cota INFORMATIVA (<= 6 ordenes)
+
+--- Escenario 2: D4 analysis parameters (alpha=2.0, sigma0=0.5) ---
+
+  alpha=2.0, Rbar=1.0, sigma0=0.5
+  Feller: 4.0000 >= 0.2500 = True
+  kappa = 16.0000, beta = 16.0000
+  Cota: 1.4152e+10
+  Trayectorias que alcanzan R0 en T_max=50.0: 708/10000 (7.08%)
+  MFPT (media):   25.4539
+  MFPT (mediana): 24.7900
+  Ratio cota/MFPT: 5.5599e+08 (8.75 ordenes)
+  Diagnostico: cota VACUA (> 6 ordenes de magnitud)
+
+==============================================================================
+CONCLUSION
+==============================================================================
+
+  La cota de whitewashing es informativa para parametros con
+  sigma0 alto y alpha bajo (Seccion 2.2), y vacua para parametros
+  con sigma0 bajo y alpha alto (D4).
+  El paper reporta ambos escenarios en la Seccion 2.3.
+
+==============================================================================

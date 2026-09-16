@@ -1,0 +1,60 @@
+==============================================================================
+STATIONARY STATS — CIR PROCESS
+==============================================================================
+
+N_PATHS = 50000, T_LONG = 50.0, dt = 0.01, burn-in = 50%
+
+--- Section 2.2 parameters ---
+  alpha=0.5, Rbar=1.0, sigma0=0.8
+  Feller: 2*alpha*Rbar = 1.0000 >= sigma0^2 = 0.6400 = True
+  Theory: R_inf ~ Gamma(k=1.5625, theta=0.6400)
+    E[R_inf] = 1.000000
+    Var[R_inf] = 0.640000, std = 0.800000
+
+  Empirical (burn-in discarded):
+    E[R_inf] = 0.998296  (|diff| = 0.001704, rel = 0.170%)
+    Var[R_inf] = 0.637595  (|diff| = 0.002405, rel = 0.376%)
+    std = 0.798496
+
+  Z-score of R0 = 2.2:
+    Theory: 1.5000 sigma
+    Empirical: 1.5050 sigma
+
+  KS test vs Gamma(k, theta):
+    KS statistic D: 0.003540
+    p-value: 0.557221
+    Reject at 95%: False
+    NOTE: samples are autocorrelated; p-value is indicative only.
+
+--- D4 analysis parameters ---
+  alpha=2.0, Rbar=1.0, sigma0=0.5
+  Feller: 2*alpha*Rbar = 4.0000 >= sigma0^2 = 0.2500 = True
+  Theory: R_inf ~ Gamma(k=16.0000, theta=0.0625)
+    E[R_inf] = 1.000000
+    Var[R_inf] = 0.062500, std = 0.250000
+
+  Empirical (burn-in discarded):
+    E[R_inf] = 1.000062  (|diff| = 0.000062, rel = 0.006%)
+    Var[R_inf] = 0.063097  (|diff| = 0.000597, rel = 0.956%)
+    std = 0.251192
+
+  Z-score of R0 = 2.2:
+    Theory: 4.8000 sigma
+    Empirical: 4.7770 sigma
+
+  KS test vs Gamma(k, theta):
+    KS statistic D: 0.004790
+    p-value: 0.200939
+    Reject at 95%: False
+    NOTE: samples are autocorrelated; p-value is indicative only.
+
+==============================================================================
+CONCLUSION
+==============================================================================
+
+  Si los momentos empiricos coinciden con la teoria y el KS test
+  no rechaza, las premisas P8, P9, P10 estan verificadas.
+  Si no coinciden, la ecuacion del CIR simulada o los parametros
+  estan mal, y todos los analisis basados en ellos quedan en duda.
+
+==============================================================================
