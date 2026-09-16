@@ -162,6 +162,22 @@ claim that fails its test is corrected or removed, not quietly reworded.
   T_max=200) and 2000 (D4, T_max=2000), dt in {0.02, 0.005,
   0.001, 0.0005}, seeds 42.
 
+### F-012 — Tucker compression and circuit cost
+
+- **Claim as originally made:** Tucker compression reduces both
+  storage and the cost of the ZK threshold circuit.
+- **Test:** `verification/tensor/tucker_analysis.py`
+- **Verdict:** **Partially refuted.** The storage reduction is real
+  (500 -> 146 entries, ratio 3.4247x, error 4.8e-16 for clean
+  low-rank tensors). The circuit cost reduction is zero: the ZK
+  proof (Section 4) verifies the norm of the raw committed tensor,
+  not its Tucker approximation. A prover who fabricates the factors
+  cannot produce a sound proof against the commitment.
+- **Resolution:** Section 3.5 distinguishes storage optimization
+  (Tucker, outside the circuit) from security (commitment + proof,
+  inside the circuit).
+- **Sample:** `tucker_analysis.py`, rank (4,3,3), seed 42.
+
 ## Open items
 
 | Item | Owner component | Status |
