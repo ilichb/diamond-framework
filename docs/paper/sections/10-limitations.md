@@ -25,11 +25,14 @@ profit to loss.** A state actor, an ideological opponent, or a
 competitor with non-monetary utility is not deterred by slashing. The
 mechanism design does not apply to them.
 
-**The Sybil cost κ_ec of Section 7.2 is a market cost.** It is the cost
-of producing consensus events at market rates. A Sybil adversary that
-controls validators on the source chain pays marginal cost, not market
-cost. The bound κ_ec · x assumes the adversary does not control the
-source chain.
+**The cost of Sybil reputation is a market cost.** A validator
+accumulates reputation by producing consensus events on the
+source chains, and the cost of these events is set by the market
+for validation on those chains. A Sybil adversary that controls
+validators on a source chain pays the marginal cost of those
+validators, not the market cost. The protocol does not model
+this case; it assumes the adversary does not control the source
+chains.
 
 **The data layer bounty B* of Section 7.3 assumes auditors respond to
 profit.** If no verifier is willing to audit at any bounty, the fraud
@@ -121,8 +124,9 @@ The empirical thresholds (q99 = 8.8372 for the right tail, 9.1371 for
 the left tail) are valid for the calibration distribution. Their
 validity on real collaboration graphs is an open question. If the
 real graphs have different spectral properties, the thresholds need
-recalibration. The procedure for recalibration is defined in
-Section 9 but not executed on real data.
+recalibration. The recalibration procedure would be the one described in
+Section 5.4 (Monte Carlo estimation of the null quantiles),
+applied to real collaboration graphs instead of synthetic ones.
 
 ## 10.8 Bootstrap Assumptions
 
