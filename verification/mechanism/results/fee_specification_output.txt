@@ -24,13 +24,13 @@ F0* (fee uniforme optimo) = 0.0500
    Deberia ser 0 por construccion de F0*
    Saturacion: OK
 
-3. VERIFICACION IC (vacua — posted price)
+3. VERIFICACION IC (tautologica — posted price)
 --------------------------------------------------------------------------------
    T es publico (verificado on-chain).
    No hay reporte privado sobre T. IC se cumple trivialmente.
    El unico tipo privado es omega, y la asignacion S_f*(T)
    no depende de omega.
-   => IC es vacua (no hay desvio posible).
+   => IC es tautologica (no hay desvio posible).
 
 4. RECAUDACION Y DESTINO DEL FEE
 --------------------------------------------------------------------------------
@@ -54,7 +54,7 @@ CONCLUSION
 
    Regla de pago: F0 = 0.0500 (posted price saturado)
    IR: se cumple para todos los tipos
-   IC: vacua (T publico, omega no afecta asignacion)
+   IC: tautologica (T publico, omega no afecta asignacion)
    No es Myerson: no hay reserva dependiente de la distribucion
 
    El paper debe reescribir la Seccion 6 como:

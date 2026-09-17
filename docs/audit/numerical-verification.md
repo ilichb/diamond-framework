@@ -69,7 +69,7 @@ claim that fails its test is corrected or removed, not quietly reworded.
 
 - **Claim as originally made:** the payment follows Myerson's optimal auction rule.
 - **Test:** `verification/mechanism/fee_specification.py`
-- **Verdict:** **Misapplied.** With `S_f*(T)` independent of the private capital cost ω, there is no revelation game. The optimal payment is a uniform posted price `F₀* = π_val(R) − ω̄·Θ`, saturated at the highest-cost type.
+- **Verdict:** **Misapplied.** With `S_f*(T)` independent of the private capital cost ω, there is no revelation game and IC is tautological (the type is publicly verified on-chain). The optimal payment is a uniform posted price `F₀* = π_val(R) − ω̄·Θ`, saturated at the highest-cost type.
 - **Resolution:** Section 6 reports the posted price. Myerson applies only if the allocation depends on the private type.
 - **Sample:** N_VALIDATORS=1000, ω ~ U[0.01, 0.10], seed 42. IR holds for all types; F0=1.2·F0* breaks IR for 0.2% of sampled types.
 

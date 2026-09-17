@@ -86,6 +86,17 @@ not a valid lower bound for the CIR first-passage time.** The implicit
 C\* values (0.562 and 3.14×10⁻⁸) are the largest constants for which
 the bound holds.
 
+With C\* set to the implicit value, the bound is tight in both
+regimes: the ratio bound/MFPT equals 1 by construction. The
+classification of a valid lower bound as tight, informative, or
+vacuous applies only to the correct C\*. With C\* = 1 the bound is
+not a valid lower bound and falls outside the classification.
+
+Throughout this paper, *vacuous* is used only for a valid lower
+bound whose ratio to the true value exceeds 10^3. For logical
+properties that hold trivially, such as Incentive Compatibility
+when the type is publicly verified on-chain, we use *tautological*.
+
 We verified the numerical values by two independent methods. The first
 is direct Euler simulation of the CIR
 [verification/stochastics/dt_convergence.py]. The simulated MFPT
