@@ -108,8 +108,7 @@ in Section 4.4.
 
 ## 4.4 Recursive Verification
 
-The design adopted by the protocol is Option B with recursive SNARK
-composition. The Bulletproofs verification, which is O(N) in scalar
+The Bulletproofs verification, which is O(N) in scalar
 multiplications and costs ~6.5M gas for N = 500 if performed
 on-chain, is instead performed off-chain. A recursive SNARK then
 attests that the off-chain verification was correct, and only the
