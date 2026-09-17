@@ -1,0 +1,36 @@
+==========================================================================================
+BOOTSTRAP DEL PROTOCOLO HÍBRIDO DESDE GÉNESIS (R=0)
+==========================================================================================
+
+N_EPOCHS=500, N_MAX=100, N_INIT=10, ENTRY_RATE=0.03
+THETA=1.0, VAR_TECH=0.2, G_GAIN=0.01, MU_DECAY=0.015
+ALPHA_HALF_TIME=100, DECAY_HALF_LIFE=50
+
+Simulando: pure_pos
+Simulando: hybrid_no_decay
+Simulando: hybrid_decay
+
+==========================================================================================
+MÉTRICAS FINALES
+==========================================================================================
+Política               t(α=1)     Gini    Top10     N    S_f med      R med      R max
+------------------------------------------------------------------------------------------
+pure_pos                  500   0.1283   0.1367   100     1.0000     0.3936     0.5976
+hybrid_no_decay           200   0.1283   0.1367   100     0.7764     0.3936     0.5976
+hybrid_decay              200   0.1563   0.1477   100     0.8393     0.2553     0.4348
+
+==========================================================================================
+LECTURA ESPERADA
+==========================================================================================
+
+1. pure_pos: S_f = Θ durante todo el período. Sin reducción.
+
+2. hybrid_no_decay: S_f cae con α(t). Gini de R crece con el
+   tiempo porque validadores tempranos acumulan ventaja.
+
+3. hybrid_decay: reduce R_max (0.4348 vs 0.5976) pero
+   AUMENTA el Gini (0.1563 vs 0.1283). El decaimiento no
+   reduce la concentracion; la redistribuye.
+4. Recomendacion: hybrid_no_decay, por Gini y S_f mas bajos.
+
+==========================================================================================

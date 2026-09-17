@@ -208,6 +208,36 @@ claim that fails its test is corrected or removed, not quietly reworded.
 - **Sample:** v2 and v3 with identical parameters; the difference
   is the rounding rule.
 
+### F-015 — Decay reduces final Gini in bootstrap
+
+- **Claim as originally made:** the hybrid_decay policy limits
+  accumulation and produces a lower final Gini than hybrid_no_decay.
+- **Test:** `verification/bootstrap/simulate_bootstrap_net_gain.py`
+- **Verdict:** **Refuted.** Decay lowers R_max (0.4348 vs 0.5976)
+  but raises Gini (0.1563 vs 0.1283). The no-decay policy saturates
+  the top validators at R ≈ 0.6 and compresses the distribution;
+  decay spreads it.
+- **Resolution:** Section 8 reports both metrics and recommends
+  hybrid_no_decay.
+- **Sample:** N_EPOCHS=500, N_MAX=100, N_INIT=10, ENTRY_RATE=0.03,
+  seed 42.
+
+### F-016 — Bootstrap numbers depend on reputation model
+
+- **Claim as originally made:** bootstrap dynamics under the
+  saturating model (Delta_R = k*a*(1-R)) reduce the median financial
+  stake from 1.0 to 0.628 (37% reduction).
+- **Test:** `verification/bootstrap/simulate_bootstrap_net_gain.py`
+- **Verdict:** **Refuted as the canonical model.** The paper selects
+  net_gain (Delta_R = g*a*(1-R) - mu*R) because it is the only model
+  with high correlation between activity and reputation (corr = 0.76).
+  With net_gain (g=0.01, mu=0.015), the median financial stake under
+  hybrid_no_decay is 0.7764, a 22.4% reduction.
+- **Resolution:** Section 8 uses net_gain. The saturating script is
+  retained in the repository as a historical record; it is not cited
+  in the paper.
+- **Sample:** identical parameters; the difference is the gain rule.
+
 ## Open items
 
 | Item | Owner component | Status |
