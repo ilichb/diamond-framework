@@ -65,7 +65,7 @@ The core insight is an opportunity-cost argument:
 | Data layer / fraud proofs | Equilibrium `n* = floor(B/B*)`; attacker profit `-502` | [`verification/data-layer/`](verification/data-layer) |
 | Bootstrap dynamics | Verified | μ sweep done: band μ/g ∈ [1, 2]; argmax R_std = 0.0424 at μ/g = 1.5 — [`verification/bootstrap/`](verification/bootstrap) |
 | Mechanism design (payment) | Fee rule specified: posted price F0* = π_val − ω̄·Θ, saturated at highest-cost type | [`verification/mechanism/`](verification/mechanism) |
-| Avalanche integration | **Pending** — gas and latency benchmarks pending | [`integrations/avalanche/`](integrations/avalanche) |
+| Avalanche integration | Specified | Gas benchmarks done (ecPairing k=4 = 181,142); Teleporter latency pending |
 
 Rows without a **Partial**/**Pending** marker carry numerical backing in the paper's
 verification program; claims in the paper without numerical backing are marked
@@ -177,7 +177,8 @@ has **not** been audited.
 |------|-----------|--------|
 | `mu` sweep over bootstrap dynamics | Bootstrap | **Done** (μ/g ∈ [1, 2]; F-005) |
 | Payment rule specification | Mechanism design | **Done** (posted price F0*, IR verified) |
-| Gas and latency benchmarks | Avalanche integration | Pending |
+| Gas benchmarks | Avalanche integration | **Done** (Foundry, integrations/avalanche/benchmarks/) |
+| Teleporter latency | Avalanche integration | Pending (requires testnet) |
 | Sections 6, 8 and 9 of the paper | Paper | Open items |
 | External security review | Whole protocol | Not started |
 
