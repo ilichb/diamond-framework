@@ -16,7 +16,8 @@ script in `verification/`. The scripts are self-contained: they depend
 only on NumPy and SciPy, and they declare their seeds and sample sizes
 at the top of each file. Running `pip install -r verification/requirements.txt`
 followed by the commands listed in `verification/README.md` reproduces
-every number reported in the paper.
+every number reported in the paper. The README lists the 17 scripts
+and their expected runtimes.
 
 The project documents its own falsifications in
 `docs/audit/numerical-verification.md`. As of this writing the log
@@ -29,14 +30,15 @@ The scripts run in the following time ranges on a 2020-era desktop:
 
 | Script | Time |
 |--------|------|
-| `sim_positivity.py` | ~34 s |
 | `calibration_modularity.py` | ~400 s |
-| `stationary_stats.py` | ~12 s |
 | `dt_convergence.py` | ~130 s |
+| `sim_positivity.py` | ~34 s |
 | `censoring_test.py` | ~17 s |
+| `clique_spectra.py` | ~17 s |
+| `stationary_stats.py` | ~12 s |
 | All others | < 5 s each |
 
-Total runtime for the full suite: approximately 12 minutes on a
+Total runtime for the full suite: approximately 10 minutes on a
 single core. The dominant cost is the RMT calibration with
 N_H0 = 2000 and N_H1 = 500.
 
@@ -88,11 +90,12 @@ value as dt → 0, with a relative error of 0.22% at dt = 5×10⁻⁴. The
 conclusions do not depend on the discretization.
 
 **Collusion detection (Section 5).** The null quantile q99 = 8.8372
-is calibrated with N_H0 = 2000 replicates, giving a standard error
-below 0.2% for the 99th percentile. The transition from partial to
-full detection for k = 1 vs k = 3 cliques is 24.8% vs 100%, well
-outside the confidence intervals. The qualitative boundary does not
-depend on the calibration sample size.
+is calibrated with N_H0 = 2000 replicates. The standard error of the
+q99 estimate is sqrt(p(1-p)/N) / f(q99) = 0.008 gas, or 0.087% of
+its value. The 95% confidence interval is approximately [8.822, 8.852].
+The transition from partial to full detection for k = 1 vs k = 3
+cliques is 24.8% vs 100%, well outside the confidence intervals. The
+qualitative boundary does not depend on the calibration sample size.
 
 **Data layer (Section 7).** The equilibrium n*(B) = ⌊B/B*⌋ is exact
 given the parameters. The attacker profit is −502 with slashing
