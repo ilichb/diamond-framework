@@ -1,0 +1,68 @@
+Compiling 2 files with Solc 0.8.33
+Solc 0.8.33 finished in 631.13ms
+Compiler run successful with warnings:
+Warning (2018): Function state mutability can be restricted to view
+  --> test/GasBenchmarks.t.sol:13:5:
+   |
+13 |     function test_ecAdd() public {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+  --> test/GasBenchmarks.t.sol:18:5:
+   |
+18 |     function test_ecMul() public {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+  --> test/GasBenchmarks.t.sol:23:5:
+   |
+23 |     function test_ecPairing_k1() public {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+  --> test/GasBenchmarks.t.sol:28:5:
+   |
+28 |     function test_ecPairing_k2() public {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+  --> test/GasBenchmarks.t.sol:33:5:
+   |
+33 |     function test_ecPairing_k4() public {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+  --> test/GasBenchmarks.t.sol:38:5:
+   |
+38 |     function test_poseidon2() public {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Ran 6 tests for test/GasBenchmarks.t.sol:GasBenchmarksTest
+[PASS] test_ecAdd() (gas: 9714)
+Logs:
+  ecAdd gas: 292
+
+[PASS] test_ecMul() (gas: 15611)
+Logs:
+  ecMul gas: 6142
+
+[PASS] test_ecPairing_k1() (gas: 89634)
+Logs:
+  ecPairing k=1 gas: 79142
+
+[PASS] test_ecPairing_k2() (gas: 123611)
+Logs:
+  ecPairing k=2 gas: 113142
+
+[PASS] test_ecPairing_k4() (gas: 191591)
+Logs:
+  ecPairing k=4 gas: 181142
+
+[PASS] test_poseidon2() (gas: 265215)
+Logs:
+  poseidon2 gas: 104963
+
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 3.23ms (6.62ms CPU time)
+
+Ran 1 test suite in 13.25ms (3.23ms CPU time): 6 tests passed, 0 failed, 0 skipped (6 total tests)
