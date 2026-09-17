@@ -5,7 +5,7 @@ To compile the full paper to PDF:
 
 ## Prerequisites
 
-    pandoc >= 3.0
+    pandoc >= 2.9
     pdflatex (from TeX Live or MacTeX)
 
 On Debian/Ubuntu:
@@ -44,3 +44,26 @@ starts with its own `# N. Title` heading.
 
 The PDF is not yet compiled in the repository. The sections are
 complete and can be compiled locally with the command above.
+
+## Troubleshooting Unicode
+
+The paper uses Unicode symbols (subscripts, superscripts, combining
+marks, mathematical operators) that pdflatex with inputenc may not
+support. If compilation fails with "Unicode character not set up for
+use with LaTeX", two solutions are available:
+
+### Option A: Use xelatex
+
+    sudo apt install texlive-xetex
+    pandoc sections/*.md -o diamond-framework.pdf \
+      --pdf-engine=xelatex --toc --number-sections
+
+### Option B: Add a header file mapping the problematic characters
+
+Create header.tex with newunicodechar mappings, and pass:
+
+    pandoc sections/*.md -o diamond-framework.pdf \
+      --pdf-engine=pdflatex --toc --number-sections \
+      -H header.tex
+
+Both options are documented but not verified in this repository.

@@ -65,7 +65,7 @@ The core insight is an opportunity-cost argument:
 | Data layer / fraud proofs | Equilibrium `n* = floor(B/B*)`; attacker profit `-502` | [`verification/data-layer/`](verification/data-layer) |
 | Bootstrap dynamics | Verified | μ sweep done: band μ/g ∈ [1, 2]; argmax R_std = 0.0424 at μ/g = 1.5 — [`verification/bootstrap/`](verification/bootstrap) |
 | Mechanism design (payment) | Fee rule specified: posted price F0* = π_val − ω̄·Θ, saturated at highest-cost type | [`verification/mechanism/`](verification/mechanism) |
-| Avalanche integration | Specified | Gas benchmarks done (ecPairing k=4 = 181,142); Teleporter latency pending |
+| Avalanche integration | **Partial** — gas benchmarks done (181,142); latency pending | [`integrations/avalanche/benchmarks/`](integrations/avalanche/benchmarks) |
 
 Rows without a **Partial**/**Pending** marker carry numerical backing in the paper's
 verification program; claims in the paper without numerical backing are marked
@@ -186,7 +186,7 @@ has **not** been audited.
 
 ## Paper
 
-The theoretical paper is in [`docs/paper/diamond-framework.pdf`](docs/paper). Sections marked
+The theoretical paper sections are in [`docs/paper/`](docs/paper). Sections marked
 `[VERIFIED]` have numerical backing in `verification/`; sections marked `[PENDING]` have open
 items; claims without numerical backing are marked `[CONJECTURE]`.
 
