@@ -168,7 +168,8 @@ claim that fails its test is corrected or removed, not quietly reworded.
 
 - **Claim as originally made:** Tucker compression reduces both
   storage and the cost of the ZK threshold circuit.
-- **Test:** `verification/tensor/tucker_analysis.py`
+- **Test:** `verification/tensor/tucker_analysis.py`,
+  `integrations/avalanche/benchmarks/src/GasBenchmarks.sol`
 - **Verdict:** **Partially refuted.** The storage reduction is real
   (500 -> 146 entries, ratio 3.4247x, error 4.8e-16 for clean
   low-rank tensors). The circuit cost reduction is zero: the ZK
@@ -237,6 +238,20 @@ claim that fails its test is corrected or removed, not quietly reworded.
   retained in the repository as a historical record; it is not cited
   in the paper.
 - **Sample:** identical parameters; the difference is the gain rule.
+
+### F-017 — ecPairing mismeasurement in v1 benchmark
+
+- **Claim as originally made:** ecPairing for Groth16 requires
+  113,142 gas (function named benchEcPairing4).
+- **Test:** `integrations/avalanche/benchmarks/src/GasBenchmarks.sol`
+- **Verdict:** **Refuted.** The function passed 384 bytes to the
+  precompile at 0x08, which corresponds to k=2 pairs, not k=4.
+  EIP-197 charges 45,000 + 34,000k; the arithmetic with k=2 gives
+  113,142 and with k=4 gives 181,142. The measured 113,142 was
+  correct for k=2 but mislabeled.
+- **Resolution:** v2 uses a parameterized function; k=4 for Groth16
+  is 181,142 gas (measured). The linearity is verified exactly
+  against EIP-197 for k ∈ {1, 2, 4}.
 
 ## Open items
 
