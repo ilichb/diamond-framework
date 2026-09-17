@@ -28,7 +28,9 @@ claim that fails its test is corrected or removed, not quietly reworded.
 
 - **Claim as originally made:** the normalized adjacency matrix `A_sym` is sufficient to
   detect colluding cliques.
-- **Test:** `verification/rmt/calibration_modularity.py`
+- **Test:** `verification/rmt/calibration_modularity.py`,
+  `verification/rmt/clique_spectra.py`,
+  `verification/rmt/archive/calibracion_rmt.py`
 - **Verdict:** **Refuted.** `A_sym` attenuates cliques. The modularity matrix
   `B = W - dd^T/(2m)` detects them: for a single small clique the true positive rate is
   **24.8% (modularity)** versus **3.3% (`A_sym`)**.
@@ -177,6 +179,20 @@ claim that fails its test is corrected or removed, not quietly reworded.
   (Tucker, outside the circuit) from security (commitment + proof,
   inside the circuit).
 - **Sample:** `tucker_analysis.py`, rank (4,3,3), seed 42.
+
+### F-013 — Empirical vs asymptotic bulk edge in sparse graphs
+
+- **Claim as originally made:** the asymptotic Wigner bulk edge
+  2√d̄ is the detection threshold for the modularity matrix B.
+- **Test:** `verification/rmt/clique_spectra.py`
+- **Verdict:** **Refuted.** For n = 500, d̄ = 20, the theoretical
+  edge is 2√20 = 8.9443. A planted clique (k=1, m=20, density 10x)
+  produces λ₂(B) = 8.8537, below the theoretical edge but above
+  the empirical q99 = 8.8372. The empirical threshold is the
+  operational one.
+- **Resolution:** Section 5.4 uses the empirical threshold. The
+  theoretical edge is reported for reference only.
+- **Sample:** `clique_spectra.py`, seed 42, n=500, d̄=20.
 
 ## Open items
 
