@@ -151,8 +151,8 @@ def main():
     print()
     print("3. hybrid_decay: reduce R_max (0.4348 vs 0.5976) pero")
     print("   AUMENTA el Gini (0.1563 vs 0.1283). El decaimiento no")
-    print("   reduce la concentracion; la redistribuye.")
-    print("4. Recomendacion: hybrid_no_decay, por Gini y S_f mas bajos.")
+    print("   reduce la concentración; la redistribuye.")
+    print("4. Recomendación: hybrid_no_decay, por Gini y S_f más bajos.")
     print()
     print("=" * 90)
 

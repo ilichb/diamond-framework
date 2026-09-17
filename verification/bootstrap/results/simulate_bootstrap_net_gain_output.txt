@@ -30,7 +30,7 @@ LECTURA ESPERADA
 
 3. hybrid_decay: reduce R_max (0.4348 vs 0.5976) pero
    AUMENTA el Gini (0.1563 vs 0.1283). El decaimiento no
-   reduce la concentracion; la redistribuye.
-4. Recomendacion: hybrid_no_decay, por Gini y S_f mas bajos.
+   reduce la concentración; la redistribuye.
+4. Recomendación: hybrid_no_decay, por Gini y S_f más bajos.
 
 ==========================================================================================

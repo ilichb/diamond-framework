@@ -41,8 +41,9 @@ The correlation between activity and reputation at stationarity is
 saturating models [verification/bootstrap/compare_reputation_models.py].
 We therefore use net_gain throughout the bootstrap analysis.
 
-The sweep over μ at fixed g = 0.01 (Section 8.3) gives a maximum
-of R_std at μ/g = 1.5. We use g = 0.01, μ = 0.015.
+The sweep over μ at fixed g = 0.01
+[verification/bootstrap/sweep_net_gain.py] gives a maximum of
+R_std at μ/g = 1.5. We use g = 0.01, μ = 0.015.
 
 ## 8.3 Bootstrap Simulation
 
@@ -51,7 +52,7 @@ We simulate the bootstrap from R(0) = 0 over 500 epochs
 
 - N_MAX = 100 validators, N_INIT = 10 at genesis.
 - Entry rate 0.03 per epoch for new validators.
-- Activity a ~ LogNormal(0, 0.7) per validator.
+- Activity a ~ LogNormal(0, 0.5) per validator.
 - Transition rate α(t) = min(1, t/200), reaching 1 at epoch 200.
 
 We compare three policies:
@@ -127,3 +128,14 @@ The Section's quantitative content is limited to the bootstrap
 simulation under the net_gain model and the comparison of three
 policies. The saturation of the alternative models is documented as
 F-016.
+
+The selection of net_gain is based on its correlation with
+activity (0.76 vs 0.08-0.11 for the saturating models), not on
+satisfying all four criteria of the model comparison. The
+standard deviation of reputation under net_gain is 0.0282 in
+`compare_reputation_models.py` and 0.0424 at the sweep optimum
+mu/g = 1.5; both fall below the 0.05 threshold used in the
+comparison script. The threshold is a heuristic, not a
+requirement, and the net_gain model is chosen for the correlation
+property, which the saturating models fail by an order of
+magnitude.
