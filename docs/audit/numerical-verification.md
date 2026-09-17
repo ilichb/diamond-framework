@@ -194,6 +194,20 @@ claim that fails its test is corrected or removed, not quietly reworded.
   theoretical edge is reported for reference only.
 - **Sample:** `clique_spectra.py`, seed 42, n=500, d̄=20.
 
+### F-014 — Equilibrium formula in v2 of the data layer
+
+- **Claim as originally made:** the equilibrium auditor count is
+  n*(B) = round(B/B*).
+- **Test:** `verification/data-layer/simulate_data_layer_v3.py`
+- **Verdict:** **Refuted.** The round() function shifted the
+  transition from B* to 0.75·B*. The correct equilibrium is
+  n*(B) = ⌊B/B*⌋, which places the transition exactly at B*.
+- **Resolution:** v3 uses integer floor. v2 is retained in the
+  repository as a historical record; it is not the canonical
+  script for Section 7.
+- **Sample:** v2 and v3 with identical parameters; the difference
+  is the rounding rule.
+
 ## Open items
 
 | Item | Owner component | Status |
