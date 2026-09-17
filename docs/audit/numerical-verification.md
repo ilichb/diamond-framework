@@ -20,8 +20,9 @@ claim that fails its test is corrected or removed, not quietly reworded.
 
 - **Claim as originally made:** 4.7% of trajectories go negative.
 - **Test:** `verification/stochastics/sim_positivity.py`
-- **Verdict:** **Refuted.** The 4.7% figure was not reproducible. With standard parameters
-  the measured rate is **40.58%**.
+- **Verdict:** **Refuted.** The 4.7% figure was fabricated: it was
+  presented as the result of a simulation that was never run. With
+  standard parameters the measured rate is **40.58%**.
 - **Resolution:** The paper reports 40.58%; the original number was withdrawn.
 
 ### F-002 — Collusion detection on the normalized adjacency matrix

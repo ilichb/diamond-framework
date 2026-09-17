@@ -112,7 +112,7 @@ entry.
 |-----------|--------|----------|
 | Reputation dynamics | Verified | `stochastics/` |
 | Tensor compression | Verified | `tensor/` |
-| ZK threshold proof | Verified | `zk/`, `benchmarks/` |
+| ZK threshold proof | Verified | `zk/`, `integrations/avalanche/benchmarks/` |
 | Collusion detection | Verified | `rmt/` |
 | Payment rule | Verified | `mechanism/` |
 | Data layer | Verified | `data-layer/` |
