@@ -161,6 +161,12 @@ ratio is approximately 7.5×. This is the numerical basis for the
 design decision to replace A_sym with B, documented as falsification
 log entry F-002.
 
+The two Wilson 95% confidence intervals do not overlap: A_sym is
+[0.006, 0.167] and B is [0.212, 0.288]
+[verification/rmt/wilson_intervals.py]. The comparison is
+statistically significant at 95% despite the small sample size of
+the A_sym measurement (N = 30).
+
 ## 5.6 The Detection Boundary
 
 The detection power measured in Section 5.5 follows a clear pattern:
@@ -208,6 +214,12 @@ these models: community hierarchies, temporal correlations between
 interactions, and directionality (who initiates contact). The
 empirical quantiles in Section 5.4 are valid for the calibration
 distribution; their validity on real graphs is an open question.
+
+The baseline measurement for A_sym uses N_H1 = 30 replicates,
+smaller than the N_H1 = 500 used for B. The Wilson intervals of the
+two measurements do not overlap, so the comparison is statistically
+significant, but the A_sym estimate carries wider uncertainty
+[verification/rmt/wilson_intervals.py].
 
 The left tail (−λ_min) is calibrated but its power is not measured.
 The H₀ distribution is characterized, but we do not simulate

@@ -1,0 +1,30 @@
+======================================================================
+WILSON 95% CONFIDENCE INTERVALS FOR TPR COMPARISON
+======================================================================
+
+A_sym:
+  k = 1, n = 30
+  TPR = 0.0333
+  Wilson 95% CI = [0.0059, 0.1667]
+
+B:
+  k = 124, n = 500
+  TPR = 0.2480
+  Wilson 95% CI = [0.2122, 0.2877]
+
+Comparison:
+  A_sym CI upper bound: 0.1667
+  B CI lower bound:     0.2122
+  Overlap: no
+
+  Point estimate ratio: 7.44x
+
+======================================================================
+CONCLUSION
+======================================================================
+
+  The intervals do not overlap. The comparison is
+  statistically significant at 95% despite the small
+  sample size of the A_sym measurement (N = 30).
+
+======================================================================
