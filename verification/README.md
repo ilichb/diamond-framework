@@ -28,6 +28,7 @@ claim in the Diamond Framework paper.
     python3 rmt/sim_laplacian.py
     python3 rmt/calibration_modularity.py
     python3 rmt/clique_spectra.py
+    python3 rmt/wilson_intervals.py
     python3 tensor/tucker_analysis.py
     python3 data-layer/simulate_data_layer_v3.py
     python3 bootstrap/compare_reputation_models.py
@@ -45,6 +46,7 @@ Approximate runtimes on a 2020-era desktop:
 | dt_convergence.py | ~130 s |
 | censoring_test.py | ~17 s |
 | clique_spectra.py | ~17 s |
+| wilson_intervals.py | < 1 s |
 | stationary_stats.py | ~12 s |
 | All others | < 5 s each |
 
