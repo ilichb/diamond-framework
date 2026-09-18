@@ -260,8 +260,8 @@ claim that fails its test is corrected or removed, not quietly reworded.
 |------|-----------------|--------|
 | `mu` sweep over bootstrap dynamics | `verification/bootstrap/` | **Done** — see F-005 (μ/g ∈ [1, 2]) |
 | Payment rule specification | `verification/mechanism/` | **Done** — posted price F0*, not Myerson |
-| Gas and latency benchmarks | `integrations/avalanche/` | Pending |
-| Sections 6, 8 and 9 of the paper | `docs/paper/` | Open items |
+| Gas benchmarks | `integrations/avalanche/` | **Done** — ecPairing k=4 = 181,142 |
+| Teleporter latency | `integrations/avalanche/` | Pending (requires testnet) |
 | External security review | whole protocol | Not started |
 
 ## Reporting a falsification

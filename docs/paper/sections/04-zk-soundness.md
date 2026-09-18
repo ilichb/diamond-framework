@@ -83,8 +83,10 @@ opens all N = C·D·H leaves inside the circuit. The circuit requires
 1,080,501 constraints. Direct on-chain verification of the resulting
 Groth16 proof costs approximately 206k gas if the circuit fits in one
 Groth16 proof, which it does not: 1.08M constraints produce a
-proving key of tens of gigabytes and a proving time of minutes. On-
-chain direct verification is not viable.
+proving key and a proving time that are not practical for on-chain
+verification [CONJECTURE: the exact key size and proving time depend
+on the Groth16 implementation and are not measured in this paper].
+On-chain direct verification is not viable.
 
 **Option A'** commits to T with a Poseidon tree over the entire tensor
 inside the circuit. With 240,261 constraints the circuit is still too
@@ -127,10 +129,14 @@ the reference configuration, we estimate the recursive proving time
 in the range of tens of seconds on a modern CPU, but the estimate is
 not verified.
 
-The choice of recursion framework (Groth16 recursion, Plonk
-recursion, Halo2 recursion) is not fixed in this paper. All three
-produce constant-size on-chain proofs at similar gas cost; the
-difference is the proving time and the trusted setup requirements.
+The choice of recursion framework is not fixed in this paper. We
+note that Bulletproofs uses an Inner Product Argument, which does
+not arithmetize naturally over pairing-friendly curves such as
+BN254. A recursion framework based on IPA, such as Halo2, is the
+natural choice; Groth16 and Plonk recursion would require additional
+arithmetization overhead that is not quantified here. The estimated
+on-chain cost of ~250k gas assumes a pairing-friendly outer circuit
+and may be higher for an IPA-based outer circuit.
 
 **Why Option B, and its cost.** Of the four designs of Section 4.3,
 only Option B has a transparent setup: Bulletproofs require no trusted

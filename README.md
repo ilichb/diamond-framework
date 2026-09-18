@@ -43,7 +43,7 @@ The core insight is an opportunity-cost argument:
 
 ### Non-goals
 
-- **Not a finished protocol.** The paper is in revision; Sections 6, 8 and 9 have open items.
+- **Not a finished protocol.** Sections 2 through 11 are written and verified; the open items are external audit, real-data calibration, and testnet benchmarks.
 - **Not audited.** No external security review has been performed and nothing here is deployed to mainnet.
 - **Not formally verified.** All proofs are mathematical arguments, not machine-checked proofs.
 - **Not a production implementation.** `src/` contains reference implementations, not production code.
@@ -150,7 +150,7 @@ corrections so far:
 | 4.7% of trajectories go negative | **40.58%** | The early simulation claim was fabricated: it was presented as the result of a simulation that was never run. With standard parameters the real figure is 40.58%. |
 | RMT collusion test on `A_sym` | **Modularity matrix** `B = W - dd^T/(2m)` | Normalized adjacency attenuates cliques: 24.8% vs 3.3% TPR for a single small clique. |
 | Tracy–Widom threshold | **Empirically calibrated quantiles** | The theoretical TW threshold is not applicable to sparse heavy-tailed collaboration graphs. |
-| Myerson projection via Frobenius norm | **Myerson applied to the capital cost type only** | Projecting a multidimensional type to a scalar destroys information needed for incentive compatibility. |
+| Myerson projection via Frobenius norm | **Applied to capital cost only** | F-004 (projection); F-006: allocation is independent of ω, IC is tautological |
 
 If you find a claim that is not reproducible, open an issue with the label `falsification`.
 We will correct the claim or remove it.
@@ -179,7 +179,7 @@ has **not** been audited.
 | Payment rule specification | Mechanism design | **Done** (posted price F0*, IR verified) |
 | Gas benchmarks | Avalanche integration | **Done** (Foundry, integrations/avalanche/benchmarks/) |
 | Teleporter latency | Avalanche integration | Pending (requires testnet) |
-| Sections 6, 8 and 9 of the paper | Paper | Open items |
+| Paper sections | Paper | **Done** — Sections 2–11 written and verified |
 | External security review | Whole protocol | Not started |
 
 ---

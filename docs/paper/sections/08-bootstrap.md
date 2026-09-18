@@ -79,6 +79,12 @@ The R med column is the median reputation. Under net_gain it converges
 to the stationary value R* = g·a/(g·a + μ). For a validator with
 median activity a ≈ 1, R* ≈ 0.4, consistent with the measured 0.3936.
 
+The Gini and Top-10 columns are identical between pure_pos and
+hybrid_no_decay because both policies track the same reputation
+trajectory R(t). The difference between them is in the financial
+stake policy S_f(t), not in the reputation. Gini and Top-10 are
+computed on the distribution of R, not on S_f.
+
 ## 8.5 Comparison of Policies
 
 Two observations follow from the table.

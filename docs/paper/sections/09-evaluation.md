@@ -92,10 +92,10 @@ conclusions do not depend on the discretization.
 **Collusion detection (Section 5).** The null quantile q99 = 8.8372
 is calibrated with N_H0 = 2000 replicates. The standard error of the
 q99 estimate is sqrt(p(1-p)/N) / f(q99), evaluated at the empirical
-z-score of q99 (2.476), giving 0.011 gas, or 0.125% of its value. The
-95% confidence interval is approximately [8.816, 8.859]. The
-corresponding theoretical value, using the standard normal density at
-z = 2.326, is 0.087%. The transition from partial to full detection
+z-score of q99 (2.476), giving 0.011 in λ₂(B) units, or 0.125% of
+its value. The 95% confidence interval is approximately [8.816, 8.859].
+The corresponding theoretical value, using the standard normal density
+at z = 2.326, is 0.087%. The transition from partial to full detection
 for k = 1 vs k = 3 cliques is 24.8% vs 100%, well outside the
 confidence intervals. The qualitative boundary does not depend on the
 calibration sample size.

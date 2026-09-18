@@ -151,6 +151,16 @@ m=20 is [0.212, 0.288], which excludes 0.5. This is not "almost
 detectable"; it is a regime where the test is better than chance
 but not reliable.
 
+**Comparison with A_sym.** The same test run on the normalized
+adjacency matrix A_sym, with the same clique configuration (k=1,
+m=20 on n = 500, d̄ = 20), gives a true positive rate of 0.033 at
+α = 0.01 [verification/rmt/archive/calibracion_rmt.py], measured
+over N_H1 = 30 replicates. The modularity matrix B gives 0.248 on
+the same configuration, measured over N_H1 = 500 replicates. The
+ratio is approximately 7.5×. This is the numerical basis for the
+design decision to replace A_sym with B, documented as falsification
+log entry F-002.
+
 ## 5.6 The Detection Boundary
 
 The detection power measured in Section 5.5 follows a clear pattern:
