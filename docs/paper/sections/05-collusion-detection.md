@@ -32,44 +32,42 @@ detection.
 The normalization is inappropriate for detecting cliques. Each edge
 is scaled by 1/√(d_i d_j). Because a clique raises the degree of its
 members, the normalization downweights the clique's internal edges
-relative to the background. Quantitatively, for a clique of size
-m = 20 with intra-clique density 10× the background:
-
-    degree of a clique node:      ≈ 27.2
-    degree of a background node:  ≈ 20.0
-    normalized intra-clique edge: 1/27.2 ≈ 0.037
-    normalized background edge:   1/20.0 ≈ 0.050
-
-The clique's edges are weaker after normalization than the
-background's. The density signal is cancelled by the degree increase.
+relative to the background.
 
 We verify this numerically
 [verification/rmt/clique_spectra.py]. For a single clique of size
 m = 20 with intra-clique density 10× the background, the three
-candidate matrices give the following second eigenvalues:
+candidate matrices give the following leading non-trivial eigenvalue:
 
-| Matrix | λ₂ (H₀) | λ₂ (H₁) | Bulk edge | Gap (H₁) |
-|--------|---------|---------|-----------|----------|
-| W (raw) | 8.6896 | 10.6439 | 8.9443 | +1.6996 |
-| A_sym | 0.4254 | 0.4316 | 0.4472 | −0.0156 |
-| B | 8.5369 | 8.8537 | 8.9443 | −0.0906 |
+| Matrix | Statistic | λ (H₀) | λ (H₁) | Bulk edge | Gap (H₁) |
+|--------|-----------|--------|--------|-----------|----------|
+| W (raw) | s[-2] | 8.6896 | 10.6439 | 8.9443 | +1.6996 |
+| A_sym | s[-2] | 0.4254 | 0.4316 | 0.4472 | −0.0156 |
+| B | s[-1] | 8.6896 | 10.7011 | 8.9443 | +1.7569 |
+
+The choice of statistic differs by matrix. For W and A_sym, s[-1] is
+the Perron eigenvalue (trivial, equal to d_max and 1 respectively)
+and s[-2] is the leading non-trivial direction. For B, the identity
+B·1 = 0 places the trivial eigenvalue at the center of the spectrum,
+and s[-1] is the signal. The change is documented in falsification
+log entry F-018.
 
 The table shows that W separates the clique from the bulk (gap
 +1.6996 against the asymptotic edge 2√d̄ = 8.9443). A_sym does not
-(gap −0.0156 against its bulk edge 0.4472). B responds to the clique
-more strongly than A_sym by a factor of 51 in the shift Δλ₂
-(+0.3168 vs +0.0062), but in this single realization it does not
-exceed the theoretical bulk edge (gap −0.0906).
+(gap −0.0156 against its bulk edge 0.4472). B separates the clique
+by a wider gap than W (+1.7569 vs +1.6996) and exceeds both the
+theoretical bulk edge and the empirically calibrated threshold
+q99 = 9.0542 of Section 5.4.
 
-The values in this table are second eigenvalues s[-2]. The right-tail
-statistic adopted in Section 5.4 is s[-1] (falsification log entry
-F-018); for that statistic this configuration has mean λ_max = 9.7452,
-above the operational threshold q99 = 9.0542 (Section 5.5).
-
-The gap between the theoretical edge 2√d̄ = 8.9443 and the empirical
-threshold q99 = 9.0542 is a known feature of sparse graphs: the
-asymptotic Wigner edge is not tight for n = 500 with d̄ = 20. The
-paper uses the empirical threshold.
+The relationship between B and W is explained by a structural
+identity. For a regular graph with degree d, the modularity matrix
+is B = A − (d/n)·11ᵀ, and since 1 is orthogonal to every other
+eigenvector, the spectrum of B equals that of A with the Perron
+eigenvalue replaced by 0. Consequently λ_max(B) = λ₂(W) exactly.
+The Erdős–Rényi graph used in the null simulation is almost regular
+(degrees 10–33, mean 19.88, std 4.22), so the identity holds to
+within 10⁻⁵ in H₀. In H₁ the clique raises the degrees of its 20
+members, breaking the regularity and leaving B slightly ahead of W.
 
 This is the content of the falsification log entry F-002.
 

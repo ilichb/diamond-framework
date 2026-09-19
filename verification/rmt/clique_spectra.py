@@ -42,7 +42,11 @@ def generate_h1(n, d_bar, k_cliques, clique_size, rng, density_factor=10):
 
 
 def spectra(A):
-    """Devuelve lambda_2(W), lambda_2(A_sym), lambda_2(B)."""
+    """Return (lambda_2(W), lambda_2(A_sym), lambda_max(B)).
+    For W and A_sym, s[-1] is the Perron eigenvalue (trivial);
+    s[-2] is the leading non-trivial direction. For B, B·1 = 0
+    places the trivial eigenvalue at the center of the spectrum,
+    so s[-1] is the signal. See F-018."""
     d = A.sum(axis=1)
     d_safe = np.where(d > 0, d, 1.0)
 
@@ -60,9 +64,9 @@ def spectra(A):
     m = A.sum() / 2.0
     B = A - np.outer(d, d) / (2.0 * m)
     eigs_B = np.linalg.eigvalsh(B)
-    lam2_B = np.sort(eigs_B)[-2]
+    lam_max_B = np.sort(eigs_B)[-1]   # s[-1], not s[-2]
 
-    return lam2_W, lam2_Asym, lam2_B
+    return lam2_W, lam2_Asym, lam_max_B
 
 
 def main():
@@ -78,22 +82,22 @@ def main():
     A_h0 = generate_h0(N, D_BAR, rng)
     A_h1 = generate_h1(N, D_BAR, 1, 20, rng, density_factor=10)
 
-    lam2_W_h0, lam2_Asym_h0, lam2_B_h0 = spectra(A_h0)
-    lam2_W_h1, lam2_Asym_h1, lam2_B_h1 = spectra(A_h1)
+    lam2_W_h0, lam2_Asym_h0, lam_max_B_h0 = spectra(A_h0)
+    lam2_W_h1, lam2_Asym_h1, lam_max_B_h1 = spectra(A_h1)
 
     bulk_edge_W = 2 * np.sqrt(D_BAR)
     bulk_edge_Asym = 2 / np.sqrt(D_BAR)
     bulk_edge_B = 2 * np.sqrt(D_BAR)
 
-    print(f"{'Matrix':<12} {'lambda_2 (H0)':>15} {'lambda_2 (H1)':>15} "
-          f"{'bulk edge':>12} {'gap (H1)':>10}")
+    print(f"{'Matrix':<8} {'stat':>6} {'lambda (H0)':>14} {'lambda (H1)':>14} "
+          f"{'bulk edge':>11} {'gap (H1)':>10}")
     print("-" * 78)
-    print(f"{'W':<12} {lam2_W_h0:>15.4f} {lam2_W_h1:>15.4f} "
-          f"{bulk_edge_W:>12.4f} {lam2_W_h1 - bulk_edge_W:>10.4f}")
-    print(f"{'A_sym':<12} {lam2_Asym_h0:>15.4f} {lam2_Asym_h1:>15.4f} "
-          f"{bulk_edge_Asym:>12.4f} {lam2_Asym_h1 - bulk_edge_Asym:>10.4f}")
-    print(f"{'B':<12} {lam2_B_h0:>15.4f} {lam2_B_h1:>15.4f} "
-          f"{bulk_edge_B:>12.4f} {lam2_B_h1 - bulk_edge_B:>10.4f}")
+    print(f"{'W':<8} {'s[-2]':>6} {lam2_W_h0:>14.4f} {lam2_W_h1:>14.4f} "
+          f"{bulk_edge_W:>11.4f} {lam2_W_h1 - bulk_edge_W:>10.4f}")
+    print(f"{'A_sym':<8} {'s[-2]':>6} {lam2_Asym_h0:>14.4f} {lam2_Asym_h1:>14.4f} "
+          f"{bulk_edge_Asym:>11.4f} {lam2_Asym_h1 - bulk_edge_Asym:>10.4f}")
+    print(f"{'B':<8} {'s[-1]':>6} {lam_max_B_h0:>14.4f} {lam_max_B_h1:>14.4f} "
+          f"{bulk_edge_B:>11.4f} {lam_max_B_h1 - bulk_edge_B:>10.4f}")
     print()
 
     print("=" * 78)
@@ -104,8 +108,9 @@ def main():
     print(f"       H1 lambda_2 = {lam2_W_h1:.4f} vs H0 = {lam2_W_h0:.4f}")
     print(f"A_sym: gap H1 vs bulk edge = {lam2_Asym_h1 - bulk_edge_Asym:+.4f}")
     print(f"       H1 lambda_2 = {lam2_Asym_h1:.4f} vs H0 = {lam2_Asym_h0:.4f}")
-    print(f"B:     gap H1 vs bulk edge = {lam2_B_h1 - bulk_edge_B:+.4f}")
-    print(f"       H1 lambda_2 = {lam2_B_h1:.4f} vs H0 = {lam2_B_h0:.4f}")
+    print(f"B:     gap H1 vs bulk edge = {lam_max_B_h1 - bulk_edge_B:+.4f}")
+    print(f"       H1 lambda_max = {lam_max_B_h1:.4f} vs H0 = {lam_max_B_h0:.4f}")
+    print(f"       (B uses s[-1]; W and A_sym use s[-2]. See F-018.)")
     print()
 
 
