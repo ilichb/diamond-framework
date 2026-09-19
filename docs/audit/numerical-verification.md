@@ -276,6 +276,16 @@ claim that fails its test is corrected or removed, not quietly reworded.
   and 9.4 is pending. Whether the final statistic should be
   s[-1] or max(s[-1], s[-2]) is under evaluation; the current
   decision is s[-1].
+  The mechanism: B*1 = 0 places the trivial eigenvalue at the center
+  of the spectrum. With a single planted community, the only direction
+  with signal is s[-1], and s[-2] remains in the bulk. With k >= 2
+  communities, the partition indicator decomposes into multiple
+  directions and s[-2] also carries signal.
+  A standardized version max(z1, z2) was also evaluated: it never
+  loses power (0 wins, 8 ties, 0 losses) but the threshold rises
+  from z99(z1) = 2.5677 to z99(max_z) = 2.8603, absorbing most of
+  the benefit. The maximum gain is +0.035 in one configuration.
+  The plain s[-1] statistic is retained.
 
 ## Open items
 
