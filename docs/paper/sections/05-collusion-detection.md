@@ -34,6 +34,17 @@ is scaled by 1/√(d_i d_j). Because a clique raises the degree of its
 members, the normalization downweights the clique's internal edges
 relative to the background.
 
+Quantitatively, for a clique of size m = 20 with intra-clique
+density 10× the background:
+
+    degree of a clique node:      ≈ 27.2
+    degree of a background node:  ≈ 20.0
+    normalized intra-clique edge: 1/27.2 ≈ 0.037
+    normalized background edge:   1/20.0 ≈ 0.050
+
+The clique's edges are weaker after normalization than the
+background's. The density signal is cancelled by the degree increase.
+
 We verify this numerically
 [verification/rmt/clique_spectra.py]. For a single clique of size
 m = 20 with intra-clique density 10× the background, the three
