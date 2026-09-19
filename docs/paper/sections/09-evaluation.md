@@ -89,16 +89,16 @@ satisfies Feller. The mean first-passage time converges to the exact
 value as dt → 0, with a relative error of 0.22% at dt = 5×10⁻⁴. The
 conclusions do not depend on the discretization.
 
-**Collusion detection (Section 5).** The null quantile q99 = 8.8372
+**Collusion detection (Section 5).** The null quantile q99 = 9.0542
 is calibrated with N_H0 = 2000 replicates. The standard error of the
 q99 estimate is sqrt(p(1-p)/N) / f(q99), evaluated at the empirical
-z-score of q99 (2.476), giving 0.011 in λ₂(B) units, or 0.125% of
-its value. The 95% confidence interval is approximately [8.816, 8.859].
-The corresponding theoretical value, using the standard normal density
-at z = 2.326, is 0.087%. The transition from partial to full detection
-for k = 1 vs k = 3 cliques is 24.8% vs 100%, well outside the
-confidence intervals. The qualitative boundary does not depend on the
-calibration sample size.
+z-score of q99 (2.568), giving 0.017 in λ_max(B) units, or 0.186% of
+its value. The 95% confidence interval is approximately
+[9.021, 9.087]. The corresponding theoretical value, using the
+standard normal density at z = 2.326, is 0.103%. The lowest true
+positive rate across the five simulated configurations is 0.972
+(single clique of size 20), well above the α = 0.01 threshold. The
+qualitative boundary does not depend on the calibration sample size.
 
 **Data layer (Section 7).** The equilibrium n*(B) = ⌊B/B*⌋ is exact
 given the parameters. The attacker profit is −502 with slashing

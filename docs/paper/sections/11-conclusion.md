@@ -25,11 +25,11 @@ components, each verified numerically in this paper:
    are measured locally and match EIP-196 and EIP-197 exactly.
 
 4. **Collusion detection** (Section 5). The modularity matrix
-   B = W − ddᵀ/(2m) replaces the normalized adjacency matrix A_sym.
-   The empirical null quantile at α = 0.01 is 8.8372 with N_H0 = 2000
-   replicates. Detection is full for k ≥ 3 cliques of size 20 and
-   partial for k = 1. The boundary is characterized as a conjecture
-   consistent with Kesten-Stigum.
+   B = W − ddᵀ/(2m) replaces the normalized adjacency matrix A_sym,
+   and the right-tail statistic is s[-1] (F-018). The empirical null
+   quantile at α = 0.01 is 9.0542 with N_H0 = 2000 replicates.
+   Detection is at 0.972 or above across the simulated configurations;
+   the detection boundary is not located within the tested range.
 
 5. **Payment, data layer, and bootstrap** (Sections 6-8). The payment
    rule is a saturated uniform posted price, not a Myerson auction.

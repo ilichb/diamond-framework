@@ -46,37 +46,34 @@ adversaries that violate them.
 
 ## 10.3 Collusion Detection Boundary
 
-The modularity-spectrum test of Section 5 detects cliques above the
-Kesten-Stigum boundary and fails below it. The boundary is a property
-of the statistical problem, not of the test: below the boundary, the
-spectrum does not contain the information needed for detection.
+The modularity-spectrum test of Section 5 detects cliques and
+bipartite structures with high power in the simulated range. The
+smallest configuration tested (a single clique of size m=20) is
+detected at 0.972 with s[-1] as the right-tail statistic.
 
-For the reference configuration (n = 500, d̄ = 20), a single clique
-of size 20 with 10× density is below the boundary. The TPR at α = 0.01
-is 0.248 with a 95% confidence interval of [0.212, 0.288]. This is
-partial detection, not reliable detection. The protocol therefore
-cannot detect small-scale collusion from the collaboration graph
-alone.
+The detection boundary below which the test loses power was not
+located. Configurations smaller than m=20 were not simulated, and
+the theoretical Kesten–Stigum threshold for the degree-corrected
+SBM with the reference parameters (n = 500, d̄ = 20) is below the
+tested range. The location of the boundary is an open question.
 
-An adaptive adversary who knows the boundary can keep the clique below
-it. The attack of Section 5.6 (a coordinated clique) becomes an attack
-of many small cliques whose joint signal stays below the detection
-threshold. The test does not have power against this adversary. The
-protocol relies on economic deterrence rather than detection for the
-sub-boundary regime.
+An adaptive adversary who knows the current test may attempt to
+construct collusion below the (unlocated) boundary. The protocol
+relies on economic deterrence for this regime rather than on
+detection.
 
 ## 10.4 Collusion by Bipartite Polarization
 
-The collusion test of Section 5 monitors both tails of the modularity
-spectrum. The right tail detects clique-based collusion; the left tail
-detects bipartite polarization. The paper calibrates the left-tail
-threshold (q99 = 9.1371) but does not measure its detection power. No
-simulation of bipartite structures is reported.
+The left-tail test measures bipartite polarization via
+−λ_min(B) > 9.1371. The power of this test was measured
+[verification/rmt/bipartite_power.py]: true positive rates of
+0.990–1.000 across block configurations from balanced (250/250) to
+heavily unbalanced (50/450), with density ratios ρ_between ∈ {2, 5,
+10}.
 
-This is a gap. Bipartite polarization could be a genuine attack
-vector: two large blocs that interact internally but not across could
-fragment the network without producing a detectable clique. Whether
-the left-tail test has power against this attack is an open question.
+The left-tail test is therefore not a gap. Its power is comparable
+to the right-tail test. Both tails have been calibrated and
+measured.
 
 ## 10.5 Reputation Model Selection
 
@@ -120,7 +117,7 @@ graphs. These are standard null models but they do not capture all
 features of real collaboration graphs: community hierarchies,
 temporal correlations between interactions, and directionality.
 
-The empirical thresholds (q99 = 8.8372 for the right tail, 9.1371 for
+The empirical thresholds (q99 = 9.0542 for the right tail, 9.1371 for
 the left tail) are valid for the calibration distribution. Their
 validity on real collaboration graphs is an open question. If the
 real graphs have different spectral properties, the thresholds need

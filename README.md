@@ -148,7 +148,7 @@ corrections so far:
 | Original claim | Correction | Why it changed |
 |----------------|------------|----------------|
 | 4.7% of trajectories go negative | **40.58%** | The early simulation claim was fabricated: it was presented as the result of a simulation that was never run. With standard parameters the real figure is 40.58%. |
-| RMT collusion test on `A_sym` | **Modularity matrix** `B = W - dd^T/(2m)` | Normalized adjacency attenuates cliques: 24.8% vs 3.3% TPR for a single small clique. |
+| RMT collusion test on `A_sym` | **Modularity matrix** `B = W - dd^T/(2m)` | Normalized adjacency attenuates cliques: 97.2% vs 3.3% TPR for a single small clique. |
 | Tracy–Widom threshold | **Empirically calibrated quantiles** | The theoretical TW threshold is not applicable to sparse heavy-tailed collaboration graphs. |
 | Myerson projection via Frobenius norm | **Applied to capital cost only** | F-004 (projection); F-006: allocation is independent of ω, IC is tautological |
 

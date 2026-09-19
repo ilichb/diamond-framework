@@ -5,7 +5,7 @@ comparison between A_sym and B on the same clique configuration.
 
 Data:
   A_sym: 1 detection / 30 replicates  -> TPR = 0.033
-  B:     124 detections / 500 replicates -> TPR = 0.248
+  B (s[-1]): 486 detections / 500 replicates -> TPR = 0.972
 
 Verifies that the two intervals do not overlap, which is the
 statistical basis for the design decision to use B instead of
@@ -32,7 +32,7 @@ def main():
 
     configs = [
         ("A_sym", 1, 30),
-        ("B", 124, 500),
+        ("B (s[-1])", 486, 500),
     ]
 
     for name, k, n in configs:
@@ -45,14 +45,14 @@ def main():
         print()
 
     lo_a, hi_a = wilson_ci(1, 30)
-    lo_b, hi_b = wilson_ci(124, 500)
+    lo_b, hi_b = wilson_ci(486, 500)
 
     print("Comparison:")
     print(f"  A_sym CI upper bound: {hi_a:.4f}")
     print(f"  B CI lower bound:     {lo_b:.4f}")
     print(f"  Overlap: {'yes' if hi_a > lo_b else 'no'}")
     print()
-    print(f"  Point estimate ratio: {(124/500)/(1/30):.2f}x")
+    print(f"  Point estimate ratio: {(486/500)/(1/30):.2f}x")
     print()
     print("=" * 70)
     print("CONCLUSION")

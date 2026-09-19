@@ -32,9 +32,10 @@ claim that fails its test is corrected or removed, not quietly reworded.
 - **Test:** `verification/rmt/calibration_modularity.py`,
   `verification/rmt/clique_spectra.py`,
   `verification/rmt/archive/calibracion_rmt.py`
-- **Verdict:** **Refuted.** `A_sym` attenuates cliques. The modularity matrix
-  `B = W - dd^T/(2m)` detects them: for a single small clique the true positive rate is
-  **24.8% (modularity)** versus **3.3% (`A_sym`)**.
+- **Verdict:** **Refuted.** A_sym attenuates cliques. The modularity
+  matrix `B = W - dd^T/(2m)` detects them: for a single small clique
+  the true positive rate is **97.2% (modularity with s[-1])** versus
+  **3.3% (A_sym)**. Ratio 29.2×.
 - **Resolution:** The protocol's collusion test uses the modularity matrix.
 
 ### F-003 — Tracy–Widom threshold
@@ -189,9 +190,11 @@ claim that fails its test is corrected or removed, not quietly reworded.
 - **Test:** `verification/rmt/clique_spectra.py`
 - **Verdict:** **Refuted.** For n = 500, d̄ = 20, the theoretical
   edge is 2√20 = 8.9443. A planted clique (k=1, m=20, density 10x)
-  produces λ₂(B) = 8.8537, below the theoretical edge but above
-  the empirical q99 = 8.8372. The empirical threshold is the
-  operational one.
+  produces λ₂(B) = 8.8537 (s[-2], the statistic at the time), below
+  the theoretical edge but above the then-current empirical
+  q99 = 8.8372. The empirical threshold is the operational one.
+  The right-tail statistic is now s[-1] (see F-018), with
+  q99 = 9.0542.
 - **Resolution:** Section 5.4 uses the empirical threshold. The
   theoretical edge is reported for reference only.
 - **Sample:** `clique_spectra.py`, seed 42, n=500, d̄=20.

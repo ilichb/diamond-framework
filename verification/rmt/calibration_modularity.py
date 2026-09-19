@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 calibration_modularity.py — Calibración del test de colusión usando
-la matriz de modularidad B = W - dd^T/(2m).
+la matriz de modularidad B = W - dd^T/(2m) con el estadístico
+λ_max(B). Cambio documentado en F-018: s[-1] en vez de s[-2].
 
 Sin networkx. Generación directa con numpy. Replicas suficientes para
 intervalos de confianza estrechos a α=0.01.
@@ -51,9 +52,12 @@ def modularity_spectrum(A):
 
 
 def top_two(eigs):
-    """Segundo más grande (positivo) y más negativo."""
+    """Más grande (positivo) y más negativo.
+    Para B, s[-1] es la señal de estructura (B·1 = 0
+    coloca el autovalor trivial en el centro del espectro).
+    Ver F-018 para la justificación."""
     s = np.sort(eigs)
-    return s[-2], s[0]
+    return s[-1], s[0]
 
 
 def run():
@@ -74,11 +78,11 @@ def run():
     for i in range(N_REPLICATES_H0):
         A = generate_h0(N, D_MEAN, rng)
         eigs = modularity_spectrum(A)
-        lam2, lam_min = top_two(eigs)
-        h0_pos[i] = lam2
+        lam_max, lam_min = top_two(eigs)
+        h0_pos[i] = lam_max
         h0_neg[i] = -lam_min
 
-    print(f"   λ₂(B):    media={h0_pos.mean():.4f}, std={h0_pos.std():.4f}, "
+    print(f"   λ_max(B):  media={h0_pos.mean():.4f}, std={h0_pos.std():.4f}, "
           f"q99={np.quantile(h0_pos, 0.99):.4f}")
     print(f"   -λ_min(B): media={h0_neg.mean():.4f}, std={h0_neg.std():.4f}, "
           f"q99={np.quantile(h0_neg, 0.99):.4f}")
@@ -89,7 +93,7 @@ def run():
         t_pos = np.quantile(h0_pos, 1 - alpha)
         t_neg = np.quantile(h0_neg, 1 - alpha)
         thresholds[alpha] = (t_pos, t_neg)
-        print(f"   Umbral α={alpha}: λ₂(B) > {t_pos:.4f}  ó  -λ_min(B) > {t_neg:.4f}")
+        print(f"   Umbral α={alpha}: λ_max(B) > {t_pos:.4f}  ó  -λ_min(B) > {t_neg:.4f}")
     print()
 
     # H1: potencia por configuración
@@ -101,24 +105,26 @@ def run():
         ("k=3 m=40", 3, 40),
     ]
 
-    print("POTENCIA DEL TEST (cola derecha, λ₂(B))")
+    print("POTENCIA DEL TEST (cola derecha, λ_max(B))")
     print("-" * 78)
-    print(f"{'Config':<12} {'λ₂ medio':>10} {'TPR@0.01':>12} {'TPR@0.05':>12} "
+    print(f"{'Config':<12} {'λ_max medio':>12} {'TPR@0.01':>12} {'TPR@0.05':>12} "
           f"{'CI95 TPR@0.01':>18}")
     print("-" * 78)
 
+    tpr01s = []
     for name, k, m in configs:
         h1_pos = np.empty(N_REPLICATES_H1)
         for i in range(N_REPLICATES_H1):
             A = generate_h1(N, D_MEAN, k, m, rng)
             eigs = modularity_spectrum(A)
-            lam2, _ = top_two(eigs)
-            h1_pos[i] = lam2
+            lam_max, _ = top_two(eigs)
+            h1_pos[i] = lam_max
 
         t01 = thresholds[0.01][0]
         t05 = thresholds[0.05][0]
         tpr01 = (h1_pos > t01).mean()
         tpr05 = (h1_pos > t05).mean()
+        tpr01s.append(tpr01)
 
         # IC 95% por Wilson
         n = len(h1_pos)
@@ -129,14 +135,15 @@ def run():
         ci_lo = max(0.0, center - margin)
         ci_hi = min(1.0, center + margin)
 
-        print(f"{name:<12} {h1_pos.mean():>10.4f} {tpr01:>12.4f} {tpr05:>12.4f} "
+        print(f"{name:<12} {h1_pos.mean():>12.4f} {tpr01:>12.4f} {tpr05:>12.4f} "
               f"  [{ci_lo:.3f}, {ci_hi:.3f}]")
 
     print()
     print("=" * 78)
-    print("NOTA: la matriz de modularidad se comporta como se espera para")
-    print("cliques k≥3, m=20 (TPR ≈ 1). Para k=1, m=20 la detección es")
-    print("parcial y el CI es informativo.")
+    print("NOTA: estadístico λ_max(B) = s[-1]; el cambio desde s[-2] está")
+    print("documentado en F-018 (audit log).")
+    print(f"TPR@0.01 mínima entre las {len(tpr01s)} configuraciones: "
+          f"{min(tpr01s):.4f}")
     print("=" * 78)
 
 

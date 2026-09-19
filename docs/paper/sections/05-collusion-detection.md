@@ -59,12 +59,15 @@ The table shows that W separates the clique from the bulk (gap
 (gap −0.0156 against its bulk edge 0.4472). B responds to the clique
 more strongly than A_sym by a factor of 51 in the shift Δλ₂
 (+0.3168 vs +0.0062), but in this single realization it does not
-exceed the theoretical bulk edge (gap −0.0906). It does, however,
-exceed the empirically calibrated threshold of Section 5.4
-(8.8537 > 8.8372), which is the operational threshold.
+exceed the theoretical bulk edge (gap −0.0906).
+
+The values in this table are second eigenvalues s[-2]. The right-tail
+statistic adopted in Section 5.4 is s[-1] (falsification log entry
+F-018); for that statistic this configuration has mean λ_max = 9.7452,
+above the operational threshold q99 = 9.0542 (Section 5.5).
 
 The gap between the theoretical edge 2√d̄ = 8.9443 and the empirical
-threshold q99 = 8.8372 is a known feature of sparse graphs: the
+threshold q99 = 9.0542 is a known feature of sparse graphs: the
 asymptotic Wigner edge is not tight for n = 500 with d̄ = 20. The
 paper uses the empirical threshold.
 
@@ -92,28 +95,36 @@ not to the degree distribution.
 
 ## 5.4 Null Distribution and Calibration
 
-We calibrate the null distribution of λ₂(B) and λ_min(B) by Monte
+We calibrate the null distribution of λ_max(B) and λ_min(B) by Monte
 Carlo on Erdős–Rényi graphs with n = 500 and d̄ = 20
 [verification/rmt/calibration_modularity.py]. The calibration uses
 N_H0 = 2000 replicates with seed 42.
 
 | Statistic | Mean | Std | q99 |
 |-----------|------|-----|-----|
-| λ₂(B) (right tail, cliques) | 8.6082 | 0.0925 | 8.8372 |
+| λ_max(B) (right tail, cliques) | 8.7679 | 0.1115 | 9.0542 |
 | −λ_min(B) (left tail, bipartite) | 8.8601 | 0.1101 | 9.1371 |
 
 The empirical thresholds at significance level α are:
 
 | α | Reject H₀ if |
 |---|--------------|
-| 0.01 | λ₂(B) > 8.8372 or −λ_min(B) > 9.1371 |
-| 0.05 | λ₂(B) > 8.7614 or −λ_min(B) > 9.0428 |
+| 0.01 | λ_max(B) > 9.0542 or −λ_min(B) > 9.1371 |
+| 0.05 | λ_max(B) > 8.9663 or −λ_min(B) > 9.0428 |
 
 The dual-tail structure distinguishes clique-based collusion (right
 tail) from bipartite polarization (left tail). The right-tail
-threshold is calibrated at q99 = 8.8372, which is 2.47σ above the
+threshold is calibrated at q99 = 9.0542, which is 2.57σ above the
 null mean. The left-tail threshold is calibrated at 9.1371, which is
 2.52σ above its null mean.
+
+The statistic for the right tail is s[-1], the largest eigenvalue of
+B, not s[-2]. The change is documented in falsification log entry
+F-018: for a balanced two-block structure the signal is at s[-1] =
+17.5 while s[-2] = 8.5 sits inside the bulk. The "skip Perron"
+convention that motivates s[-2] in the adjacency matrix does not
+apply to the modularity matrix, where B·1 = 0 places the trivial
+eigenvalue at the center of the spectrum.
 
 ## 5.5 Detection Power
 
@@ -124,87 +135,74 @@ intra-clique density 10× the background
 N_H1 = 500 replicates per configuration with Wilson 95% confidence
 intervals.
 
-| Configuration | λ₂(B) mean | TPR @ α=0.01 | 95% CI |
-|---------------|------------|--------------|--------|
-| k=1, m=20 | 8.7643 | 0.248 | [0.212, 0.288] |
-| k=3, m=20 | 9.7564 | 1.000 | [0.992, 1.000] |
-| k=5, m=20 | 10.1206 | 1.000 | [0.992, 1.000] |
-| k=1, m=40 | 8.9579 | 0.828 | [0.792, 0.859] |
-| k=3, m=40 | 15.5205 | 1.000 | [0.992, 1.000] |
+| Configuration | λ_max(B) mean | TPR @ α=0.01 | 95% CI |
+|---------------|---------------|--------------|--------|
+| k=1, m=20 | 9.7452 | 0.972 | [0.954, 0.983] |
+| k=3, m=20 | 10.2714 | 1.000 | [0.992, 1.000] |
+| k=5, m=20 | 10.5294 | 1.000 | [0.992, 1.000] |
+| k=1, m=40 | 14.2441 | 1.000 | [0.992, 1.000] |
+| k=3, m=40 | 16.2281 | 1.000 | [0.992, 1.000] |
 
-Three patterns are visible.
+Detection is uniform across the five configurations. The lowest true
+positive rate is 0.972, for a single clique of size 20 with
+intra-clique density 10× the background. All other configurations
+are detected at 1.000.
 
-**The transition is abrupt.** A single clique of size 20 is detected
-at 24.8% (TPR at α = 0.01). Three cliques of the same size are
-detected at 100%. The difference between k=1 and k=3 is not a
-gradient; it is a phase transition consistent with the
-Kesten–Stigum threshold for the stochastic block model.
+The abrupt-transition pattern that appeared with s[-2] was an
+artifact of the wrong statistic. With s[-1], the smallest clique is
+detected at 97.2% and every other configuration at 100%. There is no
+intermediate regime in the simulated range.
 
-**Coordination matters more than size.** Three small cliques (60
-nodes total) are more detectable than one medium clique (40 nodes).
-The λ₂ mean for the former is 9.7564, for the latter 8.9579. The
-detection statistic scales with the number of planted structures
-faster than with their individual size.
-
-**Partial detection is genuine.** The confidence interval for k=1,
-m=20 is [0.212, 0.288], which excludes 0.5. This is not "almost
-detectable"; it is a regime where the test is better than chance
-but not reliable.
+The single-clique case at m=20 remains the tightest: 0.972 with a
+Wilson 95% confidence interval of [0.954, 0.983]. The interval is
+above 0.9, so the detection is reliable. Configurations below m=20
+were not simulated; the boundary at which detection degrades is
+below the tested range.
 
 **Comparison with A_sym.** The same test run on the normalized
 adjacency matrix A_sym, with the same clique configuration (k=1,
 m=20 on n = 500, d̄ = 20), gives a true positive rate of 0.033 at
 α = 0.01 [verification/rmt/archive/calibracion_rmt.py], measured
-over N_H1 = 30 replicates. The modularity matrix B gives 0.248 on
+over N_H1 = 30 replicates. The modularity matrix B gives 0.972 on
 the same configuration, measured over N_H1 = 500 replicates. The
-ratio is approximately 7.5×. This is the numerical basis for the
+ratio is approximately 29.2×. This is the numerical basis for the
 design decision to replace A_sym with B, documented as falsification
 log entry F-002.
 
 The two Wilson 95% confidence intervals do not overlap: A_sym is
-[0.006, 0.167] and B is [0.212, 0.288]
+[0.006, 0.167] and B is [0.954, 0.983]
 [verification/rmt/wilson_intervals.py]. The comparison is
 statistically significant at 95% despite the small sample size of
 the A_sym measurement (N = 30).
 
 ## 5.6 The Detection Boundary
 
-The detection power measured in Section 5.5 follows a clear pattern:
-the transition from partial to full detection is controlled by the
-combination of clique size, clique count, and background degree. We
-describe the pattern and state a conjecture, not a theorem.
+The detection power measured in Section 5.5 is uniform across the
+simulated range. All five configurations have true positive rates
+above 0.97. There is no observable transition from partial to full
+detection within the tested parameter range.
 
-**Empirical pattern.** The TPR at α = 0.01 for the five simulated
-configurations, together with the ratio k·m²/n, is:
-
-| Configuration | k·m²/n | TPR @ α=0.01 |
-|---------------|--------|--------------|
-| k=1, m=20 | 0.800 | 0.248 |
-| k=3, m=20 | 2.400 | 1.000 |
-| k=5, m=20 | 4.000 | 1.000 |
-| k=1, m=40 | 3.200 | 0.828 |
-| k=3, m=40 | 9.600 | 1.000 |
-
-The ratio k·m²/n orders the configurations approximately by
-detection power: partial below 1.0, near-full at 3.2 (k=1, m=40
-with TPR = 0.828), and full for k ≥ 3 (ratio ≥ 2.4). The ordering
-is not strict, as the k=1, m=40 case shows. This scaling appears
-in the archived analysis of the protocol
-[verification/rmt/archive/calibracion_rmt.py] and is consistent with
-the five measurements above.
+This is a consequence of using s[-1] as the statistic. With the
+previous statistic s[-2], the pattern appeared to be controlled by
+the ratio k·m²/n and a boundary around k·m²/n ≈ 1.5 was conjectured.
+That pattern was an artifact: with s[-1] the same configurations all
+sit above the (much lower) effective boundary.
 
 **[CONJECTURE]** The detection boundary for the modularity-spectrum
-test on the degree-corrected stochastic block model is controlled by
-the ratio k·m²/n, with a transition around k·m²/n ≈ 1.5. We do not
-prove this; we state it as a conjecture consistent with our five data
-points. A derivation from the Kesten–Stigum threshold or from the
-random matrix literature would be a separate contribution.
+test with s[-1] on the degree-corrected stochastic block model lies
+below the configurations tested here. We do not locate it precisely;
+the smallest configuration tested (a single clique of size m=20) is
+detected at 0.972, and configurations smaller than m=20 were not
+simulated. A derivation of the boundary from the Kesten–Stigum
+threshold or from the random matrix literature would be a separate
+contribution.
 
-Consequently, collusion below this boundary is not detectable from
-the collaboration graph alone with the modularity-spectrum test. It
-must be mitigated by other mechanisms: economic deterrence through
-slashing (Section 7) and reputational collateral destruction
-(Section 2).
+Consequently, collusion at the scale tested here is detectable from
+the collaboration graph alone. Collusion below the (unlocated)
+boundary would not be. The protocol relies on economic deterrence
+through slashing (Section 7) and reputational collateral destruction
+(Section 2) for the sub-boundary regime, which is not characterized
+in this paper.
 
 ## 5.7 Limitations
 
@@ -221,10 +219,11 @@ two measurements do not overlap, so the comparison is statistically
 significant, but the A_sym estimate carries wider uncertainty
 [verification/rmt/wilson_intervals.py].
 
-The left tail (−λ_min) is calibrated but its power is not measured.
-The H₀ distribution is characterized, but we do not simulate
-bipartite structures to measure the false-negative rate. This is
-declared as an open item.
+The left tail (−λ_min) is calibrated at q99 = 9.1371 and its power
+is measured against bipartite (disassortative) two-block structure:
+TPR 0.990–1.000 at α = 0.01 for density ratios ρ_between ∈ {2, 5,
+10} and all block sizes tested, from balanced (250/250) to heavily
+unbalanced (50/450) [verification/rmt/bipartite_power.py].
 
 An adversarial validator who knows the test can attempt to avoid
 detection by keeping the clique density below the Kesten–Stigum
@@ -240,13 +239,14 @@ consistent with the detection boundary theorem.
 | Claim | Status | Script |
 |-------|--------|--------|
 | A_sym masks cliques | Verified | `clique_spectra.py`, `sim_laplacian.py` |
-| Modularity B removes degree bias | Verified | `calibration_modularity.py` |
-| Null q99 = 8.8372 | Verified | `calibration_modularity.py` |
-| TPR k=1, m=20 = 0.248 | Verified | `calibration_modularity.py` |
+| Modularity B with s[-1] detects cliques | Verified | `calibration_modularity.py` |
+| Null q99 (right tail, s[-1]) = 9.0542 | Verified | `calibration_modularity.py` |
+| TPR k=1, m=20 = 0.972 | Verified | `calibration_modularity.py` |
 | TPR k=3, m=20 = 1.000 | Verified | `calibration_modularity.py` |
-| TPR k=1, m=40 = 0.828 | Verified | `calibration_modularity.py` |
-| Detection boundary (Kesten–Stigum) | Conjecture | — |
-| Left-tail power not measured | Limitation | — |
+| TPR k=1, m=40 = 1.000 | Verified | `calibration_modularity.py` |
+| A_sym vs B ratio = 29.2× | Verified | `wilson_intervals.py` |
+| Detection boundary below tested range | Conjecture | — |
+| Left-tail power measured | Verified | `bipartite_power.py` |
 
 The Section's quantitative content is limited to the calibration of
 the null distribution, the power measurements for the right tail,
