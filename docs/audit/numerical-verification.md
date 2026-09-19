@@ -254,6 +254,29 @@ claim that fails its test is corrected or removed, not quietly reworded.
   is 181,142 gas (measured). The linearity is verified exactly
   against EIP-197 for k ∈ {1, 2, 4}.
 
+### F-018 — Right-tail statistic uses s[-2] instead of s[-1]
+
+- **Claim as originally made:** the right-tail statistic for the
+  modularity matrix B is lambda_2(B) = s[-2], the second-largest
+  eigenvalue.
+- **Test:** `verification/rmt/recalibrate_top.py`
+- **Verdict:** **Refuted.** For a balanced two-block assortative
+  structure (250/250, intra-density 10x the cross-density), the
+  signal is at s[-1] = 17.5 while s[-2] = 8.5 sits inside the bulk.
+  The paper's statistic is blind to the most natural collusion
+  topology. The "skip Perron" convention is valid for the adjacency
+  matrix, where s[-1] is the trivial Perron eigenvalue d_max. For
+  the modularity matrix, B*1 = 0 places the trivial eigenvalue at
+  the middle of the spectrum, and s[-1] is the signal.
+- **Resolution:** **Right-tail statistic should be s[-1].**
+  s[-1] is clearly better in 4 of 8 configurations, tied in 3,
+  and loses by at most 0.05 in 1 (100/400 rho=10, both > 0.94).
+  The new null quantile at alpha=0.01 is q99(s[-1]) = 9.0542
+  (mean 8.7679, std 0.1115). Cascade update to Sections 5.4-5.7
+  and 9.4 is pending. Whether the final statistic should be
+  s[-1] or max(s[-1], s[-2]) is under evaluation; the current
+  decision is s[-1].
+
 ## Open items
 
 | Item | Owner component | Status |
