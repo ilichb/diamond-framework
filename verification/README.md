@@ -66,7 +66,8 @@ quantiles require N >= 100 / alpha for reliable estimation.
 
 The `*/archive/` subdirectories contain scripts that are
 preserved for historical reference but superseded by canonical
-versions:
+versions. Their outputs are stored under `*/results/archive/`,
+parallel to the canonical outputs in `*/results/`.
 - `bootstrap/archive/simulate_bootstrap.py` (superseded by
   `bootstrap/simulate_bootstrap_net_gain.py`)
 - `data-layer/archive/simulate_data_layer.py` and
