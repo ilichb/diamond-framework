@@ -275,10 +275,13 @@ claim that fails its test is corrected or removed, not quietly reworded.
   s[-1] is clearly better in 4 of 8 configurations, tied in 3,
   and loses by at most 0.05 in 1 (100/400 rho=10, both > 0.94).
   The new null quantile at alpha=0.01 is q99(s[-1]) = 9.0542
-  (mean 8.7679, std 0.1115). Cascade update to Sections 5.4-5.7
-  and 9.4 is pending. Whether the final statistic should be
-  s[-1] or max(s[-1], s[-2]) is under evaluation; the current
-  decision is s[-1].
+  (mean 8.7679, std 0.1115). The cascade update is complete:
+  Sections 5.2 and 5.4-5.8, 9.4, 10.3-10.4, 10.7 and 11 use s[-1]
+  (commit 5e31e82), and `calibration_modularity.py` returns s[-1]
+  with its output regenerated. The `max(s[-1], s[-2])` alternative
+  was evaluated and rejected: it is identically equal to s[-1], and
+  the standardized max(z1, z2) does not justify the additional
+  calibration. The decision is s[-1].
   The mechanism: B*1 = 0 places the trivial eigenvalue at the center
   of the spectrum. With a single planted community, the only direction
   with signal is s[-1], and s[-2] remains in the bulk. With k >= 2
