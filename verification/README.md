@@ -61,3 +61,18 @@ Total: ~10 min on a single core.
 All scripts use numpy.random.default_rng with declared seeds. Monte
 Carlo sample sizes are declared at the top of each file. Tail
 quantiles require N >= 100 / alpha for reliable estimation.
+
+## Archive
+
+The `*/archive/` subdirectories contain scripts that are
+preserved for historical reference but superseded by canonical
+versions:
+- `bootstrap/archive/simulate_bootstrap.py` (superseded by
+  `bootstrap/simulate_bootstrap_net_gain.py`)
+- `data-layer/archive/simulate_data_layer.py` and
+  `simulate_data_layer_v2.py` (superseded by
+  `data-layer/simulate_data_layer_v3.py`)
+- `rmt/archive/` (early RMT versions)
+
+The archived scripts are not part of the verification suite and
+their outputs are not reported in the paper.

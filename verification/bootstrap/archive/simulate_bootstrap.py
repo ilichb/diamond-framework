@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+[LEGACY — superseded by simulate_bootstrap_net_gain.py]
 simulate_bootstrap.py — Bootstrap del protocolo híbrido desde génesis (R=0).
 
 Pregunta: ¿se concentra la reputación en validadores tempranos, y cómo

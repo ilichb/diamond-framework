@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+[LEGACY — superseded by simulate_data_layer_v3.py]
 simulate_data_layer_v2.py
 
 Versión corregida del modelo de capa de datos con:

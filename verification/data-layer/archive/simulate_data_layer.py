@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+[LEGACY — superseded by simulate_data_layer_v3.py]
 simulate_data_layer.py
 
 Simula el equilibrio de incentivos del mecanismo de fraud proofs para la
