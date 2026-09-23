@@ -5,6 +5,8 @@ CLIQUE SPECTRA — W vs A_sym vs B
 n = 500, d_bar = 20
 Clique: k=1, m=20, density 10x background
 
+H0 degrees: min=10, max=33, mean=19.88, std=4.22
+
 Matrix     stat    lambda (H0)    lambda (H1)   bulk edge   gap (H1)
 ------------------------------------------------------------------------------
 W         s[-2]         8.6896        10.6439      8.9443     1.6996

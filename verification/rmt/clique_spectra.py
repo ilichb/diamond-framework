@@ -85,6 +85,12 @@ def main():
     lam2_W_h0, lam2_Asym_h0, lam_max_B_h0 = spectra(A_h0)
     lam2_W_h1, lam2_Asym_h1, lam_max_B_h1 = spectra(A_h1)
 
+    # Degree statistics of the null graph (cited in Section 5.2)
+    d_h0 = A_h0.sum(axis=1)
+    print(f"H0 degrees: min={d_h0.min():.0f}, max={d_h0.max():.0f}, "
+          f"mean={d_h0.mean():.2f}, std={d_h0.std():.2f}")
+    print()
+
     bulk_edge_W = 2 * np.sqrt(D_BAR)
     bulk_edge_Asym = 2 / np.sqrt(D_BAR)
     bulk_edge_B = 2 * np.sqrt(D_BAR)

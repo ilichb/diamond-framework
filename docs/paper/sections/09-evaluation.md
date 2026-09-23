@@ -21,7 +21,7 @@ and their expected runtimes.
 
 The project documents its own falsifications in
 `docs/audit/numerical-verification.md`. As of this writing the log
-contains 17 entries (F-001 through F-017), each one a claim that was
+contains 18 entries (F-001 through F-018), each one a claim that was
 made, tested, and corrected. The log exists because the numerical
 verification is the primary defense against errors of the kind that
 would otherwise propagate through the paper unchallenged.
@@ -93,7 +93,8 @@ conclusions do not depend on the discretization.
 is calibrated with N_H0 = 2000 replicates. The standard error of the
 q99 estimate is sqrt(p(1-p)/N) / f(q99), evaluated at the empirical
 z-score of q99 (2.568), giving 0.017 in λ_max(B) units, or 0.186% of
-its value. The 95% confidence interval is approximately
+its value [verification/rmt/q99_standard_error.py]. The 95%
+confidence interval is approximately
 [9.021, 9.087]. The corresponding theoretical value, using the
 standard normal density at z = 2.326, is 0.103%. The lowest true
 positive rate across the five simulated configurations is 0.972
@@ -136,7 +137,8 @@ measuring them are defined in the repository.
 | Claim | Status | Source |
 |-------|--------|--------|
 | Verification suite reproduces all claims | Verified | `verification/` |
-| 17 falsifications documented | Verified | `docs/audit/` |
+| q99 standard error = 0.0168 (0.186%) | Computed | `q99_standard_error.py` |
+| 18 falsifications documented | Verified | `docs/audit/` |
 | ecPairing k=4 = 181,142 gas | Measured | `GasBenchmarks.sol` |
 | Groth16 verification ≈ 206k gas | Measured + estimate | `GasBenchmarks.sol` |
 | Bulletproofs direct: ~6.5M gas | Estimated | `GasBenchmarks.sol` |

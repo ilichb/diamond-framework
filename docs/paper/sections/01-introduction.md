@@ -78,7 +78,7 @@ seeds and sample sizes. The suite covers stochastic simulation,
 spectral calibration, game-theoretic equilibrium, and EVM gas
 benchmarks. Claims without scripts are labeled as conjectures.
 
-**A falsification log.** During development, seventeen quantitative
+**A falsification log.** During development, eighteen quantitative
 claims were made, tested, and either confirmed or corrected. The
 corrections include a fabricated simulation figure, a mismeasurement
 of a gas cost, a factor of two in an integral, a rounding rule that

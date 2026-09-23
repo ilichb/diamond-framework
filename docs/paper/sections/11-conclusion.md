@@ -42,7 +42,7 @@ components, each verified numerically in this paper:
 Every quantitative claim in this paper is paired with a script that
 reproduces it. Claims without scripts are labeled as conjectures. The
 project maintains a public log of falsifications
-(`docs/audit/numerical-verification.md`): 17 falsifications, each one a
+(`docs/audit/numerical-verification.md`): 18 falsifications, each one a
 claim that was made during development, tested, and either confirmed
 or corrected.
 
@@ -118,7 +118,7 @@ entry.
 | Data layer | Verified | `data-layer/` |
 | Bootstrap | Verified | `bootstrap/` |
 | Reproducibility | Verified | `verification/README.md` |
-| Falsification log | 17 entries | `docs/audit/` |
+| Falsification log | 18 entries | `docs/audit/` |
 | External audit | Not performed | — |
 | Real-data calibration | Open | — |
 | Testnet benchmarks | Open | — |

@@ -31,6 +31,7 @@ claim in the Diamond Framework paper.
     python3 rmt/wilson_intervals.py
     python3 rmt/recalibrate_top.py
     python3 rmt/max_statistic.py
+    python3 rmt/q99_standard_error.py
     python3 tensor/tucker_analysis.py
     python3 data-layer/simulate_data_layer_v3.py
     python3 bootstrap/compare_reputation_models.py
@@ -45,6 +46,7 @@ Approximate runtimes on a 2020-era desktop:
 |--------|------|
 | recalibrate_top.py | ~10 min |
 | max_statistic.py | ~2 min |
+| q99_standard_error.py | < 1 s |
 | sim_positivity.py | ~34 s |
 | calibration_modularity.py | ~400 s |
 | dt_convergence.py | ~130 s |
