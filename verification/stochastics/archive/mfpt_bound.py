@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+[LEGACY — superseded by mfpt_bound_explicit.py]
 mfpt_bound.py — Bound analitico y MFPT empirico para el proceso CIR.
 
 Proposito: cuantificar la cota de whitewashing de la Seccion 2.3.

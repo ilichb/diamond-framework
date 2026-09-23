@@ -83,7 +83,7 @@ claim that fails its test is corrected or removed, not quietly reworded.
   first-passage time is superexponential and therefore vacuous.
 - **Test:** `verification/stochastics/mfpt_bound_explicit.py`,
   `verification/stochastics/dt_convergence.py`,
-  `verification/stochastics/mfpt_bound.py`
+  `verification/stochastics/archive/mfpt_bound.py`
 - **Verdict:** **Refuted.** The claim that the analytical bound
   is vacuous was based on a C*=1 normalization that is not
   universal. With the corrected MFPT (11.2203 for scenario 2.2,

@@ -16,7 +16,7 @@ script in `verification/`. The scripts are self-contained: they depend
 only on NumPy and SciPy, and they declare their seeds and sample sizes
 at the top of each file. Running `pip install -r verification/requirements.txt`
 followed by the commands listed in `verification/README.md` reproduces
-every number reported in the paper. The README lists the 17 scripts
+every number reported in the paper. The README lists the 22 scripts
 and their expected runtimes.
 
 The project documents its own falsifications in
