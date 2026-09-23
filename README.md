@@ -217,7 +217,7 @@ MIT — see [LICENSE](LICENSE).
 ```bibtex
 @misc{blanco2026diamond,
   title={Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation},
-  author={Blanco, Ilich and Andromeda Core Research Team},
+  author={Blanco, Ilich},
   year={2026},
   howpublished={\url{https://github.com/ilichb/diamond-framework}}
 }

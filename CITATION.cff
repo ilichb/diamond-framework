@@ -4,8 +4,6 @@ authors:
   - family-names: "Blanco"
     given-names: "Ilich"
     affiliation: "Andromeda Computer"
-  - name: "Andromeda Core Research Team"
-    affiliation: "Andromeda Computer"
 title: "Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation"
 version: 0.1.0
 date-released: 2026-09-14
