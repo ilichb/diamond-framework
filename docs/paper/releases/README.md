@@ -21,9 +21,10 @@ its bytes, once published, never change.
 
 ## Provenance of the current snapshot
 
-`diamond-framework-2026-10-03.pdf` is byte-identical to the reference
-PDF the paper was authored against (sha256 above). Its embedded
-metadata records:
+`diamond-framework-2026-10-03.pdf` entered the repository in `ea8564d`,
+the commit that adopted `main.tex` as the source of truth, and no later
+commit has modified it. The sha256 above is that blob, unchanged. Its
+embedded metadata records:
 
     CreationDate: Wed Sep 23 13:58:28 2026 -04   (ModDate matches)
     Producer:     pdfTeX-1.40.29
@@ -111,3 +112,5 @@ shipped in TeX Live as `cm-super`).
     cd docs/paper
     pdflatex -interaction=nonstopmode -halt-on-error main.tex   # run 3x
     pdfinfo main.pdf | grep Pages      # Pages: 31
+    sha256sum releases/diamond-framework-2026-10-03.pdf       # hash in Files
+    git hash-object releases/diamond-framework-2026-10-03.pdf # blob in HEAD
