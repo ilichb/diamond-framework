@@ -153,5 +153,5 @@ Two benchmarks require a live deployment and are not reported:
   without a testnet deployment.
 
 The protocol for measuring these is defined in the repository. The
-results will be added to `docs/paper/sections/09-evaluation.md` when
-available.
+results will be added to the Evaluation section of
+`docs/paper/main.tex` when available.
