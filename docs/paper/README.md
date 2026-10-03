@@ -1,69 +1,56 @@
-# Compiling the Paper
+# The Paper
 
-The paper is written in Markdown, one file per section, in `sections/`.
-To compile the full paper to PDF:
+`main.tex` is the source of truth for the paper: a single LaTeX
+document (`article`, A4, 11pt) containing the title block, the
+abstract, a table of contents, eleven sections, and the sixteen-item
+reference list.
+
+The earlier Markdown sections are kept in `_deprecated-md/` for
+reference only. They are no longer maintained, and they never contained
+the abstract or the reference list, so they cannot reproduce the PDF.
 
 ## Prerequisites
 
-    pandoc >= 2.9
-    pdflatex (from TeX Live or MacTeX)
+    pdflatex (from TeX Live or MacTeX) with:
+    texlive-latex-base texlive-latex-recommended texlive-latex-extra
 
 On Debian/Ubuntu:
 
-    sudo apt install pandoc texlive-latex-base texlive-latex-recommended
+    sudo apt install texlive-latex-base texlive-latex-recommended texlive-latex-extra
+
+`pdflatex` must find scalable Type 1 fonts: `microtype` enables font
+expansion by default, and expansion aborts when only bitmap fonts are
+available. `main.tex` loads `lmodern` (Latin Modern) to provide them.
+Do not remove that line. See `docs/audit/compile-logs/` for the exact
+failure that occurs without it.
 
 ## Build
 
     cd docs/paper
-    pandoc sections/01-introduction.md \
-           sections/02-reputation-dynamics.md \
-           sections/03-tensor-compression.md \
-           sections/04-zk-soundness.md \
-           sections/05-collusion-detection.md \
-           sections/06-payment-rule.md \
-           sections/07-data-layer.md \
-           sections/08-bootstrap.md \
-           sections/09-evaluation.md \
-           sections/10-limitations.md \
-           sections/11-conclusion.md \
-           -o diamond-framework.pdf \
-           --pdf-engine=pdflatex \
-           --toc \
-           --number-sections
+    pdflatex -interaction=nonstopmode -halt-on-error main.tex
+    pdflatex -interaction=nonstopmode -halt-on-error main.tex
 
-The output is `diamond-framework.pdf` in this directory.
-
-## Alternative: single concatenated Markdown
-
-    cat sections/*.md > diamond-framework.md
-
-The concatenated file preserves section numbering because each file
-starts with its own `# N. Title` heading.
+Two passes are required so that the table of contents and the internal
+cross-references resolve. The output is `main.pdf` in this directory.
+The auxiliary files (`main.aux`, `main.log`, `main.out`, `main.toc`)
+are ignored by git.
 
 ## Status
 
-The PDF is not yet compiled in the repository. The sections are
-complete and can be compiled locally with the command above.
+`main.tex` compiles with the preamble as committed and produces a
+31-page PDF. Release snapshots are archived under `releases/`; the
+current revision is `releases/diamond-framework-2026-10-03.pdf`. Only
+PDFs under `releases/` are tracked by git.
 
-## Troubleshooting Unicode
+## Troubleshooting
 
-The paper uses Unicode symbols (subscripts, superscripts, combining
-marks, mathematical operators) that pdflatex with inputenc may not
-support. If compilation fails with "Unicode character not set up for
-use with LaTeX", two solutions are available:
+If compilation stops with
 
-### Option A: Use xelatex
+    ! pdfTeX error (font expansion): auto expansion is only possible with scalable fonts.
 
-    sudo apt install texlive-xetex
-    pandoc sections/*.md -o diamond-framework.pdf \
-      --pdf-engine=xelatex --toc --number-sections
+then `microtype` is performing font expansion without scalable fonts.
+Restore `\usepackage{lmodern}` after `\usepackage[T1]{fontenc}`, or
+install `cm-super` (`sudo apt install cm-super`), or disable expansion:
 
-### Option B: Add a header file mapping the problematic characters
+    \usepackage[protrusion=true,expansion=false]{microtype}
 
-Create header.tex with newunicodechar mappings, and pass:
-
-    pandoc sections/*.md -o diamond-framework.pdf \
-      --pdf-engine=pdflatex --toc --number-sections \
-      -H header.tex
-
-Both options are documented but not verified in this repository.

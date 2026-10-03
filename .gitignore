@@ -46,3 +46,7 @@ verification/**/results/*.pkl
 # Large binaries
 *.zip
 *.tar.gz
+
+# PDFs — only track release snapshots
+*.pdf
+!docs/paper/releases/*.pdf
