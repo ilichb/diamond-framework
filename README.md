@@ -186,9 +186,16 @@ has **not** been audited.
 
 ## Paper
 
-The theoretical paper sections are in [`docs/paper/`](docs/paper). Sections marked
-`[VERIFIED]` have numerical backing in `verification/`; sections marked `[PENDING]` have open
-items; claims without numerical backing are marked `[CONJECTURE]`.
+The paper source is [`docs/paper/main.tex`](docs/paper/main.tex) (LaTeX). Ten of the eleven
+sections close with a "Summary of the Section" table — every one but the Introduction. Its
+second column, headed `Status` everywhere except in the Limitations table, which calls it
+`Category`, records the nature of each claim rather than a pass/fail: `Verified`,
+`Measured` (once `Measured + estimate`), `Estimated` (once `Estimate`), `Arithmetic`,
+`Analytical`, `Logical`, `Design`, `Selection`, `Method`, `Deferred`, `Conjecture`. The
+Conclusion's table also uses that column for repository-level items: `Open`,
+`Not performed`, `18 entries`. The third column names the backing script, source path
+or section — `---` when there is none. Claims that resist measurement are marked
+`[CONJECTURE]` in the prose.
 
 ---
 
