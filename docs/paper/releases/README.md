@@ -49,7 +49,7 @@ reasons:
   12 from the classic Type 1 Computer Modern set (`CMR6`–`CMR10`,
   `CMBX10`, `CMMI7`–`CMMI10`, `CMSY7`–`CMSY10`, `CMEX10`), and
   `MSBM10` from the AMS fonts. This machine has no `cm-super`, so the
-  same source relies on Latin Modern instead and embeds 26 subsets: 25
+  rebuild loads Latin Modern instead and embeds 26 subsets: 25
   `LMRoman*`/`LMMono*`/`LMMath*` plus the shared `MSBM10`.
 
 Latin Modern is what provides scalable T1 Type 1 fonts in this
@@ -64,9 +64,11 @@ hash. The text comparison has the caveats below.
 ## Divergence from the snapshot
 
 `main.tex` is not a word-for-word rendering of the snapshot: exactly one
-source line differs, and deliberately so. The Reproducibility remark
+line of text differs, and deliberately so. The Reproducibility remark
 listed the paper source as `docs/paper/sections/`, a directory that no
-longer exists; it now reads `docs/paper/main.tex`.
+longer exists; it now reads `docs/paper/main.tex`. Beyond that the source
+differs by the `\usepackage{lmodern}` line noted above, which changes no
+words — only the line breaks that move §5.4 to the next page.
 
 Comparing the two PDFs with `pdftotext` overstates this. `diff` on the
 plain-text extractions reports 466 differing lines, and a word-level
