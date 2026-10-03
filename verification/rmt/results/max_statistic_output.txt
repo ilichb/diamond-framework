@@ -36,8 +36,10 @@ VERDICT
   Configs where max == best(s1,s2) within 0.05: 7
   Configs where max < best(s1,s2) by > 0.05: 0
 
-  max vs s[-1]: better in 0, worse in 0
-
-  RECOMMENDATION: use max(s[-1], s[-2]).
+  Note: max(s[-1], s[-2]) is identically equal to s[-1] because
+  s[-1] >= s[-2] by construction. The max statistic adds no
+  information and requires no separate calibration. The
+  recommendation is s[-1] with q99 = 9.0542, as already
+  documented in F-018.
 
 ==========================================================================================
