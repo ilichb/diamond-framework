@@ -26,7 +26,8 @@ that cannot be verified are marked with the local worksheet status
 
 - **Confirmed** — reproduced locally with a script, discrepancy is real.
 - **Partially confirmed** — some components reproduced, others not; or
-  one component confirmed and another refuted.
+  one component confirmed and another refuted; or the qualitative claim
+  holds but the precise figure has not been reproduced.
 - **Refuted** — reproduced locally, discrepancy is not real.
 - **Conceptual** — the structural issue is clear from reading the
   paper, but no numerical verification has been attempted yet.
@@ -183,8 +184,8 @@ validators.
 **Evidence:** inspection of §6.6 and the script; verifiable by
 arithmetic.
 
-**Next step:** re-derive the optimal fee accounting for exclusion, or
-clarify that the revenue column is gross (before exclusion).
+**Next step:** clarify in §6.6 that the revenue column is gross (before
+exclusion), or recompute the net column.
 
 ### C-09 — Bootstrap standard deviation does not match
 
