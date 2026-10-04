@@ -25,8 +25,9 @@ that cannot be verified are marked with the local worksheet status
 ## Status legend
 
 - **Confirmed** — reproduced locally with a script, discrepancy is real.
-- **Partially confirmed** — the qualitative claim holds, the precise
-  figure has not been reproduced.
+- **Partially confirmed** — some components reproduced, others not; or
+  one component confirmed and another refuted.
+- **Refuted** — reproduced locally, discrepancy is not real.
 - **Conceptual** — the structural issue is clear from reading the
   paper, but no numerical verification has been attempted yet.
 - **Unverified** — raised as a suspicion, no reproduction attempted.
@@ -164,20 +165,23 @@ and account for the 52.
 ### C-08 — Revenue column in §6.6 does not discount excluded validators
 
 **Location:** §6.6, table of `F_0` vs revenue.
-**Status:** Confirmed by the agent.
+**Status:** Partially confirmed.
 **Severity:** Minor.
 
-**Evidence:** inspection of the paper's §6.6 table. Verifiable by
-arithmetic; no script needed.
+Two distinct claims were bundled originally:
 
-At `F_0 = 0.06`, 0.2% of validators violate IR. The revenue column
-shows 60.00 but should be 59.88 if the excluded validators are removed
-from the base. Section 6.6 acknowledges that revenue rises above `F_0*`
-"at the cost of excluding the worst-case types"; the paper's "optimal"
-refers to IR-preservation for all types, not revenue maximization, so
-there is no discrepancy in the paper. The finding is a potential source
-of confusion for a reader who assumes "optimal" means
-revenue-maximizing.
+**(a) Refuted.** §6.6 does not contradict the paper's "optimal" `F_0*`:
+the text defines "optimal" as the largest value preserving IR for all
+types (`main.tex:772`), not as revenue-maximizing.
+
+**(b) Confirmed.** The revenue column reports gross revenue. At
+`F_0 = 0.06`, 0.2% of validators violate IR; the table shows 60.00 but
+the net revenue after excluding those validators would be 59.88. The
+script computes `f0 * N_VALIDATORS` without subtracting the excluded
+validators.
+
+**Evidence:** inspection of §6.6 and the script; verifiable by
+arithmetic.
 
 **Next step:** re-derive the optimal fee accounting for exclusion, or
 clarify that the revenue column is gross (before exclusion).
@@ -227,7 +231,8 @@ Chung–Lu with power-law weights) and report the null quantile shift.
 6. **C-05** — moderate, rewrite §5.2 with the correct mechanism.
 7. **C-06** — minor, reproduce and rephrase.
 8. **C-07** — minor, read the script and account for the discrepancy.
-9. **C-08** — minor, re-derive the fee or clarify the column.
+9. **C-08** — minor, clarify in §6.6 that the revenue column is gross
+   (before exclusion), or recompute the net column.
 10. **C-10** — minor, add a calibration.
 
 Order is by severity and dependency, not by ease. C-01 and C-02 come
@@ -240,4 +245,5 @@ This file is the entry point for the content audit. The next session
 should begin by reading it, then opening one finding at a time under
 the rules of `CONTRIBUTING.md`. No finding is closed until its script
 runs locally and its output is committed to `verification/` or
-`docs/audit/`.
+`docs/audit/`, or its arithmetic is recorded above and the evidence is
+committed.
