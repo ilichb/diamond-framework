@@ -304,6 +304,26 @@ reproducible by inspection.
 **Next step:** add a forward reference from §6.2 to §4.3-4.4 (or vice
 versa), making the dependency explicit.
 
+### C-13 — `C_R` has three incompatible forms, none of them the EDO of §2.5
+
+**Location:** §2.5 (`C_R(r)`, scalar EDO); §6.1, §6.3, §6.5 (`C_R(T)`, tensor, `main.tex:733`, `:754`, `:798`); §8.1, §8.3 (`C_R(0)`, `C_R(R(t))`, scalar, `main.tex:964`, `:1011`); `verification/` (`c_r(norm_T)`, `c_r(R)`).
+
+**Status:** Confirmed (textual + executable evidence).
+**Severity:** Structural.
+
+§2.5 defines `C_R(r)` as the viscosity solution of an integro-differential equation in a scalar `r`, with `C_R(0) = 0` (`main.tex:274-281`). §6.1 and §6.3 write `C_R(T)`, a function of the reputation tensor. §8.1 and §8.3 write `C_R(0)` and `C_R(R(t))`, scalar arguments, even though the preceding sentence names the tensor `T`. The executable scripts use a third object: `c_r(norm_T)` in `mechanism/fee_specification.py:41` and `zk/threshold_quantization.py:56`, or `c_r(R)` in four bootstrap scripts. All implement `0.8·x/(1+x)`, but `x` is `‖T‖_F`, `R`, or the tensor norm sampled in `[0,3]` depending on the script.
+
+Three forms, no declared map `T → r`. The paper never states that `C_R` depends on `T` only through `‖T‖_F`.
+
+**Evidence:** three separate verifications.
+(i) `grep -nF 'C_R' docs/paper/main.tex` shows the scalar EDO at `:274-281`, the tensor form at `:733`, `:754`, `:798`, and the scalar `C_R(0)` / `C_R(R(t))` at `:964`, `:1011`.
+(ii) `grep -rnE '\bc_r\b' verification/ --include='*.py'` shows the executable forms at `mechanism/fee_specification.py:41`, `zk/threshold_quantization.py:56`, and four bootstrap scripts (all `0.8·x/(1+x)` with `x = norm_T` or `x = R`).
+(iii) The §2.5 EDO has **zero implementation** in the repository: the search over `.py`, `.pyx`, `.jl`, `.m`, `.nb`, `.sol`, `.rs`, `.ts`, `.go`, `.c`, `.cpp`, `.h` returns only one textual match, in a comment inside `zk/threshold_quantization.py:183`. The literal `eq:integro` appears only at its own definition (`main.tex:278`); the deprecated `_deprecated-md/02-reputation-dynamics.md` reproduces the EDO text (`:174`, `:180`) without citing the label.
+
+**Adjacent:** `verification/mechanism/frobenius_counterexample.py` (tracked in `6587cda`) constructs two tensors with identical Frobenius norm but different risk and tests the log-aggregator `C_R(T) = Σ w_cdh · log(1+T_cdh)`, which the paper never adopts.
+
+**Next step:** state which `C_R` the protocol uses — the scalar EDO of §2.5, a declared function of `‖T‖_F`, or a tensor-wise aggregator — and declare the map from `T` to the argument of `C_R`.
+
 ## Proposed order of attack
 
 1. **C-01** — structural, blocks the payment rule. **Confirmed**; the
@@ -324,6 +344,9 @@ versa), making the dependency explicit.
 12. **C-12** — structural (registered late; depends on nothing),
     declares §6.2's binding assumption without citing the §4.3-4.4
     repair it depends on.
+13. **C-13** — structural, three incompatible forms of `C_R` (the
+    scalar EDO of §2.5, the tensor `C_R(T)` of §6, the executable
+    `c_r()` of `verification/`) with no declared map `T → r`.
 
 Order is by severity and dependency, not by ease. C-01 and C-02 come
 first because they determine whether §6 and §7 are implementable as
