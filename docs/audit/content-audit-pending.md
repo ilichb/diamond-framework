@@ -79,10 +79,10 @@ jumps. §2.1 defines the reputation process as CIR **with multiplicative
 downward jumps**. The whitewashing bound therefore does not apply to
 the process as defined.
 
-**Evidence:** the agent's independent reproduction using only drift and
-diffusion reproduces the reported MFPT values; adding the Lévy
-component is not attempted in the paper. No committed script under
-`verification/` yet.
+**Evidence:** `verification/stochastics/mfpt_bound_explicit.py`
+implements the drift+diffusion formula and reproduces the reported
+values (11.2203, 443.7374). The paper does not compute an MFPT for the
+jump-diffusion; no such script exists under `verification/`.
 
 **Next step:** compute the MFPT for the jump-diffusion, or re-scope the
 claim to the no-jump sub-process.
@@ -133,12 +133,15 @@ the conclusion (Asym is unsuitable) unchanged.
 **Severity:** Minor.
 
 The censoring test yields 635.7; the exact MFPT is 443.7. The paper
-claims only "the two methods agree on the qualitative structure"; the
-43% numerical gap is not discussed. Not recalculated by the agent.
+reports both figures and characterizes the relationship as agreement
+"on the qualitative structure" (finite, grows with R_0, dominated by
+alpha/sigma_0^2). It does not discuss the 43% numerical gap. Not
+recalculated by the agent.
 
-**Next step:** reproduce the censoring test locally, verify the 635.7
-figure, and decide whether "agreement" is defensible or requires
-rephrasing.
+**Next step:** reproduce the censoring test locally; verify the 635.7
+figure. Once verified, determine whether the paper's "qualitative
+structure" characterization is sufficient or whether the 43% gap
+warrants explicit discussion.
 
 ### C-07 — −502 not reproducible from declared parameters
 
@@ -169,10 +172,12 @@ arithmetic; no script needed.
 
 At `F_0 = 0.06`, 0.2% of validators violate IR. The revenue column
 shows 60.00 but should be 59.88 if the excluded validators are removed
-from the base. Section 6.6 also acknowledges that revenue rises above
-`F_0*` "at the cost of excluding the worst-case types", so there is no
-contradiction; the ambiguity is the bare word "optimal" appearing next
-to a revenue column that keeps rising.
+from the base. Section 6.6 acknowledges that revenue rises above `F_0*`
+"at the cost of excluding the worst-case types"; the paper's "optimal"
+refers to IR-preservation for all types, not revenue maximization, so
+there is no discrepancy in the paper. The finding is a potential source
+of confusion for a reader who assumes "optimal" means
+revenue-maximizing.
 
 **Next step:** re-derive the optimal fee accounting for exclusion, or
 clarify that the revenue column is gross (before exclusion).
