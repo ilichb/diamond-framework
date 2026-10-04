@@ -74,9 +74,6 @@ identify which protocol component must own the commitment.
 **Status:** Confirmed by the agent.
 **Severity:** Moderate.
 
-**Evidence:** reproduced by the agent in this session (drift + diffusion
-only; matches the reported MFPT). No committed script yet.
-
 The mean first-passage time is computed for the CIR diffusion without
 jumps. §2.1 defines the reputation process as CIR **with multiplicative
 downward jumps**. The whitewashing bound therefore does not apply to
@@ -84,7 +81,8 @@ the process as defined.
 
 **Evidence:** the agent's independent reproduction using only drift and
 diffusion reproduces the reported MFPT values; adding the Lévy
-component is not attempted in the paper.
+component is not attempted in the paper. No committed script under
+`verification/` yet.
 
 **Next step:** compute the MFPT for the jump-diffusion, or re-scope the
 claim to the no-jump sub-process.
