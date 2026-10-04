@@ -18,8 +18,9 @@ Every finding below is processed as:
 4. **Propose** the correction only after the outcome is recorded.
 
 No finding is corrected in `main.tex` before it is verified. Findings
-that cannot be verified are marked `[UNVERIFIED]` and left as open
-questions, per `CONTRIBUTING.md`.
+that cannot be verified are marked with the local worksheet status
+`Unverified` (the paper's own marker for unverifiable claims is
+`[CONJECTURE]`, per `CONTRIBUTING.md`).
 
 ## Status legend
 
@@ -73,6 +74,9 @@ identify which protocol component must own the commitment.
 **Status:** Confirmed by the agent.
 **Severity:** Moderate.
 
+**Evidence:** reproduced by the agent in this session (drift + diffusion
+only; matches the reported MFPT). No committed script yet.
+
 The mean first-passage time is computed for the CIR diffusion without
 jumps. §2.1 defines the reputation process as CIR **with multiplicative
 downward jumps**. The whitewashing bound therefore does not apply to
@@ -87,7 +91,7 @@ claim to the no-jump sub-process.
 
 ### C-04 — Section 2 is never used downstream
 
-**Location:** §2 (CIR), §6.3 (`T` scalar in `[0,3]`), §8 (`net_gain` in `[0,1)`).
+**Location:** §2 (CIR), §6.5 (`T` scalar in `[0,3]`), §8 (`net_gain` in `[0,1)`).
 **Status:** Confirmed.
 **Severity:** Structural.
 
@@ -115,8 +119,11 @@ that clique edges are 10× more probable. Expected weight per pair is
 normalization. Asym fails by a bulk-edge scale effect, not by
 cancellation.
 
-**Evidence:** the agent's numerical reproduction; the paper's own
-spectral table shows Asym's failure but not the mechanism.
+**Evidence (artifact pending):** the agent's independent reproduction
+reported in this session; no committed script under `verification/rmt/`
+backs the ≈7× counter-accounting. A script `verification/rmt/asym_weights.py`
+must be added before §5.2 is rewritten. The paper's own spectral table
+(committed) confirms Asym's failure but not the mechanism.
 
 **Next step:** rewrite §5.2 to describe the correct mechanism, keeping
 the conclusion (Asym is unsuitable) unchanged.
@@ -127,8 +134,9 @@ the conclusion (Asym is unsuitable) unchanged.
 **Status:** Partially confirmed.
 **Severity:** Minor.
 
-The censoring test yields 635.7; the exact MFPT is 443.7. The ratio is
-43%, called "agreement" in the text. Not recalculated by the agent.
+The censoring test yields 635.7; the exact MFPT is 443.7. The paper
+claims only "the two methods agree on the qualitative structure"; the
+43% numerical gap is not discussed. Not recalculated by the agent.
 
 **Next step:** reproduce the censoring test locally, verify the 635.7
 figure, and decide whether "agreement" is defensible or requires
@@ -139,6 +147,11 @@ rephrasing.
 **Location:** §7.4, attacker profit column.
 **Status:** Confirmed by the agent.
 **Severity:** Minor.
+
+**Evidence:** `-502` appears verbatim in
+`verification/data-layer/results/simulate_data_layer_v3_output.txt`.
+The paper's declared parameters give `-450`. The 52-unit gap requires
+reading the script; artifact exists, derivation does not.
 
 With the declared parameters, `50 · (1 − 10) = −450`, not −502. The
 discrepancy (52) is unexplained by the text. Possibly a term not
@@ -153,10 +166,15 @@ and account for the 52.
 **Status:** Confirmed by the agent.
 **Severity:** Minor.
 
+**Evidence:** inspection of the paper's §6.6 table. Verifiable by
+arithmetic; no script needed.
+
 At `F_0 = 0.06`, 0.2% of validators violate IR. The revenue column
 shows 60.00 but should be 59.88 if the excluded validators are removed
-from the base. Moreover, the table shows revenue increasing with `F_0`
-above `F_0*`, which contradicts the claim that `F_0*` is optimal.
+from the base. Section 6.6 also acknowledges that revenue rises above
+`F_0*` "at the cost of excluding the worst-case types", so there is no
+contradiction; the ambiguity is the bare word "optimal" appearing next
+to a revenue column that keeps rising.
 
 **Next step:** re-derive the optimal fee accounting for exclusion, or
 clarify that the revenue column is gross (before exclusion).
