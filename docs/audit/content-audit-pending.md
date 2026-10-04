@@ -53,11 +53,12 @@ table, `T ~ U[0,3]`, `C_R(x) = 0.8x/(1+x)` from `fee_specification.py`).
 The bit accepts `||T|| in [0.5, 3]`, over which `C_R` spans
 `[0.266667, 0.600000]` and `S_f*` spans `[0.400000, 0.733333]`. The
 protocol must therefore either over-collateralize the top of the band by
-83.3%, or charge the mid value and violate `CoA` for the bottom of the
-band by 0.333333 (33.3% of `Theta`). With `k` stepped thresholds the
-error falls as `0.333333/k` (optimal placement uniform in `C_R`), at one
-extra range proof per threshold; on-chain gas stays constant (~250k)
-under recursion, so the marginal cost is off-chain.
+83.3%, or charge the minimum-margin policy (`S_f* = 0.4`, the top of the
+`||T||` band) and violate `CoA` for the bottom of the band by 0.333333
+(33.3% of `Theta`). With `k` stepped thresholds the error falls as
+`0.333333/k` (optimal placement uniform in `C_R`), at one extra range
+proof per threshold; on-chain gas stays constant (~250k) under recursion,
+so the marginal cost is off-chain.
 
 **Adjacent discoveries (block the numerical resolution):** `Theta_r` has
 no numeric value anywhere in the repo; `VaR_tech` appears once, in
@@ -66,19 +67,25 @@ no numeric value anywhere in the repo; `VaR_tech` appears once, in
 function in a scalar `r`, the tensor-valued `C_R(T)` of §6.3, and
 `0.8x/(1+x)` in `fee_specification.py`), which overlaps C-04.
 
-**Resolution identified, not yet applied:** the paper already adopts
-Option B, a commitment to the raw tensor (`main.tex:512`). Under Option B
-`C_R(T)` is computed from the opened tensor, so the §4.1 threshold is a
-relic of the unsound design and should be reframed as a coarse prefilter
-rather than the source of the value consumed by §6.3.
+**Resolution (two layers):** §4.3 defines and §4.4 adopts Option B
+(Pedersen + Bulletproofs, zero R1CS constraints), which restores binding
+and thereby rescues the misreporting argument of §6.2 (`main.tex:746`)
+that §4.2 had refuted for the original design (`main.tex:450`). This
+closes the soundness layer. It does not close the allocability layer:
+Option B never opens the tensor (`main.tex:423` forbids it), and
+`C_R = 0.8x/(1+x)` is nonlinear while Bulletproofs is native to
+linear/inner-product and range statements. How `C_R(T)` reaches the chain
+is unspecified.
 
 **Open question:** single threshold (accept the 83.3% over-collateralization),
-stepped proof with `k` thresholds (cost grows off-chain), or
-commitment-opening variant (already adopted in §4.4 for soundness)?
-Each choice has different cost implications.
+stepped proof with `k` thresholds (cost grows off-chain), or a new
+commitment scheme, or a linear `C_R` expressible over the commitment
+(design proposal, not a consequence of the text)? Each choice has
+different cost implications.
 
-**Next step:** choose one design in §4 and state the `C_R` functional
-form, `Theta_r`, and `VaR_tech` in §6 so that `k` becomes derivable.
+**Next step:** state the `C_R` functional form, `Theta_r` and `VaR_tech`
+in §6 (the soundness design is already decided in §4.4), or label the gap
+`[CONJECTURE]` and present §6.3 as a design proposal.
 
 ### C-02 — Pedersen commitment not bound to the consensus-derived tensor
 
@@ -277,8 +284,8 @@ value `[CONJECTURE]`.
 
 1. **C-01** — structural, blocks the payment rule. **Confirmed**; the
    evidence is committed (`zk/threshold_quantization.py`) and the
-   correction (reframe §4.1, state `C_R`/`Theta_r`/`VaR_tech` in §6) is
-   recorded but not yet applied.
+   correction (state `C_R`/`Theta_r`/`VaR_tech` in §6, or label the gap
+   `[CONJECTURE]`) is recorded but not yet applied.
 2. **C-02** — structural, blocks the data layer's soundness.
 3. **C-04** — structural, ties §2 to the rest of the paper.
 4. **C-03** — moderate, requires a jump-diffusion computation.

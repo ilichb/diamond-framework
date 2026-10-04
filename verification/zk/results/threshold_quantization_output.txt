@@ -57,11 +57,16 @@ CONCLUSION
       deja sin determinar 0.333333 de stake (33.3% de Theta).
    2. Con k umbrales el error cae como 1/k (colocacion optima en C_R),
       pero cada umbral anade un bit de salida publica y una prueba.
-   3. El paper YA adopta la Opcion B, un compromiso al tensor crudo
-      (main.tex:512). Bajo esa opcion C_R(T) se calcula del tensor
-      abierto: la ecuacion de umbral de la Sec. 4.1 es un remanente del
-      diseno insound y debe reencuadrarse como prefiltro, no como la
-      fuente del valor que consume la Sec. 6.3.
+   3. La Sec. 4.1 especifica un bit (||T||_F >= Theta_r); la Sec. 6.3
+      requiere C_R(T) como valor. La brecha tiene dos capas:
+      soundness (cerrada por la Opcion B adoptada en Sec. 4.3-4.4:
+      Pedersen + Bulletproofs sobre el vector comprometido, sin abrir
+      el tensor, consistente con Sec. 4.1 L423 'without revealing the
+      full reputation tensor') y allocabilidad (abierta: el paper no
+      especifica como C_R(T) llega a la cadena). C_R = 0.8x/(1+x) es
+      no lineal; Bulletproofs es nativo para enunciados lineales, asi
+      que C_R(T) no es expresable sobre el commitment sin revelar
+      ||T||_F, o sin redisenar C_R como lineal.
    4. Bloqueo de verificacion: el paper no fija Theta_r, ni VaR_tech,
       ni la forma funcional de C_R (la Sec. 2.5 la define como una EDP
       integro-diferencial en un r escalar). Sin esos tres datos, k* no
