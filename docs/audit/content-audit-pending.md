@@ -38,7 +38,8 @@ that cannot be verified are marked with the local worksheet status
 
 ### C-01 — ZK proof returns a bit; payment rule needs a value
 
-**Location:** §4.1 (threshold proof) and §6.3 (allocation rule).
+**Location:** §4.1 (threshold proof) and §6.3 (allocation rule);
+`Theta = 1.0` at `main.tex:786` (§6.4) and `main.tex:1029` (§7.4).
 **Status:** Confirmed.
 **Severity:** Structural.
 
