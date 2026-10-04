@@ -142,8 +142,10 @@ Outputs are written to `verification/*/results/`.
 
 This project documents its own error correction. The history of claims that were made,
 tested and either confirmed or refuted lives in
-[`docs/audit/numerical-verification.md`](docs/audit/numerical-verification.md). Notable
-corrections so far:
+[`docs/audit/numerical-verification.md`](docs/audit/numerical-verification.md). Open
+findings from the content audit of `docs/paper/main.tex` are tracked separately in
+[`docs/audit/content-audit-pending.md`](docs/audit/content-audit-pending.md); they are
+open questions, not corrections. Notable corrections so far:
 
 | Original claim | Correction | Why it changed |
 |----------------|------------|----------------|
