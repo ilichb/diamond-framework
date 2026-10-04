@@ -7,7 +7,8 @@ claim in the Diamond Framework paper.
 
 - `stochastics/` — Reputation dynamics (positivity, MFPT, stationarity).
 - `mechanism/` — Frobenius counterexample, fee specification.
-- `zk/` — Constraint counts and soundness of the threshold circuit.
+- `zk/` — Constraint counts, soundness of the threshold circuit, and the
+  threshold-to-stake quantization of the allocation rule.
 - `rmt/` — Spectral calibration for collusion detection.
 - `tensor/` — Tucker compression analysis.
 - `data-layer/` — Fraud proof incentive equilibrium.
@@ -25,6 +26,7 @@ claim in the Diamond Framework paper.
     python3 mechanism/fee_specification.py
     python3 zk/constraint_count_check.py
     python3 zk/soundness_zk_check.py
+    python3 zk/threshold_quantization.py
     python3 rmt/sim_laplacian.py
     python3 rmt/calibration_modularity.py
     python3 rmt/clique_spectra.py

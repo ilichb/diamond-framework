@@ -1,7 +1,8 @@
 # Content Audit — Pending Findings
 
 Working notes for the content audit of `docs/paper/main.tex`. This file
-lists the technical findings raised during the initial review, their
+lists the technical findings raised during the initial review (C-01…C-10),
+plus the findings raised by the auditor during verification (C-11), their
 verification status, and the proposed order of attack.
 
 It is not a paper artifact. It is an audit worksheet: a place to record
@@ -38,7 +39,7 @@ that cannot be verified are marked with the local worksheet status
 ### C-01 — ZK proof returns a bit; payment rule needs a value
 
 **Location:** §4.1 (threshold proof) and §6.3 (allocation rule).
-**Status:** Conceptual.
+**Status:** Confirmed.
 **Severity:** Structural.
 
 The proof of §4.1 demonstrates `||T||_F >= Theta_r`, a boolean. The
@@ -46,12 +47,38 @@ allocation rule of §6.3, `S_f*(T) = max{VaR_tech, Theta - C_R(T)}`,
 requires `C_R(T)` as a continuous function of the tensor norm. No
 mechanism bridges the boolean and the continuous value.
 
-**Open question:** does the protocol intend a single threshold, a
-stepped proof (k thresholds), or a commitment-opening variant? Each
-choice has different cost implications.
+**Evidence:** `verification/zk/threshold_quantization.py` quantizes the
+gap using the paper's own numbers (`Theta_r = 0.5` from the §4.2 exploit
+table, `T ~ U[0,3]`, `C_R(x) = 0.8x/(1+x)` from `fee_specification.py`).
+The bit accepts `||T|| in [0.5, 3]`, over which `C_R` spans
+`[0.266667, 0.600000]` and `S_f*` spans `[0.400000, 0.733333]`. The
+protocol must therefore either over-collateralize the top of the band by
+83.3%, or charge the mid value and violate `CoA` for the bottom of the
+band by 0.333333 (33.3% of `Theta`). With `k` stepped thresholds the
+error falls as `0.333333/k` (optimal placement uniform in `C_R`), at one
+extra range proof per threshold; on-chain gas stays constant (~250k)
+under recursion, so the marginal cost is off-chain.
 
-**Next step:** model the quantization error as a function of the
-number of thresholds `k`, and the gas cost per additional proof.
+**Adjacent discoveries (block the numerical resolution):** `Theta_r` has
+no numeric value anywhere in the repo; `VaR_tech` appears once, in
+`main.tex:754`, and is never defined or valued (recorded as C-11);
+`C_R` carries three incompatible definitions (the §2.5 integro-PDE value
+function in a scalar `r`, the tensor-valued `C_R(T)` of §6.3, and
+`0.8x/(1+x)` in `fee_specification.py`), which overlaps C-04.
+
+**Resolution identified, not yet applied:** the paper already adopts
+Option B, a commitment to the raw tensor (`main.tex:512`). Under Option B
+`C_R(T)` is computed from the opened tensor, so the §4.1 threshold is a
+relic of the unsound design and should be reframed as a coarse prefilter
+rather than the source of the value consumed by §6.3.
+
+**Open question:** single threshold (accept the 83.3% over-collateralization),
+stepped proof with `k` thresholds (cost grows off-chain), or
+commitment-opening variant (already adopted in §4.4 for soundness)?
+Each choice has different cost implications.
+
+**Next step:** choose one design in §4 and state the `C_R` functional
+form, `Theta_r`, and `VaR_tech` in §6 so that `k` becomes derivable.
 
 ### C-02 — Pedersen commitment not bound to the consensus-derived tensor
 
@@ -222,9 +249,36 @@ degree distributions is not established.
 **Next step:** add a calibration on a heavy-tailed graph model (e.g.,
 Chung–Lu with power-law weights) and report the null quantile shift.
 
+### C-11 — The allocation rule uses symbols the paper never defines
+
+**Location:** §4.1 (`Theta_r`) and §6.3 (`VaR_tech`).
+**Status:** Confirmed (textual, by exhaustive grep).
+**Severity:** Minor.
+
+`Theta_r` is the threshold of `eq:threshold` (`main.tex:426`). It appears
+four times in the paper, always symbolically (`main.tex:316`, `:426`,
+`:432`, `:435`), and has no numeric value anywhere in the repository.
+The only threshold actually used in a table is `0.5`, in the §4.2
+exploit (`main.tex:444-445`).
+
+`VaR_tech` is worse: it occurs once in the entire paper, inside the
+allocation rule (`main.tex:754`), and is never defined, valued, or cited.
+The floor it is meant to impose cannot be evaluated from the text.
+
+**Evidence:** `grep -rnF 'Theta_r'` over the repo returns only the four
+`main.tex` lines above and this worksheet; `grep -nF 'VaR'` over
+`docs/paper/main.tex` returns only `:754` and `:1011`, where the
+bootstrap policy uses it again unvalued. Reproducible by inspection.
+
+**Next step:** define and calibrate both symbols, or label any chosen
+value `[CONJECTURE]`.
+
 ## Proposed order of attack
 
-1. **C-01** — structural, blocks the payment rule.
+1. **C-01** — structural, blocks the payment rule. **Confirmed**; the
+   evidence is committed (`zk/threshold_quantization.py`) and the
+   correction (reframe §4.1, state `C_R`/`Theta_r`/`VaR_tech` in §6) is
+   recorded but not yet applied.
 2. **C-02** — structural, blocks the data layer's soundness.
 3. **C-04** — structural, ties §2 to the rest of the paper.
 4. **C-03** — moderate, requires a jump-diffusion computation.
@@ -235,6 +289,7 @@ Chung–Lu with power-law weights) and report the null quantile shift.
 9. **C-08** — minor, clarify in §6.6 that the revenue column is gross
    (before exclusion), or recompute the net column.
 10. **C-10** — minor, add a calibration.
+11. **C-11** — minor, define `Theta_r` and `VaR_tech`.
 
 Order is by severity and dependency, not by ease. C-01 and C-02 come
 first because they determine whether §6 and §7 are implementable as
