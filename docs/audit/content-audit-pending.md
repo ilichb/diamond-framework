@@ -280,6 +280,29 @@ bootstrap policy uses it again unvalued. Reproducible by inspection.
 **Next step:** define and calibrate both symbols, or label any chosen
 value `[CONJECTURE]`.
 
+### C-12 — §6.2 presupposes the §4.3-4.4 repair without citing it
+
+**Location:** §6.2 ("Verified Reputation") vs §4.2-4.4.
+**Status:** Confirmed (textual, by inspection).
+**Severity:** Structural.
+
+§6.2 asserts that the threshold proof binds the validator to a specific
+tensor: "the proof binds the validator to a specific tensor, and the
+verifier checks the binding" (`main.tex:746`). This claim holds only
+under the Option B repair of §4.3-4.4, because §4.2 had explicitly
+refuted the binding property of the original design ("There is no
+commitment binding the prover to any specific tensor", `main.tex:450`).
+
+§6.2 does not cite §4.3-4.4. A reader arriving at §6.2 from §6.1
+encounters an assertion whose truth depends on a repair specified two
+sections earlier and never referenced.
+
+**Evidence:** `main.tex:746` vs `main.tex:450`. The dependency is
+reproducible by inspection.
+
+**Next step:** add a forward reference from §6.2 to §4.3-4.4 (or vice
+versa), making the dependency explicit.
+
 ## Proposed order of attack
 
 1. **C-01** — structural, blocks the payment rule. **Confirmed**; the
@@ -297,6 +320,9 @@ value `[CONJECTURE]`.
    (before exclusion), or recompute the net column.
 10. **C-10** — minor, add a calibration.
 11. **C-11** — minor, define `Theta_r` and `VaR_tech`.
+12. **C-12** — structural (registered late; depends on nothing),
+    declares §6.2's binding assumption without citing the §4.3-4.4
+    repair it depends on.
 
 Order is by severity and dependency, not by ease. C-01 and C-02 come
 first because they determine whether §6 and §7 are implementable as
