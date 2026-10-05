@@ -329,21 +329,55 @@ of this finding.
 ### C-09 — Bootstrap standard deviation does not match
 
 **Location:** §8.2 and §8.7.
-**Status:** Partially confirmed.
+**Status:** Refutado.
 **Severity:** Moderate.
 
-The paper reports `R_std = 0.0282` (in `compare_reputation_models.py`)
-and `0.0424` (at the sweep optimum). The agent measures ≈0.114 with an
-independent reproduction. The maximum of the sweep falls at
-`mu/g ≈ 1.0`, not `1.5`.
+**Original claim:** `R_std = 0.0282` and `0.0424` do not reproduce.
+An independent agent measured ~0.114 and placed the argmax at
+`mu/g ~ 1.0`.
 
-**Caveat:** the discrepancy may be a definitional difference in
-`R_std` (across validators at a fixed epoch vs across time). The agent
-could not conclude error without seeing the script's definition.
+**Resolution:** All three parts are refuted.
 
-**Next step:** read `compare_reputation_models.py` and
-`sweep_net_gain.py`, establish the exact definition of `R_std`, and
-reproduce the reported values or document the definitional gap.
+- `0.0282` reproduces from `compare_reputation_models.py`
+  (md5 `9032169d67ff4e47fdfb9019cfbcd3e3`) at `mu/g = 5.0`, seed 42.
+- `0.0424` reproduces from `sweep_net_gain.py`
+  (md5 `a60fd329a28217d5ce7ae095e4098866`) at `mu/g = 1.5`, averaged
+  over seeds 42-46.
+- The argmax of `R_std` over the sweep is at `mu/g = 1.5`:
+  `0.0424` at 1.5 > `0.0420` at 2.0 > `0.0405` at 1.0.
+
+Both scripts use the same statistic: `R[active].std()`, the numpy
+default `ddof = 0`, cross-sectional over active validators (n = 100)
+at the final epoch (t = 500). Neither uses a temporal std nor a
+std across seeds. `compare` runs one seed; `sweep` averages the
+result over five seeds. The large difference between `0.0282` and
+`0.0424` is the operating point (`mu/g = 5.0` vs `1.5`), not the
+definition.
+
+The ~0.114 of the independent reproduction comes from evaluating
+the analytical stationary form `R* = g*a/(g*a + mu)` with the entry
+sigma of the log-normal process (0.7). The simulated activity is a
+stationary AR(1) in log space with effective sigma
+`sigma_eff = 0.1/sqrt(1 - 0.95^2) = 0.3203`. Using `sigma_eff`
+gives `0.0453` at `mu/g = 5.0`, consistent with the simulation. The
+~0.114 is a modelling error in the independent reproduction, not a
+discrepancy in the paper.
+
+**Evidence:**
+- `verification/bootstrap/compare_reputation_models.py`
+  (md5 `9032169d67ff4e47fdfb9019cfbcd3e3`), output md5
+  `c2757936d4cc84d1c10856ecb7f267c6`.
+- `verification/bootstrap/sweep_net_gain.py`
+  (md5 `a60fd329a28217d5ce7ae095e4098866`), output md5
+  `2cb5ee01190841316c018d613bf755d4`.
+
+**Next step:** none for C-09 itself. The paper uses `R_{\mathrm{std}}`
+in three places (lines 995, 1055, 1133 of `main.tex`) and reports two
+of its values (lines 1066, 1205) without ever defining it. The two
+reported values correspond to two different operating points
+(`mu/g = 5.0` and `1.5`) and two different seed counts (1 and 5),
+neither declared. This is a textual presentation issue, registered
+separately, not part of C-09.
 
 ### C-10 — Heavy-tail robustness claimed but not measured
 
