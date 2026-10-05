@@ -30,6 +30,7 @@ claim in the Diamond Framework paper.
     python3 zk/threshold_quantization.py
     python3 rmt/sim_laplacian.py
     python3 rmt/calibration_modularity.py
+    python3 rmt/calibration_heavy_tail.py
     python3 rmt/clique_spectra.py
     python3 rmt/wilson_intervals.py
     python3 rmt/recalibrate_top.py
@@ -56,6 +57,7 @@ Approximate runtimes on a 2020-era desktop:
 | q99_standard_error.py | < 1 s |
 | sim_positivity.py | ~34 s |
 | calibration_modularity.py | ~400 s |
+| calibration_heavy_tail.py | ~60 s |
 | dt_convergence.py | ~130 s |
 | censoring_test.py | ~17 s |
 | clique_spectra.py | ~17 s |
@@ -64,7 +66,7 @@ Approximate runtimes on a 2020-era desktop:
 | r_std_specification.py | ~5 s |
 | All others | < 5 s each |
 
-Total: ~10 min on a single core.
+Total: ~11 min on a single core.
 
 ## Reproducibility
 

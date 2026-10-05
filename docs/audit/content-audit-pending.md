@@ -381,19 +381,94 @@ separately, not part of C-09.
 
 ### C-10 — Heavy-tail robustness claimed but not measured
 
-**Location:** §1.1 (Introduction requires robustness to heavy-tailed
-graphs) and §5.6/§5.7 (calibration on Erdős–Rényi and Chung–Lu only).
-**Status:** Unverified.
-**Severity:** Minor.
+**Location:** §1.2 (`main.tex:74`; the subsection opens at
+`main.tex:66`), §5.4 (`main.tex:627`, the calibration itself), §5.7
+(`main.tex:698`) and §10.7 (`main.tex:1215-1217`).
+**Status:** Confirmed.
+**Severity:** Moderate.
 
 The Introduction motivates the collusion test by the need for
-robustness against heavy-tailed interaction graphs. Section 5 does not
-report any heavy-tail calibration. The `2·sqrt(d_bar)` bulk edge for
-`B` holds for nearly-regular graphs; its validity on heavy-tailed
-degree distributions is not established.
+robustness against heavy-tailed interaction graphs (`main.tex:74`). The
+calibration of §5.4 reports `q99 = 9.0542` on Erdős–Rényi graphs only
+(`calibration_modularity.py`, `N_H0 = 2000`). `main.tex:698` and
+`main.tex:1217` acknowledge that the calibration is on ER and
+Chung–Lu and that "their validity on real graphs is an open question".
 
-**Next step:** add a calibration on a heavy-tailed graph model (e.g.,
-Chung–Lu with power-law weights) and report the null quantile shift.
+**Resolution:** `verification/rmt/calibration_heavy_tail.py`
+(md5 `db66ba8f22e820f1503215669c41551a`, output
+`verification/rmt/results/calibration_heavy_tail_output.txt`,
+md5 `faa8778684e649e8e8aca8e131f54555`) calibrates `q99` under
+Chung–Lu power-law degree distributions at the same `n = 500` and
+`d_mean = 20` as the canonical calibration. It measures both the
+false-positive rate under the paper's ER threshold (`9.0542`) and the
+power against a single planted clique. Results
+(`N_H0 = 500`, `N_H1 = 200`, seed 42):
+
+    model   beta  q99_own  FPR_at_9.0542  TPR_own   TPR_paper
+    ER       --    9.0314  0.0060         0.970     0.960
+    CL       2.10  14.4197 1.0000         0.000     1.000
+    CL       2.30  12.9942 1.0000         0.000     1.000
+    CL       2.50  12.0039 1.0000         0.020     1.000
+    CL       3.00  11.3169 1.0000         0.155     1.000
+
+The paper's ER threshold is **anti-conservative** on heavy-tailed
+graphs: it flags every H0 replicate in the four Chung–Lu models tested,
+so its empirical false-positive rate is `1.0` rather than
+`alpha = 0.01`. Re-calibrating per-null removes the false-positive
+problem but destroys the power: `TPR_own` against a single planted
+clique (`m = 20`, `10x` local density) collapses to `0.000` for
+`beta <= 2.3` and reaches only `0.155` at `beta = 3.0`.
+`TPR_paper = 1.0` is degenerate, not evidence of robustness.
+
+**Caveats:**
+
+- The `min(1, w_i w_j / sum(w))` form of Chung–Lu saturates the
+  highest-weight pairs when the weight sequence is normalised to a
+  fixed mean. At `n = 500`, `d_mean = 20`, the requested maximum degree
+  is `1120` for `beta = 2.1` and `694` for `beta = 2.3`, both above
+  `n - 1 = 499`. A simple-graph realisation of the pure configuration
+  model is therefore infeasible without rejecting the excess stubs
+  (`7.32%` at `beta = 2.1` and `1.97%` at `beta = 2.3`; the realised
+  maximum degree saturates at `n - 1 = 499`), so those two rows are a
+  degree-capped null rather than the pure power-law sequence. The
+  separation of "genuine tail" from "saturated hub core" requires
+  `n >= 5000` (or a much smaller `d_mean`) and a recalibrated ER
+  baseline; the code was prepared and is stored outside the repository
+  as a postponed experiment.
+- The bulk edge `2*sqrt(d_bar) = 8.9443` used in the canonical ER
+  calibration (`main.tex:602`) is not the correct edge for Chung–Lu.
+  The entire CL null lies above it (the `FPR_at_9.0542 = 1.0000` column
+  shows every replicate exceeding `9.0542 > 8.9443`), and the correct
+  bulk edge depends on the weight sequence.
+
+**Evidence:**
+
+- `verification/rmt/calibration_heavy_tail.py`
+  (md5 `db66ba8f22e820f1503215669c41551a`), output md5
+  `faa8778684e649e8e8aca8e131f54555`.
+- Deterministic byte-for-byte: two independent runs on the same machine
+  produce the identical md5; seed 42, no clock, no entropy, no disk I/O.
+- ER baseline cross-checked against the committed ER calibration
+  (`main.tex:636`, `calibration_modularity.py` at `N_H0 = 2000`: mean
+  `8.7679`, std `0.1115`, `q99 = 9.0542`). The ER control
+  (`N_H0 = 500`) reproduces the mean and the standard deviation
+  (`8.7693` / `0.1107`); its `q99 = 9.0314` differs from the canonical
+  value by `0.0228`, about `1.3` times the paper's own standard error
+  of the `q99` estimate (`0.017`, `main.tex:1129`). The ER control also
+  reproduces the paper's H1 power: `0.960` against a single clique of
+  size 20, with the paper's `0.972` (`main.tex:1129`) inside its Wilson
+  interval `[0.923, 0.980]`.
+- Wilson intervals computed with the same estimator as
+  `verification/rmt/wilson_intervals.py` (`wilson_ci`): ER row
+  `wilson_ci(194, 200) = [0.936, 0.986]`, and `[0.000, 0.019]`,
+  `[0.008, 0.050]`, `[0.111, 0.212]` for the CL rows at
+  `beta = 2.1 / 2.5 / 3.0`.
+
+**Next step:** declare in §5.4 that the ER-calibrated `q99` does not
+transfer to heavy-tailed graphs, and that the collusion test requires
+either per-null recalibration or a weight-dependent bulk edge. Register
+the "saturated hub core vs genuine tail" separation as a postponed
+experiment, to be run at `n >= 5000`.
 
 ### C-11 — The allocation rule uses symbols the paper never defines
 
@@ -545,7 +620,11 @@ without an interval.
 8. **C-07** — minor, read the script and account for the discrepancy.
 9. **C-08** — minor, clarify in §6.6 that the revenue column is gross
    (before exclusion), or recompute the net column.
-10. **C-10** — minor, add a calibration.
+10. **C-10** — **Confirmed** (severity raised from minor to moderate);
+    the calibration script and its output are in place
+    (`rmt/calibration_heavy_tail.py`,
+    `rmt/results/calibration_heavy_tail_output.txt`, pending commit) and
+    the §5.4 declaration is proposed but not yet applied.
 11. **C-11** — minor, define `Theta_r` and `VaR_tech`.
 12. **C-12** — structural (registered late; depends on nothing),
     declares §6.2's binding assumption without citing the §4.3-4.4

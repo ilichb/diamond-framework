@@ -1074,7 +1074,7 @@ This section evaluates three things: the reproducibility of the numerical claims
 \subsection{Reproducibility}
 Every quantitative claim in Sections~\ref{sec:reputation} through~\ref{sec:bootstrap} is accompanied by a script in \spath{verification/}. The scripts are self-contained: they depend only on NumPy and SciPy, and they declare their seeds and sample sizes at the top of each file. Running \texttt{pip install -r verification/requirements.txt} followed by the commands listed in \spath{verification/README.md} reproduces every number reported in the paper. The README lists the 22 scripts and their expected runtimes.
 
-The project documents its own falsifications in \spath{docs/audit/numerical-verification.md}. As of this writing the log contains 18 entries (F-001 through F-018), each one a claim that was made, tested, and corrected. The log exists because the numerical verification is the primary defense against errors of the kind that would otherwise propagate through the paper unchallenged.
+The project documents its own falsifications in \spath{docs/audit/numerical-verification.md}. As of this writing the log contains 19 entries (F-001 through F-019), each one a claim that was made, tested, and corrected. The log exists because the numerical verification is the primary defense against errors of the kind that would otherwise propagate through the paper unchallenged.
 
 The scripts run in the following time ranges on a 2020-era desktop:
 
@@ -1325,7 +1325,7 @@ Payment rule & Verified & \spath{mechanism/} \\
 Data layer & Verified & \spath{data-layer/} \\
 Bootstrap & Verified & \spath{bootstrap/} \\
 Reproducibility & Verified & \spath{verification/README.md} \\
-Falsification log & 18 entries & \spath{docs/audit/} \\
+Falsification log & 19 entries & \spath{docs/audit/} \\
 External audit & Not performed & --- \\
 Real-data calibration & Open & --- \\
 Testnet benchmarks & Open & --- \\

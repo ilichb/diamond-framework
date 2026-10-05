@@ -293,6 +293,51 @@ claim that fails its test is corrected or removed, not quietly reworded.
   the benefit. The maximum gain is +0.035 in one configuration.
   The plain s[-1] statistic is retained.
 
+### F-019 — ER-calibrated collusion threshold on heavy-tailed nulls
+
+- **Claim as originally made:** the detection mechanism "must be robust
+  to heavy-tailed interaction graphs" (`main.tex:74`) and "the
+  calibration is performed on Erdős–Rényi and Chung–Lu graphs"
+  (`main.tex:698`, `:1215`), so the threshold `q99 = 9.0542` of
+  Section 5.4 applies to them.
+- **Test:** `verification/rmt/calibration_heavy_tail.py`
+- **Verdict:** **Refuted.** Against four Chung–Lu power-law nulls at the
+  same `n = 500`, `d̄ = 20`, the ER threshold rejects every H0 replicate:
+  empirical FPR `1.0000` versus the nominal `alpha = 0.01`. The null
+  quantiles are `14.4197`, `12.9942`, `12.0039`, `11.3169` for
+  `beta = 2.1, 2.3, 2.5, 3.0`, all above `q99 = 9.0542` and above the
+  asymptotic edge `2√d̄ = 8.9443` (see F-013). Recalibrating per null
+  restores the size and destroys the power: against a single planted
+  clique (`m = 20`, density 10x) the true positive rate at the null's
+  own `q99` is `0.000`, `0.000`, `0.020`, `0.155`. The `TPR = 1.000` at
+  the ER threshold is degenerate: a test that rejects every H0 graph has
+  unit power by construction, so the published power figure carries no
+  evidence of robustness on heavy-tailed graphs. The same run reproduces
+  the committed ER null (mean `8.7693` vs `8.7679`, std `0.1107` vs
+  `0.1115`, `main.tex:636`) and the published ER power (`0.960` vs
+  `0.972`, `main.tex:1129`), so the CL result is not an artifact of the
+  harness.
+- **Resolution:** Section 5.4 must state that the ER-calibrated `q99`
+  does not transfer to heavy-tailed nulls, and that the test requires
+  either per-null recalibration or a weight-dependent bulk edge
+  (proposed, not yet applied). The attribution "and Chung–Lu" at
+  `main.tex:698` and `:1215` is not backed by any threshold-level CL
+  measurement: the only CL graph in the suite before this script,
+  `verification/rmt/sim_laplacian.py` (`beta = 2.3`), feeds the `L_sym`
+  vs `A_sym` comparison, not the calibration of `q99`.
+- **Sample:** `calibration_heavy_tail.py`, seed 42, `n = 500`,
+  `d̄ = 20`, `N_H0 = 500`, `N_H1 = 200`, weights
+  `w_i ∝ i^(-1/(beta-1))` normalised to `d̄`; deterministic (two runs,
+  identical md5).
+- **Caveat:** at `beta = 2.1` and `2.3` the requested degree sequence
+  exceeds what a simple graph admits at `n = 500` (`d_max = 1120` and
+  `694` against `n - 1 = 499`), so the null is realised with the excess
+  stubs rejected (`7.32%` and `1.97%`) and those two rows are
+  degree-capped rather than pure-tail. Separating a genuine tail from a
+  saturated hub core requires `n >= 5000` (or a much smaller `d̄`); it is
+  registered as a postponed experiment, with the code stored outside the
+  repository.
+
 ## Open items
 
 | Item | Owner component | Status |
@@ -300,6 +345,7 @@ claim that fails its test is corrected or removed, not quietly reworded.
 | `mu` sweep over bootstrap dynamics | `verification/bootstrap/` | **Done** — see F-005 (μ/g ∈ [1, 2]) |
 | Payment rule specification | `verification/mechanism/` | **Done** — posted price F0*, not Myerson |
 | Gas benchmarks | `integrations/avalanche/` | **Done** — ecPairing k=4 = 181,142 |
+| Heavy-tailed threshold calibration | `verification/rmt/` | **Done** — see F-019 (ER `q99` does not transfer to Chung–Lu nulls) |
 | Teleporter latency | `integrations/avalanche/` | Pending (requires testnet) |
 | External security review | whole protocol | Not started |
 
