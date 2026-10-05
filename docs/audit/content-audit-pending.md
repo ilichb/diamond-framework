@@ -143,25 +143,70 @@ align §6 and §8 to it or explicitly justify the divergence.
 ### C-05 — Asym explanation in §5.2 is conceptually wrong
 
 **Location:** §5.2, paragraph beginning "The normalization is
-inappropriate for detecting cliques".
-**Status:** Confirmed by the agent.
+inappropriate for detecting cliques", and the spectral table above it.
+**Status:** Confirmed by committed scripts:
+`verification/rmt/asym_weights.py` for the per-pair weight mechanism,
+and `verification/rmt/clique_spectra_seeds.py` for the single-seed
+nature of the table.
 **Severity:** Moderate.
 
 The paper compares only the per-edge weight (`1/27.2` vs `1/20`) and
 concludes the clique signal is cancelled by degree increase. It ignores
-that clique edges are 10× more probable. Expected weight per pair is
-≈0.0147 vs 0.002, i.e., the clique remains ≈7× stronger after
-normalization. Asym fails by a bulk-edge scale effect, not by
-cancellation.
+that clique edges are DENSITY_FACTOR times more probable: the expected
+per-pair weight of an intra-clique pair is 10x the expected per-pair
+weight of a background pair under W, and either 10x or at least 7.4x
+under A_sym depending on the background denominator. Under either
+reading, the clique signal is not cancelled by the degree increase; it
+is reduced by a normalization factor that the paper does not compute.
+Whether the residual is detected depends on the finite-size position
+of the bulk edge, which the paper does not state.
 
-**Evidence (artifact pending):** the agent's independent reproduction
-reported in this session; no committed script under `verification/rmt/`
-backs the ≈7× counter-accounting. A script `verification/rmt/asym_weights.py`
-must be added before §5.2 is rewritten. The paper's own spectral table
-(committed) confirms Asym's failure but not the mechanism.
+Separately, the spectral table reports single-seed values for the
+leading gap of W (`+1.6996`), A_sym (`-0.0156`) and B (`+1.7569`),
+without stating that they come from one seed or that they are
+atypical for W and B.
 
-**Next step:** rewrite §5.2 to describe the correct mechanism, keeping
-the conclusion (Asym is unsuitable) unchanged.
+**Evidence:** two committed scripts.
+(a) `verification/rmt/asym_weights.py` (committed in `6d0b91c`)
+    computes the expected per-pair weights in closed form. Under W:
+    intra-clique 0.400802 vs background 0.040080, ratio 10.0000.
+    Under A_sym with the H1 model-consistent background degree
+    (27.214): 0.014925 vs 0.001473, ratio 10.1343. Under A_sym with
+    the null-model degree cited by §5.2 (20.000): 0.014925 vs
+    0.002004, ratio 7.4478. Under either denominator, the clique's
+    per-pair weight exceeds the background's by more than 7.
+(b) `verification/rmt/clique_spectra_seeds.py` (committed in
+    `cc6c06c`) reruns the same generator as `clique_spectra.py` over
+    200 seeds:
+    - W: gap mean +0.73, std 0.39, P(gap > 0) = 0.980;
+      the single-seed value cited by the table (+1.6996) is at P99.
+    - A_sym: gap mean -0.02, std 0.01, P(gap > 0) = 0.005;
+      the cited value (-0.0156) is at P90.
+    - B: gap mean +0.77, std 0.41, P(gap > 0) = 0.980;
+      the cited value (+1.7569) is at P99.
+    - P(lambda > q99 = 9.0542): 0.940 for both W and B (all seeds),
+      0.937 excluding the first 10 seeds.
+    - The paired claim gap_B > gap_W is structural (Weyl interlacing:
+      B = W - dd^T/(2m) with the subtracted matrix positive
+      semidefinite of rank one, so lambda_1(W) >= lambda_max(B) >=
+      lambda_2(W) for every graph). The empirical content is the mean
+      difference +0.0353, small against the per-seed std.
+
+The first-order BBP prediction (force of the spike, detection
+threshold, normalization factor, predicted gaps) is not implemented.
+Stop rule applied: two of the required formulas lack a verifiable
+reference or a self-contained derivation, and the naive margin
+theta/sqrt(D_BAR) does not reproduce the observed gap within a factor
+of 2. This part remains [CONJECTURE].
+
+**Next step:** two edits to §5.2. (a) Rewrite the mechanism
+paragraph to state the per-pair weight argument (10x under W, >7x
+under A_sym regardless of the background denominator) instead of the
+per-edge weight comparison. (b) In the table caption, state that the
+values are one draw from `clique_spectra_seeds.py`; report the mean
+and std over seeds, or cite the single-seed values as representative.
+The first-order BBP mechanism is left as [CONJECTURE] pending a
+citable reference.
 
 ### C-06 — Censoring test disagreement
 
@@ -334,7 +379,8 @@ Three forms, no declared map `T → r`. The paper never states that `C_R` depend
 3. **C-04** — structural, ties §2 to the rest of the paper.
 4. **C-03** — moderate, requires a jump-diffusion computation.
 5. **C-09** — moderate, definitional first.
-6. **C-05** — moderate, rewrite §5.2 with the correct mechanism.
+6. **C-05** — moderate, rewrite §5.2 mechanism paragraph and
+   table caption; first-order BBP prediction remains [CONJECTURE].
 7. **C-06** — minor, reproduce and rephrase.
 8. **C-07** — minor, read the script and account for the discrepancy.
 9. **C-08** — minor, clarify in §6.6 that the revenue column is gross
