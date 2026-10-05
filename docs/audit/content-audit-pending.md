@@ -2,7 +2,7 @@
 
 Working notes for the content audit of `docs/paper/main.tex`. This file
 lists the technical findings raised during the initial review (C-01…C-10),
-plus the findings raised by the auditor during verification (C-11), their
+plus the findings raised during verification (C-11…C-14), their
 verification status, and the proposed order of attack.
 
 It is not a paper artifact. It is an audit worksheet: a place to record
@@ -462,6 +462,73 @@ Three forms, no declared map `T → r`. The paper never states that `C_R` depend
 
 **Next step:** state which `C_R` the protocol uses — the scalar EDO of §2.5, a declared function of `‖T‖_F`, or a tensor-wise aggregator — and declare the map from `T` to the argument of `C_R`.
 
+### C-14 — `R_{\mathrm{std}}` is never defined; the two reported values are unlabelled
+
+**Location:** §8.1 (`main.tex:995`), §8.2 summary table (`main.tex:1055`),
+§8.2 prose (`main.tex:1066`), §8.7 (`main.tex:1133`), §9 (`main.tex:1205`).
+**Status:** Confirmed (textual, by exhaustive grep; numeric backing in
+`verification/bootstrap/r_std_specification.py`).
+**Severity:** Minor.
+
+The symbol `R_{\mathrm{std}}` occurs three times (`main.tex:995`, `:1055`,
+`:1133`) and appears twice more as the gloss "standard deviation of
+reputation" (`:1066`, `:1205`). It is never defined. The text does not say
+whether the standard deviation is across validators or across time, over
+the full epoch history or the final epoch, over active or all slots, or
+with which `ddof`. There is no notation table, no `\newcommand`, no
+`\DeclareMathOperator`.
+
+`main.tex:1066` juxtaposes two numbers taken at different operating
+points and with different sample sizes as if comparable. `0.0282` comes
+from `compare_reputation_models.py` at `mu/g = 5.0` (one seed, 42).
+`0.0424` comes from `sweep_net_gain.py` at `mu/g = 1.5` (mean over seeds
+42-46). Neither the operating point nor the seed count is declared at
+`:1066` or at `:1205`, where `0.0424` is reported alone.
+
+The statistic used in both scripts is the same: `R[active].std()`, numpy
+default `ddof = 0`, cross-sectional over active validators (n = 100) at
+the final epoch (t = 500). Neither script uses a temporal std nor a std
+across seeds. The code is correct; the paper's presentation is not.
+
+**Evidence:** `grep -nF 'R_{\mathrm{std}}' docs/paper/main.tex` returns
+`:995`, `:1055`, `:1133`. The only executable definition in the
+repository is the dict key `"R_std": active_R.std()` at
+`verification/bootstrap/compare_reputation_models.py:151` and
+`verification/bootstrap/sweep_net_gain.py:90`; there is no function
+`r_std()` and no constant `R_STD` anywhere.
+
+`verification/bootstrap/r_std_specification.py`
+(md5 `e4cf5cfda9e94e5df12a9c9c0953546d`, output md5
+`f81ada2fa1b0be5faa196b129454bed4`) formalizes the statistic once,
+reproduces both canonical values (`0.028156` and `0.042400`), and
+extends the seed sample to N = 100:
+
+    mu/g = 1.00:  mean 0.042050,  std 0.003002,  SE 0.000300,  CI95 [0.041461, 0.042638]
+    mu/g = 1.50:  mean 0.043970,  std 0.003156,  SE 0.000316,  CI95 [0.043351, 0.044588]
+    mu/g = 2.00:  mean 0.043470,  std 0.003144,  SE 0.000314,  CI95 [0.042853, 0.044086]
+    mu/g = 3.00:  mean 0.040321,  std 0.002983,  SE 0.000298,  CI95 [0.039737, 0.040906]
+    mu/g = 5.00:  mean 0.033499,  std 0.002615,  SE 0.000262,  CI95 [0.032987, 0.034012]
+
+Two numerical consequences:
+
+- The paper's `0.0424` at `mu/g = 1.5` is below the N = 100 CI lower
+  bound (`0.043351`). It is a specific 5-seed realization that happens
+  to be low. The population mean at that operating point is `0.043970`.
+  The paper reports a point estimate without an interval and without
+  declaring that it comes from 5 seeds.
+- The N = 100 CI at `mu/g = 1.5` `[0.043351, 0.044588]` overlaps the CI
+  at `mu/g = 2.0` `[0.042853, 0.044086]`. The argmax at `1.5` is not
+  statistically distinguishable from `2.0` at N = 100. This is
+  consistent with F-005 ("the optimum is a band, not a point") and with
+  `main.tex:1133` ("nearby values give similar results").
+
+**Next step:** define `R_{\mathrm{std}}` in §8.1 as the cross-sectional
+sample standard deviation (`ddof = 0`) of `R` over active validators at
+the final epoch; declare the operating point and seed count at `:1066`
+and `:1205`; and either report the N = 100 mean with its 95% CI in place
+of the single 5-seed realization, or label `0.0424` as a point estimate
+without an interval.
+
 ## Proposed order of attack
 
 1. **C-01** — structural, blocks the payment rule. **Confirmed**; the
@@ -486,6 +553,10 @@ Three forms, no declared map `T → r`. The paper never states that `C_R` depend
 13. **C-13** — structural, three incompatible forms of `C_R` (the
     scalar EDO of §2.5, the tensor `C_R(T)` of §6, the executable
     `c_r()` of `verification/`) with no declared map `T → r`.
+
+14. **C-14** — textual, `R_{\mathrm{std}}` never defined; the two
+    reported values sit at different operating points and seed counts,
+    neither declared.
 
 Order is by severity and dependency, not by ease. C-01 and C-02 come
 first because they determine whether §6 and §7 are implementable as

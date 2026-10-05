@@ -42,6 +42,7 @@ claim in the Diamond Framework paper.
     python3 bootstrap/compare_reputation_models.py
     python3 bootstrap/sweep_net_gain.py
     python3 bootstrap/simulate_bootstrap_net_gain.py
+    python3 bootstrap/r_std_specification.py
 
 ## Runtime
 
@@ -60,6 +61,7 @@ Approximate runtimes on a 2020-era desktop:
 | clique_spectra.py | ~17 s |
 | wilson_intervals.py | < 1 s |
 | stationary_stats.py | ~12 s |
+| r_std_specification.py | ~5 s |
 | All others | < 5 s each |
 
 Total: ~10 min on a single core.
