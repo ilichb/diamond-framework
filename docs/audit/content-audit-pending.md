@@ -225,47 +225,106 @@ figure. Once verified, determine whether the paper's "qualitative
 structure" characterization is sufficient or whether the 43% gap
 warrants explicit discussion.
 
-### C-07 — −502 not reproducible from declared parameters
+### C-07 — −502 is the seed-42 Monte Carlo realization; the model value is −500
 
 **Location:** §7.4, attacker profit column.
-**Status:** Confirmed by the agent.
+**Status:** Cerrado.
 **Severity:** Minor.
 
-**Evidence:** `-502` appears verbatim in
+**Evidence (original):** `-502` appears verbatim in
 `verification/data-layer/results/simulate_data_layer_v3_output.txt`.
-The paper's declared parameters give `-450`. The 52-unit gap requires
-reading the script; artifact exists, derivation does not.
+The paper's declared parameters were read as giving `-450`. The
+52-unit gap was unexplained by the text.
 
-With the declared parameters, `50 · (1 − 10) = −450`, not −502. The
-discrepancy (52) is unexplained by the text. Possibly a term not
-declared in §7.3.
+**Resolution:** The gap decomposes exactly as `52 = 50 + 2`.
 
-**Next step:** read `verification/data-layer/simulate_data_layer_v3.py`
-and account for the 52.
+- `50` is the profit convention. The script credits `V_fraud`
+  only on undetected frauds
+  (`(n_frauds - n_detections) * V_FRAUD - n_detections * S_SLASH`,
+  line 52 of v3). At coverage 1.0 this collapses to
+  `-S_slash * n_frauds`, giving analytic value `-500`. Crediting
+  `V_fraud` on all frauds gives `-450`; that convention is not
+  used, because detected frauds are reverted rather than rewarded.
+
+- `2` is the Monte Carlo deviation. With `RNG_SEED = 42` and
+  `N_EPOCHS = 500`, `mean_mc = -502.000000`,
+  `z_vs_analitico = -0.894427`, `p_bilateral = 0.371093`,
+  `IC95 = [-506.382693, -497.617307]`, which contains `-500`.
+
+`-502.00` therefore IS reproducible byte-for-byte from the
+declared parameters (seed 42). It is not the model value: it is
+the seed-42 realization. The model value under the script's
+profit convention is `-500.00`.
+
+**Scripts:**
+- `verification/data-layer/simulate_data_layer_v3.py`
+  (md5 `2920cb7b054b787a1bcad3a422cdede2`) — canonical,
+  produces `-502.00`.
+- `verification/data-layer/attacker_profit_analytical.py`
+  (md5 `155b9f18cf54d24bfdfe6f238389eee0`,
+  output md5 `a07636b54aec9ef6f2ef0a17b1bd89ac`) —
+  closed-form vs MC, deterministic byte-for-byte.
+
+**Next step:** decide whether §7.4 declares the profit convention
+explicitly. If not, this is a separate finding (paper-level
+ambiguity), not a continuation of C-07. C-07 itself is closed.
 
 ### C-08 — Revenue column in §6.6 does not discount excluded validators
 
 **Location:** §6.6, table of `F_0` vs revenue.
-**Status:** Partially confirmed.
+**Status:** Cerrado.
 **Severity:** Minor.
 
-Two distinct claims were bundled originally:
+Two distinct claims were bundled originally.
 
-**(a) Refuted.** §6.6 does not contradict the paper's "optimal" `F_0*`:
-the text defines "optimal" as the largest value preserving IR for all
-types (`main.tex:772`), not as revenue-maximizing.
+**(a) Refuted.** §6.6 does not contradict the paper's "optimal"
+`F_0*`: the text defines "optimal" as the largest value preserving IR
+for all types (`main.tex:772` before the edit; §6.6 after), not as
+revenue-maximizing.
 
-**(b) Confirmed.** The revenue column reports gross revenue. At
-`F_0 = 0.06`, 0.2% of validators violate IR; the table shows 60.00 but
-the net revenue after excluding those validators would be 59.88. The
-script computes `f0 * N_VALIDATORS` without subtracting the excluded
-validators.
+**(b) Confirmed and repaired.** The revenue column reported gross
+revenue. At `F_0 = 0.06`, 0.2% of validators violate IR; the table
+showed `60.00`, while the net revenue after excluding those validators
+is `59.88`. The script computed `f0 * N_VALIDATORS` without subtracting
+the excluded validators.
 
-**Evidence:** inspection of §6.6 and the script; verifiable by
-arithmetic.
+**Resolution:** Two parts.
 
-**Next step:** clarify in §6.6 that the revenue column is gross (before
-exclusion), or recompute the net column.
+1. New script `verification/mechanism/fee_specification_net.py`
+   (md5 `5df811eb975d42bea4febc1e45a73ec8`, output md5
+   `6a088920edeacd9263d56c8ec64d97c9`) reproduces the canonical
+   fee specification and adds a net-revenue column. Deterministic
+   byte-for-byte, seed 42, same RNG consumption order as the canonical
+   script. Verifies:
+
+   - `U_min(F0*) = 0.009747`, identical to canonical.
+   - `U_min(1.2 F0*) = -0.000253`.
+   - `n_excluded(1.2 F0*) = 2`, `gross = 60.00`, `net = 59.88`.
+   - Asserts of exact equality, no intermediate rounding.
+
+2. `docs/paper/main.tex` §6.6 (Sensitivity) now reports a four-column
+   table (`Fraction with U < 0`, `Gross revenue`, `Net revenue`) and
+   states explicitly that the linear trade-off holds for gross, and
+   that net at `F0 = 0.06` is `59.88`. The edit is confined to the
+   table and the paragraph immediately following; no labels, captions,
+   numbering, environment, or `\resizebox` were touched.
+
+**Evidence:**
+- `verification/mechanism/fee_specification.py` (md5
+  `2cd0272a11b7eaedaf6acec0d901466b`) — canonical, unchanged.
+- `verification/mechanism/results/fee_specification_output.txt`
+  (md5 `f8a19bc06917816f0ec10dae1bd87a45`) — canonical, unchanged.
+- `verification/mechanism/fee_specification_net.py` (md5
+  `5df811eb975d42bea4febc1e45a73ec8`, output md5
+  `6a088920edeacd9263d56c8ec64d97c9`) — new.
+- `docs/paper/main.tex` md5 `9206ebb4538425cf9313afdc2f3b6349`
+  before the edit, `8ed4e6c7ddbf438a00c4f8205bb1486b` after.
+
+**Next step:** none. C-08 is closed by construction of the net column
+and the explicit statement of the gross linearity. The two scripts
+remain unversioned in `results/`; whether to add their captured output
+files (with README lines) is a separate housekeeping decision, not part
+of this finding.
 
 ### C-09 — Bootstrap standard deviation does not match
 

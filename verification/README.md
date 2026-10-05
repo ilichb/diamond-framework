@@ -24,6 +24,7 @@ claim in the Diamond Framework paper.
     python3 stochastics/censoring_test.py
     python3 mechanism/frobenius_counterexample.py
     python3 mechanism/fee_specification.py
+    python3 mechanism/fee_specification_net.py
     python3 zk/constraint_count_check.py
     python3 zk/soundness_zk_check.py
     python3 zk/threshold_quantization.py
@@ -37,6 +38,7 @@ claim in the Diamond Framework paper.
     python3 rmt/bipartite_power.py
     python3 tensor/tucker_analysis.py
     python3 data-layer/simulate_data_layer_v3.py
+    python3 data-layer/attacker_profit_analytical.py
     python3 bootstrap/compare_reputation_models.py
     python3 bootstrap/sweep_net_gain.py
     python3 bootstrap/simulate_bootstrap_net_gain.py

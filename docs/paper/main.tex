@@ -816,19 +816,19 @@ The analytical saturation $U(\bar{\omega}, 0) = 0$ is exact, with residual below
 If the fee exceeds $F_0^*$, IR is violated for the worst-case types. We verify this numerically:
 
 \begin{center}
-\begin{tabular}{lrr}
+\begin{tabular}{lrrr}
 \toprule
-$F_0$ & Fraction with $U < 0$ & Revenue per epoch \\
+$F_0$ & Fraction with $U < 0$ & Gross revenue & Net revenue \\
 \midrule
-0.025 & 0.0000 & 25.00 \\
-0.040 & 0.0000 & 40.00 \\
-0.050 & 0.0000 & 50.00 \\
-0.060 & 0.0020 & 60.00 \\
+0.025 & 0.0000 & 25.00 & 25.00 \\
+0.040 & 0.0000 & 40.00 & 40.00 \\
+0.050 & 0.0000 & 50.00 & 50.00 \\
+0.060 & 0.0020 & 60.00 & 59.88 \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-At $F_0 = 0.06$ (20\% above $F_0^*$), 0.2\% of the sampled validators violate IR. The revenue trade-off is linear: increasing the fee above $F_0^*$ gains revenue at the cost of excluding the worst-case types.
+At $F_0 = 0.06$ (20\% above $F_0^*$), 0.2\% of the sampled validators violate IR. The gross revenue trade-off is linear: increasing the fee above $F_0^*$ gains revenue at the cost of excluding the worst-case types. Net of the excluded validators, the revenue at $F_0 = 0.06$ is $59.88$ rather than $60.00$.
 
 \subsection{Incentive Compatibility}
 Incentive Compatibility is tautological in this mechanism. There is no private type to misreport: $T$ is verified on-chain, and $S_f^*(T)$ does not depend on $\omega$. A validator cannot improve its allocation by misreporting, because the allocation is determined by a public, verifiable signal.
