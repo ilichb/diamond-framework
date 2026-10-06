@@ -962,9 +962,6 @@ two known residual gaps that are not findings in this worksheet:
 
 ## Handoff
 
-This file is the entry point for the content audit. The next session
-should begin by reading it, then opening one finding at a time under
-the rules of `CONTRIBUTING.md`. No finding is closed until its script
-runs locally and its output is committed to `verification/` or
-`docs/audit/`, or its arithmetic is recorded above and the evidence is
-committed.
+The entry point for the next session is `docs/audit/handoff.md`. This
+worksheet is the record of individual findings; the handoff is the
+durable pointer to rules, inventory, and the current closure state.
