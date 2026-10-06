@@ -278,7 +278,7 @@ The associated value function $C_R(r)$ for reputational collateral satisfies the
 \label{eq:integro}
 \end{equation}
 
-with boundary condition $C_R(0) = 0$, interpreted in the viscosity sense. Existence and uniqueness follow from standard arguments for integro-PDEs with polynomial growth of $\pi$ \cite{oksendal2007}.
+with boundary condition $C_R(0) = 0$, interpreted in the viscosity sense. Existence and uniqueness follow from standard arguments for integro-PDEs with polynomial growth of $\pi$ \cite{oksendal2007}. The state $r$ is the reputation level on the positive half-line; Section~\ref{sec:payment} evaluates $C_R$ at the Frobenius norm of the reputation tensor, $r = \|T\|_F$, and the reference configuration uses the closed form $C_R(r) = 0.8 \, r / (1 + r)$.
 
 \subsection{Summary of the Section}
 \begin{center}
@@ -763,6 +763,8 @@ which does not depend on $\omega$. The type affects the validator's utility but 
 
 The floor $\mathrm{VaR}_{\mathrm{tech}}$ is the technical minimum financial stake, independent of reputation. It is a design parameter, not a value at risk in the financial sense; the notation is historical. The reference configuration uses $\mathrm{VaR}_{\mathrm{tech}} = 0.2$ [CONJECTURE].
 
+The argument of $C_R$ in~\eqref{eq:allocation} is the Frobenius norm of the tensor: $C_R(T) \equiv C_R(\|T\|_F)$, with $C_R$ the value function of Section~\ref{sec:reputation}.
+
 The utility of a validator of type $\omega$ with reputation $T$ is
 
 \begin{equation}
@@ -997,6 +999,8 @@ The net\_gain model has a stationary value that depends on activity:
 R^* = \frac{g \cdot a}{g \cdot a + \mu}
 \label{eq:netgain}
 \end{equation}
+
+The bootstrap operates on a bounded reputation score $R \in [0, 1)$, distinct from the unbounded state $r$ of Section~\ref{sec:reputation}; the two are related by $R = r/(1+r)$. During the bootstrap phase (from $R(0) = 0$, before the protocol reaches its stationary regime) the value function $C_R(r)$ of Section~\ref{sec:reputation} is replaced by the bootstrap-specific form $\tilde{C}_R(R) = 0.8 \, R / (1 + R)$. All bootstrap numbers in this section are computed under $\tilde{C}_R$. The value function $C_R(r)$ applies to the post-bootstrap steady state.
 
 The correlation between activity and reputation at stationarity is 0.76 in the reference simulation, versus 0.08--0.11 for the saturating models \fref{verification/bootstrap/compare_reputation_models.py}. We therefore use net\_gain throughout the bootstrap analysis.
 

@@ -194,21 +194,49 @@ jump-diffusion; no such script exists under `verification/`.
 **Next step:** compute the MFPT for the jump-diffusion, or re-scope the
 claim to the no-jump sub-process.
 
-### C-04 — Section 2 is never used downstream
+### C-04 — Section 2 is used downstream via the map r = ||T||_F
 
-**Location:** §2 (CIR), §6.5 (`T` scalar in `[0,3]`), §8 (`net_gain` in `[0,1)`).
-**Status:** Confirmed.
+**Location:** §2.5 (`main.tex:281`), §6.3 (`main.tex:766`),
+§8.1 (`main.tex:1003`).
+**Status:** Cerrado.
 **Severity:** Structural.
 
-Three distinct objects:
-- §2: CIR diffusion with jumps, unbounded, mean 1.
-- §6: `T` treated as a scalar uniform on `[0,3]`.
-- §8: `net_gain` deterministic ODE on `[0,1)`.
+Three objects were listed as unreconciled:
+- §2: CIR diffusion with multiplicative jumps, state `r` on `(0, ∞)`,
+  mean `\bar{R} = 1`.
+- §6: the tensor norm `||T||_F`, sampled uniformly on `[0, 3]` for the
+  allocation rule.
+- §8: `net_gain` ODE on `R ∈ [0, 1)`, stationary value
+  `R^* = ga/(ga + μ)`.
 
-No section reconciles them. §2 appears decorative.
+**Resolution.** The paper now declares the map:
 
-**Next step:** determine which process is intended to be canonical, and
-align §6 and §8 to it or explicitly justify the divergence.
+- §2.5: the state `r` is the reputation level on the positive
+  half-line. Section 6 evaluates `C_R` at `r = ||T||_F`, and the
+  reference configuration uses the closed form
+  `C_R(r) = 0.8 r / (1 + r)`.
+- §6.3: `C_R(T) ≡ C_R(||T||_F)`, with `C_R` the value function of
+  §2.5.
+- §8.1: the bootstrap operates on a bounded reputation score
+  `R ∈ [0, 1)`, distinct from the unbounded `r`, with `R = r/(1+r)`.
+  During the bootstrap phase (from `R(0) = 0`) the value function is
+  replaced by the bootstrap-specific form
+  `\tilde{C}_R(R) = 0.8 R / (1 + R)`. This is the §2.5 form expressed
+  in the normalized variable: with `r = R/(1-R)`,
+  `C_R(r) = 0.8 r/(1+r) = 0.8 R = \tilde{C}_R(R)`.
+
+The §6 sampling range `[0, 3]` on `||T||_F` is preserved by the
+mapping; the §8 stationary value `R^* ≈ 0.4` is the stationary value
+of the normalized variable `R`, not of `r`.
+
+**Evidence:**
+- `main.tex:281` (state `r` and closed form).
+- `main.tex:766` (`C_R(T) ≡ C_R(||T||_F)`).
+- `main.tex:1003` (bootstrap `R = r/(1+r)` and `\tilde{C}_R(R)`).
+- Compilation clean; references `sec:reputation`, `sec:payment`,
+  `eq:allocation`, `eq:netgain` all resolve.
+
+**Next step:** none. Closed by the paper edit in the same commit.
 
 ### C-05 — Asym explanation in §5.2 is conceptually wrong
 
@@ -611,25 +639,54 @@ reproducible by inspection.
 **Next step:** add a forward reference from §6.2 to §4.3-4.4 (or vice
 versa), making the dependency explicit.
 
-### C-13 — `C_R` has three incompatible forms, none of them the EDO of §2.5
+### C-13 — C_R has three incompatible forms; the map T → r is now declared
 
-**Location:** §2.5 (`C_R(r)`, scalar EDO); §6.1, §6.3, §6.5 (`C_R(T)`, tensor, `main.tex:733`, `:754`, `:798`); §8.1, §8.3 (`C_R(0)`, `C_R(R(t))`, scalar, `main.tex:964`, `:1011`); `verification/` (`c_r(norm_T)`, `c_r(R)`).
-
-**Status:** Confirmed (textual + executable evidence).
+**Location:** §2.5 (`main.tex:274-281`), §6.3 (`main.tex:766`),
+§8.1 (`main.tex:1003`), `verification/` (`c_r(norm_T)`, `c_r(R)`).
+**Status:** Cerrado.
 **Severity:** Structural.
 
-§2.5 defines `C_R(r)` as the viscosity solution of an integro-differential equation in a scalar `r`, with `C_R(0) = 0` (`main.tex:274-281`). §6.1 and §6.3 write `C_R(T)`, a function of the reputation tensor. §8.1 and §8.3 write `C_R(0)` and `C_R(R(t))`, scalar arguments, even though the preceding sentence names the tensor `T`. The executable scripts use a third object: `c_r(norm_T)` in `mechanism/fee_specification.py:41` and `zk/threshold_quantization.py:56`, or `c_r(R)` in four bootstrap scripts. All implement `0.8·x/(1+x)`, but `x` is `‖T‖_F`, `R`, or the tensor norm sampled in `[0,3]` depending on the script.
+**Original problem.** `C_R` appeared in three forms: the scalar EDO of
+§2.5, the tensor-valued `C_R(T)` of §6.1/§6.3/§6.5, and the executable
+`c_r(norm_T)` or `c_r(R)` of `verification/`. No map `T → r` was
+declared; the paper never stated that `C_R` depends on `T` only through
+`||T||_F`.
 
-Three forms, no declared map `T → r`. The paper never states that `C_R` depends on `T` only through `‖T‖_F`.
+**Resolution.** The paper now declares the map in three sentences:
 
-**Evidence:** three separate verifications.
-(i) `grep -nF 'C_R' docs/paper/main.tex` shows the scalar EDO at `:274-281`, the tensor form at `:733`, `:754`, `:798`, and the scalar `C_R(0)` / `C_R(R(t))` at `:964`, `:1011`.
-(ii) `grep -rnE '\bc_r\b' verification/ --include='*.py'` shows the executable forms at `mechanism/fee_specification.py:41`, `zk/threshold_quantization.py:56`, and four bootstrap scripts (all `0.8·x/(1+x)` with `x = norm_T` or `x = R`).
-(iii) The §2.5 EDO has **zero implementation** in the repository: the search over `.py`, `.pyx`, `.jl`, `.m`, `.nb`, `.sol`, `.rs`, `.ts`, `.go`, `.c`, `.cpp`, `.h` returns only one textual match, in a comment inside `zk/threshold_quantization.py:183`. The literal `eq:integro` appears only at its own definition (`main.tex:278`); the deprecated `_deprecated-md/02-reputation-dynamics.md` reproduces the EDO text (`:174`, `:180`) without citing the label.
+- §2.5: the state `r` is the reputation level on `(0, ∞)`. §6 evaluates
+  `C_R` at `r = ||T||_F`, with closed form
+  `C_R(r) = 0.8 r / (1 + r)`.
+- §6.3: `C_R(T) ≡ C_R(||T||_F)`.
+- §8.1: the bootstrap uses a bounded score `R ∈ [0, 1)`, distinct
+  from `r`, with `R = r/(1+r)`. The bootstrap form
+  `\tilde{C}_R(R) = 0.8 R/(1+R)` is the §2.5 form in the normalized
+  variable: with `r = R/(1-R)`, `C_R(r) = \tilde{C}_R(R)`.
 
-**Adjacent:** `verification/mechanism/frobenius_counterexample.py` (tracked in `6587cda`) constructs two tensors with identical Frobenius norm but different risk and tests the log-aggregator `C_R(T) = Σ w_cdh · log(1+T_cdh)`, which the paper never adopts.
+The executable forms become consistent with the declared map:
+`c_r(norm_T)` in `mechanism/fee_specification.py:41` and
+`zk/threshold_quantization.py:56` computes `C_R(||T||_F)`; `c_r(R)` in
+the four bootstrap scripts computes `\tilde{C}_R(R)`. The scripts are
+not modified; the paper now explains why the two forms are not the same
+function.
 
-**Next step:** state which `C_R` the protocol uses — the scalar EDO of §2.5, a declared function of `‖T‖_F`, or a tensor-wise aggregator — and declare the map from `T` to the argument of `C_R`.
+The §2.5 EDO itself has zero implementation in the repository. This
+remains a design gap: the closed form `0.8 r/(1+r)` is the reference
+configuration, not the solution of `eq:integro`. The gap is recorded,
+not closed.
+
+**Evidence:**
+- `main.tex:281` (state `r` and closed form).
+- `main.tex:766` (`C_R(T) ≡ C_R(||T||_F)`).
+- `main.tex:1003` (bootstrap `R = r/(1+r)` and `\tilde{C}_R(R)`).
+- `grep -nF 'C_R' docs/paper/main.tex` shows consistent use.
+- `verification/` unchanged; the two executable forms are now
+  reconciled by the declared map.
+
+**Next step:** the §2.5 EDO remains unimplemented. Whether to publish
+the closed form `0.8 r/(1+r)` as the protocol's collateral function
+(replacing the EDO), or to implement the EDO numerically, is a
+separate finding. This block closes the map inconsistency only.
 
 ### C-14 — `R_{\mathrm{std}}` is never defined; the two reported values are unlabelled
 
@@ -723,24 +780,16 @@ and the stray blank line are removed.
 
 ## Proposed order of attack
 
-Open findings only. The closed findings (C-01, C-02, C-05, C-07, C-08,
-C-09, C-10, C-12, C-13, C-14) remain in the file above as record.
+Open findings only. The closed findings (C-01, C-02, C-04, C-05, C-07,
+C-08, C-09, C-10, C-11, C-12, C-13, C-14, C-15) remain in the file
+above as record.
 
-1. **C-11** — minor, define `Theta_r` and `VaR_tech`. Prerequisite for
-   C-04 and for the §6 rewrite: the symbols are used in the allocation
-   rule without values.
-2. **C-04** — structural, ties §2 to the rest of the paper. Simplified
-   by C-02: `C_R(T)` is a public quantity, not a value extracted from
-   a circuit. Still requires reconciling the CIR process of §2, the
-   scalar `T` of §6, and the `net_gain` ODE of §8.
-3. **C-03** — moderate, requires a jump-diffusion computation for the
+1. **C-03** — moderate, requires a jump-diffusion computation for the
    MFPT with jumps.
-4. **C-06** — minor, reproduce and rephrase the censoring test
+2. **C-06** — minor, reproduce and rephrase the censoring test
    disagreement.
 
-Order is by severity modulated by dependency. C-11 precedes C-04
-because the symbols it defines are inputs to the C-04 reconciliation;
-C-03 and C-06 are independent.
+Order is by severity. C-03 and C-06 are independent.
 
 ## Handoff
 
