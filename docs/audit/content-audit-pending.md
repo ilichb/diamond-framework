@@ -2,7 +2,8 @@
 
 Working notes for the content audit of `docs/paper/main.tex`. This file
 lists the technical findings raised during the initial review (C-01…C-10),
-plus the findings raised during verification (C-11…C-18), all closed
+plus the findings raised during verification and the session-3 external
+review (C-11…C-22), all closed
 by the scripts and edits recorded below, their
 verification status, and the proposed order of attack.
 
@@ -941,9 +942,35 @@ rest.
 
 **Next step:** none.
 
+### C-19 — VaR_tech renamed to S_min
+
+**Location:** §6.3 (allocation rule and floor definition) and §8.3
+(bootstrap policy `hybrid_no_decay`) in `docs/paper/main.tex`.
+**Status:** Cerrado.
+**Severity:** Minor.
+
+The floor of the allocation rule was named `VaR_tech`. Section 6.3
+itself admitted the name was historical and that the quantity is a
+design parameter, not a financial Value at Risk. In a formal paper the
+notation must reflect the function, not the history: `S_min`
+(Minimum Financial Stake) removes the semantic friction with
+economics reviewers while keeping the same value (`0.2`).
+
+**Resolution.** Global rename of `\mathrm{VaR}_{\mathrm{tech}}` to
+`S_{\min}` in `main.tex`. The trailing clause "the notation is
+historical" was dropped because it asserted the historical origin that
+the rename removes; the sentence now states only that the floor is a
+design parameter, not a market-calibrated quantity. The value `0.2`
+and the surrounding argument are unchanged.
+
+**Evidence:** `grep -c 'VaR' docs/paper/main.tex` returns 0;
+`pdflatex` runs twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
-All findings C-01 through C-18 are closed. The list of closures is
+All findings C-01 through C-22 are closed. The list of closures is
 above, in each block. No open finding remains.
 
 The next iteration of the content audit should begin from the paper

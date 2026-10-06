@@ -759,13 +759,13 @@ The validator's cost of capital $\omega \in [\underline{\omega}, \bar{\omega}]$ 
 The allocation rule is
 
 \begin{equation}
-S_f^*(T) = \max\{\mathrm{VaR}_{\mathrm{tech}}, \Theta(t) - C_R(T)\}
+S_f^*(T) = \max\{S_{\min}, \Theta(t) - C_R(T)\}
 \label{eq:allocation}
 \end{equation}
 
 which does not depend on $\omega$. The type affects the validator's utility but not its allocation.
 
-The floor $\mathrm{VaR}_{\mathrm{tech}}$ is the technical minimum financial stake, independent of reputation. It is a design parameter, not a value at risk in the financial sense; the notation is historical. The reference configuration uses $\mathrm{VaR}_{\mathrm{tech}} = 0.2$ [CONJECTURE].
+The floor $S_{\min}$ is the technical minimum financial stake, independent of reputation. It is a design parameter, not a value at risk in the financial sense. The reference configuration uses $S_{\min} = 0.2$ [CONJECTURE].
 
 The argument of $C_R$ in~\eqref{eq:allocation} is the Frobenius norm of the tensor: $C_R(T) \equiv C_R(\|T\|_F)$, with $C_R$ the value function of Section~\ref{sec:reputation}.
 
@@ -1026,7 +1026,7 @@ We compare three policies:
 
 \begin{itemize}[leftmargin=*]
 \item \textbf{pure\_pos}: $S_f = \Theta$ throughout. No reputation adjustment.
-\item \textbf{hybrid\_no\_decay}: $S_f(t) = \max\{\mathrm{VaR}_{\mathrm{tech}}, \Theta - \alpha(t) \cdot C_R(R(t))\}$.
+\item \textbf{hybrid\_no\_decay}: $S_f(t) = \max\{S_{\min}, \Theta - \alpha(t) \cdot C_R(R(t))\}$.
 \item \textbf{hybrid\_decay}: same as hybrid\_no\_decay with $R$ decaying at half-life 50 epochs.
 \end{itemize}
 
