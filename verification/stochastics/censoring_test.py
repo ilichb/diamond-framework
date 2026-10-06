@@ -132,7 +132,8 @@ def main():
             print(f"  Extrapolacion no aplicable: no hay censura.")
         else:
             print(f"  Bound trivial E[tau] >= T_max*(1-hit_frac): {trivial_bound:.4f}")
-            print(f"  Extrapolacion geometrica E[tau] ~ T_0/(1-p): {mfpt_geo:.4f}")
+            print(f"  Extrapolacion geometrica (sobreestima si la cola es "
+                  f"sub-geometrica): {mfpt_geo:.4f}")
         print()
 
         # Geometricity check at each k
@@ -155,7 +156,11 @@ def main():
             print(f"  Ratios p_emp/p_geo (k con E[count]>=10: {n_sufficient} de "
                   f"{K-1}): mean={mean_ratio:.4f}, std={std_ratio:.4f}")
             if abs(mean_ratio - 1.0) < 0.1 and std_ratio < 0.1:
-                print(f"  Veredicto: cola GEOMETRICA (extrapolacion valida)")
+                print(f"  Veredicto: cola aproximadamente geometrica. La "
+                      f"extrapolacion T_0/(1-p)")
+                print(f"  sobreestima el MFPT porque la cola es "
+                      f"sub-geometrica (ratios < 1 en")
+                print(f"  todas las ventanas medidas).")
             else:
                 print(f"  Veredicto: cola NO geometrica (extrapolacion invalida)")
         else:

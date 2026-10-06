@@ -2,7 +2,8 @@
 
 Working notes for the content audit of `docs/paper/main.tex`. This file
 lists the technical findings raised during the initial review (C-01…C-10),
-plus the findings raised during verification (C-11…C-15), their
+plus the findings raised during verification (C-11…C-15), all closed
+by the scripts and edits recorded below, their
 verification status, and the proposed order of attack.
 
 It is not a paper artifact. It is an audit worksheet: a place to record
@@ -349,22 +350,50 @@ and std over seeds, or cite the single-seed values as representative.
 The first-order BBP mechanism is left as [CONJECTURE] pending a
 citable reference.
 
-### C-06 — Censoring test disagreement
+### C-06 — Censoring test is a tail diagnostic, not an MFPT estimate
 
-**Location:** §2.3, paragraph reporting the censoring test.
-**Status:** Partially confirmed.
+**Location:** §2.3 (censoring test paragraph, `main.tex:229-231`).
+**Status:** Cerrado.
 **Severity:** Minor.
 
-The censoring test yields 635.7; the exact MFPT is 443.7. The paper
-reports both figures and characterizes the relationship as agreement
-"on the qualitative structure" (finite, grows with R_0, dominated by
-alpha/sigma_0^2). It does not discuss the 43% numerical gap. Not
-recalculated by the agent.
+**Original problem.** The paper reported the censoring test result
+`635.7` and the exact MFPT `443.7` as the output of "two independent
+methods" that "agree on the qualitative structure", without discussing
+the `43%` numerical gap.
 
-**Next step:** reproduce the censoring test locally; verify the 635.7
-figure. Once verified, determine whether the paper's "qualitative
-structure" characterization is sufficient or whether the 43% gap
-warrants explicit discussion.
+**Resolution.** The two figures are not independent measurements of
+the same quantity. The censoring test estimates the MFPT by
+extrapolating a geometric tail: `T_0/(1-p)` with
+`p = P(tau > T_0) = 0.9214`, giving `635.7279`. The exact MFPT from
+numerical integration of the CIR formula is `443.7374`
+(`mfpt_bound_explicit.py`). The two differ by `43%`.
+
+The gap is the signature of the tail being sub-geometric. The
+empirical ratios `P_emp/P_geo` across five windows are
+`0.9973, 0.9942, 0.9943, 0.9921, 0.9858`, with mean `0.9927` and
+std `0.0038`. The survival decays faster than geometric, so the
+geometric extrapolation overestimates the MFPT. The script's own
+tolerance (`|mean-1| < 0.1 and std < 0.1`) is too loose to
+distinguish "approximately geometric" from "exactly geometric".
+
+The paper §2.3 now reports both values, explains the gap, and
+characterizes the censoring test as a tail-shape diagnostic rather
+than an MFPT estimator. The script `censoring_test.py` now labels
+its extrapolation as biased upward when the tail is sub-geometric,
+and its verdict as "approximately geometric".
+
+**Evidence:**
+- `verification/stochastics/censoring_test.py`
+  (md5 `6c1e646f1adb54341e71661543b9fb78` before the edit),
+  output `verification/stochastics/results/censoring_test_output.txt`.
+- `verification/stochastics/mfpt_bound_explicit.py`
+  (md5 `bbc34d39c7109e9ecb895fe7362394ec`) — exact MFPT, unchanged.
+- `main.tex:229-231` — reworded paragraph and conclusion.
+- Deterministic: seed 42 for R1, seed 43 for R2 (as declared in the
+  script), two runs produce the same output md5.
+
+**Next step:** none. Closed by the paper and script edits in the
+same commit.
 
 ### C-07 — −502 is the seed-42 Monte Carlo realization; the model value is −500
 
@@ -823,14 +852,22 @@ and the stray blank line are removed.
 
 ## Proposed order of attack
 
-Open findings only. The closed findings (C-01, C-02, C-03, C-04, C-05,
-C-07, C-08, C-09, C-10, C-11, C-12, C-13, C-14, C-15) remain in the
-file above as record.
+All findings C-01 through C-15 are closed. The list of closures is
+above, in each block. No open finding remains.
 
-1. **C-06** — minor, reproduce and rephrase the censoring test
-   disagreement.
+The next iteration of the content audit should begin from the paper
+as it stands after the closures of C-04, C-06, C-10, C-11, C-13. The
+two known residual gaps that are not findings in this worksheet:
 
-Order is by severity. C-06 is the last open finding.
+- The §2.5 integro-differential equation (`eq:integro`) has zero
+  implementation in the repository. The closed form
+  `C_R(r) = 0.8 r/(1+r)` is the reference configuration, not the
+  solution of the EDO. Whether to publish the closed form as the
+  protocol's collateral function or to implement the EDO numerically
+  is a design choice, not a discrepancy.
+- The `n >= 5000` experiment for separating the genuine heavy tail
+  from the saturated hub core is stored outside the repository and
+  is not scheduled.
 
 ## Handoff
 

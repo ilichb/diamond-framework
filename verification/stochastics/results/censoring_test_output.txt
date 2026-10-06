@@ -41,10 +41,12 @@ R0_target = 2.2, eps = 0.001
 
   MFPT (condicional sobre hits): 139.0923
   Bound trivial E[tau] >= T_max*(1-hit_frac): 180.9150
-  Extrapolacion geometrica E[tau] ~ T_0/(1-p): 635.7279
+  Extrapolacion geometrica (sobreestima si la cola es sub-geometrica): 635.7279
 
   Ratios p_emp/p_geo (k con E[count]>=10: 5 de 5): mean=0.9927, std=0.0038
-  Veredicto: cola GEOMETRICA (extrapolacion valida)
+  Veredicto: cola aproximadamente geometrica. La extrapolacion T_0/(1-p)
+  sobreestima el MFPT porque la cola es sub-geometrica (ratios < 1 en
+  todas las ventanas medidas).
 
 ==============================================================================
 CONCLUSION
