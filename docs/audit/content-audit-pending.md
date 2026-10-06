@@ -2,7 +2,7 @@
 
 Working notes for the content audit of `docs/paper/main.tex`. This file
 lists the technical findings raised during the initial review (C-01…C-10),
-plus the findings raised during verification (C-11…C-14), their
+plus the findings raised during verification (C-11…C-15), their
 verification status, and the proposed order of attack.
 
 It is not a paper artifact. It is an audit worksheet: a place to record
@@ -40,7 +40,7 @@ that cannot be verified are marked with the local worksheet status
 
 **Location:** §4.1 (threshold proof) and §6.3 (allocation rule);
 `Theta = 1.0` at `main.tex:786` (§6.4).
-**Status:** Confirmed.
+**Status:** Cerrado (resolved by the C-02 decision; residual gaps tracked under C-04 and C-11).
 **Severity:** Structural.
 
 The proof of §4.1 demonstrates `||T||_F >= Theta_r`, a boolean. The
@@ -674,43 +674,49 @@ and `:1205`; and either report the N = 100 mean with its 95% CI in place
 of the single 5-seed realization, or label `0.0424` as a point estimate
 without an interval.
 
+### C-15 — The Proposed order of attack is stale
+
+**Location:** `docs/audit/content-audit-pending.md`, §Proposed order of
+attack.
+**Status:** Confirmed (textual, worksheet-internal).
+**Severity:** Minor.
+
+The block listed fourteen findings. Ten of them are closed: C-02
+`Resolved (design decision)`; C-05, C-07, C-08, C-10, C-12, C-13, C-14
+`Confirmed` with committed evidence; C-09 `Refutado`; C-01 closed by
+the C-02 decision. Item 10 carried an obsolete `(pending commit)` for
+the calibration script and output, both committed in `7d7ec86`. The
+sequence was not monotone in severity, against the block's own stated
+rule ("Order is by severity and dependency"). A stray blank line sat
+between items 13 and 14.
+
+**Resolution:** The block is rewritten to list only the open findings,
+ordered by severity modulated by dependency. The closed findings remain
+in the file above this block as record. The `(pending commit)` marker
+and the stray blank line are removed.
+
+**Next step:** none. Closed in the same commit that rewrites the block.
+
 ## Proposed order of attack
 
-1. **C-01** — structural, blocks the payment rule. **Confirmed**; the
-   evidence is committed (`zk/threshold_quantization.py`) and the
-   correction (state `C_R`/`Theta_r`/`VaR_tech` in §6, or label the gap
-   `[CONJECTURE]`) is recorded but not yet applied.
-2. **C-02** — structural, resolved by design decision; paper edits
-   pending.
-3. **C-04** — structural, ties §2 to the rest of the paper.
-4. **C-03** — moderate, requires a jump-diffusion computation.
-5. **C-09** — moderate, definitional first.
-6. **C-05** — moderate, rewrite §5.2 mechanism paragraph and
-   table caption; first-order BBP prediction remains [CONJECTURE].
-7. **C-06** — minor, reproduce and rephrase.
-8. **C-07** — minor, read the script and account for the discrepancy.
-9. **C-08** — minor, clarify in §6.6 that the revenue column is gross
-   (before exclusion), or recompute the net column.
-10. **C-10** — **Confirmed** (severity raised from minor to moderate);
-    the calibration script and its output are in place
-    (`rmt/calibration_heavy_tail.py`,
-    `rmt/results/calibration_heavy_tail_output.txt`, pending commit) and
-    the §5.4 declaration is proposed but not yet applied.
-11. **C-11** — minor, define `Theta_r` and `VaR_tech`.
-12. **C-12** — structural (registered late; depends on nothing),
-    declares §6.2's binding assumption without citing the §4.3-4.4
-    repair it depends on.
-13. **C-13** — structural, three incompatible forms of `C_R` (the
-    scalar EDO of §2.5, the tensor `C_R(T)` of §6, the executable
-    `c_r()` of `verification/`) with no declared map `T → r`.
+Open findings only. The closed findings (C-01, C-02, C-05, C-07, C-08,
+C-09, C-10, C-12, C-13, C-14) remain in the file above as record.
 
-14. **C-14** — textual, `R_{\mathrm{std}}` never defined; the two
-    reported values sit at different operating points and seed counts,
-    neither declared.
+1. **C-11** — minor, define `Theta_r` and `VaR_tech`. Prerequisite for
+   C-04 and for the §6 rewrite: the symbols are used in the allocation
+   rule without values.
+2. **C-04** — structural, ties §2 to the rest of the paper. Simplified
+   by C-02: `C_R(T)` is a public quantity, not a value extracted from
+   a circuit. Still requires reconciling the CIR process of §2, the
+   scalar `T` of §6, and the `net_gain` ODE of §8.
+3. **C-03** — moderate, requires a jump-diffusion computation for the
+   MFPT with jumps.
+4. **C-06** — minor, reproduce and rephrase the censoring test
+   disagreement.
 
-Order is by severity and dependency, not by ease. C-01 and C-02 come
-first because they determine whether §6 and §7 are implementable as
-written.
+Order is by severity modulated by dependency. C-11 precedes C-04
+because the symbols it defines are inputs to the C-04 reconciliation;
+C-03 and C-06 are independent.
 
 ## Handoff
 
