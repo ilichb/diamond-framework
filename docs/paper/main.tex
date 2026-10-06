@@ -70,7 +70,7 @@ Making this intuition rigorous requires solving several problems:
 
 \begin{enumerate}[leftmargin=*]
 \item \textbf{Stochastic modeling.} Reputation evolves continuously and is subject to abrupt downward shocks. The dynamics must remain in their positive domain under all admissible shocks.
-\item \textbf{Verifiability.} Reputation claims must be cryptographically verifiable without revealing the underlying tensor and without relying on a centralized oracle.
+\item \textbf{Verifiability.} Reputation claims must be cryptographically verifiable on-chain and without relying on a centralized oracle. The tensor $T$ is public (Section~\ref{sec:datalayer}), so the proof provides succinctness rather than privacy.
 \item \textbf{Collusion resistance.} Validators may coordinate to inflate each other's reputation. The detection mechanism must be robust to heavy-tailed interaction graphs and must have a stated boundary below which detection is information-theoretically impossible.
 \item \textbf{Incentive compatibility.} The mechanism must ensure validators report their true reputation, or---if reputation is publicly verified---must make the reporting question vacuous.
 \item \textbf{Data integrity.} The reputation signal is derived from consensus events on source chains. The transport of these events must be verifiable, and fraud must be detectable and deterred.
@@ -420,7 +420,7 @@ The quantitative content of this Section is limited to the storage ratio and the
 \label{sec:zk}
 
 \subsection{Circuit Specification}
-The protocol requires validators to prove, without revealing the full reputation tensor $T$, that its Frobenius norm exceeds a threshold:
+The protocol requires validators to prove that the Frobenius norm of the reputation tensor $T$ exceeds a threshold. The tensor $T$ is public (Section~\ref{sec:datalayer}); the proof exists for succinctness, not for privacy:
 
 \begin{equation}
 \|T\|_F \geq \Theta_r
@@ -657,6 +657,8 @@ The dual-tail structure distinguishes clique-based collusion (right tail) from b
 
 The statistic for the right tail is $s[-1]$, the largest eigenvalue of $B$, not $s[-2]$. The change is documented in falsification log entry F-018: for a balanced two-block structure the signal is at $s[-1] = 17.5$ while $s[-2] = 8.5$ sits inside the bulk. The ``skip Perron'' convention that motivates $s[-2]$ in the adjacency matrix does not apply to the modularity matrix, where $B \cdot \mathbf{1} = 0$ places the trivial eigenvalue at the center of the spectrum.
 
+The calibration above is performed on Erd\H{o}s--R\'enyi graphs. The threshold does not transfer to heavy-tailed graphs. The Chung--Lu null with power-law degree distribution places every $H_0$ replicate above the Erd\H{o}s--R\'enyi threshold (empirical false-positive rate $1.0$ at $\alpha = 0.01$ for $\beta \in \{2.1, 2.3, 2.5, 3.0\}$), and per-null recalibration destroys the power against a single planted clique of size $m = 20$ with intra-clique density $10\times$ the background (true-positive rate $0.000$ at $\beta \leq 2.3$, $0.155$ at $\beta = 3.0$) \fref{verification/rmt/calibration_heavy_tail.py}. The bulk edge $2\sqrt{\bar{d}}$ used in the calibration is not the correct edge for Chung--Lu; the entire heavy-tailed null lies above it. The direction of error is anti-conservative: the threshold flags every graph as collusive. The separation of the genuine tail from the saturated hub core requires $n \geq 5000$ (or a much smaller $\bar{d}$) and a recalibrated Erd\H{o}s--R\'enyi baseline; the code is stored outside the repository as a postponed experiment. This is recorded as falsification log entry F-019.
+
 \subsection{Detection Power}
 We measure the power of the right-tail test against clique-based collusion by simulating graphs with $k$ planted cliques of size $m$ and intra-clique density $10\times$ the background \fref{verification/rmt/calibration_modularity.py}. The measurement uses $N_{H_1} = 500$ replicates per configuration with Wilson 95\% confidence intervals.
 
@@ -741,7 +743,7 @@ The allocation of collateral between its financial and reputational components d
 We address the two candidate sources of private information below.
 
 \subsection{Verified Reputation}
-The reputation tensor $T$ is verifiable on-chain via the zero-knowledge threshold proof of Section~\ref{sec:zk}. A validator whose reputation exceeds the threshold can prove it without revealing the tensor itself. A validator whose reputation falls below the threshold cannot produce a valid proof.
+The reputation tensor $T$ is verifiable on-chain via the zero-knowledge threshold proof of Section~\ref{sec:zk}. A validator whose reputation exceeds the threshold can prove it. A validator whose reputation falls below the threshold cannot produce a valid proof.
 
 Consequently, $T$ is not a private type in the sense of mechanism design. The validator cannot misreport it: the proof binds the validator to a specific tensor, and the verifier checks the binding. The revelation principle does not apply because there is nothing to reveal.
 
@@ -871,7 +873,9 @@ where $f_c$ is a public function that maps the observed consensus events to a no
 The events themselves are consensus outputs: signed attestations, governance votes, and liquidity events that have been finalized on the source chain. They are not subjective judgments or off-chain declarations.
 
 \subsection{Transport and Freshness}
-Entries of $T$ are committed to the destination chain via state inclusion proofs against signed headers of the source chains. This requires a light client or a zero-knowledge bridge for each source chain. The protocol does not define the transport mechanism; it requires that the destination contract can verify inclusion proofs against signed source-chain state.
+The commitment to the reputation tensor $T$ is produced by the data layer, not by the validator. The data layer reads the source-chain events, applies the public ingestion formula $f_c$ of Section~\ref{sec:datalayer}, and publishes the commitment optimistically. Soundness rests on the fraud-proof and slashing mechanisms of the data layer, not on the validator's honesty.
+
+For Avalanche L1 source chains, the commitment root is propagated via Avalanche Warp Messaging through the Teleporter contract, with the source chain's quorum as the trust anchor. For non-Avalanche source chains, the transport requires a light client or a zero-knowledge bridge.
 
 The tensor $T$ is frozen per epoch. Two consecutive epochs cannot differ in more than $\gamma \cdot N$ entries, where $N = CDH$ and $\gamma$ is a freshness parameter. The freshness constraint bounds the propagation of undetected fraud across epochs.
 
