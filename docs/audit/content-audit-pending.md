@@ -2,7 +2,7 @@
 
 Working notes for the content audit of `docs/paper/main.tex`. This file
 lists the technical findings raised during the initial review (C-01…C-10),
-plus the findings raised during verification (C-11…C-15), all closed
+plus the findings raised during verification (C-11…C-18), all closed
 by the scripts and edits recorded below, their
 verification status, and the proposed order of attack.
 
@@ -890,9 +890,60 @@ outputs in `results/` but were never added to the README.
 
 **Next step:** none. Closed by the edits in the same commit.
 
+### C-17 — Falsification counter says 18 in two places, 19 in four
+
+**Location:** `main.tex:1166` (§9.6 table), `main.tex:1296` (§11.2).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+The log has 19 entries (F-001 through F-019). The paper says 19 in the
+abstract (`:49`), §1.3 (`:88`), §9.2 (`:1091`), and §11.6 (`:1342`
+before the edit). It said 18 in §9.6 (`:1166` before the edit) and
+§11.2 (`:1296` before the edit). The 18 was residue from when the log
+had 18 entries.
+
+`falsifications` is a misleading count: 16 of the 19 entries are
+`Refuted` or `Partially refuted`; the rest are `Not applicable`,
+`Misapplied`, `Mis-tested`. The paper now says `19 entries`
+everywhere. The `either confirmed or corrected` clause in §11.2 is
+removed because it contradicted the actual verdicts.
+
+**Resolution.** §9.6 and §11.2 aligned at 19 entries; terminology
+changed from `falsifications` to `entries` in both.
+
+**Evidence:**
+- `grep -c '^### F-' docs/audit/numerical-verification.md` returns 19.
+- `grep -nF '18 falsifications' docs/paper/main.tex` returns 0 after
+  the edit.
+
+**Next step:** none.
+
+### C-18 — §9.2 runtime table contradicts the README
+
+**Location:** `main.tex:1095-1112` (§9.2 Reproducibility).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+§9.2 reported `approximately 10 minutes` and `All others < 5 s each`,
+listing six scripts. The README reports `~12 min` and lists thirteen
+scripts at `≥5 s`, including the actually dominant `recalibrate_top.py`
+(`~10 min`), which §9.2 omitted.
+
+**Resolution.** The §9.2 table now matches the README rows at `≥5 s`.
+The total is `~12 min` and the dominant cost is cited as
+`recalibrate_top.py`. `All others < 5 s each` remains true for the
+rest.
+
+**Evidence:**
+- `awk '/^## Runtime/,/^## Reproducibility/' verification/README.md`
+  lists the same rows.
+- The paper table no longer omits `recalibrate_top.py`.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
-All findings C-01 through C-16 are closed. The list of closures is
+All findings C-01 through C-18 are closed. The list of closures is
 above, in each block. No open finding remains.
 
 The next iteration of the content audit should begin from the paper

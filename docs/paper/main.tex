@@ -1098,18 +1098,25 @@ The scripts run in the following time ranges on a 2020-era desktop:
 \toprule
 Script & Time \\
 \midrule
+\spath{recalibrate_top.py} & $\sim$10 min \\
+\spath{bipartite_power.py} & $\sim$3 min \\
+\spath{max_statistic.py} & $\sim$2 min \\
 \spath{calibration_modularity.py} & $\sim$400 s \\
 \spath{dt_convergence.py} & $\sim$130 s \\
+\spath{mfpt_jump_diffusion.py} & $\sim$90 s \\
+\spath{calibration_heavy_tail.py} & $\sim$60 s \\
 \spath{sim_positivity.py} & $\sim$34 s \\
+\spath{clique_spectra_seeds.py} & $\sim$21 s \\
 \spath{censoring_test.py} & $\sim$17 s \\
 \spath{clique_spectra.py} & $\sim$17 s \\
 \spath{stationary_stats.py} & $\sim$12 s \\
+\spath{r_std_specification.py} & $\sim$5 s \\
 All others & $< 5$ s each \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-Total runtime for the full suite: approximately 10 minutes on a single core. The dominant cost is the RMT calibration with $N_{H_0} = 2000$ and $N_{H_1} = 500$.
+Total runtime for the full suite: approximately 12 minutes on a single core. The dominant cost is the RMT calibration (\spath{recalibrate_top.py}, $\sim$10 min).
 
 \subsection{On-Chain Gas Costs}
 The cryptographic design of Section~\ref{sec:zk} has an on-chain component. We measure the gas cost of the EVM precompiles that implement the BN254 pairings and scalar multiplications \fref{integrations/avalanche/benchmarks/src/GasBenchmarks.sol}. The measurements match EIP-196 and EIP-197 to the gas unit:
@@ -1163,7 +1170,7 @@ Both benchmarks are declared as future work. The protocols for measuring them ar
 Claim & Status & Source \\
 \midrule
 Verification suite reproduces all claims & Verified & \spath{verification/} \\
-18 falsifications documented & Verified & \spath{docs/audit/} \\
+19 entries documented & Verified & \spath{docs/audit/} \\
 \texttt{ecPairing} $k=4 = 181{,}142$ gas & Measured & \spath{GasBenchmarks.sol} \\
 Groth16 verification $\approx 206$k gas & Measured + estimate & \spath{GasBenchmarks.sol} \\
 Bulletproofs direct: $\sim$6.5M gas & Estimated & \spath{GasBenchmarks.sol} \\
@@ -1293,7 +1300,7 @@ The Diamond Framework replaces a fraction of the financial stake required of a p
 \end{enumerate}
 
 \subsection{Methodology}
-Every quantitative claim in this paper is paired with a script that reproduces it. Claims without scripts are labeled as conjectures. The project maintains a public log of falsifications (\spath{docs/audit/numerical-verification.md}) with 18 falsifications: each one a claim that was made during development, tested, and either confirmed or corrected.
+Every quantitative claim in this paper is paired with a script that reproduces it. Claims without scripts are labeled as conjectures. The project maintains a public log of falsifications (\spath{docs/audit/numerical-verification.md}) with 19 entries: each one a claim that was made during development and tested.
 
 The falsification log includes errors of several kinds: a fabricated simulation figure (F-001), a mismeasurement of a gas cost (F-017), a factor of two in an integral (F-011), a rounding rule that shifted a phase transition (F-014), an unverified projection of a multidimensional type (F-004), and an incorrect eigenvalue statistic in the collusion test (F-018). The corrections are documented in the same file as the original claims.
 
