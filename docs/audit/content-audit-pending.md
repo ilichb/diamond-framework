@@ -120,9 +120,10 @@ verifier does not recompute the Frobenius norm.
 
 - **Option 2 (primary).** The data layer reads the source chains,
   applies `f_c`, produces `T`, and publishes the commitment
-  optimistically. Soundness rests on the bond and the dispute window
-  of §7.3, not on the validator's honesty. The validator references
-  the published commitment; it does not create one.
+  optimistically. Soundness rests on the fraud-proof mechanism of §7.3 and the
+  slashing parameter $S_{\mathrm{slash}}$ of §7.5, not on the
+  validator's honesty. The validator references the published
+  commitment; it does not create one.
 - **Option 3 (transport).** For Avalanche L1 source chains, the root
   is propagated via Warp Messaging (`main.tex:1140`). The trust
   anchor is the source chain's quorum. For non-Avalanche chains, the
@@ -139,9 +140,9 @@ are rejected.
 2. The events that feed `T` are consensus output. Privacy of `T`
    would require privacy of the source chains, which the protocol
    does not assume.
-3. Option 1 requires roughly `C*D*H = 500` state inclusion proofs
+3. Option 1 requires `C*D*H = 500` state inclusion proofs
    inside the recursive circuit. The proving time is the benchmark
-   the paper explicitly defers (`main.tex:1140`).
+   the paper explicitly defers (`main.tex:1138`).
 4. Option 2 removes the ZK soundness surface that §4.2 already
    exploited once (`main.tex:450`) and does not depend on the
    unmeasured proving time.
@@ -164,7 +165,7 @@ are rejected.
 **Costs accepted.**
 
 - A dispute window before a new validator activates.
-- Dependence on honest watchers (`main.tex:1181`).
+- Dependence on honest auditors (`main.tex:1181`).
 - `T` is visible. Any adversary that reads the source chains sees it.
 
 **Next step:** rewrite `main.tex` §4.1 (`:423`), §1.2 (`:73`) and §6.2
