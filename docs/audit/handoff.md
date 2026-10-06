@@ -45,20 +45,26 @@ disagrees with the log, the log wins.
 | C-02 | Pedersen binding | — (design decision) | a4eb339, 44decda, fc61a71 | yes |
 | C-03 | MFPT ignores the jumps | mfpt_jump_diffusion.py | a6964d6 | yes |
 | C-04 | Section 2 unused downstream | — (declared map) | 31186a7 | yes |
-| C-05 | Asym explanation wrong | clique_spectra_seeds.py, asym_weights.py | 0eeea29 | no |
+| C-05 | Asym explanation wrong | clique_spectra_seeds.py, asym_weights.py | 0eeea29 | yes |
 | C-06 | Censoring test disagreement | censoring_test.py | 2d6a46b | yes |
 | C-07 | −502 not the model value | attacker_profit_analytical.py | 3779272 | yes |
 | C-08 | Revenue column gross | fee_specification_net.py | 3779272 | yes |
 | C-09 | Bootstrap R_std mismatch | — (refuted) | f682d7d | no |
 | C-10 | Heavy-tail not measured | calibration_heavy_tail.py | 7d7ec86, fc61a71 | yes |
 | C-11 | Theta_r / VaR_tech undefined | — (definitions) | a2200a8 | yes |
-| C-12 | §6.2 presupposes repair | — (textual) | 4f597a7 | no |
+| C-12 | §6.2 presupposes repair | — (textual) | 4f597a7 | yes |
 | C-13 | Three forms of C_R | — (declared map) | 31186a7 | yes |
-| C-14 | R_std never defined | r_std_specification.py | 82324e6 | no |
+| C-14 | R_std never defined | r_std_specification.py | 82324e6 | yes |
 | C-15 | Order of attack stale | — (worksheet-internal) | dc205df | no |
 | C-16 | Script counter stale | — (counter) | f4de779 | yes |
 | C-17 | Falsification counter | — (counter) | 92ea4a4 | yes |
 | C-18 | §9.2 runtime table | — (counter) | 92ea4a4 | yes |
+
+The `main.tex` column is derived with
+`git log --format='%h %s' -- docs/paper/main.tex`. C-05, C-12 and C-14
+were audited in session 2 with `Status: Confirmed` but their Next step
+(a paper edit) was applied in the commit that closes them, after the
+audit-close commit.
 
 Re-derive with:
 

@@ -569,7 +569,7 @@ A_{\mathrm{sym}} = D^{-1/2} W D^{-1/2}
 
 where $D = \mathrm{diag}(d_1, \ldots, d_n)$, $d_i = \sum_j W_{ij}$. This matrix has a bulk spectrum that recovers a Wigner-type distribution~\cite{wigner1958,bai2010} for heavy-tailed graphs, which the original formulation of the protocol used for detection.
 
-The normalization is inappropriate for detecting cliques. Each edge is scaled by $1/\sqrt{d_i d_j}$. Because a clique raises the degree of its members, the normalization downweights the clique's internal edges relative to the background. Quantitatively, for a clique of size $m = 20$ with intra-clique density $10\times$ the background:
+Each edge is scaled by $1/\sqrt{d_i d_j}$, so the per-edge weight of an intra-clique edge is $1/27.2 \approx 0.037$ and of a background edge is $1/20.0 \approx 0.050$. A per-edge comparison alone would conclude that the clique's edges are weaker after normalization, cancelling the density signal. The relevant comparison is per-pair: intra-clique pairs are $10\times$ more probable than background pairs, so the expected weight is what determines the spectral signature. Quantitatively, for a clique of size $m = 20$ with intra-clique density $10\times$ the background:
 
 \begin{center}
 \begin{tabular}{lr}
@@ -584,9 +584,9 @@ Normalized background edge & $1/20.0 \approx 0.050$ \\
 \end{tabular}
 \end{center}
 
-The clique's edges are weaker after normalization than the background's. The density signal is cancelled by the degree increase.
+The clique's per-edge weight is lower after normalization, but the per-pair weight is not. Under $W$, the expected per-pair weight of an intra-clique pair is $10.0000\times$ that of a background pair. Under $A_{\mathrm{sym}}$, with the null-model background degree cited above ($d_{\mathrm{bg}} = 20$), the ratio is $7.4478$; with the model-consistent background degree under $H_1$ ($d_{\mathrm{bg}} = 27.214$), the ratio is $10.1343$. Under either denominator the density signal is attenuated by the normalization, not cancelled.
 
-We verify this numerically \fref{verification/rmt/clique_spectra.py}. For a single clique of size $m = 20$ with intra-clique density $10\times$ the background, the three candidate matrices give the following leading non-trivial eigenvalue:
+We verify this numerically \fref{verification/rmt/clique_spectra.py}. For a single clique of size $m = 20$ with intra-clique density $10\times$ the background, the three candidate matrices give the following leading non-trivial eigenvalue, for a single draw of the generator (seed 42):
 
 \begin{center}
 \resizebox{\textwidth}{!}{%
@@ -600,6 +600,8 @@ $B$ & $s[-1]$ & 8.6896 & 10.7011 & 8.9443 & $+1.7569$ \\
 \bottomrule
 \end{tabular}}
 \end{center}
+
+The single-seed values above are one draw from the multi-seed distribution. Across 200 seeds \fref{verification/rmt/clique_spectra_seeds.py}, the $W$ gap has mean $+0.73$ with std $0.39$, the $A_{\mathrm{sym}}$ gap has mean $-0.02$ with std $0.01$, and the $B$ gap has mean $+0.77$ with std $0.41$. The single-seed values sit at the P99, P90 and P99 of their respective distributions. The paired claim $\mathrm{gap}_B > \mathrm{gap}_W$ is structural rather than informative: it follows from Weyl interlacing on $B = W - dd^{\top}/(2m)$. The empirical content is the mean difference $+0.0353$, small against the per-seed standard deviation.
 
 The choice of statistic differs by matrix. For $W$ and $A_{\mathrm{sym}}$, $s[-1]$ is the Perron eigenvalue (trivial, equal to $d_{\max}$ and 1 respectively) and $s[-2]$ is the leading non-trivial direction. For $B$, the identity $B \cdot \mathbf{1} = 0$ places the trivial eigenvalue at the center of the spectrum, and $s[-1]$ is the signal. The change is documented in falsification log entry F-018.
 

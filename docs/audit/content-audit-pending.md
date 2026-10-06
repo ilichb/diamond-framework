@@ -286,10 +286,9 @@ of the normalized variable `R`, not of `r`.
 
 **Location:** §5.2, paragraph beginning "The normalization is
 inappropriate for detecting cliques", and the spectral table above it.
-**Status:** Confirmed by committed scripts:
-`verification/rmt/asym_weights.py` for the per-pair weight mechanism,
-and `verification/rmt/clique_spectra_seeds.py` for the single-seed
-nature of the table.
+**Status:** Cerrado. §5.2 mechanism paragraph rewritten with the
+per-pair weight argument; table prose now reports the multi-seed
+distribution and cites Weyl interlacing for the paired claim.
 **Severity:** Moderate.
 
 The paper compares only the per-edge weight (`1/27.2` vs `1/20`) and
