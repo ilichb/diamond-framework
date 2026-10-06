@@ -175,24 +175,67 @@ owns the commitment and the source chain transport, with Option 3 for
 Avalanche L1 source chains. The paper edits belong to a separate
 iteration and are not applied here.
 
-### C-03 — MFPT formula ignores the jumps
+### C-03 — MFPT of the jump-diffusion is larger than the CIR value
 
-**Location:** §2.3 (equations 2.4 and 2.5).
-**Status:** Confirmed by the agent.
+**Location:** §2.3 (equations 2.4 and 2.5, `main.tex:180-192`).
+**Status:** Cerrado.
 **Severity:** Moderate.
 
-The mean first-passage time is computed for the CIR diffusion without
-jumps. §2.1 defines the reputation process as CIR **with multiplicative
-downward jumps**. The whitewashing bound therefore does not apply to
-the process as defined.
+**Original problem.** The mean first-passage time was computed for the
+CIR diffusion without jumps. §2.1 defines the reputation process as CIR
+with multiplicative downward jumps (`R -> R*y`, `y in (0,1]`). The
+values reported in §2.3 (`11.2203` and `443.7374`) are the `lambda = 0`
+limit, not the MFPT of the process as defined.
 
-**Evidence:** `verification/stochastics/mfpt_bound_explicit.py`
-implements the drift+diffusion formula and reproduces the reported
-values (11.2203, 443.7374). The paper does not compute an MFPT for the
-jump-diffusion; no such script exists under `verification/`.
+**Resolution.** A new script,
+`verification/stochastics/mfpt_jump_diffusion.py`
+(md5 `e57613ea0b9347769c4f95a0fa9d8fa3`), measures the MFPT by Euler
+simulation of the full jump-diffusion for `lambda in {0.0, 0.05, 0.1,
+0.3, 0.8}`, in both parameter regimes. The jump distribution is
+`y ~ U(0.5, 1.0)`, applied as `R -> R*y` per event, matching
+`sim_positivity.py`. Deterministic, seed 42, `N_paths = 2000`,
+`dt = 0.005`.
 
-**Next step:** compute the MFPT for the jump-diffusion, or re-scope the
-claim to the no-jump sub-process.
+Measured MFPT (conditional on absorption within `T_MAX`):
+
+    Regime  lambda   MFPT     reached   analytical
+    R1      0.00     11.34    1.0000    11.2203
+    R1      0.05     12.10    1.0000    --
+    R1      0.10     12.20    1.0000    --
+    R1      0.30     14.03    1.0000    --
+    R1      0.80     19.38    1.0000    --
+    R2      0.00     495.10   0.9725    443.7374
+    R2      0.05     512.95   0.9710    --
+    R2      0.10     535.22   0.9650    --
+    R2      0.30     594.50   0.9280    --
+    R2      0.80     710.49   0.8210    --
+
+The `lambda = 0` control at `N_paths = 2000` gives `+1.03%` over the
+analytical value, within the Euler-scheme bias (`dt_convergence.py`
+reports `+4.9%` at `dt = 0.005` with `N = 5000`; the two are
+statistically indistinguishable at `z < 2`). The MFPT grows
+monotonically with `lambda`, and in the second regime the fraction of
+paths that reach `R_0` within `T_MAX = 2000` falls from `0.9725` at
+`lambda = 0` to `0.8210` at `lambda = 0.8`.
+
+`main.tex:192` (after the table of the two regimes) now declares that
+the reported values are the `lambda = 0` limit and that the full
+process has a larger MFPT. The whitewashing bound of §2.3 is therefore
+a lower bound for the process as defined.
+
+**Evidence:**
+- `verification/stochastics/mfpt_jump_diffusion.py`
+  (md5 `e57613ea0b9347769c4f95a0fa9d8fa3`), output
+  `verification/stochastics/results/mfpt_jump_diffusion_output.txt`.
+- `verification/stochastics/mfpt_bound_explicit.py`
+  (md5 `bbc34d39c7109e9ecb895fe7362394ec`) — the drift+diffusion
+  formula, unchanged.
+- `verification/stochastics/dt_convergence.py`
+  (md5 `9382aaa5e4f888d88971f0204f272fcf`) — the Euler scheme,
+  unchanged; same integration rule.
+- Two independent runs produce the same output md5.
+
+**Next step:** none. Closed by the paper edit in the same commit.
 
 ### C-04 — Section 2 is used downstream via the map r = ||T||_F
 
@@ -780,16 +823,14 @@ and the stray blank line are removed.
 
 ## Proposed order of attack
 
-Open findings only. The closed findings (C-01, C-02, C-04, C-05, C-07,
-C-08, C-09, C-10, C-11, C-12, C-13, C-14, C-15) remain in the file
-above as record.
+Open findings only. The closed findings (C-01, C-02, C-03, C-04, C-05,
+C-07, C-08, C-09, C-10, C-11, C-12, C-13, C-14, C-15) remain in the
+file above as record.
 
-1. **C-03** — moderate, requires a jump-diffusion computation for the
-   MFPT with jumps.
-2. **C-06** — minor, reproduce and rephrase the censoring test
+1. **C-06** — minor, reproduce and rephrase the censoring test
    disagreement.
 
-Order is by severity. C-03 and C-06 are independent.
+Order is by severity. C-06 is the last open finding.
 
 ## Handoff
 

@@ -204,6 +204,8 @@ $\alpha = 2.0$, $\sigma_0 = 0.5$ & 443.7374 & $1.415 \times 10^{10}$ & $3.14 \ti
 \end{tabular}
 \end{center}
 
+The values above are the mean first-passage time of the CIR diffusion without jumps, i.e., the $\lambda = 0$ limit of the process defined in Section~\ref{sec:reputation}. The full process with multiplicative downward jumps has a larger MFPT: at $\lambda = 0.8$, the measured value is $19.38$ in the first regime and $710.5$ in the second, and the fraction of paths that reach $R_0$ within the horizon falls from $1.0$ to $0.82$ in the second \fref{verification/stochastics/mfpt_jump_diffusion.py}. The whitewashing bound of this section is therefore a lower bound for the process as defined.
+
 The analytical bound of the original formulation, $C^* \cdot R_0^{1-\kappa} \exp(\beta R_0)$, requires specifying $C^*$. With $C^* = 1$ the bound exceeds the exact MFPT in both regimes: by a factor of 1.78 in the first, and by $3.19 \times 10^7$ (7.5 orders of magnitude) in the second. \textbf{$C^* = 1$ is not a valid lower bound for the CIR first-passage time.} The implicit $C^*$ values (0.562 and $3.14 \times 10^{-8}$) are the largest constants for which the bound holds.
 
 We verified the numerical values by two independent methods. The first is direct Euler simulation of the CIR \fref{verification/stochastics/dt_convergence.py}. The simulated MFPT converges monotonically to the exact value as $dt \to 0$:
