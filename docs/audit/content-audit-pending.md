@@ -90,20 +90,89 @@ in §6 (the soundness design is already decided in §4.4), or label the gap
 
 ### C-02 — Pedersen commitment not bound to the consensus-derived tensor
 
-**Location:** §3.5 ("proof operates on the committed tensor") and
-§7.2 ("committed via state inclusion proofs").
-**Status:** Conceptual.
+**Location:** §4.1 (`main.tex:423`), §4.2 (`main.tex:450`), §6.2
+(`main.tex:744`), §7.1 (`main.tex:862-869`), §7.2 (`main.tex:873`).
+**Status:** Resolved (design decision).
 **Severity:** Structural.
 
-Neither section specifies who creates the Pedersen commitment. If the
-validator creates it, the same class of unsoundness corrected in §4
-(F-012) reappears at the data layer: the validator chooses `T` freely
-and proves the norm of a fabricated tensor. If the data layer creates
-it, the binding mechanism between the commitment and the events of
-§7.1 is unspecified.
+**Original problem.** Neither §3.5 nor §7.2 specified who creates the
+Pedersen commitment. If the validator creates it, the same class of
+unsoundness corrected in §4 (F-012) reappears at the data layer: the
+validator chooses `T` freely and proves the norm of a fabricated
+tensor. If the data layer creates it, the binding between the
+commitment and the events of §7.1 is unspecified.
 
-**Next step:** model both scenarios, quantify the exploit cost, and
-identify which protocol component must own the commitment.
+**Root contradiction.** §4.1 states the protocol "requires validators
+to prove, without revealing the full reputation tensor `T`, that its
+Frobenius norm exceeds a threshold" (`main.tex:423`), and §1.2 lists
+"Verifiability. Reputation claims must be cryptographically verifiable
+without revealing the underlying tensor" (`main.tex:73`). §7.1 states
+the opposite: `T` is "derived from consensus events on the source
+chains" via "a public function `f_c`" (`main.tex:862-869`). Any party
+with access to the source chains recomputes `T`. The privacy claim of
+§4.1 is vacuous in the protocol §7.1 specifies.
+
+**Decision.** `T` is public. The privacy layer of §4 is dropped. The
+ZK proof of §4 is reassigned from privacy to succinctness: the on-chain
+verifier does not recompute the Frobenius norm.
+
+**Owner of the commitment.** Option 2 + Option 3 combined.
+
+- **Option 2 (primary).** The data layer reads the source chains,
+  applies `f_c`, produces `T`, and publishes the commitment
+  optimistically. Soundness rests on the bond and the dispute window
+  of §7.3, not on the validator's honesty. The validator references
+  the published commitment; it does not create one.
+- **Option 3 (transport).** For Avalanche L1 source chains, the root
+  is propagated via Warp Messaging (`main.tex:1140`). The trust
+  anchor is the source chain's quorum. For non-Avalanche chains, the
+  transport requires a light client or a ZK bridge; a centralized
+  oracle is excluded by `main.tex:73`.
+
+Options 1 (validator creates) and a pure Option 3 without Option 2
+are rejected.
+
+**Reasons.**
+
+1. §7.1 already declares `T` public. Any alternative requires
+   rewriting §7.1, not just §4.
+2. The events that feed `T` are consensus output. Privacy of `T`
+   would require privacy of the source chains, which the protocol
+   does not assume.
+3. Option 1 requires roughly `C*D*H = 500` state inclusion proofs
+   inside the recursive circuit. The proving time is the benchmark
+   the paper explicitly defers (`main.tex:1140`).
+4. Option 2 removes the ZK soundness surface that §4.2 already
+   exploited once (`main.tex:450`) and does not depend on the
+   unmeasured proving time.
+
+**Consequences for other findings.**
+
+- **C-01.** The gap between the bit returned by the ZK proof and the
+  continuous value required by the allocation rule is closed if
+  `C_R(T) = ||T||_F` is published optimistically by the data layer.
+  The contract reads a value, not a bit. C-01 loses its soundness
+  layer entirely; only the allocability layer (the functional form
+  of `C_R`) remains.
+- **C-04.** Reconciliation of §2, §6 and §8 is simplified because
+  `C_R(T)` is a public quantity, not a value extracted from a
+  circuit.
+- **§6.2** (`main.tex:744`). The misreporting argument becomes
+  vacuous in a stronger sense: `T` is not a private type because it
+  is public, not because a proof binds the validator.
+
+**Costs accepted.**
+
+- A dispute window before a new validator activates.
+- Dependence on honest watchers (`main.tex:1181`).
+- `T` is visible. Any adversary that reads the source chains sees it.
+
+**Next step:** rewrite `main.tex` §4.1 (`:423`), §1.2 (`:73`) and §6.2
+(`:744`) to declare `T` public and reassign the ZK proof from privacy
+to succinctness. Rewrite §7.2 (`:873`) to specify that the data layer
+owns the commitment and the source chain transport, with Option 3 for
+Avalanche L1 source chains. The paper edits belong to a separate
+iteration and are not applied here.
 
 ### C-03 — MFPT formula ignores the jumps
 
@@ -610,7 +679,8 @@ without an interval.
    evidence is committed (`zk/threshold_quantization.py`) and the
    correction (state `C_R`/`Theta_r`/`VaR_tech` in §6, or label the gap
    `[CONJECTURE]`) is recorded but not yet applied.
-2. **C-02** — structural, blocks the data layer's soundness.
+2. **C-02** — structural, resolved by design decision; paper edits
+   pending.
 3. **C-04** — structural, ties §2 to the rest of the paper.
 4. **C-03** — moderate, requires a jump-diffusion computation.
 5. **C-09** — moderate, definitional first.
