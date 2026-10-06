@@ -33,6 +33,8 @@ claim in the Diamond Framework paper.
     python3 rmt/calibration_modularity.py
     python3 rmt/calibration_heavy_tail.py
     python3 rmt/clique_spectra.py
+    python3 rmt/clique_spectra_seeds.py
+    python3 rmt/asym_weights.py
     python3 rmt/wilson_intervals.py
     python3 rmt/recalibrate_top.py
     python3 rmt/max_statistic.py
@@ -63,6 +65,8 @@ Approximate runtimes on a 2020-era desktop:
 | censoring_test.py | ~17 s |
 | mfpt_jump_diffusion.py | ~90 s |
 | clique_spectra.py | ~17 s |
+| clique_spectra_seeds.py | ~21 s |
+| asym_weights.py | < 1 s |
 | wilson_intervals.py | < 1 s |
 | stationary_stats.py | ~12 s |
 | r_std_specification.py | ~5 s |

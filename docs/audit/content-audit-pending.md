@@ -850,9 +850,49 @@ and the stray blank line are removed.
 
 **Next step:** none. Closed in the same commit that rewrites the block.
 
+### C-16 — Script counter in §9 is stale
+
+**Location:** `main.tex:1089` (`The README lists the N scripts`).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+The paper reported `27` scripts in §9.1. The README's `## Running`
+block listed `28` executable scripts. The disk had `30` non-archived
+`.py` files. Three counters, three values.
+
+Origin: the commit `a7f7bf2` aligned the counter at 27 (README 27,
+paper 27). The commit `a6964d6` (C-03) added
+`stochastics/mfpt_jump_diffusion.py` to the README (28) but did not
+update the paper. Separately, `rmt/asym_weights.py` (commit `6d0b91c`)
+and `rmt/clique_spectra_seeds.py` (commit `cc6c06c`) had versioned
+outputs in `results/` but were never added to the README.
+
+**Resolution.** All three counters are aligned at 30:
+
+- `verification/README.md` `## Running` now lists
+  `clique_spectra_seeds.py` and `asym_weights.py`; both have rows in
+  `## Runtime`. The total runtime is unchanged (~12 min) because the
+  two additions total ~22 s.
+- `main.tex:1089` now reads `30 scripts`.
+- The reference is now consistent across the paper, the README, and
+  the disk.
+
+**Evidence:**
+- `grep -c '^    python3 ' verification/README.md` returns 30 after
+  this edit (28 before).
+- `find verification -name '*.py' -not -path '*/archive/*'` returns 30.
+- `grep -nF 'The README lists the' docs/paper/main.tex` returns the
+  line with `30`.
+- Both scripts were re-run for timing and produce the same output md5
+  as the committed version (`clique_spectra_seeds.py` →
+  `92862f2e11aa8188658ffbbb30869e9c`, `asym_weights.py` →
+  `9671f10df471b4f3d19b27683a78b677`).
+
+**Next step:** none. Closed by the edits in the same commit.
+
 ## Proposed order of attack
 
-All findings C-01 through C-15 are closed. The list of closures is
+All findings C-01 through C-16 are closed. The list of closures is
 above, in each block. No open finding remains.
 
 The next iteration of the content audit should begin from the paper
