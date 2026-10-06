@@ -749,7 +749,7 @@ We address the two candidate sources of private information below.
 \subsection{Verified Reputation}
 The reputation tensor $T$ is verifiable on-chain via the zero-knowledge threshold proof of Section~\ref{sec:zk}. A validator whose reputation exceeds the threshold can prove it. A validator whose reputation falls below the threshold cannot produce a valid proof.
 
-Consequently, $T$ is not a private type in the sense of mechanism design. The validator cannot misreport it: the proof binds the validator to a specific tensor, and the verifier checks the binding. The revelation principle does not apply because there is nothing to reveal.
+Consequently, $T$ is not a private type in the sense of mechanism design. The validator cannot misreport it: the proof binds the validator to a specific tensor, and the verifier checks the binding. This binding property holds under the Option B repair of Section~\ref{subsec:recursive}, which replaces the original circuit of Section~\ref{sec:zk} with a Pedersen commitment and a Bulletproofs argument. The revelation principle does not apply because there is nothing to reveal.
 
 \subsection{Private Cost of Capital}
 The validator's cost of capital $\omega \in [\underline{\omega}, \bar{\omega}]$ is private. It represents the opportunity cost of locking financial stake. A validator with low $\omega$ can lock stake cheaply; a validator with high $\omega$ faces a higher opportunity cost.
@@ -1008,6 +1008,8 @@ The correlation between activity and reputation at stationarity is 0.76 in the r
 
 The sweep over $\mu$ at fixed $g = 0.01$ \fref{verification/bootstrap/sweep_net_gain.py} gives a maximum of $R_{\mathrm{std}}$ at $\mu/g = 1.5$. We use $g = 0.01$, $\mu = 0.015$.
 
+The quantity $R_{\mathrm{std}}$ is the cross-sectional sample standard deviation of the reputation score $R$ over the active validators at the final epoch of the simulation, with the population convention (numpy default \texttt{ddof = 0}); the reference simulation runs $N = 100$ validators over $T = 500$ epochs \fref{verification/bootstrap/r_std_specification.py}.
+
 \subsection{Bootstrap Simulation}
 We simulate the bootstrap from $R(0) = 0$ over 500 epochs \fref{verification/bootstrap/simulate_bootstrap_net_gain.py}. Parameters:
 
@@ -1077,7 +1079,7 @@ Hybrid\_no\_decay is recommended & Design & --- \\
 
 The Section's quantitative content is limited to the bootstrap simulation under the net\_gain model and the comparison of three policies. The saturation of the alternative models is documented as F-016.
 
-The selection of net\_gain is based on its correlation with activity~\cite{cong2021} (0.76 vs 0.08--0.11 for the saturating models), not on satisfying all four criteria of the model comparison. The standard deviation of reputation under net\_gain is 0.0282 in \spath{compare_reputation_models.py} and 0.0424 at the sweep optimum $\mu/g = 1.5$; both fall below the 0.05 threshold used in the comparison script. The threshold is a heuristic, not a requirement, and the net\_gain model is chosen for the correlation property, which the saturating models fail by an order of magnitude.
+The selection of net\_gain is based on its correlation with activity~\cite{cong2021} (0.76 vs 0.08--0.11 for the saturating models), not on satisfying all four criteria of the model comparison. The standard deviation of reputation under net\_gain is 0.0282 in \spath{compare_reputation_models.py} at $\mu/g = 5.0$ with one seed, and 0.0424 in \spath{sweep_net_gain.py} at the sweep optimum $\mu/g = 1.5$, averaged over five seeds; both fall below the 0.05 threshold used in the comparison script. The threshold is a heuristic, not a requirement, and the net\_gain model is chosen for the correlation property, which the saturating models fail by an order of magnitude.
 
 \section{Evaluation}
 \label{sec:evaluation}
@@ -1223,7 +1225,7 @@ R' = g \cdot a \cdot (1-R) - \mu \cdot R
 \label{eq:netgain-limits}
 \end{equation}
 
-selected for its correlation between activity and reputation (0.76 vs 0.08--0.11 for the saturating alternatives). The selection does not satisfy all four criteria of the model comparison: the standard deviation of reputation under net\_gain is 0.0424 at the sweep optimum, below the 0.05 threshold used in the comparison script. The threshold is a heuristic.
+selected for its correlation between activity and reputation (0.76 vs 0.08--0.11 for the saturating alternatives). The selection does not satisfy all four criteria of the model comparison: the standard deviation of reputation under net\_gain is 0.0424 at the sweep optimum $\mu/g = 1.5$ (five seeds; the $N = 100$ mean is $0.043970$ with 95\% CI $[0.043351, 0.044588]$), below the 0.05 threshold used in the comparison script. The threshold is a heuristic.
 
 If the true reputation dynamics differ from net\_gain --- if the activity of a validator has decreasing returns, if reputation decays with a different functional form, if there are non-linear effects --- the bootstrap results change. The qualitative conclusion (stake reduction of 20--25\% at the median validator) is robust to small changes in the gain rule, but the specific numbers are not.
 

@@ -691,7 +691,7 @@ reference values `[CONJECTURE]`:
 ### C-12 — §6.2 presupposes the §4.3-4.4 repair without citing it
 
 **Location:** §6.2 ("Verified Reputation") vs §4.2-4.4.
-**Status:** Confirmed (textual, by inspection).
+**Status:** Cerrado. Forward reference added at `main.tex:752` (§6.2 → §4.4).
 **Severity:** Structural.
 
 §6.2 asserts that the threshold proof binds the validator to a specific
@@ -764,8 +764,9 @@ separate finding. This block closes the map inconsistency only.
 
 **Location:** §8.1 (`main.tex:995`), §8.2 summary table (`main.tex:1055`),
 §8.2 prose (`main.tex:1066`), §8.7 (`main.tex:1133`), §9 (`main.tex:1205`).
-**Status:** Confirmed (textual, by exhaustive grep; numeric backing in
-`verification/bootstrap/r_std_specification.py`).
+**Status:** Cerrado. `R_{\mathrm{std}}` defined at the end of §8.2;
+operating point and seed count declared at `main.tex:1080` and
+`main.tex:1226`.
 **Severity:** Minor.
 
 The symbol `R_{\mathrm{std}}` occurs three times (`main.tex:995`, `:1055`,
