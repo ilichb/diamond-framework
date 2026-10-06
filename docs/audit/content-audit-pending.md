@@ -542,27 +542,51 @@ experiment, to be run at `n >= 5000`.
 
 ### C-11 — The allocation rule uses symbols the paper never defines
 
-**Location:** §4.1 (`Theta_r`) and §6.3 (`VaR_tech`).
-**Status:** Confirmed (textual, by exhaustive grep).
+**Location:** §4.1 (`Theta_r` defined at `main.tex:430`) and §6.3
+(`VaR_tech` defined at `main.tex:764`).
+**Status:** Cerrado (textual; definitions added to the paper).
 **Severity:** Minor.
 
-`Theta_r` is the threshold of `eq:threshold` (`main.tex:426`). It appears
-four times in the paper, always symbolically (`main.tex:316`, `:426`,
-`:432`, `:435`), and has no numeric value anywhere in the repository.
-The only threshold actually used in a table is `0.5`, in the §4.2
-exploit (`main.tex:444-445`).
+**Confirmed.** `\Theta_r` appears five times in the paper
+(`main.tex:316`, `:426`, `:430`, `:434`, `:437`). Before the present
+edit it appeared four times with no numeric value (`:316`, `:426`,
+`:432`, `:435`). `\mathrm{VaR}_{\mathrm{tech}}` appears three times
+(`main.tex:758` in the allocation rule, `:764` in the definition
+below, `:1019` in the bootstrap policy). Neither symbol had a notation
+entry or a `\newcommand` before the present edit.
 
-`VaR_tech` is worse: it occurs once in the entire paper, inside the
-allocation rule (`main.tex:754`), and is never defined, valued, or cited.
-The floor it is meant to impose cannot be evaluated from the text.
+The scripts use working values, but neither is derived from the paper:
 
-**Evidence:** `grep -rnF 'Theta_r'` over the repo returns only the four
-`main.tex` lines above and this worksheet; `grep -nF 'VaR'` over
-`docs/paper/main.tex` returns only `:754` and `:1011`, where the
-bootstrap policy uses it again unvalued. Reproducible by inspection.
+- `verification/zk/threshold_quantization.py:41` sets `THETA_R = 0.5`
+  citing `main.tex:444-445` (the §4.2 exploit table). That value is an
+  illustration of the exploit, not a declared protocol constant.
+- `verification/mechanism/fee_specification.py:38` sets `VAR_TECH = 0.2`
+  with no paper citation. The same value is used in the bootstrap
+  scripts (`compare_reputation_models.py:29`,
+  `sweep_net_gain.py:32`, `simulate_bootstrap_net_gain.py:20`) and in
+  `threshold_quantization.py:43`.
 
-**Next step:** define and calibrate both symbols, or label any chosen
-value `[CONJECTURE]`.
+**Resolution.** The paper defines both symbols in place and labels the
+reference values `[CONJECTURE]`:
+
+- §4.1, after `eq:threshold`: `\Theta_r` defined as the minimum
+  Frobenius norm required for admission; reference value
+  `\Theta_r = 0.5` `[CONJECTURE]`.
+- §6.3, after the sentence that follows the allocation rule:
+  `\mathrm{VaR}_{\mathrm{tech}}` defined as the technical minimum
+  financial stake; reference value `\mathrm{VaR}_{\mathrm{tech}} = 0.2`
+  `[CONJECTURE]`.
+
+**Evidence:**
+- `grep -nF 'Theta_r' docs/paper/main.tex` returns `:316`, `:426`,
+  `:430`, `:434`, `:437` after this edit; `:316`, `:426`, `:432`,
+  `:435` before.
+- `grep -nF 'VaR' docs/paper/main.tex` returns `:758`, `:764`, `:1019`
+  after this edit; `:756`, `:1015` before.
+- `grep -rnE 'THETA_R|VAR_TECH' verification/ --include='*.py'`
+  returns the script lines cited above.
+
+**Next step:** none. Closed by the paper edit in the same commit.
 
 ### C-12 — §6.2 presupposes the §4.3-4.4 repair without citing it
 

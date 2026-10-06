@@ -427,6 +427,8 @@ The protocol requires validators to prove that the Frobenius norm of the reputat
 \label{eq:threshold}
 \end{equation}
 
+The threshold $\Theta_r$ is the minimum Frobenius norm required for admission. It is a design parameter, not derived from first principles in this paper. The reference configuration uses $\Theta_r = 0.5$ [CONJECTURE].
+
 The natural implementation is a zero-knowledge proof~\cite{gmr1985} over an R1CS circuit that verifies~\eqref{eq:threshold}. The prover commits to $T$ in some form and proves knowledge of a witness satisfying the inequality.
 
 The original specification of the protocol used a Tucker-compressed witness: the prover supplies the core tensor $G$ and factor matrices $A^{(0)}, A^{(1)}, A^{(2)}$, the circuit reconstructs $\hat{T} = G \times_0 A^{(0)} \times_1 A^{(1)} \times_2 A^{(2)}$, and verifies $\|\hat{T}\|_F \geq \Theta_r$. This specification is unsound.
@@ -758,6 +760,8 @@ S_f^*(T) = \max\{\mathrm{VaR}_{\mathrm{tech}}, \Theta(t) - C_R(T)\}
 \end{equation}
 
 which does not depend on $\omega$. The type affects the validator's utility but not its allocation.
+
+The floor $\mathrm{VaR}_{\mathrm{tech}}$ is the technical minimum financial stake, independent of reputation. It is a design parameter, not a value at risk in the financial sense; the notation is historical. The reference configuration uses $\mathrm{VaR}_{\mathrm{tech}} = 0.2$ [CONJECTURE].
 
 The utility of a validator of type $\omega$ with reputation $T$ is
 
