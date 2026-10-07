@@ -1009,6 +1009,34 @@ runs twice with no `^!` and no `Undefined`.
 
 **Next step:** none.
 
+### C-21 — The financial floor S_min was an unjustified conjecture
+
+**Location:** §6.3 (allocation rule and floor definition).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+§6.3 set the financial floor `S_min = 0.2` and tagged it `[CONJECTURE]`,
+with no derivation. A design parameter that gates admission should trace
+to the model, not to a round number.
+
+**Resolution.** The floor is the complement of the collateral saturation:
+`S_min = Theta - C_R^inf`, with `C_R^inf = lim_{r->inf} C_R(r)`. For the
+reference value function `C_R(r) = 0.8 r/(1+r)` the collateral saturates at
+`C_R^inf = 0.8`, giving `S_min = 1.0 - 0.8 = 0.2`. The floor is the largest
+minimum stake that stays inactive over the admissible range (the unfloored
+allocation `Theta - C_R(T)` has infimum `0.2`). §6.3 now states the
+derivation and drops the `[CONJECTURE]` marker; the §6 summary table lists
+the closed form.
+
+**Evidence:** `verification/mechanism/financial_floor_sensitivity.py`
+(output in
+`verification/mechanism/results/financial_floor_sensitivity_output.txt`)
+sweeps `C_R^inf in [0.5, 1.0]`, tracing `S_min = Theta - C_R^inf` over
+`[0.0, 0.5]`. `grep -c 'financial_floor_sensitivity' docs/paper/main.tex`
+returns 2; `pdflatex` runs twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
 All findings C-01 through C-22 are closed. The list of closures is

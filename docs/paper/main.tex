@@ -777,7 +777,7 @@ S_f^*(T) = \max\{S_{\min}, \Theta(t) - C_R(T)\}
 
 which does not depend on $\omega$. The type affects the validator's utility but not its allocation.
 
-The floor $S_{\min}$ is the technical minimum financial stake, independent of reputation. It is a design parameter, not a value at risk in the financial sense. The reference configuration uses $S_{\min} = 0.2$ [CONJECTURE].
+The floor $S_{\min}$ is the technical minimum financial stake, independent of reputation. It is a design parameter, not a value at risk in the financial sense, and it is not arbitrary: it equals the complement of the collateral saturation, $S_{\min} = \Theta - C_R^{\infty}$ with $C_R^{\infty} = \lim_{r \to \infty} C_R(r)$. For the reference value function $C_R(r) = 0.8\,r/(1+r)$ the collateral saturates at $C_R^{\infty} = 0.8$, so $S_{\min} = 1.0 - 0.8 = 0.2$. The floor is the largest minimum stake that stays inactive over the admissible range: the unfloored allocation $\Theta - C_R(T)$ has infimum $\Theta - C_R^{\infty} = 0.2$, which the floor meets but never exceeds \fref{verification/mechanism/financial_floor_sensitivity.py}. A sweep of the saturation $C_R^{\infty}$ over $[0.5, 1.0]$ moves $S_{\min} = \Theta - C_R^{\infty}$ over $[0.0, 0.5]$; the reference value $0.2$ corresponds to $C_R^{\infty} = 0.8$, i.e.\ reputation supplies at most $80\%$ of the admission threshold.
 
 The argument of $C_R$ in~\eqref{eq:allocation} is the Frobenius norm of the tensor: $C_R(T) \equiv C_R(\|T\|_F)$, with $C_R$ the value function of Section~\ref{sec:reputation}.
 
@@ -868,6 +868,7 @@ Claim & Status & Script \\
 \midrule
 $T$ is verified, not private & Design & Section~\ref{sec:zk} \\
 $S_f^*(T)$ independent of $\omega$ & Design & --- \\
+$S_{\min} = \Theta - C_R^{\infty} = 0.2$ & Analytical & \spath{financial_floor_sensitivity.py} \\
 $F_0^* = \pi_{\mathrm{val}} - \bar{\omega} \Theta$ & Analytical & \spath{fee_specification.py} \\
 IR holds for all types & Verified & \spath{fee_specification.py} \\
 IR saturation exact at worst-case type & Verified & \spath{fee_specification.py} \\

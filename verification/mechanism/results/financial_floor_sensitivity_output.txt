@@ -1,0 +1,47 @@
+==============================================================================
+C-21: EL PISO FINANCIERO S_min — ¿CONJETURA O DERIVADO?
+==============================================================================
+
+Parámetros de referencia: Theta = 1.0, C_R(r) = 0.8 r/(1+r)
+
+1. SATURACIÓN DE LA GARANTÍA REPUTACIONAL
+------------------------------------------------------------------------------
+   C_R_inf = lim_{r->inf} C_R(r) = 0.800
+   (Verificación numérica: C_R(1e9) = 0.800000)
+   Stake sin piso: Theta - C_R(T) en (0.200, 1.000]
+   Ínfimo = Theta - C_R_inf = 0.200
+
+2. PISO S_min Y SU CAP DE REPUTACIÓN
+------------------------------------------------------------------------------
+    S_min     Cap rep. (Theta-S_min)    Rep. share    ¿Ata? (C_R_inf=0.8)
+   ------   ------------------------   -----------   --------------------
+     0.00                      1.000          100%                     no
+     0.10                      0.900           90%                     no
+     0.20                      0.800           80%                     no
+
+   El piso ata si S_min > Theta - C_R_inf = 0.200.
+   El valor de referencia 0.2 es el mayor piso que
+   permanece inerte bajo la saturación 0.8 del modelo.
+
+3. SENSIBILIDAD A LA SATURACIÓN C_R_inf
+------------------------------------------------------------------------------
+    C_R_inf     Piso S_min = Theta - C_R_inf    Rep. share
+   --------   ------------------------------   -----------
+        0.5                            0.500           50%
+        0.6                            0.400           60%
+        0.7                            0.300           70%
+        0.8                            0.200           80%
+        0.9                            0.100           90%
+        1.0                            0.000          100%
+
+4. VEREDICTO
+------------------------------------------------------------------------------
+   El S_min = 0.2 del paper NO es una conjetura arbitraria: es
+   Theta - C_R_inf = 1.0 - 0.8 = 0.2, el complemento
+   exacto de la saturación de la garantía reputacional del modelo.
+
+   Para C_R_inf en [0.5, 1.0] el piso implicado barre [0.0, 0.5];
+   0.2 corresponde a la saturación de referencia 0.8, es decir,
+   la reputación aporta como máximo el 80% del umbral de admisión.
+
+==============================================================================
