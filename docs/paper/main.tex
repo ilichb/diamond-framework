@@ -1041,14 +1041,14 @@ We simulate the bootstrap from $R(0) = 0$ over 500 epochs \fref{verification/boo
 \item $N_{\mathrm{MAX}} = 100$ validators, $N_{\mathrm{INIT}} = 10$ at genesis.
 \item Entry rate 0.03 per epoch for new validators.
 \item Activity $a \sim \mathrm{LogNormal}(0, 0.5)$ per validator.
-\item Transition rate $\alpha(t) = \min(1, t/200)$, reaching 1 at epoch 200.
+\item Transition rate $\tau(t) = \min(1, t/200)$, reaching 1 at epoch 200.
 \end{itemize}
 
 We compare three policies:
 
 \begin{itemize}[leftmargin=*]
 \item \textbf{pure\_pos}: $S_f = \Theta$ throughout. No reputation adjustment.
-\item \textbf{hybrid\_no\_decay}: $S_f(t) = \max\{S_{\min}, \Theta - \alpha(t) \cdot C_R(R(t))\}$.
+\item \textbf{hybrid\_no\_decay}: $S_f(t) = \max\{S_{\min}, \Theta - \tau(t) \cdot C_R(R(t))\}$.
 \item \textbf{hybrid\_decay}: same as hybrid\_no\_decay with $R$ decaying at half-life 50 epochs.
 \end{itemize}
 
@@ -1057,7 +1057,7 @@ We compare three policies:
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lrrrrrr}
 \toprule
-Policy & $t(\alpha{=}1)$ & Gini & Top-10 & $S_f$ med & $R$ med & $R$ max \\
+Policy & $t(\tau{=}1)$ & Gini & Top-10 & $S_f$ med & $R$ med & $R$ max \\
 \midrule
 pure\_pos & 500 & 0.1283 & 0.1367 & 1.0000 & 0.3936 & 0.5976 \\
 hybrid\_no\_decay & 200 & 0.1283 & 0.1367 & 0.7764 & 0.3936 & 0.5976 \\
@@ -1270,7 +1270,7 @@ The bootstrap simulation of Section~\ref{sec:bootstrap} assumes:
 \begin{itemize}[leftmargin=*]
 \item Activity follows $\mathrm{LogNormal}(0, 0.5)$ per validator.
 \item Validators enter at a rate of 0.03 per epoch.
-\item The transition rate $\alpha(t)$ is linear in time, reaching 1 at epoch 200.
+\item The transition rate $\tau(t)$ is linear in time, reaching 1 at epoch 200.
 \end{itemize}
 
 These are design choices, not empirical facts. The stationary reputation $R^* = ga/(ga + \mu)$ depends on the activity distribution; if real activity is heavier-tailed or lighter-tailed, $R^*$ changes.

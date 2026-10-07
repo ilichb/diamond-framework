@@ -1251,6 +1251,26 @@ The 104{,}963 gas figure for Poseidon-2 comes from `benchPoseidon2()` in
 
 **Next step:** none.
 
+### C-32 — §8 reused the §2 mean-reversion glyph alpha for the transition rate
+
+**Location:** `docs/paper/main.tex` §8.3 (`\alpha(t)`, `\alpha{=}1`) vs §2.1 (`\alpha`, mean-reversion speed).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+§2.1 uses `\alpha` for the CIR mean-reversion speed; §8.3 used the same
+glyph for the hybrid transition rate `\alpha(t) = \min(1, t/200)`. Two
+distinct quantities in the same paper.
+
+**Resolution.** `\alpha(t)` (three occurrences) and `\alpha{=}1` (one
+table entry) renamed to `\tau` in §8.3. The mean-reversion `\alpha` of §2
+and the significance level `\alpha` of §5 are untouched.
+
+**Evidence:** `grep -c '\\alpha(t)' docs/paper/main.tex` = 0;
+`grep -c '\\tau(t)' docs/paper/main.tex` = 3; `pdflatex` twice with no
+`^!` and no `Undefined`.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
 All findings C-01 through C-27 are closed. The list of closures is
