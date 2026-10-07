@@ -3,7 +3,7 @@
 Working notes for the content audit of `docs/paper/main.tex`. This file
 lists the technical findings raised during the initial review (C-01…C-10),
 plus the findings raised during verification and the session-3 external
-review (C-11…C-27), all closed
+review (C-11…C-35), all closed
 by the scripts and edits recorded below, their
 verification status, and the proposed order of attack.
 
@@ -1340,7 +1340,7 @@ contradiction.
 
 ## Proposed order of attack
 
-All findings C-01 through C-27 are closed. The list of closures is
+All findings C-01 through C-35 are closed. The list of closures is
 above, in each block. No open finding remains.
 
 The next iteration of the content audit should begin from the paper

@@ -33,9 +33,9 @@ of truth.
 The content audit worksheet is `docs/audit/content-audit-pending.md`.
 The falsification log is `docs/audit/numerical-verification.md`.
 
-## 2. Backlog: C-01 through C-27, all closed
+## 2. Backlog: C-01 through C-35, all closed
 
-27 findings, all closed. Closure record in each block of the
+35 findings, all closed. Closure record in each block of the
 worksheet. The compact table below is derived from `git log`; if it
 disagrees with the log, the log wins.
 
@@ -68,6 +68,14 @@ disagrees with the log, the log wins.
 | C-25 | Reproducibility counters (§1.4/§9/§11) | — (counter) | 047dc5c | yes |
 | C-26 | F-log counter in §1.3 (words) | — (counter) | 1f46bd0 | yes |
 | C-27 | F-log counter in Abstract (words) | — (counter) | 1f46bd0 | yes |
+| C-28 | §5.2 per-pair ratio citation | asym_weights.py | 38d97ab | yes |
+| C-29 | F-018 cites the correct script (refuted) | recalibrate_top.py | 9fa0a53 | no |
+| C-30 | §10.5 unsourced 20--25% range | simulate_bootstrap_net_gain.py | bf91735 | yes |
+| C-31 | §4.5 Poseidon-2 gas citation | — (benchmark) | ec38f91 | yes |
+| C-32 | §8.3 transition rate alpha(t) glyph | — (rename) | 0c90d10 | yes |
+| C-33 | §8.2 bootstrap decay rate mu glyph | — (rename) | e82243c | yes |
+| C-34 | lambda for eigenvalues (refuted) | — (refuted) | bf602c0 | no |
+| C-35 | sigma glyphs, distinct domains (refuted) | — (refuted) | d3e1942 | no |
 
 The `main.tex` column is derived with
 `git log --format='%h %s' -- docs/paper/main.tex`. C-05, C-12 and C-14
@@ -155,6 +163,21 @@ Consolidated during session 3:
   caught four digit counters; C-26 and C-27 caught the same class in
   the Abstract and §1.3 written as "nineteen". A grep for digits alone
   is insufficient.
+
+Consolidated during session 4:
+
+- The content-audit and eje (ii) passes closed C-28 through C-35. C-29
+  (a false positive of eje (i)) and C-34, C-35 (standard notation, no
+  value contradiction) were refuted; C-28, C-30 and C-31 were citation
+  gaps closed with a `\fref`; C-32 and C-33 were glyph reuses
+  disambiguated by renaming the §8 symbols (`\alpha(t)` → `\tau(t)` and
+  `\mu` → `\delta`), leaving the §2 mean-reversion `\alpha` and the
+  §2.5 `\mu(r)` drift untouched.
+- `run_all.sh --resume` must verify the existence of each script's
+  `*_output.txt`, not only its numeric row in the manifest. `rm -f` of
+  an output therefore requires removing its row from the manifest
+  before relaunching; otherwise `--resume` skips a script whose output
+  is gone. (Recorded; the hardening is still pending.)
 
 ## 5. Verification inventory
 
