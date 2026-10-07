@@ -16,15 +16,29 @@
 #   - Writes nothing into the repository except under OUT_DIR (the
 #     baseline directory). Those outputs are not committed.
 #
+# Options:
+#   --resume   Keep the existing manifest and skip any script that already
+#              has a completed (numeric exit-code) row. Re-invoking after an
+#              interruption continues where the last run stopped.
+#
 # Usage:
-#   bash verification/run_all.sh [OUT_DIR]
+#   bash verification/run_all.sh [--resume] [OUT_DIR]
 # Default OUT_DIR: verification/baseline_<YYYY-MM-DD>/
 #
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 README="${SCRIPT_DIR}/README.md"
-OUT_DIR="${1:-${SCRIPT_DIR}/baseline_$(date +%F)}"
+OUT_DIR=""
+RESUME=0
+
+for arg in "$@"; do
+    case "${arg}" in
+        --resume) RESUME=1 ;;
+        *) OUT_DIR="${arg}" ;;
+    esac
+done
+OUT_DIR="${OUT_DIR:-${SCRIPT_DIR}/baseline_$(date +%F)}"
 
 if [ ! -f "${README}" ]; then
     echo "run_all.sh: README not found: ${README}" >&2
@@ -43,15 +57,31 @@ fi
 mkdir -p "${OUT_DIR}"
 MANIFEST="${OUT_DIR}/manifest.txt"
 
-printf '%-38s %6s %10s %13s\n' "script" "exit" "runtime_s" "output_bytes" > "${MANIFEST}"
+# When resuming, keep the existing manifest and note which scripts are done.
+declare -A DONE=()
+if [ "${RESUME}" -eq 1 ] && [ -f "${MANIFEST}" ]; then
+    while read -r name exit_code _rest; do
+        case "${exit_code}" in
+            ''|*[!0-9]*) continue ;;   # header line or MISSING row
+        esac
+        DONE["${name}"]=1
+    done < "${MANIFEST}"
+else
+    printf '%-38s %6s %10s %13s\n' "script" "exit" "runtime_s" "output_bytes" > "${MANIFEST}"
+fi
 
-echo "run_all.sh: ${#CMDS[@]} scripts -> ${OUT_DIR}"
+echo "run_all.sh: ${#CMDS[@]} scripts -> ${OUT_DIR} (resume=${RESUME})"
 
 for rel in "${CMDS[@]}"; do
     script_path="${SCRIPT_DIR}/${rel}"
     name="$(basename "${rel}")"
     stem="${name%.py}"
     out_file="${OUT_DIR}/${stem}_output.txt"
+
+    if [ "${RESUME}" -eq 1 ] && [ "${DONE[${name}]:-0}" = "1" ]; then
+        echo "run_all.sh: skip (already done): ${name}"
+        continue
+    fi
 
     if [ ! -f "${script_path}" ]; then
         printf '%-38s %6s %10s %13s\n' "${name}" "MISSING" "-" "-" >> "${MANIFEST}"
