@@ -285,8 +285,7 @@ of the normalized variable `R`, not of `r`.
 
 ### C-05 — Asym explanation in §5.2 is conceptually wrong
 
-**Location:** §5.2, paragraph beginning "The normalization is
-inappropriate for detecting cliques", and the spectral table above it.
+**Location:** §5.2, paragraph "Each edge is scaled by..." and the spectral table.
 **Status:** Cerrado. §5.2 mechanism paragraph rewritten with the
 per-pair weight argument; table prose now reports the multi-seed
 distribution and cites Weyl interlacing for the paired claim.
