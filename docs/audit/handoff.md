@@ -33,9 +33,9 @@ of truth.
 The content audit worksheet is `docs/audit/content-audit-pending.md`.
 The falsification log is `docs/audit/numerical-verification.md`.
 
-## 2. Backlog: C-01 through C-25, all closed
+## 2. Backlog: C-01 through C-27, all closed
 
-25 findings, all closed. Closure record in each block of the
+27 findings, all closed. Closure record in each block of the
 worksheet. The compact table below is derived from `git log`; if it
 disagrees with the log, the log wins.
 
@@ -66,6 +66,8 @@ disagrees with the log, the log wins.
 | C-23 | Heavy-tail failure is structural, not clique scale | heavy_tail_scaled_clique.py | 3510769 | yes |
 | C-24 | Closed-form C_R vs the IDE (eq:integro) | cr_ide_solver.py | 9d96b76 | yes |
 | C-25 | Reproducibility counters (§1.4/§9/§11) | — (counter) | 047dc5c | yes |
+| C-26 | F-log counter in §1.3 (words) | — (counter) | 1f46bd0 | yes |
+| C-27 | F-log counter in Abstract (words) | — (counter) | 1f46bd0 | yes |
 
 The `main.tex` column is derived with
 `git log --format='%h %s' -- docs/paper/main.tex`. C-05, C-12 and C-14
@@ -148,6 +150,11 @@ Consolidated during session 3:
   batch that changes the script count or the F-log count. Deriving
   only the handoff and worksheet counters is insufficient; the paper's
   claims are the most visible to reviewers. (C-25.)
+
+- Counter re-derivation must cover both digit and word forms. C-25
+  caught four digit counters; C-26 and C-27 caught the same class in
+  the Abstract and §1.3 written as "nineteen". A grep for digits alone
+  is insufficient.
 
 ## 5. Verification inventory
 
