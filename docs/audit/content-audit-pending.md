@@ -3,7 +3,7 @@
 Working notes for the content audit of `docs/paper/main.tex`. This file
 lists the technical findings raised during the initial review (C-01…C-10),
 plus the findings raised during verification and the session-3 external
-review (C-11…C-37), all closed
+review (C-11…C-37) and the eje (v) integrated read (C-38…C-42), all closed
 by the scripts and edits recorded below, their
 verification status, and the proposed order of attack.
 
@@ -1403,9 +1403,131 @@ lists the same rows; `pdflatex` twice with no `^!` and no `Undefined`.
 
 **Next step:** none.
 
+### C-38 — §11.3 fourth contribution disagrees with the Abstract and §1.3
+
+**Location:** `docs/paper/main.tex` Abstract (`main.tex:49`), §1.3
+(`main.tex:82`--`90`), §11.3 (`main.tex:1337`--`1343`).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+The Abstract and §1.3 promise four contributions and name the fourth as
+"a set of design decisions with explicit boundaries, stating where the
+protocol cannot deliver a guarantee". §11.3 (Contributions) listed a
+different fourth, "Local benchmarks of the EVM precompile costs", and
+dropped the design-decisions item. The count matched ("four" in all
+three places); the content of the fourth did not. Found by the eje (v)
+integrated read of the compiled PDF.
+
+**Resolution.** §11.3 item 4 → "A set of design decisions with explicit
+boundaries … (Section~\ref{sec:limitations})"; the local benchmarks are
+folded into item 2 (the numerical verification suite). The count stays
+four in the Abstract, §1.3 and §11.3.
+
+**Evidence:** `grep -n 'design decisions with explicit boundaries'
+docs/paper/main.tex` returns the Abstract, §1.3 and §11.3; `pdflatex`
+twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
+### C-39 — §5.6 detection-power cross-ref points to §5.4
+
+**Location:** `docs/paper/main.tex` §5.5 (`main.tex:687`), §5.6
+(`main.tex:716`).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+§5.6 (The Detection Boundary) read "The detection power measured in
+Section~\ref{subsec:null-distribution}", but `subsec:null-distribution`
+is §5.4 (Null Distribution and Calibration); the detection power is
+measured in §5.5 (Detection Power), which had no label. The reference
+resolved to the neighbouring subsection.
+
+**Resolution.** Add `\label{subsec:detection-power}` to §5.5 and redirect
+the §5.6 reference to it. §5.7's citation of the null quantiles (which do
+live in §5.4) is unchanged.
+
+**Evidence:** `pdftotext -layout docs/paper/main.pdf | grep 'detection
+power measured'` → "Section 5.5"; `pdflatex` twice with no `^!` and no
+`Undefined`.
+
+**Next step:** none.
+
+### C-40 — §11.1 "five components" vs the seven-row §11.6 table
+
+**Location:** `docs/paper/main.tex` §11.1 (`main.tex:1321`) and §11.6
+(`main.tex:1368`--`1376`).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+§11.1 said the protocol is "built from five components" and grouped
+payment, data layer and bootstrap into a single fifth item. §11.6
+tabulates seven component rows (Reputation dynamics, Tensor compression,
+ZK threshold proof, Collusion detection, Payment rule, Data layer,
+Bootstrap). The same object was counted as five and as seven. §1.3 also
+lists a third set of five protocol parts, which omits tensor and ZK.
+
+**Resolution.** Un-group §11.1's fifth item into three (Payment rule §6,
+Data layer §7, Bootstrap §8) and change "five" to "seven", so §11.1 and
+§11.6 enumerate the same seven. §1.3's prose list is left as is.
+
+**Evidence:** `pdftotext -layout docs/paper/main.pdf | grep -n 'built
+from seven components'`; the §11.1 list and the §11.6 table both show
+seven rows; `pdflatex` twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
+### C-41 — §2.6 table uses undefined regime labels D4 / S2.2
+
+**Location:** `docs/paper/main.tex` §2.6 summary table (`main.tex:304`).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+The §2.6 table read "D4 tail is geometric; S2.2 has no censoring".
+Neither "D4" nor "S2.2" occurs anywhere else in the paper; the body
+(§2.3) refers to the regimes as "first regime" and "second regime". The
+labels are the script configuration names (`censoring_test.py`: "Section
+2.2 parameters" = alpha 0.5, sigma0 0.8; "D4 analysis parameters" =
+alpha 2.0, sigma0 0.5).
+
+**Resolution.** Replace the opaque labels with the body's terminology.
+The meaning was already correct (§2.3: the second regime has the
+geometric tail, the first has no censoring), so only the labels change:
+"Second-regime tail is geometric; first regime has no censoring".
+
+**Evidence:** `grep -c 'D4\|S2\.2' docs/paper/main.tex` = 0; `pdflatex`
+twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
+### C-42 — §11.4 attributes §9.5 items to §10
+
+**Location:** `docs/paper/main.tex` §9.5 (`main.tex:1185`), §11.4
+(`main.tex:1347`).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+§11.4 opened by attributing its six-item open-problems list to "the
+limitations section (Section~\ref{sec:limitations})" alone. Two of the
+six ("Recursive proving time", "Teleporter latency") live in §9.5
+(Deferred Benchmarks) and do not appear in §10. Reciprocally §10.5
+(Reputation Model Selection) and §10.8 (Bootstrap Assumptions) are not in
+§11.4, so the list is not a clean subset of §10. Note §9.5, not §9.4, is
+Deferred Benchmarks; §9.4 is Stability of Conclusions.
+
+**Resolution.** Add `\label{subsec:deferred}` to §9.5 and widen the §11.4
+attribution to cite both sections: "The limitations section (Section 10)
+and the deferred benchmarks (Section 9.5) identify …".
+
+**Evidence:** `pdftotext -layout docs/paper/main.pdf | grep 'and the
+deferred benchmarks'` → "(Section 10) … (Section 9.5)"; `pdflatex` twice
+with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
+
 ## Proposed order of attack
 
-All findings C-01 through C-37 are closed. The list of closures is
+All findings C-01 through C-42 are closed. The list of closures is
 above, in each block. No open finding remains.
 
 The next iteration of the content audit should begin from the paper

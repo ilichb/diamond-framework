@@ -33,9 +33,9 @@ of truth.
 The content audit worksheet is `docs/audit/content-audit-pending.md`.
 The falsification log is `docs/audit/numerical-verification.md`.
 
-## 2. Backlog: C-01 through C-37, all closed
+## 2. Backlog: C-01 through C-42, all closed
 
-37 findings, all closed. Closure record in each block of the
+42 findings, all closed. Closure record in each block of the
 worksheet. The compact table below is derived from `git log`; if it
 disagrees with the log, the log wins.
 
@@ -78,6 +78,11 @@ disagrees with the log, the log wins.
 | C-35 | sigma glyphs, distinct domains (refuted) | — (refuted) | d3e1942 | no |
 | C-36 | Eigenvalue rounding in §5.4 | recalibrate_top.py | 5f76824 | yes |
 | C-37 | §9.2 runtime table omits the heavy-tail rows | — (counter) | 3f998e7 | yes |
+| C-38 | Abstract/§11.3 4th contribution mismatch | — (textual) | ac696c2 | yes |
+| C-39 | §5.6 detection-power cross-ref → §5.4 | — (cross-ref) | f06fe16 | yes |
+| C-40 | §11.1 "five" vs seven-row §11.6 table | — (counter) | cda36f6 | yes |
+| C-41 | §2.6 undefined regime labels D4/S2.2 | — (textual) | cd6f8f4 | yes |
+| C-42 | §11.4 attributes §9.5 items to §10 | — (cross-ref) | a5b0e30 | yes |
 
 The `main.tex` column is derived with
 `git log --format='%h %s' -- docs/paper/main.tex`. C-05, C-12 and C-14
