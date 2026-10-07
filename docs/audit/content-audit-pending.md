@@ -1037,6 +1037,37 @@ returns 2; `pdflatex` runs twice with no `^!` and no `Undefined`.
 
 **Next step:** none.
 
+### C-22 — The `n >= 5000` heavy-tail experiment (stop-gate tripped)
+
+**Location:** §5.4 (the Chung–Lu FPR paragraph, the "requires `n >= 5000`"
+remedy) in `docs/paper/main.tex`.
+**Status:** Cerrado (stop-gate tripped; the §5.4 edit is deferred to C-23).
+**Severity:** Structural.
+
+§5.4 defers the separation of the genuine heavy tail from the saturated
+hub core to a "postponed experiment" at `n >= 5000`, with the code stored
+outside the repository. That experiment is now run
+(`verification/rmt/heavy_tail_n5000.py`).
+
+**Resolution.** At `n = 5000` the stop-gate tripped: `TPR_pernull < 0.5`
+for every `beta`, and the ER threshold rejects every Chung–Lu replicate
+(empirical FPR `1.0000`). The failure persists, so §5.4 is *not* edited to
+claim a recovery; F-020 records the raw result. The `n >= 5000` remedy is
+refuted on two counts. First, even at `n = 5000`, `beta = 2.1` remains
+degree-capped (expected `d_max = 7445.8 > n - 1 = 4999`). Second, the
+experiment conflates the heavy-tail miscalibration with clique-size
+scaling: a fixed `m = 20` clique is `0.4%` of `n = 5000` versus `4%` at
+`n = 500`, so the Erdős–Rényi baseline itself loses power (`TPR = 0.005`)
+for reasons unrelated to the tail. The structural conclusion requires
+isolating the confound; it is carried as C-23.
+
+**Evidence:** `verification/rmt/heavy_tail_n5000.py` (output in
+`verification/rmt/results/heavy_tail_n5000_output.txt`), seed 42,
+deterministic. `main.tex` is unchanged by this finding.
+
+**Next step:** C-23 (scaled-clique experiment) isolates the confound
+before §5.4 is edited.
+
 ## Proposed order of attack
 
 All findings C-01 through C-22 are closed. The list of closures is
@@ -1053,8 +1084,11 @@ two known residual gaps that are not findings in this worksheet:
   protocol's collateral function or to implement the EDO numerically
   is a design choice, not a discrepancy.
 - The `n >= 5000` experiment for separating the genuine heavy tail
-  from the saturated hub core is stored outside the repository and
-  is not scheduled.
+  from the saturated hub core was run as C-22 (F-020). It refutes the
+  remedy: at `n = 5000` the ER threshold still rejects every Chung–Lu
+  replicate, and `beta = 2.1` remains degree-capped. It also leaves a
+  scale confound (a fixed-size clique is below the detection floor as
+  `n` grows), which C-23 isolates before §5.4 is edited.
 
 ## Handoff
 

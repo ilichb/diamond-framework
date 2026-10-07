@@ -338,6 +338,43 @@ claim that fails its test is corrected or removed, not quietly reworded.
   registered as a postponed experiment, with the code stored outside the
   repository.
 
+### F-020 — The `n >= 5000` remedy for the heavy-tail threshold is refuted
+
+- **Claim as originally made:** "The separation of the genuine tail from
+  the saturated hub core requires `n >= 5000` (or a much smaller `d̄`) and
+  a recalibrated Erdős–Rényi baseline" (`main.tex` §5.4), with the code
+  "stored outside the repository as a postponed experiment" (restated in
+  F-019).
+- **Test:** `verification/rmt/heavy_tail_n5000.py`, `n = 5000`,
+  `d̄ = 20`, seed 42, `N_H0 = 500`, `N_H1 = 200`, `alpha = 0.01`,
+  clique size `m = 20` fixed, intra-clique density 10x,
+  `beta in {2.1, 2.3, 2.5, 3.0}`.
+- **Verdict:** **Refuted.** Increasing `n` does not restore the
+  calibration.
+- **Degree-sequence feasibility:** `beta = 2.1` remains degree-capped at
+  `n = 5000` (expected `d_max = 7445.8` against `n - 1 = 4999`), so the
+  "requires `n >= 5000`" remedy is false for the heaviest tail;
+  `beta >= 2.3` is realised without capping.
+- **FPR:** at the recalibrated ER threshold (`q99 = 9.1957` at
+  `n = 5000`) the empirical false-positive rate is `1.0000` for all four
+  Chung–Lu nulls (null `q99` = `47.3792`, `37.0298`, `30.2631`,
+  `22.8598`; null-to-threshold shift `+38.18`, `+27.83`, `+21.07`,
+  `+13.66`). F-019 is confirmed, not resolved, at `n = 5000`.
+- **Per-null power:** recalibration does not restore the power:
+  `TPR_pernull = 0.000, 0.010, 0.015, 0.005` for
+  `beta = 2.1, 2.3, 2.5, 3.0` (Wilson 95% CIs all below `0.05`).
+- **Scale confound:** the ER baseline itself loses power at `n = 5000`
+  (`TPR_ER = 0.005` on pure Erdős–Rényi), because a fixed `m = 20`
+  clique is `0.4%` of `n` at `n = 5000` versus `4%` at `n = 500`. The
+  experiment therefore conflates heavy-tail miscalibration with
+  clique-size scaling; it does not isolate the heavy-tail effect.
+- **Conclusion:** The "requires `n >= 5000`" remedy is refuted. Whether
+  the modularity-spectrum test is recoverable on heavy-tailed graphs at
+  a fixed clique fraction is not resolved by this experiment; it is
+  carried as C-23.
+- **Sample:** `heavy_tail_n5000.py`, deterministic (seed 42), output in
+  `verification/rmt/results/heavy_tail_n5000_output.txt`.
+
 ## Open items
 
 | Item | Owner component | Status |
