@@ -46,7 +46,7 @@
 \begin{abstract}
 The Diamond Framework addresses the structural tension in Proof-of-Stake between security and accessibility. High collateral requirements deter honest but capital-constrained validators; low requirements expose the network to Sybil attacks. The framework replaces a fraction of the financial stake with verifiable, non-transferable reputation.
 
-The paper makes four contributions: a cryptoeconomic protocol in which financial stake and reputational collateral are partial substitutes; a numerical verification suite that pairs every quantitative claim with a reproducible script; a falsification log documenting nineteen claims that were made, tested, and corrected during development; and a set of design decisions with explicit boundaries, stating where the protocol cannot deliver a guarantee.
+The paper makes four contributions: a cryptoeconomic protocol in which financial stake and reputational collateral are partial substitutes; a numerical verification suite that pairs every quantitative claim with a reproducible script; a falsification log documenting twenty-one claims that were made, tested, and corrected during development; and a set of design decisions with explicit boundaries, stating where the protocol cannot deliver a guarantee.
 
 The protocol is verified numerically for the reputation dynamics, the tensor representation, the zero-knowledge threshold proof, the collusion detection, the payment rule, the data layer, and the bootstrap transition. EVM precompile costs are measured locally with Foundry. Two benchmarks are deferred: the recursive SNARK proving time and the Teleporter latency, both requiring infrastructure not available in this paper.
 \end{abstract}
@@ -85,7 +85,7 @@ The paper makes four contributions.
 
 \textbf{A numerical verification suite.} Every quantitative claim in the paper is paired with a script that reproduces it. The scripts are self-contained, depend only on NumPy and SciPy, and declare their seeds and sample sizes. The suite covers stochastic simulation, spectral calibration, game-theoretic equilibrium, and EVM gas benchmarks. Claims without scripts are labeled as conjectures.
 
-\textbf{A falsification log.} During development, nineteen quantitative claims were made, tested, and either confirmed or corrected. The corrections include a fabricated simulation figure, a mismeasurement of a gas cost, a factor of two in an integral, a rounding rule that shifted a phase transition, and an unverified projection of a multidimensional type. The log is part of the paper's record, not a supplement to it.
+\textbf{A falsification log.} During development, twenty-one quantitative claims were made, tested, and either confirmed or corrected. The corrections include a fabricated simulation figure, a mismeasurement of a gas cost, a factor of two in an integral, a rounding rule that shifted a phase transition, and an unverified projection of a multidimensional type. The log is part of the paper's record, not a supplement to it.
 
 \textbf{Design decisions with explicit boundaries.} Where the protocol cannot deliver a guarantee---for adversaries that are not rational, for collusion below the Kesten--Stigum boundary, for real reputation data that is not available---the paper states the boundary and does not claim the guarantee. The limitations section separates methodological limits (the numerical methods could be improved) from design limits (the protocol does not solve these problems even with perfect methods).
 

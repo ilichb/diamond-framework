@@ -3,7 +3,7 @@
 Working notes for the content audit of `docs/paper/main.tex`. This file
 lists the technical findings raised during the initial review (C-01…C-10),
 plus the findings raised during verification and the session-3 external
-review (C-11…C-23), all closed
+review (C-11…C-27), all closed
 by the scripts and edits recorded below, their
 verification status, and the proposed order of attack.
 
@@ -1159,9 +1159,47 @@ downward to preserve the original runtime claim.
 
 **Next step:** none.
 
+### C-26 — F-log counter in §1.3 written in words is stale
+
+**Location:** `docs/paper/main.tex` §1.3 (`main.tex:88`).
+**Status:** Cerrado.
+**Severity:** Structural.
+
+§1.3 read "During development, nineteen quantitative claims were
+made, tested, and either confirmed or corrected." The falsification log
+holds 21 entries (F-001 through F-021). The counter was stale in the
+same way as C-25, but expressed in words, which is why the C-25 digit
+sweep did not catch it.
+
+**Resolution.** "nineteen" → "twenty-one" in §1.3. The digit counters
+in §9 and §11 already read 21; both forms are now consistent with the
+log.
+
+**Evidence:** `grep -cE 'nineteen' docs/paper/main.tex` = 0;
+`grep -cE 'twenty[- ]one|21 entries|21 quantitative' docs/paper/main.tex`
+= 6; `pdflatex` twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
+### C-27 — F-log counter in the Abstract written in words is stale
+
+**Location:** `docs/paper/main.tex` Abstract (`main.tex:49`).
+**Status:** Cerrado.
+**Severity:** Structural.
+
+The Abstract read "a falsification log documenting nineteen claims
+that were made, tested, and corrected during development." Same stale
+counter as C-26, same root cause (word form), same log (21 entries).
+
+**Resolution.** "nineteen" → "twenty-one" in the Abstract.
+
+**Evidence:** as C-26.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
-All findings C-01 through C-24 are closed. The list of closures is
+All findings C-01 through C-27 are closed. The list of closures is
 above, in each block. No open finding remains.
 
 The next iteration of the content audit should begin from the paper
