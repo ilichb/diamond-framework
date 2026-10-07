@@ -1323,6 +1323,21 @@ finding was a false positive.
 
 **Next step:** none.
 
+### C-35 — Sigma glyphs live in distinct domains (refuted)
+
+**Location:** `docs/paper/main.tex` §2.1, §2.5 and §3.3.
+**Status:** Refutado.
+**Severity:** —
+
+§2.1 uses `\sigma_0` (diffusion constant); §2.5 uses
+`\sigma^2(r) = \sigma_0^2 r` (local variance derived from `\sigma_0`);
+§3.3 uses `\sigma = 0.05` (tensor noise std, a distinct domain). No
+contradiction.
+
+**Resolution.** No edit. Refuted in eje (ii).
+
+**Next step:** none.
+
 ## Proposed order of attack
 
 All findings C-01 through C-27 are closed. The list of closures is
