@@ -64,7 +64,7 @@ disagrees with the log, the log wins.
 | C-21 | S_min derived from C_R | financial_floor_sensitivity.py | 469a532 | yes |
 | C-22 | The n >= 5000 heavy-tail experiment | heavy_tail_n5000.py | 0c54363 | no |
 | C-23 | Heavy-tail failure is structural, not clique scale | heavy_tail_scaled_clique.py | 3510769 | yes |
-| C-24 | Closed-form C_R vs the IDE (eq:integro) | cr_ide_solver.py | (this commit) | yes |
+| C-24 | Closed-form C_R vs the IDE (eq:integro) | cr_ide_solver.py | 9d96b76 | yes |
 
 The `main.tex` column is derived with
 `git log --format='%h %s' -- docs/paper/main.tex`. C-05, C-12 and C-14
