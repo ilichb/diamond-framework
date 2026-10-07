@@ -18,8 +18,10 @@
 #
 # Options:
 #   --resume   Keep the existing manifest and skip any script that already
-#              has a completed (numeric exit-code) row. Re-invoking after an
-#              interruption continues where the last run stopped.
+#              has a completed (numeric exit-code) row *and* whose output
+#              file still exists and is non-empty. Re-invoking after an
+#              interruption continues where the last run stopped; deleting
+#              an output forces that script to re-run.
 #
 # Usage:
 #   bash verification/run_all.sh [--resume] [OUT_DIR]
@@ -64,7 +66,13 @@ if [ "${RESUME}" -eq 1 ] && [ -f "${MANIFEST}" ]; then
         case "${exit_code}" in
             ''|*[!0-9]*) continue ;;   # header line or MISSING row
         esac
-        DONE["${name}"]=1
+        # Only treat a script as done if its output still exists and is
+        # non-empty. A phantom row (its output since deleted) must not be
+        # trusted, or --resume would skip a script whose artifact is gone.
+        stem="${name%.py}"
+        if [ -s "${OUT_DIR}/${stem}_output.txt" ]; then
+            DONE["${name}"]=1
+        fi
     done < "${MANIFEST}"
 else
     printf '%-38s %6s %10s %13s\n' "script" "exit" "runtime_s" "output_bytes" > "${MANIFEST}"
@@ -88,6 +96,14 @@ for rel in "${CMDS[@]}"; do
         continue
     fi
 
+    if [ "${RESUME}" -eq 1 ]; then
+        # Drop any stale row for this script before re-executing, so a
+        # phantom row (output deleted) does not duplicate on re-run.
+        grep -v "^${name}[[:space:]]" "${MANIFEST}" > "${MANIFEST}.tmp" || true
+        mv "${MANIFEST}.tmp" "${MANIFEST}"
+    fi
+
+    echo "run_all.sh: running ${name}"
     start="$(date +%s.%N)"
     python3 "${script_path}" > "${out_file}" 2>&1
     rc=$?
