@@ -127,6 +127,15 @@ Consolidated during session 2:
   obtained with git, grep or find, the handoff gives the command, not
   the result typed from memory.
 
+Consolidated during session 3:
+
+- When a plan produces N parallel edits, the commit-message templates
+  must enumerate all 2^N subsets (or explicitly declare the intended
+  subset). Assuming "all or nothing" leaves valid intermediate states
+  unhandled and forces a stop that the plan did not anticipate. Case
+  A.2: the guard tripped on a line-wrap false positive, and the
+  {A.1 only, A.2 blocked} template was the missing case.
+
 ## 5. Verification inventory
 
 - 34 non-archived `.py` files under `verification/` (41 total, 7 under
