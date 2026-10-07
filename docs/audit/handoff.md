@@ -33,9 +33,9 @@ of truth.
 The content audit worksheet is `docs/audit/content-audit-pending.md`.
 The falsification log is `docs/audit/numerical-verification.md`.
 
-## 2. Backlog: C-01 through C-23, all closed
+## 2. Backlog: C-01 through C-24, all closed
 
-23 findings, all closed. Closure record in each block of the
+24 findings, all closed. Closure record in each block of the
 worksheet. The compact table below is derived from `git log`; if it
 disagrees with the log, the log wins.
 
@@ -64,6 +64,7 @@ disagrees with the log, the log wins.
 | C-21 | S_min derived from C_R | financial_floor_sensitivity.py | 469a532 | yes |
 | C-22 | The n >= 5000 heavy-tail experiment | heavy_tail_n5000.py | 0c54363 | no |
 | C-23 | Heavy-tail failure is structural, not clique scale | heavy_tail_scaled_clique.py | 3510769 | yes |
+| C-24 | Closed-form C_R vs the IDE (eq:integro) | cr_ide_solver.py | (this commit) | yes |
 
 The `main.tex` column is derived with
 `git log --format='%h %s' -- docs/paper/main.tex`. C-05, C-12 and C-14
@@ -79,16 +80,18 @@ Re-derive with:
 
 ## 3. Residual gaps (not findings)
 
-Two items are declared in the worksheet's Proposed order of attack as
+Items declared in the worksheet's Proposed order of attack as
 non-findings. They are not tasks and not bugs; they are design
-decisions or contributions that require their own iteration.
+decisions or contributions that require their own iteration. Item 1
+was later formalized and closed as C-24.
 
-1. `eq:integro` (§2.5). The integro-differential equation that defines
-   `C_R(r)` has zero implementation in the repository. The closed form
-   `C_R(r) = 0.8 r/(1+r)` is the reference configuration, not the
-   solution of the EDO. Whether to publish the closed form as the
-   protocol's collateral function or to implement the EDO numerically
-   is a design choice.
+1. (Resolved) `eq:integro` (§2.5). The integro-differential equation
+   that defines `C_R(r)` is checked against the closed form
+   `C_R(r) = 0.8 r/(1+r)` by
+   `verification/stochastics/cr_ide_solver.py`: the implied running
+   reward `pi(r)` is admissible in the operational range (`pi(r) > 0`
+   for `r >= 1.0` in both regimes; `pi(r) = O(r)`; monotone above the
+   admission threshold). Recorded as C-24.
 
 2. (Resolved) The `n >= 5000` experiment for separating the genuine
    heavy tail from the saturated hub core was run as C-22
@@ -138,7 +141,7 @@ Consolidated during session 3:
 
 ## 5. Verification inventory
 
-- 34 non-archived `.py` files under `verification/` (41 total, 7 under
+- 35 non-archived `.py` files under `verification/` (42 total, 7 under
   `*/archive/`).
 - Every script has a corresponding `*_output.txt` under the sibling
   `results/` directory.

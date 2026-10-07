@@ -23,6 +23,7 @@ claim in the Diamond Framework paper.
     python3 stochastics/dt_convergence.py
     python3 stochastics/censoring_test.py
     python3 stochastics/mfpt_jump_diffusion.py
+    python3 stochastics/cr_ide_solver.py
     python3 mechanism/frobenius_counterexample.py
     python3 mechanism/fee_specification.py
     python3 mechanism/fee_specification_net.py
@@ -76,6 +77,7 @@ Approximate runtimes on a 2020-era desktop:
 | wilson_intervals.py | < 1 s |
 | stationary_stats.py | ~12 s |
 | r_std_specification.py | ~5 s |
+| cr_ide_solver.py | < 1 s |
 | All others | < 5 s each |
 
 The two heavy-tail scripts dominate the total: ~15 min

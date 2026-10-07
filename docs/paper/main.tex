@@ -282,6 +282,13 @@ The associated value function $C_R(r)$ for reputational collateral satisfies the
 
 with boundary condition $C_R(0) = 0$, interpreted in the viscosity sense. Existence and uniqueness follow from standard arguments for integro-PDEs with polynomial growth of $\pi$ \cite{oksendal2007}. The state $r$ is the reputation level on the positive half-line; Section~\ref{sec:payment} evaluates $C_R$ at the Frobenius norm of the reputation tensor, $r = \|T\|_F$, and the reference configuration uses the closed form $C_R(r) = 0.8 \, r / (1 + r)$.
 
+The running reward implied by the closed form follows from \eqref{eq:integro}. With $C_R'(r) = 0.8/(1+r)^2$, $C_R''(r) = -1.6/(1+r)^3$, and, for the reference jump $y = 0.85$ (mean magnitude $0.15$), $C_R(yr) = 0.68\,r/(1+0.85r)$, the stationary operator ($\partial_t C_R = 0$) yields
+\begin{equation}
+\pi(r) = -\Big[\mu(r)\,\frac{0.8}{(1+r)^{2}} \;-\; 0.8\,\sigma^{2}(r)\,\frac{1}{(1+r)^{3}} \;+\; \lambda\Big(\frac{0.68\,r}{1+0.85r} - \frac{0.8\,r}{1+r}\Big) \;-\; \frac{0.8\,r^{2}}{1+r}\Big],
+\label{eq:running-reward}
+\end{equation}
+with $\mu(r) = \alpha(\bar{R} - r)$ and $\sigma^{2}(r) = \sigma_0^{2} r$. \fref{verification/stochastics/cr_ide_solver.py} evaluates \eqref{eq:running-reward} on a fixed grid: $\pi(r)$ is negative below an admission threshold $r_0 \approx 0.33$ (first regime) and $\approx 0.61$ (second regime), positive and increasing above it, and asymptotically $\pi(r) \sim 0.8\,r$. In the operational range the reward is positive: $\pi(r) > 0$ for every $r \geq 1.0$ in both regimes, so the closed form is consistent with \eqref{eq:integro} wherever the protocol operates.
+
 \subsection{Summary of the Section}
 \begin{center}
 \resizebox{\textwidth}{!}{%

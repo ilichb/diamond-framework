@@ -1098,21 +1098,54 @@ deterministic; the H0 calibration reproduces C-22 exactly (q99 `9.1957`,
 
 **Next step:** none.
 
+### C-24 — Closed-form `C_R` unverified against the IDE (`eq:integro`)
+
+**Location:** §2.5 (`eq:integro`) and the closed form `C_R(r) = 0.8 r/(1+r)`
+in `docs/paper/main.tex`.
+**Status:** Cerrado.
+**Severity:** Moderate.
+
+§2.5 defines the integro-differential equation that `C_R(r)` satisfies and
+declares the closed form `C_R(r) = 0.8 r/(1+r)` as the reference
+configuration, but never checks it against the operator. The gap was carried
+as residual gap #1 in the handoff (§3) with zero implementation in the
+repository.
+
+**Resolution.** `verification/stochastics/cr_ide_solver.py` evaluates the
+stationary operator `L[C_R](r)` analytically (no Monte Carlo, no finite
+differences) on the fixed grid `r in {1e-3, ..., 50}` for both regimes
+(`alpha = 0.5, sigma_0 = 0.8`; `alpha = 2.0, sigma_0 = 0.5`), with the
+reference jump `lambda = 0.8`, `nu = delta_{y=0.85}` (mean magnitude `0.15`),
+and backs out the running reward `pi(r) = -L[C_R](r)`. The strict guards pass
+in both regimes: `pi` is real and finite, `pi(r) = O(r)` as `r -> inf`
+(`pi(r)/r -> 0.8`), and `pi` increases on `[r_0, inf)`. The zero crossing
+sits at `r_0 = 0.325039` (Regime 1) and `r_0 = 0.611879` (Regime 2), below
+the operational range; `pi(r) > 0` for every `r >= 1.0` in both regimes, so
+the closed form is admissible wherever the protocol operates. §2.5 now
+states the payoff `pi(r)` explicitly (equation `eq:running-reward`) and
+cites the script.
+
+**Evidence:** `verification/stochastics/cr_ide_solver.py` (output in
+`verification/stochastics/results/cr_ide_solver_output.txt`); deterministic,
+no seed, analytical. `grep -c 'cr_ide_solver' docs/paper/main.tex` returns 1;
+`pdflatex` runs twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
-All findings C-01 through C-23 are closed. The list of closures is
+All findings C-01 through C-24 are closed. The list of closures is
 above, in each block. No open finding remains.
 
 The next iteration of the content audit should begin from the paper
 as it stands after the closures of C-04, C-06, C-10, C-11, C-13. The
-two known residual gaps that are not findings in this worksheet:
+residual gaps that were not findings in this worksheet:
 
-- The §2.5 integro-differential equation (`eq:integro`) has zero
-  implementation in the repository. The closed form
-  `C_R(r) = 0.8 r/(1+r)` is the reference configuration, not the
-  solution of the EDO. Whether to publish the closed form as the
-  protocol's collateral function or to implement the EDO numerically
-  is a design choice, not a discrepancy.
+- (Closed as C-24) The §2.5 integro-differential equation
+  (`eq:integro`) had zero implementation in the repository. The closed
+  form `C_R(r) = 0.8 r/(1+r)` is the reference configuration; C-24 now
+  checks it against the operator and records the running reward
+  `pi(r)`.
 - The `n >= 5000` experiment for separating the genuine heavy tail
   from the saturated hub core was run as C-22 (F-020) and extended as
   C-23 (F-021). It refutes the remedy and shows the failure is
