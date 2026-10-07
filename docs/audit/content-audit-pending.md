@@ -3,7 +3,7 @@
 Working notes for the content audit of `docs/paper/main.tex`. This file
 lists the technical findings raised during the initial review (C-01…C-10),
 plus the findings raised during verification and the session-3 external
-review (C-11…C-35), all closed
+review (C-11…C-36), all closed
 by the scripts and edits recorded below, their
 verification status, and the proposed order of attack.
 
@@ -1304,7 +1304,9 @@ rho = 10; `recalibrate_top_output.txt`, line 27). The attribution is
 correct.
 
 **Resolution.** No edit. Refuted in eje (ii). The initial eje (i)
-finding was a false positive.
+finding was a false positive. The attribution is correct, but the
+value was not checked against the output; the eje (iv) cross-check
+later found `8.5` should read `8.6` (C-36).
 
 **Next step:** none.
 
@@ -1338,9 +1340,40 @@ contradiction.
 
 **Next step:** none.
 
+### C-36 — Eigenvalue rounding in §5.4 (`8.5` → `8.6`)
+
+**Location:** `docs/paper/main.tex` §5.4 (`main.tex:683`).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+§5.4 reported `s[-2] = 8.5` for the balanced two-block structure.
+The source cited (F-018 → `verification/rmt/recalibrate_top.py`,
+assortative configuration 250/250, rho = 10) reports `mean_s2 =
+8.5617` (`recalibrate_top_output.txt`, line 27). The paper's own
+convention is round-half-up, not truncation: `85.7366` → `85.74` and
+`52.5270` → `52.53` (`tucker_analysis_output.txt`, lines 25 and 28).
+Applied to `8.5617` at one decimal the convention gives `8.6`, not
+`8.5`. No output contains a value in `[8.45, 8.55)`; nothing is
+truncated. By contrast `s[-1] = 17.5172` → `17.5` rounds cleanly.
+
+Eje (i) and eje (ii) closed this neighbourhood as C-29 by attribution
+only: the `\fref` to `recalibrate_top.py` is correct, but the value was
+never checked against the output. C-36 is the value check eje (iv)
+performs.
+
+**Resolution.** `8.5` → `8.6` in §5.4. One-line edit. The qualitative
+claim survives: the bulk edge is `2 \sqrt{\bar d} = 8.9443` for
+`\bar d = 20`, so both 8.5 and 8.6 sit inside the bulk.
+
+**Evidence:** `grep -c '\$s\[-2\] = 8\.5\$' docs/paper/main.tex` = 0;
+`grep -c '\$s\[-2\] = 8\.6\$' docs/paper/main.tex` = 1; `pdflatex`
+twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
-All findings C-01 through C-35 are closed. The list of closures is
+All findings C-01 through C-36 are closed. The list of closures is
 above, in each block. No open finding remains.
 
 The next iteration of the content audit should begin from the paper
