@@ -1197,6 +1197,24 @@ counter as C-26, same root cause (word form), same log (21 entries).
 
 **Next step:** none.
 
+### C-28 — The §5.2 per-pair ratio lacked a citation to asym_weights.py
+
+**Location:** `docs/paper/main.tex` §5.2, paragraph on the per-pair ratios.
+**Status:** Cerrado.
+**Severity:** Moderate.
+
+The values 7.4478 / 10.1343 / d_bg = 27.214 are produced by
+`verification/rmt/asym_weights.py` (`results/asym_weights_output.txt`,
+lines 10-17). The nearest `\fref` pointed to `clique_spectra.py`, which
+does not produce those values.
+
+**Resolution.** `\fref` to `asym_weights.py` added in §5.2. One-line edit.
+
+**Evidence:** `grep -c 'asym_weights.py' docs/paper/main.tex` >= 1;
+`pdflatex` twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
 All findings C-01 through C-27 are closed. The list of closures is
