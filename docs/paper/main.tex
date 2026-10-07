@@ -80,7 +80,7 @@ The Diamond Framework addresses all five.
 \subsection{Contributions}
 The paper makes four contributions.
 
-\textbf{A cryptoeconomic protocol.} We present a validator admission rule in which financial stake and reputational collateral are partial substitutes. The rule is $\mathrm{CoA}(i) = S_f(i) + C_R(T(i)) \geq \Theta(t)$, where $C_R(T)$ is the reputational collateral derived from a verified reputation tensor $T$. The protocol includes the reputation dynamics, the collusion test, the payment rule, the data layer, and the bootstrap simulation.
+\textbf{A cryptoeconomic protocol.} We present a validator admission rule in which financial stake and reputational collateral are partial substitutes. The rule is $\mathrm{CoA}(i) = S_f(i) + C_R(T(i)) \geq \Theta(t)$, where $C_R(T)$ is the reputational collateral derived from a verified reputation tensor $T$. The protocol includes the reputation dynamics, the collusion detection, the payment rule, the data layer, and the bootstrap simulation.
 
 \textbf{A numerical verification suite.} Every quantitative claim in the paper is paired with a script that reproduces it. The scripts are self-contained, depend only on NumPy and SciPy, and declare their seeds and sample sizes. The suite covers stochastic simulation, spectral calibration, game-theoretic equilibrium, and EVM gas benchmarks. Claims without scripts are labeled as conjectures.
 
@@ -1334,7 +1334,7 @@ The Diamond Framework replaces a fraction of the financial stake required of a p
 \subsection{Methodology}
 Every quantitative claim in this paper is paired with a script that reproduces it. Claims without scripts are labeled as conjectures. The project maintains a public log of falsifications (\spath{docs/audit/numerical-verification.md}) with 21 entries: each one a claim that was made during development and tested.
 
-The falsification log includes errors of several kinds: a fabricated simulation figure (F-001), a mismeasurement of a gas cost (F-017), a factor of two in an integral (F-011), a rounding rule that shifted a phase transition (F-014), an unverified projection of a multidimensional type (F-004), and an incorrect eigenvalue statistic in the collusion test (F-018). The corrections are documented in the same file as the original claims.
+The falsification log includes errors of several kinds: a fabricated simulation figure (F-001), a mismeasurement of a gas cost (F-017), a factor of two in an integral (F-011), a rounding rule that shifted a phase transition (F-014), an unverified projection of a multidimensional type (F-004), and an incorrect eigenvalue statistic in the collusion detection (F-018). The corrections are documented in the same file as the original claims.
 
 \subsection{Contributions}
 The paper contributes:
