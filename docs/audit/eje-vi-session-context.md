@@ -9,6 +9,13 @@ pendientes, reglas, ficheros a leer y comandos de verificación.
 `docs/audit/` y siguen el formato de `eje-ii-consistency-report.md` /
 `eje-v-integrated-read-report.md`.
 
+> **CERRADO (2026-10-10).** El Eje (vi) se cerró en los commits `dc62f1c`
+> (C-45), `065fc9a` (C-46), `8c04346` (C-47) y `d04d5a4` (C-48). Los
+> pendientes de §5 quedaron resueltos: I3→C-47, I5→C-46, I6→C-48; `net_gain`
+> (I1) se deja sin cambio (STOP). Estado vigente en `docs/audit/handoff.md`
+> §2 y `docs/audit/eje-vi-style-report.md`. Este documento es histórico.
+
+
 ---
 
 ## 0. Anclajes (re-derivar siempre; son volátiles)

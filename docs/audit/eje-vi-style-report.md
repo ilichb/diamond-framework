@@ -75,7 +75,9 @@ dos grafías del **mismo rol**.
 | `heavy-tail` (atributivo) | 2 | 123, 1148 («heavy-tail recalibrations») |
 
 **Adjudicación: divergencia menor (2 cambios).** El uso atributivo debería ser
-`heavy-tailed`. **[pendiente de validación]** — propuesta, no aplicada.
+`heavy-tailed`. **Resuelto como C-47** (aplicado en el cierre): las dos líneas de
+prosa pasan a `heavy-tailed`; los nombres de script (`heavy_tail_*.py`) no se
+tocan.
 
 ### Inventario 4 — `worst-case`
 
@@ -99,9 +101,12 @@ dos grafías del **mismo rol**.
 | `true-positive` (atributivo, con guion) | 2 | 685 |
 | `false-positive` (atributivo, con guion) | 3 | 685 |
 
-**Adjudicación: STOP (>5 cambios).** El mismo rol atributivo («true positive
-rate») aparece 6 veces sin guion y con guion. Normalizar a la forma con guion
-implica 6 cambios → **STOP**, se reporta y no se aplica.
+**Adjudicación: STOP en la primera pasada; resuelto como C-46 en el cierre.** El
+mismo rol atributivo («true positive rate» / «false positive rate») aparece en
+las **dos** formas dentro de la **misma línea** (l.685: 2 `true-positive` + 3
+`false-positive`). La forma mayoritaria y la del título de sección es la **sin
+guion**, así que se unifica a `true positive` / `false positive` (5 cadenas en la
+línea).
 
 ### Inventario 6 — `fraud proof` / `fraud-proof`
 
@@ -114,18 +119,19 @@ implica 6 cambios → **STOP**, se reporta y no se aplica.
 
 **Adjudicación: divergencia menor (2 cambios).** El rol atributivo se escribe de
 las dos formas (l.995 contiene ambas). Forma mayoritaria y del título de
-sección: `fraud proof`. **[pendiente de validación]** — propuesta, no aplicada.
+sección: `fraud proof`. **Resuelto como C-48 (Opción a, unificar a sin guion):**
+se quita el guion en l.909 y en la primera ocurrencia de l.995.
 
 ### Tabla de adjudicación (resumen)
 
-| # | Término | Formas | Cambios propuestos | Veredicto |
+| # | Término | Formas | Cambios | Veredicto final |
 |---|---|---|---|---|
-| 1 | `net_gain` | `net\_gain` / `net_gain` / `netgain` | ≥4 | **STOP (>5): reportar, esperar validación** |
+| 1 | `net_gain` | `net\_gain` / `net_gain` / `netgain` | 0 | STOP sin finding (tocar ≥8 identificadores/etiquetas) |
 | 2 | `on-chain` | `on-chain` / `on chain` / `On-chain` | 0 | LIMPIO |
-| 3 | `heavy-tailed` | `heavy-tailed` / `heavy-tail` | 2 | divergencia menor [pendiente] |
+| 3 | `heavy-tailed` | `heavy-tailed` / `heavy-tail` | 2 | **C-47** (aplicado) |
 | 4 | `worst-case` | `worst-case` / `worst case` | 0 | LIMPIO |
-| 5 | `true-positive` | `true positive` / `true-positive` | 6 | **STOP (>5): reportar** |
-| 6 | `fraud-proof` | `fraud proof` / `fraud-proof` | 2 | divergencia menor [pendiente] |
+| 5 | `true-positive` | `true positive` / `true-positive` | 5 | **C-46** (aplicado; unifica a sin guion) |
+| 6 | `fraud-proof` | `fraud proof` / `fraud-proof` | 2 | **C-48** (aplicado; unifica a sin guion) |
 
 **Observación adicional (fuera de los 6).** `README.md` documenta dos quiebres
 de convención en las tablas «Summary of the Section»: el encabezado de columna
@@ -200,14 +206,55 @@ de `\fref` de la línea 830»*. **No se genera finding.**
 | l.977 «in the worst case» | Frase sustantiva; el rol atributivo (`worst-case`) sí es consistente. |
 | l.1027, 1254 `\label{eq:netgain}` | Identificadores de etiqueta LaTeX, no prosa. |
 | l.35 `\newtheorem{conjecture}` | Sin uso; no es inconsistencia de texto, se limpia en C-44. |
+| `net_gain` (I1) — normalizar el identificador | STOP por umbral (≥8 cambios en prosa/rutas/etiquetas); sin finding. |
+| Opción (b) para `fraud proof` (unificar a **con** guion) | Descartada: la forma mayoritaria y el título de sección son sin guion; (a) implica 2 cambios frente a 4. |
+| Recuento de l.685 en I5 (decía 3 cadenas con guion) | Corregido: la línea contiene **5** cadenas (`2 true-` + `3 false-`); el informe omitió además una línea sin guion (l.1329 pre-C-44). |
 
 ---
 
-## Estado
+## Estado — Eje (vi) CERRADO
 
-- Sub-eje 1: inventarios + tabla de adjudicación entregados. **`net_gain` (I1) e
-  `true-positive` (I5) = STOP (>5)**, se reporta y se espera validación. I3 e I6
-  son divergencias menores **[pendientes de validación]**; no se editó el paper.
+- Sub-eje 1: 6 inventarios. Resueltos I3 (C-47), I5 (C-46) e I6 (C-48);
+  `on-chain` (I2) y `worst-case` (I4) limpios; `net_gain` (I1) **STOP sin
+  finding** (tocar ≥8 identificadores/etiquetas). Ver «Cierre» más abajo.
 - Sub-eje 2: **LIMPIO** (guardas = 0).
 - Sub-eje 3: C-43 y C-44 ejecutados (2 commits, un finding por commit).
 - Sub-eje 4: sin finding (9 ocurrencias / 8 con `\fref`; l.850 desestimada).
+- Cierre: **C-45** (housekeeping del worksheet) y **C-46…C-48** (los tres fixes
+  de estilo) aplicados; worksheet, handoff §2 y este informe alineados en 48
+  findings.
+
+---
+
+## Cierre — adjudicaciones definitivas (C-45…C-48)
+
+Cuatro commits atómicos, uno por finding (los fixes se aplican sobre `main.tex`
+y se validan con `pdflatex` ×2 → `^!` = 0, `Undefined` = 0):
+
+| Commit | Finding | Cambio | Guarda |
+|---|---|---|---|
+| `dc62f1c` | C-45 | worksheet: bloques C-43/C-44 (+ C-45) | `grep -c '^### C-'` = 45 |
+| `065fc9a` | C-46 | `main.tex:684`: `true/false-positive` → sin guion (5 cadenas) | `grep -cE '[-](true\|false)positive'` = 0 |
+| `8c04346` | C-47 | `main.tex:122,1147`: `heavy-tail` → `heavy-tailed` (sin tocar `heavy_tail_*.py`) | `grep -cE 'heavy-tail([^e]\|$)'` = 0 |
+| `d04d5a4` | C-48 | `main.tex:908,994`: `fraud-proof` → `fraud proof` | `grep -c 'fraud-proof'` = 0 |
+
+### Estado final de los 6 inventarios (re-derivado en el árbol final)
+
+| # | Término | Reparto | Forma canónica | Acción |
+|---|---|---|---|---|
+| 1 | `net_gain` | `net\_gain`(4) / `net_gain`(6) / `netgain`(2) | — | sin cambio (STOP) |
+| 2 | `on-chain` | `on-chain`(31) / `on chain`(2) / `On-chain`(4) | `on-chain` | ninguna (roles distintos) |
+| 3 | `heavy-tail(ed)` | `heavy-tailed`(6) / `heavy-tail`(0) | `heavy-tailed` | C-47 |
+| 4 | `worst-case` | `worst-case`(6) / `worst case`(1) | `worst-case` | ninguna (roles distintos) |
+| 5 | `true/false positive` | `… positive`(8 líneas) / `…-positive`(0) | sin guion | C-46 |
+| 6 | `fraud proof` | `fraud proof`(4) / `fraud-proof`(0) | sin guion | C-48 |
+
+### Correcciones a este informe (arregladas en el cierre)
+
+1. **I5, l.685.** El informe listaba 3 cadenas con guion; la línea contiene
+   **5** (`2 true-` + `3 false-`). El fix de C-46 afecta a las 5, no a 3.
+2. **I5, recuento sin guion.** El informe citaba 6 líneas; hay **7** (706, 712,
+   717, 730, 1180, 1245, **1329** en numeración pre-C-44); faltaba la última.
+3. **Numeración de findings.** El handoff declaraba «C-01 through C-44» pero el
+   worksheet sólo tenía 42 bloques; el cierre abre **C-45** (housekeeping) y
+   **C-46…C-48** (los fixes), dejando worksheet y handoff en 48.

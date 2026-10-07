@@ -3,9 +3,9 @@
 Working notes for the content audit of `docs/paper/main.tex`. This file
 lists the technical findings raised during the initial review (C-01…C-10),
 plus the findings raised during verification and the session-3 external
-review (C-11…C-37) and the eje (v) integrated read (C-38…C-42), all closed
-by the scripts and edits recorded below, their
-verification status, and the proposed order of attack.
+review (C-11…C-37), the eje (v) integrated read (C-38…C-42), and the eje
+(vi) style pass (C-43…C-48), all closed by the scripts and edits recorded
+below, their verification status, and the proposed order of attack.
 
 It is not a paper artifact. It is an audit worksheet: a place to record
 what is suspected, what has been confirmed, and what still requires a
@@ -1591,10 +1591,76 @@ matches the handoff count; the worksheet is not a paper artifact, so no
 
 **Next step:** none.
 
+### C-46 — `true`/`false positive` hyphenation in §5.4
+
+**Location:** `docs/paper/main.tex` §5.4 (`main.tex:684`).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+The attributive term appeared in both forms, and both in the **same
+line**: `main.tex:684` carried 2 `true-positive rate` and 3
+`false-positive rate`, while seven other lines used the unhyphenated
+`true positive rate`. The majority form is unhyphenated, and the
+unhyphenated sense is the one used elsewhere.
+
+**Resolution.** Removed the hyphen from the five strings on
+`main.tex:684` (2 `true-positive`, 3 `false-positive`), unifying to
+`true positive` / `false positive`.
+
+**Evidence:** `grep -cE '[-](true|false)positive' docs/paper/main.tex`
+= 0; `grep -cE '(true|false) positive' docs/paper/main.tex` = 8;
+`pdflatex` twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
+### C-47 — `heavy-tail` → `heavy-tailed` (§1.5, §9.2)
+
+**Location:** `docs/paper/main.tex` §1.5 (`main.tex:122`), §9.2
+(`main.tex:1147`).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+Both runtime sentences wrote the attributive "heavy-tail recalibrations",
+while the rest of the paper uses `heavy-tailed` (6 occurrences). The
+script names (`heavy_tail_n5000.py`, `heavy_tail_scaled_clique.py`) use
+underscores and are not prose.
+
+**Resolution.** `heavy-tail` → `heavy-tailed` in the two prose lines;
+script names untouched.
+
+**Evidence:** `grep -cE 'heavy-tail([^e]|$)' docs/paper/main.tex` = 0;
+the count of `heavy_tail_n5000.py` is unchanged; `pdflatex` twice with no
+`^!` and no `Undefined`.
+
+**Next step:** none.
+
+### C-48 — `fraud-proof` → `fraud proof`
+
+**Location:** `docs/paper/main.tex` §7.2 (`main.tex:908`), §7.7
+(`main.tex:994`).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+The attributive term appeared as `fraud-proof` in two places while the
+section title (`\subsection{The Fraud Proof Mechanism}`, `main.tex:914`,
+§7.3) and two other lines used `fraud proof`. The majority form and the
+section title are unhyphenated.
+
+**Resolution.** Option (a): removed the hyphen at `main.tex:908` and at
+the first occurrence in `main.tex:994`; the title was already
+unhyphenated. Option (b) (unify to the hyphenated form) was discarded: it
+would touch 4 strings against 2.
+
+**Evidence:** `grep -c 'fraud-proof' docs/paper/main.tex` = 0;
+`grep -c 'fraud proof' docs/paper/main.tex` = 4; `pdflatex` twice with no
+`^!` and no `Undefined`.
+
+**Next step:** none.
+
 
 ## Proposed order of attack
 
-All findings C-01 through C-45 are closed. The list of closures is
+All findings C-01 through C-48 are closed. The list of closures is
 above, in each block. No open finding remains.
 
 The next iteration of the content audit should begin from the paper

@@ -33,16 +33,19 @@ of truth.
 The content audit worksheet is `docs/audit/content-audit-pending.md`.
 The falsification log is `docs/audit/numerical-verification.md`.
 
-## 2. Backlog: C-01 through C-44, all closed
+## 2. Backlog: C-01 through C-48, all closed
 
-44 findings, all closed. Closure record in each block of the
+48 findings, all closed. Closure record in each block of the
 worksheet. The compact table below is derived from `git log`; if it
 disagrees with the log, the log wins. C-43 and C-44 were raised and
-closed by the eje (vi) style pass (report:
-`docs/audit/eje-vi-style-report.md`). The eje (vi) Sub-eje 1
-terminology inventories raised no finding: `net_gain` and
-`true-positive` are declared **STOP (>5 line changes)** and await the
-reviewer's validation before any fix.
+closed by the eje (vi) style pass; C-45 through C-48 were raised and
+closed by its closure round (report:
+`docs/audit/eje-vi-style-report.md`). Of the eje (vi) Sub-eje 1
+terminology inventories, three were resolved — `heavy-tail` →
+`heavy-tailed` (C-47), `true/false-positive` → unhyphenated (C-46),
+`fraud-proof` → `fraud proof` (C-48) — and `net_gain` was left
+unchanged: normalizing the identifier reaches 8 occurrences (prose,
+paths, labels) and is an unopened STOP, not a finding.
 
 | Finding | Title (short) | Script(s) | Commit(s) | main.tex |
 |---|---|---|---|---|
@@ -90,6 +93,10 @@ reviewer's validation before any fix.
 | C-42 | §11.4 attributes §9.5 items to §10 | — (cross-ref) | a5b0e30 | yes |
 | C-43 | §5.4 [CONJECTURE] prefix→suffix | — (style) | edc29b9 | yes |
 | C-44 | Unused conjecture theorem environment | — (style) | 55d4d90 | yes |
+| C-45 | Worksheet missing C-43/C-44 blocks | — (worksheet) | dc62f1c | no |
+| C-46 | true/false positive unhyphenated | — (style) | 065fc9a | yes |
+| C-47 | heavy-tail → heavy-tailed | — (style) | 8c04346 | yes |
+| C-48 | fraud-proof → fraud proof | — (style) | d04d5a4 | yes |
 
 The `main.tex` column is derived with
 `git log --format='%h %s' -- docs/paper/main.tex`. C-05, C-12 and C-14
