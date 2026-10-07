@@ -1215,6 +1215,24 @@ does not produce those values.
 
 **Next step:** none.
 
+### C-30 — Unsourced 20--25% range replaced with the derived 22.4%
+
+**Location:** `docs/paper/main.tex` §10.5 (Reputation Model Selection).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+The "20--25\%" range is produced by no script. The derived reference
+value is 22.4\% (`simulate_bootstrap_net_gain.py`), cited in §8.4 and §11.
+
+**Resolution.** The range is replaced by the derived value with a
+`\fref`. The robustness claim is preserved for the ranking of policies.
+
+**Evidence:** `grep -c 'reference stake reduction is 22.4' docs/paper/main.tex` = 1;
+`grep -c 'stake reduction of 20--25' docs/paper/main.tex` = 0;
+`pdflatex` twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
 All findings C-01 through C-27 are closed. The list of closures is
