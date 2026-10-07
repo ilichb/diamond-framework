@@ -33,9 +33,9 @@ of truth.
 The content audit worksheet is `docs/audit/content-audit-pending.md`.
 The falsification log is `docs/audit/numerical-verification.md`.
 
-## 2. Backlog: C-01 through C-24, all closed
+## 2. Backlog: C-01 through C-25, all closed
 
-24 findings, all closed. Closure record in each block of the
+25 findings, all closed. Closure record in each block of the
 worksheet. The compact table below is derived from `git log`; if it
 disagrees with the log, the log wins.
 
@@ -65,6 +65,7 @@ disagrees with the log, the log wins.
 | C-22 | The n >= 5000 heavy-tail experiment | heavy_tail_n5000.py | 0c54363 | no |
 | C-23 | Heavy-tail failure is structural, not clique scale | heavy_tail_scaled_clique.py | 3510769 | yes |
 | C-24 | Closed-form C_R vs the IDE (eq:integro) | cr_ide_solver.py | 9d96b76 | yes |
+| C-25 | Reproducibility counters (§1.4/§9/§11) | — (counter) | 047dc5c | yes |
 
 The `main.tex` column is derived with
 `git log --format='%h %s' -- docs/paper/main.tex`. C-05, C-12 and C-14
@@ -138,6 +139,15 @@ Consolidated during session 3:
   unhandled and forces a stop that the plan did not anticipate. Case
   A.2: the guard tripped on a line-wrap false positive, and the
   {A.1 only, A.2 blocked} template was the missing case.
+
+- When a plan requires a commit to reference its own hash, use a
+  placeholder and fill it in a follow-up housekeeping commit.
+  Self-reference is not a plan bug; the missing follow-up template
+  was. (C-24.)
+- The paper's own counters (§1.4, §9) must be re-derived after any
+  batch that changes the script count or the F-log count. Deriving
+  only the handoff and worksheet counters is insufficient; the paper's
+  claims are the most visible to reviewers. (C-25.)
 
 ## 5. Verification inventory
 
