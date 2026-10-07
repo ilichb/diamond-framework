@@ -905,7 +905,7 @@ where $f_c$ is a public function that maps the observed consensus events to a no
 The events themselves are consensus outputs: signed attestations, governance votes, and liquidity events that have been finalized on the source chain. They are not subjective judgments or off-chain declarations.
 
 \subsection{Transport and Freshness}
-The commitment to the reputation tensor $T$ is produced by the data layer, not by the validator. The data layer reads the source-chain events, applies the public ingestion formula $f_c$ of Section~\ref{sec:datalayer}, and publishes the commitment optimistically. Soundness rests on the fraud-proof and slashing mechanisms of the data layer, not on the validator's honesty.
+The commitment to the reputation tensor $T$ is produced by the data layer, not by the validator. The data layer reads the source-chain events, applies the public ingestion formula $f_c$ of Section~\ref{sec:datalayer}, and publishes the commitment optimistically. Soundness rests on the fraud proof and slashing mechanisms of the data layer, not on the validator's honesty.
 
 For Avalanche L1 source chains, the commitment root is propagated via Avalanche Warp Messaging through the Teleporter contract, with the source chain's quorum as the trust anchor. For non-Avalanche source chains, the transport requires a light client or a zero-knowledge bridge.
 
@@ -991,7 +991,7 @@ Freshness bounds propagation linearly & Analytical & --- \\
 \end{tabular}}
 \end{center}
 
-The Section describes the ingestion, transport, and fraud-proof mechanism of the data layer, and verifies the audit equilibrium by Monte Carlo. The freshness parameter provides a second line of defense in case the fraud proof mechanism fails to detect a particular attack.
+The Section describes the ingestion, transport, and fraud proof mechanism of the data layer, and verifies the audit equilibrium by Monte Carlo. The freshness parameter provides a second line of defense in case the fraud proof mechanism fails to detect a particular attack.
 
 \section{Bootstrap Dynamics}
 \label{sec:bootstrap}
