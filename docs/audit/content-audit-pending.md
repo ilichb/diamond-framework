@@ -1233,6 +1233,24 @@ value is 22.4\% (`simulate_bootstrap_net_gain.py`), cited in §8.4 and §11.
 
 **Next step:** none.
 
+### C-31 — The Poseidon-2 gas measurement lacked a benchmark citation
+
+**Location:** `docs/paper/main.tex` §4.5.
+**Status:** Cerrado.
+**Severity:** Minor.
+
+The 104{,}963 gas figure for Poseidon-2 comes from `benchPoseidon2()` in
+`integrations/avalanche/benchmarks/src/GasBenchmarks.sol`
+(`benchmark_output_v2.txt`, line 64), but the sentence carried no
+`\fref`.
+
+**Resolution.** `\fref` to `GasBenchmarks.sol` added in §4.5. One-line edit.
+
+**Evidence:** `grep -cF '104{,}963 gas \fref{integrations/avalanche/benchmarks/src/GasBenchmarks.sol}' docs/paper/main.tex` = 1;
+`pdflatex` twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
 All findings C-01 through C-27 are closed. The list of closures is

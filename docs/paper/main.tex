@@ -533,7 +533,7 @@ First, the calldata cost of transmitting the tensor (EIP-2028: 4 gas per zero by
 This is $3.3\times$ the cost of verifying a Groth16 proof directly ($\sim$206k gas) and $2.7\times$ the cost of the recursive proof ($\sim$250k gas); only the direct on-chain Bulletproofs verification ($\sim$6.5M gas, Section~\ref{subsec:recursive}) is more expensive. Transmitting the tensor and computing its norm on-chain does not dominate the constant-size proof, so the succinctness argument holds on the reference tensor.
 
 \subsection{Estimates and Their Provenance}
-The gas measurements for the EVM precompiles are exact: they match EIP-196 and EIP-197 to the gas unit. The Poseidon-2 measurement of 104{,}963 gas is an upper bound from an unoptimized Solidity implementation; production implementations are 20--40k gas. The relevant constraint on Poseidon in this paper is the R1CS count of 240 per hash, which is independent of the on-chain gas cost.
+The gas measurements for the EVM precompiles are exact: they match EIP-196 and EIP-197 to the gas unit. The Poseidon-2 measurement of 104{,}963 gas \fref{integrations/avalanche/benchmarks/src/GasBenchmarks.sol} is an upper bound from an unoptimized Solidity implementation; production implementations are 20--40k gas. The relevant constraint on Poseidon in this paper is the R1CS count of 240 per hash, which is independent of the on-chain gas cost.
 
 The recursive SNARK cost of $\sim$250k gas is an estimate. The Bulletproofs proof size of 0.72 KB for $n = 500$ is an estimate from the literature. The proving time of the recursive proof is not measured.
 
