@@ -33,9 +33,9 @@ of truth.
 The content audit worksheet is `docs/audit/content-audit-pending.md`.
 The falsification log is `docs/audit/numerical-verification.md`.
 
-## 2. Backlog: C-01 through C-18, all closed
+## 2. Backlog: C-01 through C-23, all closed
 
-18 findings, all closed. Closure record in each block of the
+23 findings, all closed. Closure record in each block of the
 worksheet. The compact table below is derived from `git log`; if it
 disagrees with the log, the log wins.
 
@@ -59,6 +59,11 @@ disagrees with the log, the log wins.
 | C-16 | Script counter stale | — (counter) | f4de779 | yes |
 | C-17 | Falsification counter | — (counter) | 92ea4a4 | yes |
 | C-18 | §9.2 runtime table | — (counter) | 92ea4a4 | yes |
+| C-19 | VaR_tech renamed to S_min | — (rename) | 563df9d | yes |
+| C-20 | Succinctness of ingesting T | succinctness_comparison.py | aa7f642 | yes |
+| C-21 | S_min derived from C_R | financial_floor_sensitivity.py | 469a532 | yes |
+| C-22 | The n >= 5000 heavy-tail experiment | heavy_tail_n5000.py | 0c54363 | no |
+| C-23 | Heavy-tail failure is structural, not clique scale | heavy_tail_scaled_clique.py | 3510769 | yes |
 
 The `main.tex` column is derived with
 `git log --format='%h %s' -- docs/paper/main.tex`. C-05, C-12 and C-14
@@ -85,11 +90,13 @@ decisions or contributions that require their own iteration.
    protocol's collateral function or to implement the EDO numerically
    is a design choice.
 
-2. The `n >= 5000` experiment for separating the genuine heavy tail
-   from the saturated hub core. The code is stored outside the
-   repository, under
-   `/home/ilich/Escritorio/Rootstock/andromeda-rootstock/diamond-verification-rmt.py`
-   and its sibling directory. It is not scheduled.
+2. (Resolved) The `n >= 5000` experiment for separating the genuine
+   heavy tail from the saturated hub core was run as C-22
+   (`verification/rmt/heavy_tail_n5000.py`, F-020) and extended as C-23
+   (`verification/rmt/heavy_tail_scaled_clique.py`, F-021). The
+   separation is structural, not a clique-size artifact: §5.4 drops the
+   `n >= 5000` remedy and §5.7 delegates the heavy-tailed defence to
+   `S_min`.
 
 ## 4. Rules
 
@@ -122,7 +129,7 @@ Consolidated during session 2:
 
 ## 5. Verification inventory
 
-- 30 non-archived `.py` files under `verification/` (37 total, 7 under
+- 34 non-archived `.py` files under `verification/` (41 total, 7 under
   `*/archive/`).
 - Every script has a corresponding `*_output.txt` under the sibling
   `results/` directory.
@@ -130,9 +137,10 @@ Consolidated during session 2:
   no disk I/O.
 - Every figure cited in `main.tex` traces to a script, a benchmark, or
   a falsification log entry.
-- Falsification log F-001 through F-019 (19 entries). Sixteen are
-  refuted or partially refuted; three are not applicable, misapplied,
-  or mis-tested.
+- Falsification log F-001 through F-021 (21 entries). Seventeen are
+  refuted or partially refuted, three are not applicable, misapplied,
+  or mis-tested, and one (F-021) confirms a structural failure that
+  amends the paper.
 
 Re-derive with:
 
