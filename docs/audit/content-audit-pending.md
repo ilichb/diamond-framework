@@ -1308,6 +1308,21 @@ finding was a false positive.
 
 **Next step:** none.
 
+### C-34 — Lambda for eigenvalues is standard notation (refuted)
+
+**Location:** `docs/paper/main.tex` §2.2 (jump intensity) vs §5.4-§5.5 (eigenvalues).
+**Status:** Refutado.
+**Severity:** —
+
+§2.2 uses `\lambda = 0.8` (Poisson intensity); §5 uses
+`\lambda_{\max}(B)`, `-\lambda_{\min}(B)` (eigenvalues). The convention
+`\lambda` for eigenvalues is universal (Wigner 1958; Bai-Silverstein
+2010; Chung-Lu 2002). The sections are disjoint; no value contradiction.
+
+**Resolution.** No edit. Refuted in eje (ii).
+
+**Next step:** none.
+
 ## Proposed order of attack
 
 All findings C-01 through C-27 are closed. The list of closures is
