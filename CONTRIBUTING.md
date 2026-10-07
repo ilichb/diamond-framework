@@ -12,7 +12,7 @@
    Scripts must be deterministic given a seed. The seed must be declared.
 
 4. **Conjectures must be labeled as such.**
-   Use `[CONJECTURE]` prefix in documents for claims without numerical backing.
+   Use `[CONJECTURE]` suffix in documents for claims without numerical backing.
 
 ## Workflow
 
