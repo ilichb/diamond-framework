@@ -33,13 +33,13 @@ of truth.
 The content audit worksheet is `docs/audit/content-audit-pending.md`.
 The falsification log is `docs/audit/numerical-verification.md`.
 
-## 2. Backlog: C-01 through C-48, all closed
+## 2. Backlog: C-01 through C-50, all closed
 
-48 findings, all closed. Closure record in each block of the
+50 findings, all closed. Closure record in each block of the
 worksheet. The compact table below is derived from `git log`; if it
 disagrees with the log, the log wins. C-43 and C-44 were raised and
-closed by the eje (vi) style pass; C-45 through C-48 were raised and
-closed by its closure round (report:
+closed by the eje (vi) style pass; C-45 through C-48 by its closure
+round, and C-49/C-50 by a post-closure terminology sweep (report:
 `docs/audit/eje-vi-style-report.md`). Of the eje (vi) Sub-eje 1
 terminology inventories, three were resolved — `heavy-tail` →
 `heavy-tailed` (C-47), `true/false-positive` → unhyphenated (C-46),
@@ -97,6 +97,8 @@ paths, labels) and is an unopened STOP, not a finding.
 | C-46 | true/false positive unhyphenated | — (style) | 065fc9a | yes |
 | C-47 | heavy-tail → heavy-tailed | — (style) | 8c04346 | yes |
 | C-48 | fraud-proof → fraud proof | — (style) | d04d5a4 | yes |
+| C-49 | collusion test → collusion detection | — (style) | e08c862 | yes |
+| C-50 | log of falsifications → falsification log | — (style) | 6cc8130 | yes |
 
 The `main.tex` column is derived with
 `git log --format='%h %s' -- docs/paper/main.tex`. C-05, C-12 and C-14

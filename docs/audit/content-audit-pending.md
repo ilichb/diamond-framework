@@ -4,7 +4,8 @@ Working notes for the content audit of `docs/paper/main.tex`. This file
 lists the technical findings raised during the initial review (C-01…C-10),
 plus the findings raised during verification and the session-3 external
 review (C-11…C-37), the eje (v) integrated read (C-38…C-42), and the eje
-(vi) style pass (C-43…C-48), all closed by the scripts and edits recorded
+(vi) style pass and its closure round (C-43…C-50), all closed by the
+scripts and edits recorded
 below, their verification status, and the proposed order of attack.
 
 It is not a paper artifact. It is an audit worksheet: a place to record
@@ -1657,10 +1658,53 @@ would touch 4 strings against 2.
 
 **Next step:** none.
 
+### C-49 — `collusion test` → `collusion detection`
+
+**Location:** `docs/paper/main.tex` §1.3 (`main.tex:83`), §11
+(`main.tex:1337`).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+The protocol-component list in §1.3 named the component "the collusion
+test", while the section title (`\section{Collusion Detection}`,
+`main.tex:565`, §5) and the parallel enumeration in `main.tex:50` both use
+"the collusion detection". A second occurrence in §11 (`main.tex:1337`,
+the F-018 entry) also read "the collusion test".
+
+**Resolution.** `collusion test` → `collusion detection` at both
+occurrences. This finding was recovered after the C-45…C-48 closure: the
+closure plan assumed a single occurrence, and the re-derivation found two.
+
+**Evidence:** `grep -c 'collusion test' docs/paper/main.tex` = 0;
+`grep -c 'collusion detection' docs/paper/main.tex` = 4; `pdflatex` twice
+with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
+### C-50 — `log of falsifications` → `falsification log`
+
+**Location:** `docs/paper/main.tex` §11 (`main.tex:1335`).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+The canonical term is `falsification log` (16 occurrences, e.g.
+`main.tex:118` "The falsification log"). A single variant, "a public log
+of falsifications", appeared in the §11 traceability sentence.
+
+**Resolution.** `log of falsifications` → `falsification log`. Recovered
+by the same post-closure sweep: the closure plan had assumed the variant
+was already normalised (`= 0`); the raw diagnostic disproved it (`= 1`).
+
+**Evidence:** `grep -c 'log of falsifications' docs/paper/main.tex` = 0;
+`grep -c 'falsification log' docs/paper/main.tex` = 17; `pdflatex` twice
+with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
 
 ## Proposed order of attack
 
-All findings C-01 through C-48 are closed. The list of closures is
+All findings C-01 through C-50 are closed. The list of closures is
 above, in each block. No open finding remains.
 
 The next iteration of the content audit should begin from the paper

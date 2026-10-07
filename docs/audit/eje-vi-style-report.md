@@ -223,12 +223,16 @@ de `\fref` de la línea 830»*. **No se genera finding.**
 - Cierre: **C-45** (housekeeping del worksheet) y **C-46…C-48** (los tres fixes
   de estilo) aplicados; worksheet, handoff §2 y este informe alineados en 48
   findings.
+- Ronda post-cierre: **C-49** (`collusion test` → `collusion detection`, **dos**
+  ocurrencias) y **C-50** (`log of falsifications` → `falsification log`),
+  halladas al re-derivar el árbol con el comando exacto. Total final: **50**
+  findings. Ver «Lección aprendida».
 
 ---
 
-## Cierre — adjudicaciones definitivas (C-45…C-48)
+## Cierre — adjudicaciones definitivas (C-45…C-50)
 
-Cuatro commits atómicos, uno por finding (los fixes se aplican sobre `main.tex`
+Seis commits atómicos, uno por finding (los fixes se aplican sobre `main.tex`
 y se validan con `pdflatex` ×2 → `^!` = 0, `Undefined` = 0):
 
 | Commit | Finding | Cambio | Guarda |
@@ -237,6 +241,8 @@ y se validan con `pdflatex` ×2 → `^!` = 0, `Undefined` = 0):
 | `065fc9a` | C-46 | `main.tex:684`: `true/false-positive` → sin guion (5 cadenas) | `grep -cE '[-](true\|false)positive'` = 0 |
 | `8c04346` | C-47 | `main.tex:122,1147`: `heavy-tail` → `heavy-tailed` (sin tocar `heavy_tail_*.py`) | `grep -cE 'heavy-tail([^e]\|$)'` = 0 |
 | `d04d5a4` | C-48 | `main.tex:908,994`: `fraud-proof` → `fraud proof` | `grep -c 'fraud-proof'` = 0 |
+| `e08c862` | C-49 | `main.tex:83,1337`: `collusion test` → `collusion detection` | `grep -c 'collusion test'` = 0 |
+| `6cc8130` | C-50 | `main.tex:1335`: `log of falsifications` → `falsification log` | `grep -c 'log of falsifications'` = 0 |
 
 ### Estado final de los 6 inventarios (re-derivado en el árbol final)
 
@@ -258,3 +264,15 @@ y se validan con `pdflatex` ×2 → `^!` = 0, `Undefined` = 0):
 3. **Numeración de findings.** El handoff declaraba «C-01 through C-44» pero el
    worksheet sólo tenía 42 bloques; el cierre abre **C-45** (housekeeping) y
    **C-46…C-48** (los fixes), dejando worksheet y handoff en 48.
+4. **C-49/C-50, terminología huérfana.** El plan de cierre asumía un solo
+   `collusion test` (real: **dos**, §1.3 y §11) y daba `log of falsifications`
+   por ya corregido (real: **presente**, §11). Ambos se recuperaron al
+   re-derivar el árbol con el comando exacto; el recuento final sube a **50**.
+
+### Lección aprendida (C-49/C-50)
+
+Un valor en prosa sin comando de origen no es un valor, es una hipótesis. Los
+guards deben re-derivarse con el comando exacto. C-49 es el ejemplo directo:
+`grep -c 'collusion test'` no puede llegar a 0 tocando una sola línea, porque
+la forma aparece dos veces. C-50 es el reverso: una variante declarada «ya
+corregida» seguía en el árbol. Antes de declarar un grep en 0, se re-ejecuta.
