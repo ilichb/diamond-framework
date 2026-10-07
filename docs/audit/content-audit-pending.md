@@ -1290,6 +1290,24 @@ Scripts unchanged; only paper notation.
 
 **Next step:** none.
 
+### C-29 — F-018 cites the correct script (refuted)
+
+**Location:** `docs/paper/main.tex` §5.4 (two-block balance);
+`docs/audit/numerical-verification.md` F-018.
+**Status:** Refutado.
+**Severity:** —
+
+The paper attributes s[-1] = 17.5 and s[-2] = 8.5 to F-018. The Test
+field of F-018 cites `verification/rmt/recalibrate_top.py`, which
+produces exactly 17.5172 / 8.5617 (assortative configuration 250/250,
+rho = 10; `recalibrate_top_output.txt`, line 27). The attribution is
+correct.
+
+**Resolution.** No edit. Refuted in eje (ii). The initial eje (i)
+finding was a false positive.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
 All findings C-01 through C-27 are closed. The list of closures is
