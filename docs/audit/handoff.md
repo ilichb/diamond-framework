@@ -177,7 +177,11 @@ Consolidated during session 4:
   `*_output.txt`, not only its numeric row in the manifest. `rm -f` of
   an output therefore requires removing its row from the manifest
   before relaunching; otherwise `--resume` skips a script whose output
-  is gone. (Recorded; the hardening is still pending.)
+  is gone. Hardened in `run_all.sh` (561e2cf): `DONE` now requires the
+  output to exist and be non-empty, the stale row is dropped before
+  re-executing, and the regression test deletes
+  `sim_positivity_output.txt`, resumes, and asserts exactly one re-run
+  and one manifest row.
 
 ## 5. Verification inventory
 
