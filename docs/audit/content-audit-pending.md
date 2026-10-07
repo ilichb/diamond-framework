@@ -3,7 +3,7 @@
 Working notes for the content audit of `docs/paper/main.tex`. This file
 lists the technical findings raised during the initial review (C-01…C-10),
 plus the findings raised during verification and the session-3 external
-review (C-11…C-36), all closed
+review (C-11…C-37), all closed
 by the scripts and edits recorded below, their
 verification status, and the proposed order of attack.
 
@@ -1371,9 +1371,41 @@ twice with no `^!` and no `Undefined`.
 
 **Next step:** none.
 
+### C-37 — §9.2 runtime table omits the heavy-tail rows
+
+**Location:** `docs/paper/main.tex` §9.2 (Reproducibility), the runtime
+table (`main.tex:1127`--`1142`).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+The §9.2 runtime table listed thirteen scripts and closed with
+`All others < 5 s each`. The same subsection (`Total runtime ...
+approximately 67 minutes ... dominated by the heavy-tail
+recalibrations`) and §1.4 (`main.tex:123`) state that two scripts
+outside the table run `15 min` and `24 min`. Those two scripts therefore
+fall under "All others", whose `< 5 s each` bound is then false. C-18
+had already fixed this table to "match the README rows at ≥5 s"; the two
+heavy-tail rows were never added, so C-18's stated resolution was not
+satisfied once the suite grew (§1.4 and §9.2 were re-derived to 67 min
+by C-25, but the table itself was left behind).
+
+**Resolution.** The two missing rows are added, derived from
+`verification/README.md` `## Runtime` (not from memory):
+`heavy_tail_scaled_clique.py` `~24 min` and `heavy_tail_n5000.py`
+`~15 min`, both above the ten-minute `recalibrate_top.py`. The table now
+lists the same fifteen `≥5 s` rows as the README, and
+`All others < 5 s each` is true.
+
+**Evidence:** `grep -nE 'heavy_tail_(n5000|scaled_clique)' docs/paper/main.tex`
+returns the two rows in §9.2 and the §1.4/§9.2 prose;
+`sed -n '/^## Runtime/,/^## Reproducibility/p' verification/README.md`
+lists the same rows; `pdflatex` twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
-All findings C-01 through C-36 are closed. The list of closures is
+All findings C-01 through C-37 are closed. The list of closures is
 above, in each block. No open finding remains.
 
 The next iteration of the content audit should begin from the paper
