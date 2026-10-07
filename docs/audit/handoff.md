@@ -33,9 +33,9 @@ of truth.
 The content audit worksheet is `docs/audit/content-audit-pending.md`.
 The falsification log is `docs/audit/numerical-verification.md`.
 
-## 2. Backlog: C-01 through C-36, all closed
+## 2. Backlog: C-01 through C-37, all closed
 
-36 findings, all closed. Closure record in each block of the
+37 findings, all closed. Closure record in each block of the
 worksheet. The compact table below is derived from `git log`; if it
 disagrees with the log, the log wins.
 
@@ -77,6 +77,7 @@ disagrees with the log, the log wins.
 | C-34 | lambda for eigenvalues (refuted) | — (refuted) | bf602c0 | no |
 | C-35 | sigma glyphs, distinct domains (refuted) | — (refuted) | d3e1942 | no |
 | C-36 | Eigenvalue rounding in §5.4 | recalibrate_top.py | 5f76824 | yes |
+| C-37 | §9.2 runtime table omits the heavy-tail rows | — (counter) | 3f998e7 | yes |
 
 The `main.tex` column is derived with
 `git log --format='%h %s' -- docs/paper/main.tex`. C-05, C-12 and C-14
@@ -194,6 +195,13 @@ Consolidated during session 5:
   finding is closed by attribution, record explicitly that the value
   was not checked against the output; a numeric cross-check (eje iv)
   is a separate pass. (C-36.)
+
+- A counter can contradict itself within a single subsection. The §9.2
+  runtime table's `All others < 5 s each` was contradicted by the two
+  heavy-tail figures cited three lines below in the same subsection, and
+  the two `≥5 s` rows C-18 said the table matched were absent. When a
+  table and its surrounding prose describe the same set, both must be
+  cross-checked against the derivation. (C-37.)
 
 ## 5. Verification inventory
 
