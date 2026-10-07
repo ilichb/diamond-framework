@@ -33,11 +33,16 @@ of truth.
 The content audit worksheet is `docs/audit/content-audit-pending.md`.
 The falsification log is `docs/audit/numerical-verification.md`.
 
-## 2. Backlog: C-01 through C-42, all closed
+## 2. Backlog: C-01 through C-44, all closed
 
-42 findings, all closed. Closure record in each block of the
+44 findings, all closed. Closure record in each block of the
 worksheet. The compact table below is derived from `git log`; if it
-disagrees with the log, the log wins.
+disagrees with the log, the log wins. C-43 and C-44 were raised and
+closed by the eje (vi) style pass (report:
+`docs/audit/eje-vi-style-report.md`). The eje (vi) Sub-eje 1
+terminology inventories raised no finding: `net_gain` and
+`true-positive` are declared **STOP (>5 line changes)** and await the
+reviewer's validation before any fix.
 
 | Finding | Title (short) | Script(s) | Commit(s) | main.tex |
 |---|---|---|---|---|
@@ -83,6 +88,8 @@ disagrees with the log, the log wins.
 | C-40 | §11.1 "five" vs seven-row §11.6 table | — (counter) | cda36f6 | yes |
 | C-41 | §2.6 undefined regime labels D4/S2.2 | — (textual) | cd6f8f4 | yes |
 | C-42 | §11.4 attributes §9.5 items to §10 | — (cross-ref) | a5b0e30 | yes |
+| C-43 | §5.4 [CONJECTURE] prefix→suffix | — (style) | edc29b9 | yes |
+| C-44 | Unused conjecture theorem environment | — (style) | 55d4d90 | yes |
 
 The `main.tex` column is derived with
 `git log --format='%h %s' -- docs/paper/main.tex`. C-05, C-12 and C-14
