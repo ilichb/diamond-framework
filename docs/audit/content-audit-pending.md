@@ -1132,6 +1132,33 @@ no seed, analytical. `grep -c 'cr_ide_solver' docs/paper/main.tex` returns 1;
 
 **Next step:** none.
 
+### C-25 — Reproducibility counters stale in §1.4, §9 and §11
+
+**Location:** `docs/paper/main.tex` §1.4 (runtime), §9 (script count,
+F-log count, runtime), §11.
+**Status:** Cerrado.
+**Severity:** Moderate.
+
+Four counters in the paper had drifted from the repository. §1.4 said
+"approximately ten minutes"; §9 said "the 30 scripts", "19 entries
+(F-001 through F-019)" and "approximately 12 minutes". The two runtime
+claims were already inconsistent with each other before this batch, and
+all four counters were stale. The F-log count also appears in the §9
+summary table and twice in Section 11.
+
+**Resolution.** Re-derived from the repository: 35 non-archived scripts
+(`find verification -name '*.py' -not -path '*/archive/*' | wc -l`),
+F-001 through F-021 (21 entries), and a total runtime dominated by
+`recalibrate_top.py` (~10 min), `heavy_tail_n5000.py` (~15 min) and
+`heavy_tail_scaled_clique.py` (~24 min). §1.4 and §9 now report the same
+total; the F-log count reads 21 in §9 and §11. No number was adjusted
+downward to preserve the original runtime claim.
+
+**Evidence:** `docs/paper/main.tex`; derived with the commands above.
+`pdflatex` runs twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
 All findings C-01 through C-24 are closed. The list of closures is

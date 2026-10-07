@@ -120,7 +120,7 @@ The paper is accompanied by a public repository containing:
 \item The paper source (\spath{docs/paper/main.tex}).
 \end{itemize}
 
-Every quantitative claim in the paper can be traced to a script, a benchmark, or a log entry. The commands to reproduce the claims are listed in \spath{verification/README.md}. Running the full suite takes approximately ten minutes on a single core.
+Every quantitative claim in the paper can be traced to a script, a benchmark, or a log entry. The commands to reproduce the claims are listed in \spath{verification/README.md}. Running the full suite takes approximately 65 minutes on a single core, dominated by the heavy-tail recalibrations (\spath{heavy_tail_n5000.py}, $\sim$15 min; \spath{heavy_tail_scaled_clique.py}, $\sim$24 min) and the RMT calibration (\spath{recalibrate_top.py}, $\sim$10 min).
 
 \section{Reputation Dynamics}
 \label{sec:reputation}
@@ -1112,9 +1112,9 @@ The selection of net\_gain is based on its correlation with activity~\cite{cong2
 This section evaluates three things: the reproducibility of the numerical claims, the measured on-chain gas costs of the cryptographic primitives, and the stability of the conclusions under parameter variation. Two benchmarks are deferred to future work because they require a live network: the proving time of the recursive SNARK, and the latency of cross-chain message propagation.
 
 \subsection{Reproducibility}
-Every quantitative claim in Sections~\ref{sec:reputation} through~\ref{sec:bootstrap} is accompanied by a script in \spath{verification/}. The scripts are self-contained: they depend only on NumPy and SciPy, and they declare their seeds and sample sizes at the top of each file. Running \texttt{pip install -r verification/requirements.txt} followed by the commands listed in \spath{verification/README.md} reproduces every number reported in the paper. The README lists the 30 scripts and their expected runtimes.
+Every quantitative claim in Sections~\ref{sec:reputation} through~\ref{sec:bootstrap} is accompanied by a script in \spath{verification/}. The scripts are self-contained: they depend only on NumPy and SciPy, and they declare their seeds and sample sizes at the top of each file. Running \texttt{pip install -r verification/requirements.txt} followed by the commands listed in \spath{verification/README.md} reproduces every number reported in the paper. The README lists the 35 scripts and their expected runtimes.
 
-The project documents its own falsifications in \spath{docs/audit/numerical-verification.md}. As of this writing the log contains 19 entries (F-001 through F-019), each one a claim that was made, tested, and corrected. The log exists because the numerical verification is the primary defense against errors of the kind that would otherwise propagate through the paper unchallenged.
+The project documents its own falsifications in \spath{docs/audit/numerical-verification.md}. As of this writing the log contains 21 entries (F-001 through F-021), each one a claim that was made, tested, and corrected. The log exists because the numerical verification is the primary defense against errors of the kind that would otherwise propagate through the paper unchallenged.
 
 The scripts run in the following time ranges on a 2020-era desktop:
 
@@ -1142,7 +1142,7 @@ All others & $< 5$ s each \\
 \end{tabular}
 \end{center}
 
-Total runtime for the full suite: approximately 12 minutes on a single core. The dominant cost is the RMT calibration (\spath{recalibrate_top.py}, $\sim$10 min).
+Total runtime for the full suite: approximately 65 minutes on a single core. The dominant costs are the heavy-tail recalibrations (\spath{heavy_tail_n5000.py}, $\sim$15 min; \spath{heavy_tail_scaled_clique.py}, $\sim$24 min) and the RMT calibration (\spath{recalibrate_top.py}, $\sim$10 min).
 
 \subsection{On-Chain Gas Costs}
 \label{subsec:evalgas}
@@ -1197,7 +1197,7 @@ Both benchmarks are declared as future work. The protocols for measuring them ar
 Claim & Status & Source \\
 \midrule
 Verification suite reproduces all claims & Verified & \spath{verification/} \\
-19 entries documented & Verified & \spath{docs/audit/} \\
+21 entries documented & Verified & \spath{docs/audit/} \\
 \texttt{ecPairing} $k=4 = 181{,}142$ gas & Measured & \spath{GasBenchmarks.sol} \\
 Groth16 verification $\approx 206$k gas & Measured + estimate & \spath{GasBenchmarks.sol} \\
 Bulletproofs direct: $\sim$6.5M gas & Estimated & \spath{GasBenchmarks.sol} \\
@@ -1327,7 +1327,7 @@ The Diamond Framework replaces a fraction of the financial stake required of a p
 \end{enumerate}
 
 \subsection{Methodology}
-Every quantitative claim in this paper is paired with a script that reproduces it. Claims without scripts are labeled as conjectures. The project maintains a public log of falsifications (\spath{docs/audit/numerical-verification.md}) with 19 entries: each one a claim that was made during development and tested.
+Every quantitative claim in this paper is paired with a script that reproduces it. Claims without scripts are labeled as conjectures. The project maintains a public log of falsifications (\spath{docs/audit/numerical-verification.md}) with 21 entries: each one a claim that was made during development and tested.
 
 The falsification log includes errors of several kinds: a fabricated simulation figure (F-001), a mismeasurement of a gas cost (F-017), a factor of two in an integral (F-011), a rounding rule that shifted a phase transition (F-014), an unverified projection of a multidimensional type (F-004), and an incorrect eigenvalue statistic in the collusion test (F-018). The corrections are documented in the same file as the original claims.
 
@@ -1373,7 +1373,7 @@ Payment rule & Verified & \spath{mechanism/} \\
 Data layer & Verified & \spath{data-layer/} \\
 Bootstrap & Verified & \spath{bootstrap/} \\
 Reproducibility & Verified & \spath{verification/README.md} \\
-Falsification log & 19 entries & \spath{docs/audit/} \\
+Falsification log & 21 entries & \spath{docs/audit/} \\
 External audit & Not performed & --- \\
 Real-data calibration & Open & --- \\
 Testnet benchmarks & Open & --- \\
