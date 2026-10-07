@@ -1271,6 +1271,25 @@ and the significance level `\alpha` of §5 are untouched.
 
 **Next step:** none.
 
+### C-33 — §8 reused the §2.5 drift glyph mu for the bootstrap decay rate
+
+**Location:** `docs/paper/main.tex` §2.5 (`\mu(r)` drift) vs §8.2 (bootstrap decay rate).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+§2.5 uses `\mu(r)` for the CIR drift; §8.2 used the same glyph for the
+reputational decay rate of the bootstrap. Same model, two quantities.
+
+**Resolution.** `\mu` renamed to `\delta` in §8.2, §8.4, §8.7, §9 and
+§10 (including `\mu/g` → `\delta/g`). The `\mu(r)` of §2.5 is untouched.
+Scripts unchanged; only paper notation.
+
+**Evidence:** `grep -c '\\mu' docs/paper/main.tex` equals
+`grep -c '\\mu(r)' docs/paper/main.tex`; `grep -c '\\delta'` = 10;
+`pdflatex` twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
 All findings C-01 through C-27 are closed. The list of closures is

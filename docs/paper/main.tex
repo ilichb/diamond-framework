@@ -1012,7 +1012,7 @@ Model & Gain rule & Stationary value \\
 \midrule
 Saturating & $k \cdot a \cdot (1-R)$ & $R \to 1$ for all $a$ \\
 Decreasing & $k \cdot a \cdot (1-R)^2$ & $R \to 1$ for all $a$ \\
-net\_gain & $g \cdot a \cdot (1-R) - \mu R$ & $R^* = g a / (g a + \mu)$ \\
+net\_gain & $g \cdot a \cdot (1-R) - \delta R$ & $R^* = g a / (g a + \delta)$ \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -1022,7 +1022,7 @@ The saturating and decreasing models converge to $R \to 1$ for all validators re
 The net\_gain model has a stationary value that depends on activity:
 
 \begin{equation}
-R^* = \frac{g \cdot a}{g \cdot a + \mu}
+R^* = \frac{g \cdot a}{g \cdot a + \delta}
 \label{eq:netgain}
 \end{equation}
 
@@ -1030,7 +1030,7 @@ The bootstrap operates on a bounded reputation score $R \in [0, 1)$, distinct fr
 
 The correlation between activity and reputation at stationarity is 0.76 in the reference simulation, versus 0.08--0.11 for the saturating models \fref{verification/bootstrap/compare_reputation_models.py}. We therefore use net\_gain throughout the bootstrap analysis.
 
-The sweep over $\mu$ at fixed $g = 0.01$ \fref{verification/bootstrap/sweep_net_gain.py} gives a maximum of $R_{\mathrm{std}}$ at $\mu/g = 1.5$. We use $g = 0.01$, $\mu = 0.015$.
+The sweep over $\delta$ at fixed $g = 0.01$ \fref{verification/bootstrap/sweep_net_gain.py} gives a maximum of $R_{\mathrm{std}}$ at $\delta/g = 1.5$. We use $g = 0.01$, $\delta = 0.015$.
 
 The quantity $R_{\mathrm{std}}$ is the cross-sectional sample standard deviation of the reputation score $R$ over the active validators at the final epoch of the simulation, with the population convention (numpy default \texttt{ddof = 0}); the reference simulation runs $N = 100$ validators over $T = 500$ epochs \fref{verification/bootstrap/r_std_specification.py}.
 
@@ -1068,7 +1068,7 @@ hybrid\_decay & 200 & 0.1563 & 0.1477 & 0.8393 & 0.2553 & 0.4348 \\
 
 The $S_f$ med column measures the median financial stake required at the end of the simulation. Under pure\_pos it is $\Theta = 1.0$. Under hybrid\_no\_decay it is 0.7764, a reduction of 22.4\%. Under hybrid\_decay it is 0.8393, a reduction of 16.1\%.
 
-The $R$ med column is the median reputation. Under net\_gain it converges to the stationary value $R^* = g a / (g a + \mu)$. For a validator with median activity $a \approx 1$, $R^* \approx 0.4$, consistent with the measured 0.3936.
+The $R$ med column is the median reputation. Under net\_gain it converges to the stationary value $R^* = g a / (g a + \delta)$. For a validator with median activity $a \approx 1$, $R^* \approx 0.4$, consistent with the measured 0.3936.
 
 The Gini and Top-10 columns are identical between pure\_pos and hybrid\_no\_decay because both policies track the same reputation trajectory $R(t)$. The difference between them is in the financial stake policy $S_f(t)$, not in the reputation. Gini and Top-10 are computed on the distribution of $R$, not on $S_f$.
 
@@ -1092,7 +1092,7 @@ The reduction is real but modest. It corresponds to a validator with median repu
 Claim & Status & Script \\
 \midrule
 net\_gain is the selected model & Verified & \spath{compare_reputation_models.py} \\
-$\mu/g = 1.5$ maximizes $R_{\mathrm{std}}$ & Verified & \spath{sweep_net_gain.py} \\
+$\delta/g = 1.5$ maximizes $R_{\mathrm{std}}$ & Verified & \spath{sweep_net_gain.py} \\
 $S_f$ median 0.7764 under hybrid\_no\_decay & Verified & \spath{simulate_bootstrap_net_gain.py} \\
 22.4\% stake reduction at median & Verified & \spath{simulate_bootstrap_net_gain.py} \\
 hybrid\_decay raises Gini & Verified & \spath{simulate_bootstrap_net_gain.py} \\
@@ -1103,7 +1103,7 @@ Hybrid\_no\_decay is recommended & Design & --- \\
 
 The Section's quantitative content is limited to the bootstrap simulation under the net\_gain model and the comparison of three policies. The saturation of the alternative models is documented as F-016.
 
-The selection of net\_gain is based on its correlation with activity~\cite{cong2021} (0.76 vs 0.08--0.11 for the saturating models), not on satisfying all four criteria of the model comparison. The standard deviation of reputation under net\_gain is 0.0282 in \spath{compare_reputation_models.py} at $\mu/g = 5.0$ with one seed, and 0.0424 in \spath{sweep_net_gain.py} at the sweep optimum $\mu/g = 1.5$, averaged over five seeds; both fall below the 0.05 threshold used in the comparison script. The threshold is a heuristic, not a requirement, and the net\_gain model is chosen for the correlation property, which the saturating models fail by an order of magnitude.
+The selection of net\_gain is based on its correlation with activity~\cite{cong2021} (0.76 vs 0.08--0.11 for the saturating models), not on satisfying all four criteria of the model comparison. The standard deviation of reputation under net\_gain is 0.0282 in \spath{compare_reputation_models.py} at $\delta/g = 5.0$ with one seed, and 0.0424 in \spath{sweep_net_gain.py} at the sweep optimum $\delta/g = 1.5$, averaged over five seeds; both fall below the 0.05 threshold used in the comparison script. The threshold is a heuristic, not a requirement, and the net\_gain model is chosen for the correlation property, which the saturating models fail by an order of magnitude.
 
 \section{Evaluation}
 \label{sec:evaluation}
@@ -1178,7 +1178,7 @@ The conclusions of the paper depend on parameter choices that are fixed at desig
 
 \textbf{Data layer (Section~\ref{sec:datalayer}).} The equilibrium $n^*(B) = \lfloor B/B^* \rfloor$ is exact given the parameters. The attacker profit is $-502$ with slashing $S_{\mathrm{slash}} = 10$ and $+49.91$ without detection. The discontinuity at $B = B^*$ is a property of the equilibrium, not of the Monte Carlo.
 
-\textbf{Bootstrap (Section~\ref{sec:bootstrap}).} The stationary reputation under net\_gain is $R^* = ga/(ga + \mu)$. The measured median $R = 0.3936$ matches the analytic $R^* = 0.4$ for unit activity. The choice $\mu/g = 1.5$ maximizes $R_{\mathrm{std}}$ in the sweep; nearby values give similar results.
+\textbf{Bootstrap (Section~\ref{sec:bootstrap}).} The stationary reputation under net\_gain is $R^* = ga/(ga + \delta)$. The measured median $R = 0.3936$ matches the analytic $R^* = 0.4$ for unit activity. The choice $\delta/g = 1.5$ maximizes $R_{\mathrm{std}}$ in the sweep; nearby values give similar results.
 
 \subsection{Deferred Benchmarks}
 Two benchmarks are not reported in this paper because they require a live network:
@@ -1246,11 +1246,11 @@ The left-tail test is therefore not a gap. Its power is comparable to the right-
 The bootstrap analysis of Section~\ref{sec:bootstrap} uses the net\_gain model
 
 \begin{equation}
-R' = g \cdot a \cdot (1-R) - \mu \cdot R
+R' = g \cdot a \cdot (1-R) - \delta \cdot R
 \label{eq:netgain-limits}
 \end{equation}
 
-selected for its correlation between activity and reputation (0.76 vs 0.08--0.11 for the saturating alternatives). The selection does not satisfy all four criteria of the model comparison: the standard deviation of reputation under net\_gain is 0.0424 at the sweep optimum $\mu/g = 1.5$ (five seeds; the $N = 100$ mean is $0.043970$ with 95\% CI $[0.043351, 0.044588]$), below the 0.05 threshold used in the comparison script. The threshold is a heuristic.
+selected for its correlation between activity and reputation (0.76 vs 0.08--0.11 for the saturating alternatives). The selection does not satisfy all four criteria of the model comparison: the standard deviation of reputation under net\_gain is 0.0424 at the sweep optimum $\delta/g = 1.5$ (five seeds; the $N = 100$ mean is $0.043970$ with 95\% CI $[0.043351, 0.044588]$), below the 0.05 threshold used in the comparison script. The threshold is a heuristic.
 
 If the true reputation dynamics differ from net\_gain --- if the activity of a validator has decreasing returns, if reputation decays with a different functional form, if there are non-linear effects --- the bootstrap results change. The reference stake reduction is 22.4\% at the median validator \fref{verification/bootstrap/simulate_bootstrap_net_gain.py}. The qualitative ranking of policies (hybrid\_no\_decay dominates hybrid\_decay) is robust to small changes in the gain rule; the specific numbers of other rules are not tabulated in this paper.
 
@@ -1273,7 +1273,7 @@ The bootstrap simulation of Section~\ref{sec:bootstrap} assumes:
 \item The transition rate $\tau(t)$ is linear in time, reaching 1 at epoch 200.
 \end{itemize}
 
-These are design choices, not empirical facts. The stationary reputation $R^* = ga/(ga + \mu)$ depends on the activity distribution; if real activity is heavier-tailed or lighter-tailed, $R^*$ changes.
+These are design choices, not empirical facts. The stationary reputation $R^* = ga/(ga + \delta)$ depends on the activity distribution; if real activity is heavier-tailed or lighter-tailed, $R^*$ changes.
 
 The bootstrap numbers ($S_f$ median 0.7764, $R$ median 0.3936, Gini 0.1283) are specific to the reference parameters. The qualitative ranking of policies (hybrid\_no\_decay dominates hybrid\_decay) is robust; the specific numbers are not.
 
