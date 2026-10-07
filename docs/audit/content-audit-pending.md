@@ -968,6 +968,47 @@ and the surrounding argument are unchanged.
 
 **Next step:** none.
 
+### C-20 — The succinctness claim lacked a cost model
+
+**Location:** §4.1 (circuit specification) and §4.5 (new subsection
+"Succinctness and the Cost of Ingesting the Tensor",
+`\label{subsec:succinctness}`).
+**Status:** Cerrado.
+**Severity:** Structural.
+
+§4.1 asserted that the threshold proof "exists for succinctness, not
+for privacy" without ever quantifying the alternative. Since `T` is
+public, a reviewer can ask why a validator does not simply transmit
+`T` to the destination chain and compute `||T||_F` there. Without a
+cost model the claim is an assertion, not an argument.
+
+**Resolution.** A Foundry benchmark (`benchmarkIngestFrobeniusNorm` in
+`GasBenchmarks.sol`) measures the native sum-of-squares loop over the
+500-entry tensor. §4.5 composes the cost of the native alternative
+from two terms: the calldata cost of transmitting `T` (EIP-2028,
+`256,000` gas at the upper bound for 500 254-bit field elements) and
+the measured on-chain loop (`428,064` gas at the reference compile,
+optimizer disabled as for the precompile benchmarks). The composed
+ingest is `684,064` gas, which exceeds the constant verification
+costs: `206k` (Groth16 direct), `250k` (recursive SNARK), and the
+`181,142` pairing step. The reviewer's premise does not hold on the
+reference tensor, and the stop-gate set at `181,142` gas is not
+tripped. §4.1 now states the cross-chain framing and the §4 summary
+table lists the measured ingest.
+
+**Evidence:** `verification/zk/succinctness_comparison.py` (output in
+`verification/zk/results/succinctness_comparison_output.txt`) reads
+the raw Foundry output at
+`integrations/avalanche/benchmarks/results/gas_ingest_output.txt`.
+The measured call gas is insensitive to the byte pattern of `T`
+(`T[i]=1` and `T[i]=2^64-1` both give `428,064`): the Foundry
+call-frame figure measures the loop and the test frame, not the
+calldata payload, so the calldata term is composed analytically.
+`grep -c 'succinctness' docs/paper/main.tex` returns 8; `pdflatex`
+runs twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
 All findings C-01 through C-22 are closed. The list of closures is

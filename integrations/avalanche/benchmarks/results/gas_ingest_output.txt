@@ -1,0 +1,30 @@
+# C-20 - raw Foundry gas for benchmarkIngestFrobeniusNorm
+# contract: src/GasBenchmarks.sol ; test: test/GasBenchmarks.t.sol
+# forge 1.5.1, solc 0.8.24. Reference compile (optimizer=false, foundry default), as used for the
+# precompile benchmarks cited in the paper.
+
+## unoptimized (foundry default: optimizer = false)
+[PASS] test_gasleftProbe() (gas: 129567)
+  minimal 500-loop gas: 124545
+[PASS] test_ingestFrobeniusNorm() (gas: 492465)
+  ingest Frobenius norm (T[i]=1), exec gas: 428064
+  sum T^2: 500
+[PASS] test_ingestFrobeniusNormWide() (gas: 492531)
+  ingest Frobenius norm (T[i]=2^64-1), exec gas: 428064
+  sum T^2: 170141183460469231713240559642174554112500
+[PASS] test_ingestInlineLoop() (gas: 353059)
+  inline loop only gas: 288547
+  sum T^2: 500
+
+## optimized (FOUNDRY_OPTIMIZER=true) - reported for completeness only
+[PASS] test_gasleftProbe() (gas: 65704)
+  minimal 500-loop gas: 61538
+[PASS] test_ingestFrobeniusNorm() (gas: 251561)
+  ingest Frobenius norm (T[i]=1), exec gas: 199430
+  sum T^2: 500
+[PASS] test_ingestFrobeniusNormWide() (gas: 251627)
+  ingest Frobenius norm (T[i]=2^64-1), exec gas: 199430
+  sum T^2: 170141183460469231713240559642174554112500
+[PASS] test_ingestInlineLoop() (gas: 202288)
+  inline loop only gas: 150040
+  sum T^2: 500

@@ -39,5 +39,60 @@ contract GasBenchmarksTest is Test {
         uint256 gas = bench.benchPoseidon2();
         console.log("poseidon2 gas:", gas);
     }
+
+    function test_ingestFrobeniusNorm() public {
+        uint256[500] memory T;
+        for (uint256 i = 0; i < 500; i++) {
+            T[i] = 1;
+        }
+        uint256 g0 = gasleft();
+        uint256 n2 = bench.benchmarkIngestFrobeniusNorm(T);
+        uint256 used = g0 - gasleft();
+        console.log("ingest Frobenius norm (T[i]=1), exec gas:", used);
+        console.log("sum T^2:", n2);
+    }
+
+    function test_ingestFrobeniusNormWide() public {
+        uint256[500] memory T;
+        for (uint256 i = 0; i < 500; i++) {
+            T[i] = 0xffffffffffffffff; // 8 bytes non-zero; square = 2^128
+        }
+        uint256 g0 = gasleft();
+        uint256 n2 = bench.benchmarkIngestFrobeniusNorm(T);
+        uint256 used = g0 - gasleft();
+        console.log("ingest Frobenius norm (T[i]=2^64-1), exec gas:", used);
+        console.log("sum T^2:", n2);
+    }
+
+    // Isolation: the pure sum-of-squares loop, no external call, so the
+    // measured gas is the loop alone (no memory/arg overhead of a CALL).
+    function test_ingestInlineLoop() public {
+        uint256[500] memory T;
+        for (uint256 i = 0; i < 500; i++) {
+            T[i] = 1;
+        }
+        uint256 sum;
+        uint256 g0 = gasleft();
+        for (uint256 i = 0; i < 500; i++) {
+            sum += T[i] * T[i];
+        }
+        uint256 used = g0 - gasleft();
+        console.log("inline loop only gas:", used);
+        console.log("sum T^2:", sum);
+    }
+
+    // Harness calibration: gasleft() probe and a trivial 500-step loop.
+    function test_gasleftProbe() public {
+        uint256 g0 = gasleft();
+        uint256 used = g0 - gasleft();
+        console.log("gasleft probe:", used);
+        uint256 sum;
+        g0 = gasleft();
+        for (uint256 i = 0; i < 500; i++) {
+            sum += i;
+        }
+        used = g0 - gasleft();
+        console.log("minimal 500-loop gas:", used);
+    }
 }
 

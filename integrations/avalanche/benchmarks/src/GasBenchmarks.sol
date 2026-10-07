@@ -121,5 +121,19 @@ contract GasBenchmarks {
         // eliminado la permutacion, el estado seguiria siendo el inicial.
         require(s[0] != s0in || s[1] != s1in, "poseidon: permutation eliminated");
     }
+
+    // ------------------------------------------------------------------
+    // Coste de ingerir el tensor T (C*D*H = 500 entradas) en la cadena
+    // destino y calcular su norma de Frobenius al cuadrado, sum T[i]^2.
+    // Es la alternativa nativa que propone el revisor: transmitir T y
+    // computar la norma on-chain en lugar de verificar una prueba.
+    // ------------------------------------------------------------------
+    function benchmarkIngestFrobeniusNorm(uint256[500] calldata T)
+        external pure returns (uint256 sum)
+    {
+        for (uint256 i = 0; i < 500; i++) {
+            sum += T[i] * T[i];
+        }
+    }
 }
 

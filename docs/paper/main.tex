@@ -429,6 +429,8 @@ The protocol requires validators to prove that the Frobenius norm of the reputat
 \label{eq:threshold}
 \end{equation}
 
+The succinctness is what the proof buys: $T$ lives on the source chain, and the destination chain accepts the constant-size proof instead of the tensor. Section~\ref{subsec:succinctness} quantifies the alternative---transmitting $T$ to the destination chain and computing $\|T\|_F$ there---and shows that it is the more expensive path.
+
 The threshold $\Theta_r$ is the minimum Frobenius norm required for admission. It is a design parameter, not derived from first principles in this paper. The reference configuration uses $\Theta_r = 0.5$ [CONJECTURE].
 
 The natural implementation is a zero-knowledge proof~\cite{gmr1985} over an R1CS circuit that verifies~\eqref{eq:threshold}. The prover commits to $T$ in some form and proves knowledge of a witness satisfying the inequality.
@@ -515,6 +517,14 @@ The choice of recursion framework (Groth16 recursion, Plonk recursion, Halo2 rec
 
 The protocol adopts Option B with recursive SNARK composition. Selecting it does not remove the Tucker representation from the protocol: Tucker remains useful for data transmission outside the circuit (Section~\ref{sec:tensor}), but the circuit operates on the raw committed tensor.
 
+\subsection{Succinctness and the Cost of Ingesting the Tensor}
+\label{subsec:succinctness}
+The proof of Section~\ref{sec:zk} is sound by commitment binding and constant-size by construction. Because the tensor $T$ is public, a reviewer may ask why a proof is needed at all: a validator could transmit $T$ to the destination chain and compute $\|T\|_F = \sum_i T_i^2$ natively. We compose the cost of this alternative from two terms \fref{verification/zk/succinctness_comparison.py}.
+
+First, the calldata cost of transmitting the tensor (EIP-2028: 4 gas per zero byte, 16 gas per non-zero byte). With $N = C D H = 500$ entries sent as BN254 field elements of 254 bits (one 32-byte word each), the payload is $500 \times 32 = 16{,}000$ bytes, or $256{,}000$ gas at the upper bound. Second, the on-chain sum of squares $\sum_i T_i^2$, measured with Foundry \fref{integrations/avalanche/benchmarks/src/GasBenchmarks.sol}: $428{,}064$ gas at the reference compile, which disables the optimizer exactly as the precompile benchmarks of Section~\ref{subsec:evalgas} do. The composed ingest is therefore $684{,}064$ gas ($455{,}430$ with the optimizer enabled).
+
+This is $3.3\times$ the cost of verifying a Groth16 proof directly ($\sim$206k gas) and $2.7\times$ the cost of the recursive proof ($\sim$250k gas); only the direct on-chain Bulletproofs verification ($\sim$6.5M gas, Section~\ref{subsec:recursive}) is more expensive. Transmitting the tensor and computing its norm on-chain does not dominate the constant-size proof, so the succinctness argument holds on the reference tensor.
+
 \subsection{Estimates and Their Provenance}
 The gas measurements for the EVM precompiles are exact: they match EIP-196 and EIP-197 to the gas unit. The Poseidon-2 measurement of 104{,}963 gas is an upper bound from an unoptimized Solidity implementation; production implementations are 20--40k gas. The relevant constraint on Poseidon in this paper is the R1CS count of 240 per hash, which is independent of the on-chain gas cost.
 
@@ -537,6 +547,8 @@ Poseidon tree: $\sim 2.4 \times 10^5$ constraints & Arithmetic & \spath{soundnes
 Bulletproofs: 0 R1CS, $\sim$0.72 KB & Estimate & \spath{soundness_zk_check.py} \\
 Groth16 $k=4$ pairing: 181{,}142 gas & Verified & \spath{GasBenchmarks.sol} \\
 Bulletproofs direct on-chain: $\sim$6.5M gas & Estimated & \spath{GasBenchmarks.sol} \\
+Ingesting $T$ on-chain: 684{,}064 gas & Measured & \spath{succinctness_comparison.py} \\
+Ingesting $T$ is not cheaper than the proof & Verified & \spath{succinctness_comparison.py} \\
 Recursion required for on-chain viability & Design & --- \\
 \bottomrule
 \end{tabular}}
@@ -1123,6 +1135,7 @@ All others & $< 5$ s each \\
 Total runtime for the full suite: approximately 12 minutes on a single core. The dominant cost is the RMT calibration (\spath{recalibrate_top.py}, $\sim$10 min).
 
 \subsection{On-Chain Gas Costs}
+\label{subsec:evalgas}
 The cryptographic design of Section~\ref{sec:zk} has an on-chain component. We measure the gas cost of the EVM precompiles that implement the BN254 pairings and scalar multiplications \fref{integrations/avalanche/benchmarks/src/GasBenchmarks.sol}. The measurements match EIP-196 and EIP-197 to the gas unit:
 
 \begin{center}

@@ -1,0 +1,57 @@
+==============================================================================
+SUCCINCTNESS: INGESTA NATIVA DE T vs VERIFICACIÓN DE PRUEBA
+==============================================================================
+
+Tensor de reputación: (C,D,H)=(20,5,5)  ->  N = 500 entradas
+Transmisión como field elements de 254 bits: 32 bytes por entrada
+
+1. MEDICIÓN FOUNDRY (integrations/avalanche/benchmarks)
+------------------------------------------------------------------------------
+   Gas del cargador de la función, sin optimizador :    428,064
+   Gas del cargador de la función, con optimizador:    199,430
+   Bucle aislado (sum T[i]^2), sin opt.            :    288,547
+   Bucle aislado (sum T[i]^2), con opt.            :    150,040
+   Calibración: bucle trivial de 500 pasos, sin opt:    124,545
+   Calibración: bucle trivial de 500 pasos, con opt:     61,538
+
+   El gas del cargador es insensible al patrón de bytes de T
+   (T[i]=1 y T[i]=2^64-1 dan idéntico resultado), luego mide el
+   costo del bucle y del marco de test, no el payload de calldata.
+
+2. COSTO DE CALLDATA (EIP-2028) DE TRANSMITIR T
+------------------------------------------------------------------------------
+   500 entradas x 32 bytes = 16,000 bytes
+   Cota superior (16 gas/byte no-cero) :    256,000 gas
+
+3. COMPOSICIÓN DE LA ALTERNATIVA NATIVA
+------------------------------------------------------------------------------
+   Ingesta = calldata + cómputo = 256,000 + 428,064 = 684,064 gas  (sin opt.)
+   Ingesta = calldata + cómputo = 256,000 + 199,430 = 455,430 gas  (con opt.)
+
+4. COMPARACIÓN ON-CHAIN
+------------------------------------------------------------------------------
+   Método                                                 Gas   Naturaleza
+   ----------------------------------------------------------   ----------
+   Ingesta nativa de T (calldata + bucle)             684,064   derivado
+   Verificar Groth16 directo (constante)              206,000   constante
+   Paso ecPairing k=4 aislado                         181,142   medido
+   SNARK recursivo on-chain                           250,000   estimado
+   Verificar Bulletproofs directo (N=500)           6,500,000   estimado
+
+5. VEREDICTO
+------------------------------------------------------------------------------
+   Ingesta nativa (684,064 gas) supera:
+     - la verificación Groth16 directa (206,000),
+     - el paso ecPairing k=4 (181,142), y
+     - el SNARK recursivo (250,000).
+
+   Solo la verificación directa de Bulletproofs (6,500,000)
+   es más cara que ingerir T; y ésa es precisamente la ruta que el
+   paper descarta en favor de la recursión.
+
+   Conclusión: transmitir T y computar ||T||_F en cadena NO es más
+   barato que verificar la prueba. La prueba es succinct y la
+   ingesta nativa es el camino caro. La premisa del revisor no se
+   sostiene para el tensor de referencia.
+
+==============================================================================
