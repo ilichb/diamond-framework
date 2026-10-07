@@ -1524,10 +1524,77 @@ with no `^!` and no `Undefined`.
 
 **Next step:** none.
 
+### C-43 — §5.4 marked [CONJECTURE] as a prefix, not a suffix
+
+**Location:** `docs/paper/main.tex` §5.4 (`main.tex:720`),
+`CONTRIBUTING.md` (`CONTRIBUTING.md:14-15`).
+**Status:** Cerrado.
+**Severity:** Minor.
+
+`CONTRIBUTING.md` rule 4 requires the marker as a **suffix** ("Use
+`[CONJECTURE]` suffix in documents"). §5.4 opened its sentence with a
+bold prefix, unlike §4.1 (`main.tex:441`) and §7.2 (`main.tex:507`),
+which place the marker as a plain, unbolded suffix at the end of the
+clause. `CONTRIBUTING.md` also spelled its own rule as "prefix",
+contradicting its example.
+
+**Resolution.** Moved the marker in §5.4 to the end of the sentence, in
+the style of §4.1/§7.2 (no bold); changed `CONTRIBUTING.md:14-15` from
+"prefix" to "suffix" (commit `edc29b9`, `fix(paper): C-43 ...`).
+
+**Evidence:** `grep -in 'conjecture' docs/paper/main.tex` shows the §5.4
+marker as a suffix (`main.tex:720`); `sed -n '14,15p' CONTRIBUTING.md`
+prints "suffix"; `pdflatex` twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
+### C-44 — Unused `conjecture` theorem environment in the preamble
+
+**Location:** `docs/paper/main.tex` preamble (`main.tex:35`).
+**Status:** Cerrado.
+**Severity:** Trivial.
+
+The preamble declared `\newtheorem{conjecture}[theorem]{Conjecture}`, but
+the environment is never used (`grep -rn 'begin{conjecture}' docs/paper/`
+is empty). It also invited a second, inconsistent way of marking
+conjectures, at odds with the `[CONJECTURE]` suffix rule of
+`CONTRIBUTING.md`.
+
+**Resolution.** Deleted the `\newtheorem{conjecture}` line (commit
+`55d4d90`, `fix(paper): C-44 ...`).
+
+**Evidence:** `grep -rn 'begin{conjecture}' docs/paper/` is empty;
+`grep -rn 'newtheorem{conjecture}' docs/paper/` is empty; `pdflatex`
+twice with no `^!` and no `Undefined`.
+
+**Next step:** none.
+
+### C-45 — Worksheet missing the C-43/C-44 closure blocks
+
+**Location:** `docs/audit/content-audit-pending.md`.
+**Status:** Cerrado.
+**Severity:** Trivial.
+
+The handoff declared "C-01 through C-44, all closed" and "44 findings",
+but this worksheet carried only 42 blocks (C-01 to C-42): the eje (vi)
+findings C-43 and C-44 were recorded in the handoff table and in
+`docs/audit/eje-vi-style-report.md` but never as worksheet blocks. The
+handoff's own derivable counter (section 0, `grep -c '^### C-'`)
+therefore returned 42, contradicting its prose.
+
+**Resolution.** Added the C-43 and C-44 blocks above and updated this
+worksheet's counter. The derivable count now matches the handoff prose.
+
+**Evidence:** `grep -c '^### C-' docs/audit/content-audit-pending.md`
+matches the handoff count; the worksheet is not a paper artifact, so no
+`pdflatex` guard applies.
+
+**Next step:** none.
+
 
 ## Proposed order of attack
 
-All findings C-01 through C-42 are closed. The list of closures is
+All findings C-01 through C-45 are closed. The list of closures is
 above, in each block. No open finding remains.
 
 The next iteration of the content audit should begin from the paper
