@@ -1320,14 +1320,16 @@ The methodological limitations (calibration on synthetic data, specific model ch
 \label{sec:conclusion}
 
 \subsection{Summary}
-The Diamond Framework replaces a fraction of the financial stake required of a proof-of-stake validator with verifiable, non-transferable reputation. The protocol is built from five components, each verified numerically in this paper:
+The Diamond Framework replaces a fraction of the financial stake required of a proof-of-stake validator with verifiable, non-transferable reputation. The protocol is built from seven components, each verified numerically in this paper:
 
 \begin{enumerate}[leftmargin=*]
 \item \textbf{Reputation dynamics} (Section~\ref{sec:reputation}). The process is a CIR diffusion with multiplicative downward jumps. It remains in its positive domain by construction. The exact mean first-passage time is computed by numerical integration and confirmed by two independent simulation methods.
 \item \textbf{Tensor representation and compression} (Section~\ref{sec:tensor}). The reputation tensor is compressed by Tucker decomposition for storage and transmission. The compression is exact for low-rank tensors and fails for blocky tensors; it is not used in the security path.
 \item \textbf{Zero-knowledge threshold proof} (Section~\ref{sec:zk}). The original circuit specification is unsound. The protocol adopts a Pedersen commitment with a Bulletproofs inner-product argument, recursively composed for constant on-chain verification cost. The EVM precompile costs are measured locally and match EIP-196 and EIP-197 exactly.
 \item \textbf{Collusion detection} (Section~\ref{sec:collusion}). The modularity matrix $B = W - dd^{\top}/(2m)$ replaces the normalized adjacency matrix $A_{\mathrm{sym}}$. The empirical null quantile at $\alpha = 0.01$ is 9.0542 with $N_{H_0} = 2000$ replicates. The lowest true positive rate across the five simulated configurations is 0.972; the boundary below which detection degrades is below the tested range. The boundary is characterized as a conjecture.
-\item \textbf{Payment, data layer, and bootstrap} (Sections~\ref{sec:payment}--\ref{sec:bootstrap}). The payment rule is a saturated uniform posted price, not a Myerson auction. The data layer equilibrium is $n^*(B) = \lfloor B/B^* \rfloor$ with $B^* = c_{\mathrm{audit}}/p_{\mathrm{fraud}}$. The bootstrap under the net\_gain reputation model reduces the median financial stake by 22.4\%.
+\item \textbf{Payment rule} (Section~\ref{sec:payment}). The payment rule is a saturated uniform posted price, not a Myerson auction.
+\item \textbf{Data layer} (Section~\ref{sec:datalayer}). The data layer equilibrium is $n^*(B) = \lfloor B/B^* \rfloor$ with $B^* = c_{\mathrm{audit}}/p_{\mathrm{fraud}}$.
+\item \textbf{Bootstrap} (Section~\ref{sec:bootstrap}). The bootstrap under the net\_gain reputation model reduces the median financial stake by 22.4\%.
 \end{enumerate}
 
 \subsection{Methodology}
