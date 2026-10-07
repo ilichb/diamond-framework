@@ -33,9 +33,9 @@ of truth.
 The content audit worksheet is `docs/audit/content-audit-pending.md`.
 The falsification log is `docs/audit/numerical-verification.md`.
 
-## 2. Backlog: C-01 through C-35, all closed
+## 2. Backlog: C-01 through C-36, all closed
 
-35 findings, all closed. Closure record in each block of the
+36 findings, all closed. Closure record in each block of the
 worksheet. The compact table below is derived from `git log`; if it
 disagrees with the log, the log wins.
 
@@ -76,6 +76,7 @@ disagrees with the log, the log wins.
 | C-33 | §8.2 bootstrap decay rate mu glyph | — (rename) | e82243c | yes |
 | C-34 | lambda for eigenvalues (refuted) | — (refuted) | bf602c0 | no |
 | C-35 | sigma glyphs, distinct domains (refuted) | — (refuted) | d3e1942 | no |
+| C-36 | Eigenvalue rounding in §5.4 | recalibrate_top.py | 5f76824 | yes |
 
 The `main.tex` column is derived with
 `git log --format='%h %s' -- docs/paper/main.tex`. C-05, C-12 and C-14
@@ -182,6 +183,17 @@ Consolidated during session 4:
   re-executing, and the regression test deletes
   `sim_positivity_output.txt`, resumes, and asserts exactly one re-run
   and one manifest row.
+
+Consolidated during session 5:
+
+- Attribution is not value verification. Eje (i) checked that every
+  number had a source; eje (ii) checked symbol consistency; neither
+  compared the paper's value against the output's value. The §5.4
+  `s[-2]` case was closed as C-29 by attribution only (the `\fref`
+  was correct) while the value was wrong (`8.5` vs `8.6`). When a
+  finding is closed by attribution, record explicitly that the value
+  was not checked against the output; a numeric cross-check (eje iv)
+  is a separate pass. (C-36.)
 
 ## 5. Verification inventory
 
