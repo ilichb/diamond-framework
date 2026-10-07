@@ -3,7 +3,7 @@
 Working notes for the content audit of `docs/paper/main.tex`. This file
 lists the technical findings raised during the initial review (C-01…C-10),
 plus the findings raised during verification and the session-3 external
-review (C-11…C-22), all closed
+review (C-11…C-23), all closed
 by the scripts and edits recorded below, their
 verification status, and the proposed order of attack.
 
@@ -1068,9 +1068,40 @@ deterministic. `main.tex` is unchanged by this finding.
 **Next step:** C-23 (scaled-clique experiment) isolates the confound
 before §5.4 is edited.
 
+### C-23 — The `n >= 5000` failure conflates heavy-tail miscalibration with clique scaling
+
+**Location:** §5.4 (Calibration) and §5.7 (Limitations) in
+`docs/paper/main.tex`.
+**Status:** Cerrado.
+**Severity:** Structural.
+
+C-22 (F-020) left a confound: at `n = 5000` a fixed `m = 20` clique is
+`0.4%` of `n` versus `4%` at `n = 500`, so the collapse of the per-null
+power could be a clique-size effect rather than a heavy-tail effect. A
+structural conclusion about §5.4 cannot be drawn without isolating it.
+
+**Resolution.** `heavy_tail_scaled_clique.py` sweeps the clique size at
+`n = 5000` over three regimes (fixed `m = 20`; `m = 63`, preserving
+`m/sqrt(n)`; `m = 200`, preserving `m/n`). The confound resolves cleanly:
+at `m = 200` (the `n = 500` fraction) the ER baseline recovers full power
+(`TPR = 1.000`) while every Chung–Lu null stays at `0.085` or below
+(F-021). The failure is therefore structural in the heavy-tailed null.
+§5.4 now removes the "requires `n >= 5000`" remedy and states the measured
+result; §5.7 declares that detection is not the binding defence in
+heavy-tailed regimes and that the guarantee rests on the financial floor
+`S_min` (C-21).
+
+**Evidence:** `verification/rmt/heavy_tail_scaled_clique.py` (output in
+`verification/rmt/results/heavy_tail_scaled_clique_output.txt`), seed 42,
+deterministic; the H0 calibration reproduces C-22 exactly (q99 `9.1957`,
+`47.3792`, `37.0298`, `30.2631`, `22.8598`). `pdflatex` runs twice with no
+`^!` and no `Undefined`.
+
+**Next step:** none.
+
 ## Proposed order of attack
 
-All findings C-01 through C-22 are closed. The list of closures is
+All findings C-01 through C-23 are closed. The list of closures is
 above, in each block. No open finding remains.
 
 The next iteration of the content audit should begin from the paper
@@ -1084,11 +1115,12 @@ two known residual gaps that are not findings in this worksheet:
   protocol's collateral function or to implement the EDO numerically
   is a design choice, not a discrepancy.
 - The `n >= 5000` experiment for separating the genuine heavy tail
-  from the saturated hub core was run as C-22 (F-020). It refutes the
-  remedy: at `n = 5000` the ER threshold still rejects every Chung–Lu
-  replicate, and `beta = 2.1` remains degree-capped. It also leaves a
-  scale confound (a fixed-size clique is below the detection floor as
-  `n` grows), which C-23 isolates before §5.4 is edited.
+  from the saturated hub core was run as C-22 (F-020) and extended as
+  C-23 (F-021). It refutes the remedy and shows the failure is
+  structural, not a clique-size artifact: at the `n = 500` clique
+  fraction the ER baseline recovers full power while every Chung–Lu
+  null does not. §5.4 therefore drops the remedy and §5.7 delegates the
+  heavy-tailed defence to `S_min` (§6.3).
 
 ## Handoff
 

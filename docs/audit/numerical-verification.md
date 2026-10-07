@@ -375,6 +375,35 @@ claim that fails its test is corrected or removed, not quietly reworded.
 - **Sample:** `heavy_tail_n5000.py`, deterministic (seed 42), output in
   `verification/rmt/results/heavy_tail_n5000_output.txt`.
 
+### F-021 — The heavy-tail failure is structural, not a clique-size artifact
+
+- **Claim under test:** the E.R.-threshold failure on Chung–Lu nulls
+  (F-019, F-020) might be an artifact of the clique scale: at `n = 5000`
+  a fixed `m = 20` clique is `0.4%` of `n`, versus `4%` at `n = 500`
+  (F-020), so a small clique could be below the detection floor for
+  reasons unrelated to the tail.
+- **Test:** `verification/rmt/heavy_tail_scaled_clique.py`, `n = 5000`,
+  `d̄ = 20`, seed 42, `N_H0 = 500`, `N_H1 = 200`, `alpha = 0.01`, one
+  planted clique at sizes `m = 20` (fixed), `m = 63` (preserves
+  `m/√n`), `m = 200` (preserves `m/n`), intra-density 10x. The null
+  sampler is imported from F-020, so the H0 calibration reproduces it
+  exactly.
+- **Verdict:** **Confirmed** (structural). The clique-size effect is
+  real but orthogonal: at `m = 200` the ER baseline recovers full power
+  (`TPR = 1.000`, Wilson 95% `[0.981, 1.000]`), whereas every Chung–Lu
+  null stays at or below `0.085` under its own recalibrated `q99`
+  (`0.025`, `0.035`, `0.035`, `0.085` for `beta = 2.1, 2.3, 2.5, 3.0`;
+  all Wilson upper bounds `<= 0.132`). At the same clique fraction and
+  the same `n`, ER detects and Chung–Lu does not.
+- **Conclusion:** The modularity-spectrum test does not transfer to
+  heavy-tailed graphs. The "requires `n >= 5000`" remedy is removed from
+  `main.tex` §5.4; §5.7 declares that detection is not the binding
+  defence in heavy-tailed regimes and that the guarantee rests on the
+  financial floor `S_min` (C-21).
+- **Sample:** `heavy_tail_scaled_clique.py`, deterministic (seed 42),
+  output in
+  `verification/rmt/results/heavy_tail_scaled_clique_output.txt`.
+
 ## Open items
 
 | Item | Owner component | Status |
