@@ -169,10 +169,11 @@ grep dirigido en Fase 4): C-38, C-39 y C-41 no tienen pasaje intermedio que los
 desambigüe; C-40 el tercer pasaje (§1.3) *agrava* la inconsistencia; C-42 se
 confirma al comprobar que §10 no contiene los dos ítems.
 
-No se edita `main.tex`: los findings quedan **propuestos** a la espera de
-validación del revisor. Se respetó la regla anti-invención: las anotaciones que
-se disolvieron al contextualizarse se registran como descartes (arriba), no como
-findings.
+Los findings se registraron primero como **propuestos** a la espera de
+validación; tras la validación del revisor se corrigieron en `main.tex` (los
+commits están en la cabecera). Se respetó la regla anti-invención: las
+anotaciones que se disolvieron al contextualizarse se registran como descartes
+(arriba), no como findings.
 
 
 ## Pasajes verificados sin fricción (muestreo)
