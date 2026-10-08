@@ -1,0 +1,42 @@
+==============================================================================
+DT CONVERGENCE — EULER DISCRETIZATION BIAS IN SIMULATED MFPT
+==============================================================================
+
+R0 = 2.2, eps = 0.001
+
+--- Section 2.2 parameters ---
+  alpha=0.5, Rbar=1.0, sigma0=0.8
+  N_PATHS=5000, T_max=200.0, dt grid=[0.02, 0.005, 0.001, 0.0005]
+  MFPT exacto (referencia): 11.2203
+
+        dt    n_steps   hit_frac         MFPT    rel_err
+  -------- ---------- ---------- ------------ ----------
+   0.02000      10000     1.0000      12.3115    +0.0973
+   0.00500      40000     1.0000      11.7708    +0.0491
+   0.00100     200000     1.0000      11.3334    +0.0101
+   0.00050     400000     1.0000      11.2453    +0.0022
+
+--- D4 analysis parameters ---
+  alpha=2.0, Rbar=1.0, sigma0=0.5
+  N_PATHS=2000, T_max=2000.0, dt grid=[0.02, 0.005, 0.001]
+  MFPT exacto (referencia): 443.7374
+
+        dt    n_steps   hit_frac         MFPT    rel_err
+  -------- ---------- ---------- ------------ ----------
+   0.02000     100000     0.9480     561.5454    +0.2655
+   0.00500     400000     0.9770     503.7052    +0.1351
+   0.00100    2000000     0.9835     461.8307    +0.0408
+
+==============================================================================
+CONCLUSION
+==============================================================================
+
+  Si MFPT(dt) converge a 'expected_mfpt' cuando dt -> 0, la
+  integral exacta esta confirmada y el sesgo de Euler es
+  cuantificado. Si no converge, hay un problema adicional.
+
+  El sesgo observado sobreestima el MFPT: el esquema Euler
+  con max(R,0) retrasa la llegada al umbral (residuos positivos
+  en ambos escenarios). El signo es consistente.
+
+==============================================================================

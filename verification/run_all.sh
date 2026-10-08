@@ -14,10 +14,11 @@
 #     scripts that emit a file write to a path relative to their own
 #     location, and no script reads a data file.
 #   - Writes the run outputs under OUT_DIR (the baseline directory) plus a
-#     closed list of their exact paths at verification/output_manifest.txt
-#     (and a canonical copy at OUT_DIR/output_manifest.txt). No `find` glob
-#     is used downstream; Fase 0 hashes exactly the listed files. None of
-#     these is committed by this script.
+#     closed list of their exact repo-relative paths at
+#     verification/output_manifest.txt (and a canonical copy at
+#     OUT_DIR/output_manifest.txt). No `find` glob is used downstream;
+#     Fase 0 hashes exactly the listed files. None of these is committed by
+#     this script.
 #
 # Options:
 #   --resume   Keep the existing manifest and skip any script that already
@@ -28,11 +29,14 @@
 #
 # Usage:
 #   bash verification/run_all.sh [--resume] [OUT_DIR]
-# Default OUT_DIR: verification/baseline_<YYYY-MM-DD>/
+# Default OUT_DIR: verification/baseline_verified/  (durable path inside the
+# repo; ratified by the Auditor for the Fase 0 tamper-evident anchor). /tmp
+# is NOT acceptable for the final manifest.
 #
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "${SCRIPT_DIR}")"
 README="${SCRIPT_DIR}/README.md"
 OUT_DIR=""
 RESUME=0
@@ -43,7 +47,7 @@ for arg in "$@"; do
         *) OUT_DIR="${arg}" ;;
     esac
 done
-OUT_DIR="${OUT_DIR:-${SCRIPT_DIR}/baseline_$(date +%F)}"
+OUT_DIR="${OUT_DIR:-${SCRIPT_DIR}/baseline_verified}"
 
 if [ ! -f "${README}" ]; then
     echo "run_all.sh: README not found: ${README}" >&2
@@ -124,10 +128,18 @@ done
 
 # Emit the closed output list: exact paths, one per line, non-empty only.
 # Written next to the run outputs (canonical, self-consistent with OUT_DIR)
-# and at the top-level path requested by the audit.
+# and at the top-level path requested by the audit. Paths are emitted
+# RELATIVE to the repo root (D6 fix, Bloque B) so the manifest is portable
+# across clones and machines; anything outside the repo stays absolute.
+rel_of() {
+    case "$1" in
+        "${REPO_ROOT}/"*) printf '%s\n' "${1#"${REPO_ROOT}/"}" ;;
+        *) printf '%s\n' "$1" ;;
+    esac
+}
 {
     for f in "${OUTPUTS[@]}"; do
-        [ -s "${f}" ] && printf '%s\n' "${f}"
+        [ -s "${f}" ] && rel_of "${f}"
     done
 } > "${OUT_DIR}/output_manifest.txt"
 cp "${OUT_DIR}/output_manifest.txt" "${SCRIPT_DIR}/output_manifest.txt"

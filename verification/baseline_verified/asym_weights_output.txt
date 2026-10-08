@@ -1,0 +1,37 @@
+==============================================================================
+ASYM WEIGHTS - expected per-pair weight, W vs A_sym
+==============================================================================
+
+N = 500, D_BAR = 20, CLIQUE_M = 20, DENSITY_FACTOR = 10
+
+p_out    = D_BAR / (N - 1)                         = 0.040080
+p_in     = min(1, DENSITY_FACTOR * p_out)          = 0.400802
+d_clique = (CLIQUE_M-1)*p_in + (N-CLIQUE_M)*p_out  = 26.8537
+d_bg     = CLIQUE_M*p_in + (N-CLIQUE_M-1)*p_out    = 27.2144
+
+Expected weight of one pair
+  Matrix                     intra-clique       background ratio intra/bg
+  -----------------------------------------------------------------------
+  W   (raw)                      0.400802         0.040080        10.0000
+  A_sym (d_bg = 27.214)          0.014925         0.001473        10.1343
+  A_sym (d_bg = 20.000)          0.014925         0.002004         7.4478
+
+Notes:
+- d_bg = 27.214 is the expected degree of a background node in the
+  H1 graph (clique present). This is the model-consistent denominator.
+- d_bg = 20.000 is the null-model degree, cited by section 5.2 as the
+  background degree.
+- Under either denominator the clique's expected per-pair weight
+  exceeds the background's by more than 7, contradicting the
+  "cancelled by degree increase" claim.
+
+DENSITY_FACTOR = 10 is the ratio of the underlying edge
+probabilities; compare it with the ratios above.
+
+Method: closed form, mean-field expected weights. A_sym divides
+by the expected degrees, so the realized weight of one pair
+fluctuates with the realized degree sequence.
+
+Part (b) of the task (first-order BBP predictions) is not
+implemented; see the docstring for the stop rule applied.
+

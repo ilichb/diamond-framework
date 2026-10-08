@@ -1,0 +1,45 @@
+==============================================================================
+MFPT EXPLICIT — CIR FIRST-PASSAGE BY NUMERICAL INTEGRATION
+(stable formulation, no catastrophic cancellation)
+==============================================================================
+
+R0 = 2.2
+
+--- Section 2.2 parameters ---
+  alpha=0.5, Rbar=1.0, sigma0=0.8
+  kappa = 1.562500, beta = 1.562500
+
+  MFPT exacto (integracion estable): 11.220298
+  Error de cuadratura:                2.45e-08
+  Cota con C*=1:                      1.996524e+01
+  C* implicito (bound = mfpt):        5.619917e-01
+
+  Veredicto: C*=1 NO valido como bound inferior
+             (bound excede MFPT por factor 1.7794e+00)
+             C* <= 5.619917e-01
+
+--- D4 analysis parameters ---
+  alpha=2.0, Rbar=1.0, sigma0=0.5
+  kappa = 16.000000, beta = 16.000000
+
+  MFPT exacto (integracion estable): 443.737421
+  Error de cuadratura:                1.69e-10
+  Cota con C*=1:                      1.415225e+10
+  C* implicito (bound = mfpt):        3.135455e-08
+
+  Veredicto: C*=1 NO valido como bound inferior
+             (bound excede MFPT por factor 3.1893e+07)
+             C* <= 3.135455e-08
+
+==============================================================================
+CONCLUSION
+==============================================================================
+
+  La cota original C*R0^(1-kappa)exp(beta*R0) con C*=1 es:
+    - INVALIDA en Section 2.2 (C* implicito = 0.562 < 1)
+    - INVALIDA (mas severamente) en D4 (C* implicito = 3.14e-08)
+
+  El MFPT exacto por integracion numerica es el estandar.
+  La cota original requiere especificar C* para cada regimen.
+
+==============================================================================

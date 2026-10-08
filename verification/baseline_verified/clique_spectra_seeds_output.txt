@@ -1,0 +1,86 @@
+==============================================================================
+CLIQUE SPECTRA SEEDS - N=200 seeds, H1 = k=1, m=20, density 10x
+==============================================================================
+
+N = 500, D_BAR = 20
+Clique: CLIQUE_K = 1, CLIQUE_M = 20, DENSITY_FACTOR = 10x background
+N_SEEDS = 200, SEED_LIST_RNG = 42
+seeds = default_rng(42).integers(0, 2**31, size=200)
+first 5 seeds = 191664964, 1662057958, 1405681632, 942484272, 929893138
+last 5 seeds  = 188226768, 735708086, 253415745, 727876280, 2065659505
+Bulk edges: W and B use 2*sqrt(d_bar) = 8.9443; A_sym uses 2/sqrt(d_bar) = 0.4472
+Percentile method: empirical ECDF, percentile(x) = 100 * mean(gaps <= x)
+
+==============================================================================
+ALL SEEDS (1..200)
+==============================================================================
+
+Matrix W
+  gap mean = +0.73  std = 0.39  min = -0.13  max = +1.91
+  P(gap > 0)             = 0.980
+  P(lambda > q99 = 9.0542)  = 0.940
+  Paper cited value      = +1.6996 -> percentile 99.0
+
+Matrix A_sym
+  gap mean = -0.02  std = 0.01  min = -0.04  max = +0.00
+  P(gap > 0)             = 0.005
+  Paper cited value      = -0.0156 -> percentile 90.0
+
+Matrix B
+  gap mean = +0.77  std = 0.41  min = -0.10  max = +2.02
+  P(gap > 0)             = 0.980
+  P(lambda > q99 = 9.0542)  = 0.940
+  Paper cited value      = +1.7569 -> percentile 99.0
+
+==============================================================================
+ROBUSTNESS - seeds 11..200 (first 10 excluded)
+==============================================================================
+
+Matrix W
+  gap mean = +0.74  std = 0.39  min = -0.13  max = +1.91
+  P(gap > 0)             = 0.979
+  P(lambda > q99 = 9.0542)  = 0.937
+  Paper cited value      = +1.6996 -> percentile 98.9
+
+Matrix A_sym
+  gap mean = -0.02  std = 0.01  min = -0.04  max = +0.00
+  P(gap > 0)             = 0.005
+  Paper cited value      = -0.0156 -> percentile 89.5
+
+Matrix B
+  gap mean = +0.78  std = 0.41  min = -0.10  max = +2.02
+  P(gap > 0)             = 0.979
+  P(lambda > q99 = 9.0542)  = 0.937
+  Paper cited value      = +1.7569 -> percentile 98.9
+
+==============================================================================
+CROSS-CHECK - seed 42 must reproduce the canonical single-seed run
+==============================================================================
+
+  W     gap = +1.6996  canonical = +1.6996  MATCH
+  A_sym gap = -0.0156  canonical = -0.0156  MATCH
+  B     gap = +1.7569  canonical = +1.7569  MATCH
+
+==============================================================================
+PAIRED TEST - B vs W on the same seed
+==============================================================================
+
+  All seeds (1..200):
+    P(gap_B > gap_W)    = 1.000
+    P(gap_B = gap_W)    = 0.000
+    P(gap_B < gap_W)    = 0.000
+    mean(gap_B - gap_W) = +0.0353   std = 0.0209
+
+  Robustness (seeds 11..200):
+    P(gap_B > gap_W)    = 1.000
+    P(gap_B = gap_W)    = 0.000
+    P(gap_B < gap_W)    = 0.000
+    mean(gap_B - gap_W) = +0.0357   std = 0.0206
+
+  main.tex:602 claims gap_B > gap_W (+1.7569 vs +1.6996) on the same
+  seed. The inequality is structural: B = W - dd^T/(2m) with dd^T/(2m)
+  positive semidefinite of rank 1, so lambda_1(W) >= lambda_max(B) >=
+  lambda_2(W) for every graph (Weyl interlacing). The paired test is
+  therefore not informative; the empirical content is the mean
+  difference (reported above), small against the per-seed std.
+

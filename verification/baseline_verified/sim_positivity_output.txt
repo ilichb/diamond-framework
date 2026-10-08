@@ -1,0 +1,5 @@
+=== Verificacion de positividad: SDE original vs Fix 1 ===
+Parametros: alpha=0.5, Rbar=1.0, sigma0=0.8, lambda=0.8, jump_mean=0.15, R0=0.3, T=5.0, paths=100000
+
+SDE original (saltos aditivos): 40.5800% de trayectorias tocan R<0
+Fix 1 (saltos multiplicativos):  0.000000% de trayectorias tocan R<0 (min observado: 0.000000)

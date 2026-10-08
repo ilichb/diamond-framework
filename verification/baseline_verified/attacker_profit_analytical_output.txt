@@ -1,0 +1,57 @@
+==============================================================================
+ATTACKER PROFIT - CLOSED FORM VS MONTE CARLO (data layer, coverage = 1.0)
+==============================================================================
+
+Constants (same names and values as simulate_data_layer_v3.py):
+N_ATTESTATIONS                      = 500
+N_EPOCHS                            = 500
+V_FRAUD                             = 1.0
+S_SLASH                             = 10.0
+BETA_ADVERSARIAL                    = 0.2
+P_FAKE_GIVEN_ADV                    = 0.5
+RNG_SEED                            = 42
+COVERAGE                            = 1.0
+
+Derived counts (integer arithmetic only, no int()/round()/floor()):
+N_PCT                               = 100
+PCT_ADV                             = 20
+PCT_HONEST                          = 80
+n_att_adv                           = 100
+
+Analytical values (n_frauds ~ Binomial(n_att_adv, P_FAKE_GIVEN_ADV)):
+E[n_frauds]                         = 50.000000
+Var[n_frauds]                       = 25.000000
+E[attacker_profit per epoch]        = -500.000000
+Var[attacker_profit per epoch]      = 2500.000000
+SE[mean over N_EPOCHS]              = 2.236068
+
+Monte Carlo (seed RNG_SEED, N_EPOCHS epochs, coverage = 1.0 fixed):
+mean_mc                             = -502.000000
+std_mc                              = 50.710384
+SE_mc                               = 2.267837
+z_vs_analitico                      = -0.894427
+p_bilateral                         = 0.371093
+IC95                                = [-506.382693, -497.617307]
+
+Verdict:
+atacante_profit_esperado_analitico  = -500.00
+atacante_profit_realizacion_mc      = -502.00
+paper_cita                          = -502.00
+z_del_paper_vs_analitico            = -0.894427
+
+Cross-checks against the canonical script (coverage = 1.0):
+n_detections == n_frauds (epochs)   = 500/500
+sum(n_frauds)                       = 25100
+mean(n_frauds)                      = 50.200000
+sum(profits) identity               = True
+paper value minus analytic value    = -2.000000
+
+Note:
+  -502.00 is the Monte Carlo realization, equal to -S_SLASH times the
+  realized mean fraud count (10 * 50.2). It is not a closed form. The
+  closed form under the profit formula of v3 line 52 is -500.00; the
+  alternative convention that credits V_FRAUD on detected frauds,
+  n_frauds * (V_FRAUD - S_SLASH) = 50 * (1 - 10), gives -450.00. The
+  52-unit gap decomposes as 50 (profit convention) + 2 (Monte Carlo).
+
+==============================================================================

@@ -5,6 +5,46 @@ HEAD: `0cb4b34` (`docs(audit): mark the --resume hardening as applied (561e2cf)`
 Alcance: cifras cuantitativas de `docs/paper/main.tex` × outputs de
 `verification/baseline_2026-10-06/` (35 scripts). No se editó el paper.
 
+## Errata — Bloque B (resolución G4): 518 → 517 tokens
+
+El total de arriba (**518**) ya no se reproduce: el cross-check actual emite
+**517**. La caída NO viene del regex del cross-check.
+
+    git log --follow --oneline -- docs/audit/eje-iv-crosscheck.py   # 34f85f0 (único commit)
+    git diff HEAD~5 -- docs/audit/eje-iv-crosscheck.py              # vacío
+
+La pérdida viene de una edición posterior de `main.tex` (commit `cd6f8f4`):
+
+    git show cd6f8f4 -- docs/paper/main.tex | grep -E '^[-+][^-+]'
+    -D4 tail is geometric; S2.2 has no censoring & Verified & \spath{censoring_test.py} \\
+    +Second-regime tail is geometric; first regime has no censoring & Verified & \spath{censoring_test.py} \\
+
+Eliminar la etiqueta `S2.2` (los rótulos de régimen "D4/S2.2" eran indefinidos,
+finding **C-41**) eliminó el token numérico `2.2` — antiguo `main.tex:304`.
+Derivación reproducible (mismo `TOKEN_RE` que el cross-check):
+
+    git show 34f85f0:docs/paper/main.tex > /tmp/old.tex
+    # TOKEN_RE sobre /tmp/old.tex vs docs/paper/main.tex -> 518 vs 517
+    # difflib.SequenceMatcher -> única diferencia: delete '2.2' (old line 304)
+
+**517 es el nuevo baseline.** La tabla de cruce de abajo conserva la numeración
+de `34f85f0`: sus filas posteriores a la antigua línea 304 van una por delante
+de la numeración actual.
+
+### Limitaciones del matcher del cross-check (no son defectos del paper)
+
+El cross-check compara por igualdad numérica **sin entender escala ni formato**,
+por eso reporta como "huérfanas" cifras que sí están en los outputs:
+
+| Formato en el output | Tokens afectados |
+|---|---|
+| Notación científica (`1.415225e+10`, `3.135455e-08`, `3.1893e+07`) | `1.415`, `3.14`, `3.19` |
+| Separadores de millares (`6,500,000`, `1,080,501`) | `6.5`, `1.08` |
+| Fracción → porcentaje (`0.9720` → `97.2\%`, `rel_err` → `\%`) | `97.2`, `77.6`, `26.6`, `13.5` |
+
+La adjudicación de las 27 cifras huérfanas (numeración actual) está en
+`docs/audit/claim-registry.csv`.
+
 ## Metodología
 
 - **Regla A — una cifra, un renglón.** Extracción mecánica con la misma regex

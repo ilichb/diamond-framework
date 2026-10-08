@@ -1,0 +1,75 @@
+==============================================================================
+CUANTIZACION UMBRAL->STAKE — FINDING C-01 (bit del circuito vs valor)
+==============================================================================
+
+1. PARAMETROS Y CHEQUEOS DE COHERENCIA CON EL PAPER
+------------------------------------------------------------------------------
+   N = C*D*H = 20*5*5 = 500  (main.tex:316)
+   Intervalo aceptado por el bit: ||T|| in [0.5, 3.0]
+   Gas pairing Groth16 (k=4) = 45,000 + 34,000*4 + 142 = 181,142  (main.tex:467: 181,142)
+   C_R(3.0) = 0.6000   (main.tex:798 afirma C_R(T) in [0, 0.6])
+   C_R(0.5) = 0.266667
+   Inversa: c_r_inverse(0.6000) = 3.000000  (debe ser 3.0)
+
+2. EL BIT SOLO (k = 1): LA ASIGNACION QUEDA INDETERMINADA
+------------------------------------------------------------------------------
+   C_R recorre [0.266667, 0.600000] dentro del conjunto aceptado.
+   S_f* recorre [0.400000, 0.733333]; rango 0.333333 (33.33% de Theta).
+
+   [a] Politica de caso peor (segura): cobrar S_f*(Theta_r) a todos.
+       sobre-colateralizacion con ||T||=3.0: +83.33%
+   [b] Politica intermedia (lo que el bit sugiere): cobrar S_f*(T_max).
+       CoA con ||T||=0.5: 0.400000 + 0.266667 = 0.666667 < Theta
+       deficit de colateral: 0.333333 (33.33% de Theta)
+
+   => El bit no distingue ||T||=0.5 de ||T||=3.0: el protocolo debe
+      sobre-colateralizar o violar CoA. Ninguna opcion sale del paper.
+
+3. UMBRALES ESCALONADOS: ERROR DE CUANTIZACION vs k
+------------------------------------------------------------------------------
+     k bits   eps(||T||)   eps(C_R)   gas directo    recursivo    off-chain
+     1    0     0.333333   0.333333       206,000      250,000    6,500,000
+     2    1     0.242424   0.166667       412,000      250,000   13,000,000
+     4    2     0.156863   0.083333       824,000      250,000   26,000,000
+     8    3     0.091954   0.041667     1,648,000      250,000   52,000,000
+    16    4     0.050314   0.020833     3,296,000      250,000  104,000,000
+    32    5     0.026403   0.010417     6,592,000      250,000  208,000,000
+    64    6     0.013536   0.005208    13,184,000      250,000  416,000,000
+
+   Colocacion optima (uniforme en C_R): eps = (0.600000 - 0.266667)/k = 0.333333/k.
+   Prueba Bulletproofs: k x 0.72 KB (una prueba de rango por umbral).
+   Con recursion el gas on-chain es constante (250,000); el costo marginal es off-chain.
+
+4. k NECESARIO PARA UN ERROR OBJETIVO (colocacion optima)
+------------------------------------------------------------------------------
+    eps objetivo    k*   gas directo    off-chain
+            0.10     4       824,000   26,000,000
+            0.05     7     1,442,000   45,500,000
+            0.01    34     7,004,000  221,000,000
+
+   El paper no declara eps objetivo; sin eps no hay k* unico.
+
+==============================================================================
+CONCLUSION
+==============================================================================
+
+   1. El bit de la Sec. 4.1 es insuficiente para la regla de la Sec. 6.3:
+      deja sin determinar 0.333333 de stake (33.3% de Theta).
+   2. Con k umbrales el error cae como 1/k (colocacion optima en C_R),
+      pero cada umbral anade un bit de salida publica y una prueba.
+   3. La Sec. 4.1 especifica un bit (||T||_F >= Theta_r); la Sec. 6.3
+      requiere C_R(T) como valor. La brecha tiene dos capas:
+      soundness (cerrada por la Opcion B adoptada en Sec. 4.3-4.4:
+      Pedersen + Bulletproofs sobre el vector comprometido, sin abrir
+      el tensor, consistente con Sec. 4.1 L423 'without revealing the
+      full reputation tensor') y allocabilidad (abierta: el paper no
+      especifica como C_R(T) llega a la cadena). C_R = 0.8x/(1+x) es
+      no lineal; Bulletproofs es nativo para enunciados lineales, asi
+      que C_R(T) no es expresable sobre el commitment sin revelar
+      ||T||_F, o sin redisenar C_R como lineal.
+   4. Bloqueo de verificacion: el paper no fija Theta_r, ni VaR_tech,
+      ni la forma funcional de C_R (la Sec. 2.5 la define como una EDP
+      integro-diferencial en un r escalar). Sin esos tres datos, k* no
+      puede derivarse del texto.
+
+==============================================================================

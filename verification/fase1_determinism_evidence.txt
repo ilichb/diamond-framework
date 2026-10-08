@@ -1,0 +1,47 @@
+# machine log — Fase 1 determinism (Bloque A/B)
+# harness: bash verification/run_all.sh   -> OUT_DIR=verification/baseline_verified
+# frozen:  verification/baseline_2026-10-06
+# corrida durable: 2026-10-08 10:28:23
+# suma de runtime_s del manifiesto: 2074.6 s
+#
+# --- exit codes por script ---
+sim_positivity.py EXIT 0
+stationary_stats.py EXIT 0
+mfpt_bound_explicit.py EXIT 0
+dt_convergence.py EXIT 0
+censoring_test.py EXIT 0
+mfpt_jump_diffusion.py EXIT 0
+cr_ide_solver.py EXIT 0
+frobenius_counterexample.py EXIT 0
+fee_specification.py EXIT 0
+fee_specification_net.py EXIT 0
+financial_floor_sensitivity.py EXIT 0
+constraint_count_check.py EXIT 0
+soundness_zk_check.py EXIT 0
+threshold_quantization.py EXIT 0
+succinctness_comparison.py EXIT 0
+sim_laplacian.py EXIT 0
+calibration_modularity.py EXIT 0
+calibration_heavy_tail.py EXIT 0
+clique_spectra.py EXIT 0
+clique_spectra_seeds.py EXIT 0
+asym_weights.py EXIT 0
+wilson_intervals.py EXIT 0
+recalibrate_top.py EXIT 0
+max_statistic.py EXIT 0
+q99_standard_error.py EXIT 0
+bipartite_power.py EXIT 0
+heavy_tail_n5000.py EXIT 0
+heavy_tail_scaled_clique.py EXIT 0
+tucker_analysis.py EXIT 0
+simulate_data_layer_v3.py EXIT 0
+attacker_profit_analytical.py EXIT 0
+compare_reputation_models.py EXIT 0
+sweep_net_gain.py EXIT 0
+simulate_bootstrap_net_gain.py EXIT 0
+r_std_specification.py EXIT 0
+#
+# --- comparaciones byte a byte (cmp -s sobre cada *_output.txt) ---
+frozen_vs_durable COMPARED 35 DIFFERENCES 0
+run1_vs_durable COMPARED 35 DIFFERENCES 0
+run2_vs_durable COMPARED 35 DIFFERENCES 0

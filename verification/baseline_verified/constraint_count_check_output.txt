@@ -1,0 +1,10 @@
+=== Sanity check: Proposicion 5.4 ===
+
+Ejemplo del paper (version corregida):
+(R1,R2,R3)=(4,3,3)  (C,D,H)=(20,5,5)
+  compressed   = R1*R2*R3 + R1*C + R2*D + R3*H = 146
+  uncompressed = C*D*H = 500
+  ratio real = 3.4247x   reduccion = 70.8%
+
+Para probar tus propios parametros, editar los valores de abajo:
+(dejando el ejemplo tal cual como plantilla)

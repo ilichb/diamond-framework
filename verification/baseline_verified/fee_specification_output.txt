@@ -1,0 +1,65 @@
+================================================================================
+REGLA DE PAGO UNIFORME (POSTED PRICE) — VERIFICACION IC/IR
+================================================================================
+
+Parametros:
+  N_VALIDATORS = 1000
+  omega ~ Uniforme[0.01, 0.1]
+  PI_VAL = 0.15
+  THETA = 1.0, VAR_TECH = 0.2
+
+F0* (fee uniforme optimo) = 0.0500
+
+1. VERIFICACION IR (F0 = F0*)
+--------------------------------------------------------------------------------
+   U min  = 0.009747
+   U max  = 0.095891
+   U mean = 0.069152
+   Fraccion con U >= 0: 1.0000
+   IR: OK (todos los tipos tienen U >= 0)
+
+2. SATURACION EN (omega_max, norm_T = 0)
+--------------------------------------------------------------------------------
+   U(omega_max, norm_T=0) = 0.0000000000
+   Deberia ser 0 por construccion de F0*
+   Saturacion: OK
+
+3. VERIFICACION IC (tautologica — posted price)
+--------------------------------------------------------------------------------
+   T es publico (verificado on-chain).
+   No hay reporte privado sobre T. IC se cumple trivialmente.
+   El unico tipo privado es omega, y la asignacion S_f*(T)
+   no depende de omega.
+   => IC es tautologica (no hay desvio posible).
+
+4. RECAUDACION Y DESTINO DEL FEE
+--------------------------------------------------------------------------------
+   Fee unitario:          0.0500
+   Fee total por epoca:   50.0000
+   Uso del fee:
+     - Pool de bounties (Seccion 7)
+     - Fondo de compensacion (Seccion 9)
+
+5. F0 SENSIBILIDAD
+--------------------------------------------------------------------------------
+      F0   IR violada    Recaudacion
+  0.0250       0.0000          25.00
+  0.0400       0.0000          40.00
+  0.0500       0.0000          50.00
+  0.0600       0.0020          60.00
+
+================================================================================
+CONCLUSION
+================================================================================
+
+   Regla de pago: F0 = 0.0500 (posted price saturado)
+   IR: se cumple para todos los tipos
+   IC: tautologica (T publico, omega no afecta asignacion)
+   No es Myerson: no hay reserva dependiente de la distribucion
+
+   El paper debe reescribir la Seccion 6 como:
+     - T verificado => no revelacion
+     - omega privado pero asignacion independiente de omega
+     - F0 uniforme saturado en (omega_max, norm_T=0)
+
+================================================================================

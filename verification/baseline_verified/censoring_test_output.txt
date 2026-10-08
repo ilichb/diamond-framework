@@ -1,0 +1,63 @@
+==============================================================================
+CENSORING TEST — GEOMETRIC TAIL HYPOTHESIS FOR CIR FIRST-PASSAGE
+==============================================================================
+
+N_PATHS = 20000, T_0 = 50.0, K = 6, T_max = 300.0, dt = 0.01
+R0_target = 2.2, eps = 0.001
+
+--- Section 2.2 parameters ---
+  alpha=0.5, Rbar=1.0, sigma0=0.8
+
+  Trayectorias que alcanzan R0 en T_max=300.0: 20000/20000 (100.00%)
+
+     k  T = k*T_0   P(tau > T)     P_geo(T)     E[count]      ratio
+  ---- ---------- ------------ ------------ ------------ ----------
+     1       50.0     0.009100     0.009100       182.00     1.0000
+     2      100.0     0.000050     0.000083         1.66     0.6038
+     3      150.0     0.000000     0.000001         0.02     0.0000
+     4      200.0     0.000000     0.000000         0.00     0.0000
+     5      250.0     0.000000     0.000000         0.00     0.0000
+     6      300.0     0.000000     0.000000         0.00     0.0000
+
+  MFPT (condicional sobre hits): 12.0653
+  MFPT directo (sin censura): 12.0653
+  Extrapolacion no aplicable: no hay censura.
+
+  Veredicto: INSUFICIENTE — ningun k alcanza E[count] >= 10; la cola no es medible a esta resolucion (N_PATHS=20000).
+
+--- D4 analysis parameters ---
+  alpha=2.0, Rbar=1.0, sigma0=0.5
+
+  Trayectorias que alcanzan R0 en T_max=300.0: 7939/20000 (39.70%)
+
+     k  T = k*T_0   P(tau > T)     P_geo(T)     E[count]      ratio
+  ---- ---------- ------------ ------------ ------------ ----------
+     1       50.0     0.921350     0.921350     18427.00     1.0000
+     2      100.0     0.846600     0.848886     16977.72     0.9973
+     3      150.0     0.777550     0.782121     15642.42     0.9942
+     4      200.0     0.716500     0.720607     14412.14     0.9943
+     5      250.0     0.658700     0.663931     13278.63     0.9921
+     6      300.0     0.603050     0.611713     12234.26     0.9858
+
+  MFPT (condicional sobre hits): 139.0923
+  Bound trivial E[tau] >= T_max*(1-hit_frac): 180.9150
+  Extrapolacion geometrica (sobreestima si la cola es sub-geometrica): 635.7279
+
+  Ratios p_emp/p_geo (k con E[count]>=10: 5 de 5): mean=0.9927, std=0.0038
+  Veredicto: cola aproximadamente geometrica. La extrapolacion T_0/(1-p)
+  sobreestima el MFPT porque la cola es sub-geometrica (ratios < 1 en
+  todas las ventanas medidas).
+
+==============================================================================
+CONCLUSION
+==============================================================================
+
+  Si la cola es geometrica: E[tau] ~ T_0/(1-p) es una estimacion
+  valida y se puede usar para clasificar la cota como tight, 
+  informativa, o vacua.
+
+  Si la cola NO es geometrica (p_emp/p_geo != 1), la extrapolacion
+  sobreestima o subestima E[tau], y solo tenemos el bound trivial
+  E[tau] >= T_max*(1-hit_frac).
+
+==============================================================================

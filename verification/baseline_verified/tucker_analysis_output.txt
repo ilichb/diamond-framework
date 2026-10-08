@@ -1,0 +1,58 @@
+================================================================================
+TUCKER ANALYSIS — ATOMIC VERIFICATION OF TENSOR COMPRESSION
+================================================================================
+
+Tensor shape: (C, D, H) = (20, 5, 5)
+Full storage: 500 entries
+Target rank: (R1, R2, R3) = (4, 3, 3)
+Tucker storage: 146 entries
+Storage reduction: 3.4247x
+
+================================================================================
+RECONSTRUCTION ERROR BY TENSOR TYPE (rank = (4,3,3))
+================================================================================
+Note: random_uniform and blocky tensors are generated
+with zero mean. Non-zero mean introduces a rank-1 DC
+component that dominates the reconstruction.
+
+Note: blocky tensors have community structure in mode C,
+not low-rank structure. HOSVD does not capture block
+structure; the error at rank (4,3,3) is dominated by
+truncation of modes 1 and 2, not by noise.
+
+Scenario                  ||T||_F    ||T-That||_F    rel error
+--------------------------------------------------------------------------------
+random_uniform             6.4067          5.4929     85.7366%
+low_rank_clean            73.0680          0.0000      0.0000%
+low_rank_noisy            45.2608          0.9926      2.1931%
+blocky                     6.7754          3.5589     52.5270%
+
+================================================================================
+RECONSTRUCTION ERROR VS RANK (low_rank_noisy)
+================================================================================
+R1=R2=R3        storage      ratio    rel error
+--------------------------------------------------------------------------------
+1                    31    16.1290x      5.0228%
+2                    68     7.3529x      3.2426%
+3                   117     4.2735x      2.3221%
+4                   184     2.7174x      1.7715%
+5                   275     1.8182x      1.5180%
+
+================================================================================
+CONCLUSION
+================================================================================
+
+  1. HOSVD verified: rel error < 1e-14 for clean low-rank tensor
+  2. Storage reduction: 3.4247x (500 -> 146 entries)
+  3. Reconstruction error depends on tensor structure:
+     - random (zero mean): large, ~85%
+     - low-rank clean:     0%
+     - low-rank noisy:     ~ ||noise||_F / ||T||_F
+     - blocky:             ~53% (block structure not
+                            captured by HOSVD)
+  4. Tucker is used for storage and transmission, not for
+     security. Soundness is provided by the ZK proof
+     (Section 4) and the modularity-based collusion test
+     (Section 5).
+
+================================================================================

@@ -1,0 +1,32 @@
+==============================================================================
+FEE SPECIFICATION - GROSS VS NET REVENUE (finding C-08(b))
+==============================================================================
+
+Parametros (mismos nombres y valores que fee_specification.py):
+  N_VALIDATORS = 1000
+  omega ~ Uniforme[0.01, 0.1]
+  PI_VAL = 0.15, THETA = 1.0, VAR_TECH = 0.2
+  RNG_SEED = 42, tolerancia IR: U < -1e-09
+
+Recaudacion por epoca segun el fee:
+      F0  N_VALIDATORS  n_excluded  gross_revenue   net_revenue  viol_frac
+--------------------------------------------------------------------------
+  0.0250          1000           0          25.00         25.00     0.0000
+  0.0400          1000           0          40.00         40.00     0.0000
+  0.0500          1000           0          50.00         50.00     0.0000
+  0.0600          1000           2          60.00         59.88     0.0020
+
+==============================================================================
+VERIFICACION
+==============================================================================
+
+F0_star (find_optimal_fee)            = 0.0500    (esperado 0.0500)
+F0 tensionado (1.2 * F0_star)         = 0.0600   
+U min con F0 = F0_star                = 0.009747  (esperado 0.009747, identico al canonico)
+U min con F0 = 1.2 * F0_star          = -0.000253 (esperado negativo)
+n_excluded con F0 = F0_star           = 0         (esperado 0)
+n_excluded con F0 = 1.2 * F0_star     = 2         (esperado 2)
+gross_revenue con F0 = 1.2 * F0_star  = 60.00     (esperado 60.00)
+net_revenue con F0 = 1.2 * F0_star    = 59.88     (esperado 59.88)
+
+Todos los asserts pasaron (igualdad exacta, sin redondeo intermedio).

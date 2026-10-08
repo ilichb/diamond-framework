@@ -1,0 +1,65 @@
+==============================================================================
+R_STD SPECIFICATION - FINDING C-14
+==============================================================================
+
+1. NAMED DEFINITION
+------------------------------------------------------------------------------
+    r_std(R, active, ddof=0) = R[active].std(ddof=ddof)
+    Cross-sectional, over active validators, final epoch.
+    ddof=0 matches the numpy default in both canonical scripts.
+
+2. IDENTITY TEST
+------------------------------------------------------------------------------
+    r_std(synthetic, all-active)   = 0.2121320344
+    numpy .std(ddof=0), same array = 0.2121320344
+    r_std(synthetic, partial mask) = 0.1870828693
+    asserts at 1e-15: OK
+
+3. REPRODUCE THE TWO PAPER VALUES
+------------------------------------------------------------------------------
+    compare_reputation_models.py
+        operating point mu/g  = 5.0000
+        seeds used            = [42]
+        R_std reproduced      = 0.028156    (paper: 0.0282)
+    sweep_net_gain.py
+        operating point mu/g  = 1.5000
+        seeds used            = [42,43,44,45,46]
+        per-seed R_std        = [0.039299, 0.042856, 0.041621, 0.044937, 0.043284]
+        mean R_std            = 0.042400    (paper: 0.0424)
+
+4. EXTENDED SEED SAMPLE (N = 100 per operating point)
+------------------------------------------------------------------------------
+      mu/g       mean        std         SE     CI95 low    CI95 high
+      1.00   0.042050   0.003002   0.000300     0.041461     0.042638
+      1.50   0.043970   0.003156   0.000316     0.043351     0.044588
+      2.00   0.043470   0.003144   0.000314     0.042853     0.044086
+      3.00   0.040321   0.002983   0.000298     0.039737     0.040906
+      5.00   0.033499   0.002615   0.000262     0.032987     0.034012
+
+5. CROSS-CHECKS
+------------------------------------------------------------------------------
+    sweep N=5 mean at mu/g=1.5 reproduces 0.0424 within 5e-4: OK
+    compare single-seed R_std reproduces 0.0282 within 5e-4: OK
+    N=100 mean at mu/g=1.5 = 0.043970
+    N=100 CI95 at mu/g=1.5 = [0.043351, 0.044588]
+    N=100 mean at mu/g=2.0 = 0.043470
+    N=100 CI95 at mu/g=2.0 = [0.042853, 0.044086]
+    paper 0.0424 inside CI95(N=100, mu/g=1.5): False
+    CI95(mu/g=1.5) overlaps CI95(mu/g=2.0):   True
+
+==============================================================================
+VERDICT
+==============================================================================
+  - R_std is a single nameable statistic. Both canonical scripts
+    compute it as R[active].std() (ddof=0) but neither names it.
+  - Paper reports 0.0282 (mu/g=5.0, 1 seed) and 0.0424
+    (mu/g=1.5, 5 seeds) without declaring operating point or
+    seed count. Two regimes, two sample sizes, one symbol.
+  - With N=100 at mu/g=1.5 the mean is not 0.0424. The paper's
+    cited 0.0424 is a 5-seed realization; its position relative to
+    the N=100 CI is printed above.
+  - Finding C-14 is textual (R_std never defined) plus numeric
+    (operating points and seed counts not declared).
+
+Runtime: ~7 s on a single core.
+Deterministic: seeds 42..141, no clock, no entropy, no disk I/O.

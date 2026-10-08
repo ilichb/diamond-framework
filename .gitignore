@@ -50,3 +50,8 @@ verification/**/results/*.pkl
 # PDFs — only track release snapshots
 *.pdf
 !docs/paper/releases/*.pdf
+
+# Frozen Phase-1 baseline (retained locally as the byte-identical reference
+# used by the determinism evidence; superseded by
+# verification/baseline_verified/, which is the committed, anchored baseline).
+verification/baseline_2026-10-06/
