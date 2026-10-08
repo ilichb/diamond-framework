@@ -37,9 +37,12 @@ it is not a missing-font-substitution problem.
 
 Add `\usepackage{lmodern}` immediately after `\usepackage[T1]{fontenc}`.
 Latin Modern ships T1-native scalable Type 1 fonts, so `microtype` can
-perform font expansion. With the fix, `pdflatex main.tex` completes
-three passes with exit code 0 and produces a 31-page PDF — the same
-page count as the reference snapshot in `docs/paper/releases/`.
+perform font expansion. With the fix, `pdflatex main.tex` completes its
+passes with exit code 0 and produces a PDF: 31 pages when the reference
+snapshot in `docs/paper/releases/` was taken, 34 pages for the source as of
+`794ba7c`.
+
+    cd docs/paper && pdfinfo main.pdf | grep Pages
 
 ## Verifying
 

@@ -16,6 +16,8 @@ command, the handoff gives the command, not the result.
 
     git rev-parse HEAD                                   # current commit
     git status --short                                   # tree state
+    bash verification/audit-gate.sh                      # state of the whole chain (G1..G10)
+    bash verification/fase0_anchor.sh --check            # re-derives the anchor and diffs it
     md5sum docs/paper/main.tex docs/audit/content-audit-pending.md
     grep -c '^### C-' docs/audit/content-audit-pending.md # findings count
     grep -c '^### F-' docs/audit/numerical-verification.md # log entries
@@ -232,10 +234,13 @@ Consolidated during session 6:
 
 ## 5. Verification inventory
 
-- 35 non-archived `.py` files under `verification/` (42 total, 7 under
-  `*/archive/`).
-- Every script has a corresponding `*_output.txt` under the sibling
-  `results/` directory.
+- 36 non-archived `.py` files under `verification/` (43 total, 7 under
+  `*/archive/`). 35 of them are the documented suite; the 36th is
+  `verification/eip_cost_check.py`, the helper behind guard G7 (it writes
+  nothing; it prints the EIP-196/197 cost table to stdout, which the gate
+  discards with `>/dev/null 2>&1` — G7 reads only its exit code).
+- Every suite script has a corresponding `*_output.txt` under the sibling
+  `results/` directory (35 of 35).
 - All scripts are deterministic: seed declared, no clock, no entropy,
   no disk I/O.
 - Every figure cited in `main.tex` traces to a script, a benchmark, or
@@ -250,6 +255,49 @@ Re-derive with:
     find verification -name '*.py' -not -path '*/archive/*'
     ls verification/*/results/*_output.txt
     grep -c '^### F-' docs/audit/numerical-verification.md
+
+### 5.1 The audit gate (Bloques A and B)
+
+`verification/audit-gate.sh` re-derives the state of the repository and
+prints one line per guard. It is the single command that closes the loop
+between the README, the paper, the logs and the anchored outputs, and it
+is what a new session should run first:
+
+    bash verification/audit-gate.sh      # PASS=10 FAIL=0 SKIP=0 (exit 0)
+
+| Guard | Definition (as implemented in `audit-gate.sh`) |
+|---|---|
+| G1 | `.py` file count under `verification/` at depth 2 (`find ... -maxdepth 2`) >= 35 |
+| G2 | `EXIT 0` lines in the harness evidence log = scripts with a numeric row in the manifest |
+| G3 | `DRIFT` lines in the harness evidence log = 0 |
+| G4 | rows of `docs/audit/claim-registry.csv` with `class == 'Orphan'` or empty = 0 |
+| G5 | `### F-` entries in `docs/audit/numerical-verification.md` = 21 |
+| G6 | `### C-` worksheets in `docs/audit/content-audit-pending.md` = 50 |
+| G7 | `python3 verification/eip_cost_check.py` exits 0 |
+| G8 | no `Estimate`/`Verified` mix on one line of `docs/paper/main.tex` |
+| G9 | `pdflatex` on `main.tex` x2: 0 `!` errors and 0 `Undefined`; SKIP without `pdflatex` |
+| G10 | the anchor verifies: the master manifest pairs, **and** the 35 output hashes, **and** the anchored HEAD is an ancestor of HEAD |
+
+The anchor chain (Bloque B, `794ba7c`) is
+
+    outputs  <-  verification/output_manifest.sha256
+             <-  verification/audit_manifest.sha256
+             <-  docs/paper/main.tex
+
+Two properties to carry forward, both measured rather than argued, with the
+negative tests recorded in `docs/audit/post-closure-audit.md`: G3 is a
+count of zero (it passes vacuously if the evidence log disappears) and G4
+counts orphans *inside* the registry (it does not see a new token that has
+no row). Neither weakens the claims the gate does establish; both are open
+hardening opportunities.
+
+Fase 0 now ships a versioned generator, `verification/fase0_anchor.sh`, which
+closes the third gap: it uses no `find` (it reads the closed list
+`verification/output_manifest.txt`), it pins the manifest order so the result
+does not depend on the machine locale, and its `--check` mode re-derives the
+anchor into a temporary directory and diffs it against the committed one
+without writing to the repository.
+
 
 ## 6. First message for the new session
 

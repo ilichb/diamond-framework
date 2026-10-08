@@ -63,7 +63,7 @@ The core insight is an opportunity-cost argument:
 | ZK threshold proof | Bulletproofs: 0 R1CS constraints, 0.72 KB proof | [`verification/zk/`](verification/zk) |
 | RMT collusion detection | Modularity matrix; TPR characterized for cliques | [`verification/rmt/`](verification/rmt) |
 | Data layer / fraud proofs | Equilibrium `n* = floor(B/B*)`; attacker profit `-502` | [`verification/data-layer/`](verification/data-layer) |
-| Bootstrap dynamics | Verified | μ sweep done: band μ/g ∈ [1, 2]; argmax R_std = 0.0424 at μ/g = 1.5 — [`verification/bootstrap/`](verification/bootstrap) |
+| Bootstrap dynamics | Verified — μ/g sweep: the optimum is a band, μ/g ∈ [1, 2] (argmax R_std = 0.0424 at μ/g = 1.5) | [`verification/bootstrap/`](verification/bootstrap) |
 | Mechanism design (payment) | Fee rule specified: posted price F0* = π_val − ω̄·Θ, saturated at highest-cost type | [`verification/mechanism/`](verification/mechanism) |
 | Avalanche integration | **Partial** — gas benchmarks done (181,142); latency pending | [`integrations/avalanche/benchmarks/`](integrations/avalanche/benchmarks) |
 
@@ -142,10 +142,11 @@ Outputs are written to `verification/*/results/`.
 
 This project documents its own error correction. The history of claims that were made,
 tested and either confirmed or refuted lives in
-[`docs/audit/numerical-verification.md`](docs/audit/numerical-verification.md). Open
-findings from the content audit of `docs/paper/main.tex` are tracked separately in
-[`docs/audit/content-audit-pending.md`](docs/audit/content-audit-pending.md); they are
-open questions, not corrections. Notable corrections so far:
+[`docs/audit/numerical-verification.md`](docs/audit/numerical-verification.md), and the
+content audit of `docs/paper/main.tex` is recorded as a worksheet in
+[`docs/audit/content-audit-pending.md`](docs/audit/content-audit-pending.md) — 50
+findings (C-01…C-50), all closed, with the script or edit that closed each one. Notable
+corrections so far:
 
 | Original claim | Correction | Why it changed |
 |----------------|------------|----------------|
@@ -195,7 +196,7 @@ second column, headed `Status` everywhere except in the Limitations table, which
 `Measured` (once `Measured + estimate`), `Estimated` (once `Estimate`), `Arithmetic`,
 `Analytical`, `Logical`, `Design`, `Selection`, `Method`, `Deferred`, `Conjecture`. The
 Conclusion's table also uses that column for repository-level items: `Open`,
-`Not performed`, `18 entries`. The third column names the backing script, source path
+`Not performed`, `21 entries`. The third column names the backing script, source path
 or section — `---` when there is none. Claims that resist measurement are marked
 `[CONJECTURE]` in the prose.
 

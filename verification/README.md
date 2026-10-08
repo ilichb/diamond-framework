@@ -14,6 +14,11 @@ claim in the Diamond Framework paper.
 - `data-layer/` — Fraud proof incentive equilibrium.
 - `bootstrap/` — Genesis transition and reputation models.
 
+Three helpers orchestrate and check the suite; they are not part of the
+numbered claims: `run_all.sh` (harness), `audit-gate.sh` (guards G1..G10) and
+`fase0_anchor.sh` (Fase 0 anchor generator — `--check` re-derives the anchor
+into a temporary directory and diffs it against the committed one).
+
 ## Running
 
     pip install -r requirements.txt
@@ -55,9 +60,24 @@ claim in the Diamond Framework paper.
 
 ## Runtime
 
-Approximate runtimes on a 2020-era desktop:
+The table below is the one quoted in the paper's §9.2: measured on the
+reference 2020-era desktop, single core, and indicative. It is *not* a
+description of what the current suite costs. The measured runtimes are not
+transcribed here — the harness writes them, and the anchored copy is
+verifiable:
 
-| Script | Time |
+    ver=verification/baseline_verified          # OUT_DIR of run_all.sh (durable run)
+    awk 'NR>1{printf "%-34s %9.2f\n", $1,$3}' $ver/manifest.txt | sort -k2 -nr | head
+    awk 'NR>1{s+=$3} END{printf "total %.1f s\n", s}' $ver/manifest.txt    # total 2074.6 s
+
+Drift against the table is real, and mostly toward being faster:
+`recalibrate_top.py` ~10 min → 62.93 s, `calibration_modularity.py` ~400 s
+→ 103.70 s, `clique_spectra.py` ~17 s → 0.16 s. What has not changed is
+where the cost sits: the two heavy-tail scripts are 68.4% of the total
+(`heavy_tail_n5000.py` 920.13 s, `heavy_tail_scaled_clique.py` 499.23 s,
+which parallelises as the table notes).
+
+| Script | Reference desktop, single core (paper §9.2) |
 |--------|------|
 | recalibrate_top.py | ~10 min |
 | max_statistic.py | ~2 min |
@@ -80,10 +100,10 @@ Approximate runtimes on a 2020-era desktop:
 | cr_ide_solver.py | < 1 s |
 | All others | < 5 s each |
 
-The two heavy-tail scripts dominate the total: ~15 min
-(`heavy_tail_n5000.py`) and ~24 min single-core
-(`heavy_tail_scaled_clique.py`, which parallelises over the available
-cores). Everything else is ~10 min or less on a single core.
+Scripts are CWD-independent: the suite reads no data file, and none of its
+36 `.py` files (`find verification -maxdepth 2 -name '*.py'`) writes one
+either — the `results/*.csv` rules in `.gitignore` are preventive, not a
+description of outputs that exist.
 
 ## Reproducibility
 

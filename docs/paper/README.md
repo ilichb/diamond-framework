@@ -37,10 +37,17 @@ are ignored by git.
 
 ## Status
 
-`main.tex` compiles with the preamble as committed and produces a
-31-page PDF. Release snapshots are archived under `releases/`; the
-current revision is `releases/diamond-framework-2026-10-03.pdf`. Only
-PDFs under `releases/` are tracked by git.
+`main.tex` compiles with the preamble as committed, and produces `main.pdf`.
+The page count follows the content, so it is read from the build:
+
+    cd docs/paper && pdflatex -interaction=nonstopmode -halt-on-error main.tex && pdfinfo main.pdf | grep Pages
+
+At `794ba7c` that prints `Pages: 34`. Release snapshots are archived under
+`releases/`; the latest is `releases/diamond-framework-2026-10-03.pdf`
+(31 pages, 624450 bytes, SHA-256 `bacd6242…cde`). Snapshots are frozen
+documents: they are not re-exported when the source advances, so a rebuild
+of the current source is no longer byte-comparable to them — see
+`releases/README.md`. Only PDFs under `releases/` are tracked by git.
 
 ## Troubleshooting
 

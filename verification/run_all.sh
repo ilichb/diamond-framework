@@ -10,9 +10,8 @@
 #   - Does not stop on a failing script: it records the exit code and
 #     continues to the next one.
 #   - Invokes every script by absolute path, so the caller's working
-#     directory is irrelevant. The suite is CWD-independent: the three
-#     scripts that emit a file write to a path relative to their own
-#     location, and no script reads a data file.
+#     directory is irrelevant. The suite is CWD-independent: no script
+#     reads a data file, and no script writes one either.
 #   - Writes the run outputs under OUT_DIR (the baseline directory) plus a
 #     closed list of their exact repo-relative paths at
 #     verification/output_manifest.txt (and a canonical copy at

@@ -1,6 +1,8 @@
 # machine log — Fase 1 determinism (Bloque A/B)
 # harness: bash verification/run_all.sh   -> OUT_DIR=verification/baseline_verified
-# frozen:  verification/baseline_2026-10-06
+# frozen:  verification/baseline_2026-10-06   (congelado local, no versionado: .gitignore,
+#          decision D5 — en un clon limpio estas comparaciones no se re-ejecutan; el
+#          artefacto anclado y versionado es verification/baseline_verified/)
 # corrida durable: 2026-10-08 10:28:23
 # suma de runtime_s del manifiesto: 2074.6 s
 #

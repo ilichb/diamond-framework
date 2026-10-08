@@ -35,7 +35,16 @@ the `\date{September 2026}` declared in `main.tex`.
 
 ## A rebuild is content-equivalent, not byte-identical
 
-Three `pdflatex` passes on `main.tex` reproduce the paper — 31 pages
+The comparison in this section was made when `main.tex` was still the
+snapshot-era source (`ea8564d`). It describes that source, not the current
+one: `main.tex` has advanced since, and only the reason a rebuild can never
+be byte-identical is independent of the content.
+
+    git rev-list --count ea8564d..HEAD -- docs/paper/main.tex   # commits touching main.tex since the snapshot
+    cd docs/paper && pdfinfo main.pdf | grep Pages              # pages of the current source
+
+Three `pdflatex` passes on the snapshot-era `main.tex` reproduce the paper —
+31 pages
 and the same text, apart from the two differences noted under *Divergence
 from the snapshot* — but never the same bytes, for two independent
 reasons:
@@ -63,11 +72,12 @@ hash. The text comparison has the caveats below.
 
 ## Divergence from the snapshot
 
-`main.tex` is not a word-for-word rendering of the snapshot: exactly one
-line of text differs, and deliberately so. The Reproducibility remark
+As of `ea8564d`, `main.tex` was not a word-for-word rendering of the
+snapshot: exactly one
+line of text differed, and deliberately so. The Reproducibility remark
 listed the paper source as `docs/paper/sections/`, a directory that no
 longer exists; it now reads `docs/paper/main.tex`. Beyond that the source
-differs by the `\usepackage{lmodern}` line noted above, which changes no
+differed at that commit by the `\usepackage{lmodern}` line noted above, which changes no
 words — only the line breaks that move §5.4 to the next page.
 
 Comparing the two PDFs with `pdftotext` overstates this. `diff` on the
@@ -98,9 +108,11 @@ page 15 in the rebuild. That is pagination, not text — the different line
 breaks move a subsection across the page boundary. Both PDFs are 31
 pages.
 
-Per the Convention above the snapshot is not re-exported, so the
-corrected source line reaches the public artifact only through the next
-dated snapshot.
+Per the Convention above the snapshot is not re-exported, so the corrected
+source line reaches the public artifact only through the next dated
+snapshot. The 43 commits that have touched `main.tex` since `ea8564d` are
+in the same position: the snapshot above is still the citable artifact of
+record, and it documents the paper as it stood on 2026-10-03.
 
 ## Note on `cm-super`
 
@@ -113,6 +125,6 @@ shipped in TeX Live as `cm-super`).
 
     cd docs/paper
     pdflatex -interaction=nonstopmode -halt-on-error main.tex   # run 3x
-    pdfinfo main.pdf | grep Pages      # Pages: 31
+    pdfinfo main.pdf | grep Pages      # 31 for the snapshot-era source; the current source builds to 34
     sha256sum releases/diamond-framework-2026-10-03.pdf       # hash in Files
     git hash-object releases/diamond-framework-2026-10-03.pdf # blob in HEAD
