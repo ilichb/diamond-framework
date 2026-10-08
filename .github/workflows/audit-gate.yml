@@ -4,7 +4,12 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
+      # G10 exige que el HEAD anclado exista y sea ancestro del actual
+      # (git merge-base --is-ancestor); el checkout por defecto es shallow
+      # (fetch-depth: 1) y deja el commit anclado fuera de la historia local.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
