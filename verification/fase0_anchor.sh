@@ -31,6 +31,27 @@
 # produjo el ancla. Lo determinista, y lo que G10 verifica, es la cadena de
 # hashes (HEAD + los 2 pares sha256), que se reproduce identica.
 #
+# D1 EXTENSION (2026-10-08). El generador tambien emite
+# verification/anchor_root.sha256, que hashea los 10 ficheros de la
+# cadena de custodia completa: el ancla (main.tex + los 2 manifiestos),
+# el verificador (audit-gate.sh, este generador, run_all.sh, el
+# workflow de CI), y los inputs estables que el verificador audita
+# (claim-registry.csv, numerical-verification.md,
+# content-audit-pending.md).
+#
+# El root es determinista byte a byte: sin header, sin timestamp, sin
+# HEAD. El sellado externo (OpenTimestamps) del root es el testigo
+# contra rewrite de historia; los detalles del sello viven en
+# docs/audit/anchor-receipts.md, FUERA del root (o reintroduciria
+# ciclo).
+#
+# La rama --check tambien verifica el root, de modo que G11 lo cubre
+# transitivamente sin que el gate cambie de definicion.
+#
+# DISCIPLINA: regenerar anchor_root.sha256 es el ULTIMO acto antes de
+# git add. Cualquier retoque posterior de los 10 ficheros (incluido un
+# comentario en este script) invalida el root.
+#
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -41,12 +62,35 @@ OUT_SHA_REL="verification/output_manifest.sha256"
 AUDIT_SHA_REL="verification/audit_manifest.sha256"
 PAPER_REL="docs/paper/main.tex"
 
+ROOT_SHA_REL="verification/anchor_root.sha256"
+
+# Rutas del root: 10 ficheros, orden hardcodeado (reproducibilidad byte a
+# byte; el orden del manifiesto es parte del contrato).
+ANCHOR_PATHS=(
+    "${PAPER_REL}"
+    "${LIST_REL}"
+    "${OUT_SHA_REL}"
+)
+VERIFIER_PATHS=(
+    "verification/audit-gate.sh"
+    "verification/fase0_anchor.sh"
+    "verification/run_all.sh"
+    ".github/workflows/audit-gate.yml"
+)
+INPUT_PATHS=(
+    "docs/audit/claim-registry.csv"
+    "docs/audit/numerical-verification.md"
+    "docs/audit/content-audit-pending.md"
+)
+ROOT_PATHS=("${ANCHOR_PATHS[@]}" "${VERIFIER_PATHS[@]}" "${INPUT_PATHS[@]}")
+
 usage() {
     cat <<'EOF'
 Uso: fase0_anchor.sh [--check]
 
   (sin argumentos)  Escribe verification/output_manifest.sha256 y
-                    verification/audit_manifest.sha256 en el repo.
+                    verification/audit_manifest.sha256 y
+                    verification/anchor_root.sha256 en el repo.
   --check           Genera en un directorio temporal y compara con el ancla
                     commiteada; exit != 0 si algo discrepa.
   OUT_DIR=DIR       Escribe los manifiestos en DIR (por defecto verification/).
@@ -75,8 +119,9 @@ fi
 OUT_DIR="$(cd "${OUT_DIR}" && pwd)"
 
 # ---- 1. Entradas -----------------------------------------------------------
-[ -f "${LIST_REL}" ]  || { echo "fase0_anchor.sh: falta ${LIST_REL}" >&2; exit 1; }
-[ -f "${PAPER_REL}" ] || { echo "fase0_anchor.sh: falta ${PAPER_REL}" >&2; exit 1; }
+for p in "${ROOT_PATHS[@]}"; do
+    [ -f "${p}" ] || { echo "fase0_anchor.sh: falta ${p}" >&2; exit 1; }
+done
 git rev-parse HEAD >/dev/null 2>&1 \
     || { echo "fase0_anchor.sh: ${REPO_DIR} no es un repo git con HEAD" >&2; exit 1; }
 
@@ -127,6 +172,16 @@ H_OUT="$(sha256sum -- "${OUT_DIR}/output_manifest.sha256" | cut -d' ' -f1)"
     printf '%s  %s\n' "${H_OUT}" "${OUT_SHA_REL}"
 } > "${OUT_DIR}/audit_manifest.sha256"
 
+# ---- 4b. anchor_root.sha256 (10 pares, sin header ni timestamp) ------------
+# Cubre la cadena de custodia completa: ancla + verificador + inputs del
+# verificador. NO incluye audit_manifest.sha256 (timestamp no determinista),
+# ni el root mismo, ni el receipt .ots (ciclo). NO incluye HEAD (lo registra
+# el receipt, fuera del root). Reproducible byte a byte desde cualquier maquina.
+: > "${OUT_DIR}/anchor_root.sha256"
+for p in "${ROOT_PATHS[@]}"; do
+    sha256sum -- "${p}" >> "${OUT_DIR}/anchor_root.sha256"
+done
+
 printf 'fase0_anchor: %d outputs -> %s\n' "${n}" "${OUT_SHA_REL}"
 printf 'fase0_anchor: sello UTC %s, HEAD %s\n' "${TS}" "${HEAD_REV}"
 
@@ -163,6 +218,16 @@ if [ "${CHECK}" -eq 1 ]; then
     else
         echo "fase0_anchor: HEAD anclado ${OLD_HEAD} NO es ancestro de ${NEW_HEAD}" >&2
         status=1
+    fi
+    if [ -f "${ROOT_SHA_REL}" ]; then
+        if cmp -s "${OUT_DIR}/anchor_root.sha256" "${ROOT_SHA_REL}"; then
+            echo "fase0_anchor: anchor_root.sha256        IDENTICO byte a byte (${#ROOT_PATHS[@]} pares)"
+        else
+            echo "fase0_anchor: anchor_root.sha256        DISCREPA de ${ROOT_SHA_REL}" >&2
+            status=1
+        fi
+    else
+        echo "fase0_anchor: anchor_root.sha256        no existe todavia (nada que comparar)"
     fi
     echo "fase0_anchor: la linea de timestamp sella el momento de la generacion"
     exit "${status}"
