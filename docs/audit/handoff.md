@@ -224,6 +224,12 @@ Consolidated during session 5:
   table and its surrounding prose describe the same set, both must be
   cross-checked against the derivation. (C-37.)
 
+Consolidated during session 6:
+
+- C-49 (`collusion test` → `collusion detection`) and C-50 (`log of falsifications` → `falsification log`) are **new findings** discovered during the post-closure terminology sweep. They are not renumbered continuations of session-5 findings. The session-5 slots C-45 (worksheet gap) and C-46 (true/false-positive hyphenation) were applied in commits `dc62f1c` and `065fc9a` respectively, and their numbering was not reassigned.
+
+- A prose value with no originating command is not a value, it is a hypothesis. Guards must be re-derived with the exact command that will verify them, not with a similar command from a previous block or a value summarized in prose.
+
 ## 5. Verification inventory
 
 - 35 non-archived `.py` files under `verification/` (42 total, 7 under
