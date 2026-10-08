@@ -7,11 +7,16 @@ jobs:
       # G10 exige que el HEAD anclado exista y sea ancestro del actual
       # (git merge-base --is-ancestor); el checkout por defecto es shallow
       # (fetch-depth: 1) y deja el commit anclado fuera de la historia local.
-      - uses: actions/checkout@v4
+      # Pinned to full commit SHAs, not to the mutable v4/v5 major tags: a moving
+      # tag inside the workflow that verifies the anchor is a supply-chain hole
+      # (the pin is what makes the verified bytes speakable). Re-resolve with:
+      #   git ls-remote https://github.com/actions/checkout refs/tags/v4
+      #   git ls-remote https://github.com/actions/setup-python refs/tags/v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.10'
       - name: Install dependencies
