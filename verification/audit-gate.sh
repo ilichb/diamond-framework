@@ -200,9 +200,10 @@ fi
 # re-ancla.  Un re-anclaje con otra regla de orden habria quedado registrado en
 # silencio (el "impacto latente" de D9).  G11 convierte ese uso en obligacion
 # verificada, y ademas cierra un estado que G10 deja pasar: si los DOS
-# manifiestos sha256 desaparecen, G10 emite SKIP (audit-gate.sh:177-179) y el
-# gate quedaba verde sin ancla; para un repo cuyo ancla esta commiteada, la
-# ausencia del manifiesto no es "todavia no hay Fase 0" sino manipulacion.
+# manifiestos sha256 desaparecen, G10 emite SKIP (rama "sin manifiestos sha256
+# todavia") y el gate quedaba verde sin ancla; para un repo cuyo ancla esta
+# commiteada, la ausencia del manifiesto no es "todavia no hay Fase 0" sino
+# manipulacion.
 # Fail-closed: sin generador, o si el generador no reproduce el ancla, FAIL.
 # Requiere historia completa, igual que G10 (D10): en un clon shallow el criterio
 # de ancestro no es evaluable.

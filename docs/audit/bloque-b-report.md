@@ -460,11 +460,13 @@ es `794ba7c`: G10 lo acepta como relación de **ancestro** (D7-b). Los 35 hashes
 de outputs y el de `main.tex` se verifican byte a byte contra el árbol actual, así
 que la evidencia de manipulación es la misma que con igualdad estricta.
 
-### 6.2 Hallazgos de la remediación post-clausura (D9, D10)
+### 6.2 Hallazgos de la remediación post-clausura (D9, D10, D11)
 
-Estos dos hallazgos no son del cierre del Bloque B: salen de la auditoría
-post-clausura (`post-closure-audit.md`, P-6 y P-7) y de su remediación. Se
-registran aquí para que la serie D1…D10 quede completa en un solo sitio.
+Estos hallazgos no son del cierre del Bloque B: D9 y D10 salen de la auditoría
+post-clausura (`post-closure-audit.md`, P-6 y P-7) y de su remediación; D11 salió
+de la implementación de G11 (commit `5bd9e3b`, sesión de sellado) y lo ratificó
+el Auditor. Se registran aquí para que la serie D1…D11 quede completa en un solo
+sitio.
 
 **D9 — La Fase 0 original era locale-dependiente.**
 
@@ -535,5 +537,63 @@ commits por detrás del HEAD, es decir harían falta N=4).
 Corridas posteriores, también verdes, sobre los dos commits de documentación que
 siguieron: run `37806740664` (`7ee0d1f`) y run `37808594205` (`496fc48`), ambas
 `PASS=9 FAIL=0 SKIP=1` (valores leídos del log del runner, no de este informe).
+
+**D11 — G10 hace SKIP cuando falta su input manifiesto: fail-open (cubierto por G11).**
+
+*Síntoma.* Con `verification/output_manifest.sha256` y
+`verification/audit_manifest.sha256` ausentes, G10 emitía **SKIP**, no FAIL: el
+gate salía `PASS=9 FAIL=0 SKIP=1`, **exit 0** — verde sin ancla alguna. G10 era
+la única guarda que leía los manifiestos, así que retirarlos bastaba para que el
+gate certificara la nada.
+
+*Causa.* La definición ratificada de G10 (Resolución 3, §3) trata el input
+ausente como «no verificable»: la rama `emit G10 SKIP "sin manifiestos sha256
+todavia (Fase 0)"` (introducida en `48b6a3c`). Es defendible para el estado en
+que el manifiesto **nunca existió** —el gate se escribió antes de la Fase 0— y es
+**fail-open** cuando existió y fue retirado: «todavía no» y «ya no» producen la
+misma salida, y lo segundo es manipulación.
+
+*Mitigación.* G11 (`fase0_anchor.sh --check`, commit `5bd9e3b`) es **fail-closed**
+ante ese input: si el ancla no se re-deriva, emite FAIL. No se tocó G10 —su
+definición está ratificada y se preserva—, así que la cobertura se añadió
+*encima*. G11 no forma parte de la Resolución 3 (§3 sigue siendo el registro
+ratificado de G1–G10): se añadió después y el Auditor lo ratificó en la sesión de
+sellado.
+
+*Residual.* G10 conserva su fail-open por decisión: endurecerlo exige revisar su
+definición ratificada, y el sitio natural es **P-4/D1**, donde la raíz se mueve de
+todos modos. Y lo que G11 **no** cierra es el defecto de fondo —el verificador
+dentro de lo verificado—: sube el coste a «hay que modificar dos ficheros en vez
+de uno» (ratchet), no lo elimina.
+
+*Evidencia* (medida; el árbol se restauró y `git status` quedó limpio). El gate
+PRE-G11 se toma de `120634d` (C1a: ya con G3 cerrado, aún sin G11): **`HEAD~1` no
+sirve para esta prueba**, porque `47b7d1f` ya lleva G11. El temporal va dentro de
+`verification/` a propósito, porque el gate resuelve `REPO_DIR` desde su ruta.
+
+    git show 120634d:verification/audit-gate.sh > verification/.tmp_pre_g11_gate.sh
+    mv verification/output_manifest.sha256 /tmp/om.bak
+    mv verification/audit_manifest.sha256 /tmp/am.bak
+    bash verification/.tmp_pre_g11_gate.sh 2>&1 | grep -E '^G10|^PASS='
+    #  G10  SKIP  sin manifiestos sha256 todavia (Fase 0)
+    #  PASS=9 FAIL=0 SKIP=1
+    bash verification/audit-gate.sh 2>&1 | grep -E '^G10|^G11|^PASS='
+    #  G10  SKIP  sin manifiestos sha256 todavia (Fase 0)
+    #  G11  FAIL  ancla no re-derivable (exit 1): ... output_manifest.sha256  DISCREPA ...
+    #  PASS=9 FAIL=1 SKIP=1
+    mv /tmp/om.bak verification/output_manifest.sha256
+    mv /tmp/am.bak verification/audit_manifest.sha256
+    rm -f verification/.tmp_pre_g11_gate.sh
+
+Exit codes capturados con `$?` (no a través del pipe): PRE-G11 `exit 0` (verde sin
+ancla), con G11 `exit 1`. Restaurado: `PASS=11 FAIL=0 SKIP=0`, `G11 PASS`.
+
+*Nota de método.* Esta entrada evita citar por número de línea: los números
+envejecen con cada edición del gate —las citas de D10 (`audit-gate.sh:120-135`,
+`171-173`) corresponden a la numeración de `48b6a3c`, no a la vigente— y una cita
+que no resuelve es una afirmación falsa en el árbol. Localización por símbolo, p.
+ej. `grep -n 'sin manifiestos sha256 todavia' verification/audit-gate.sh`. Sin
+este registro, dentro de dos sesiones «G11 cubre el caso» se leería sin saber por
+qué existía el caso.
 
 
