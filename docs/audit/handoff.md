@@ -278,6 +278,15 @@ is what a new session should run first:
 | G9 | `pdflatex` on `main.tex` x2: 0 `!` errors and 0 `Undefined`; SKIP without `pdflatex` |
 | G10 | the anchor verifies: the master manifest pairs, **and** the 35 output hashes, **and** the anchored HEAD is an ancestor of HEAD |
 
+The same gate runs in CI (`.github/workflows/audit-gate.yml`, active since
+`48b6a3c`, fixed in `56bf653`): `fetch-depth: 0` is **required** because G10
+checks the anchored HEAD is an ancestor of the current one; a shallow
+checkout makes G10 FAIL (D10, `bloque-b-report.md` §6.2). G9 degrades to
+SKIP on the runner (no `pdflatex`): CI green at `PASS=9 FAIL=0 SKIP=1`. The
+full finding (why a fixed `fetch-depth: N` does not suffice, and why G10
+fails closed instead of skipping) is recorded as D10 in
+`docs/audit/bloque-b-report.md` §6.2.
+
 The anchor chain (Bloque B, `794ba7c`) is
 
     outputs  <-  verification/output_manifest.sha256
