@@ -294,12 +294,16 @@ The anchor chain (Bloque B, `794ba7c`) is
              <-  verification/audit_manifest.sha256
              <-  docs/paper/main.tex
 
-Two properties, measured rather than argued, with the negative tests recorded
+Three properties, measured rather than argued, with the negative tests recorded
 in `docs/audit/post-closure-audit.md`: G3 was a count of zero and passed
 vacuously when the evidence log disappeared (B-2) — since `120634d` it fails
 closed (`-s "${EVID}"`), so the test is now the guard; G4 counts orphans
 *inside* the registry and does not see a new token that has no row, which is
-still an open hardening opportunity (P-3, deferred).
+still an open hardening opportunity (P-3, deferred); and G10 skips
+(`PASS=9 FAIL=0 SKIP=1`, exit 0) when both sha256 manifests are removed, so a
+repository with no anchor could come out green — the state that motivated G11,
+recorded as D11 in `docs/audit/bloque-b-report.md` §6.2 and closed since it,
+without touching G10's ratified definition.
 
 Fase 0 ships a versioned generator, `verification/fase0_anchor.sh`, which
 closes the third gap: it uses no `find` (it reads the closed list
