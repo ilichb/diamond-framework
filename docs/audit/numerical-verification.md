@@ -250,9 +250,9 @@ claim that fails its test is corrected or removed, not quietly reworded.
 - **Test:** `integrations/avalanche/benchmarks/src/GasBenchmarks.sol`
 - **Verdict:** **Refuted.** The function passed 384 bytes to the
   precompile at 0x08, which corresponds to k=2 pairs, not k=4.
-  EIP-197 charges 45,000 + 34,000k; the arithmetic with k=2 gives
-  113,142 and with k=4 gives 181,142. The measured 113,142 was
-  correct for k=2 but mislabeled.
+  EIP-197 charges 45,000 + 34,000k; adding a constant harness
+  overhead of 142 gas yields exactly 113,142 (k=2) and 181,142
+  (k=4). The measured 113,142 was correct for k=2 but mislabeled.
 - **Resolution:** v2 uses a parameterized function; k=4 for Groth16
   is 181,142 gas (measured). The linearity is verified exactly
   against EIP-197 for k ∈ {1, 2, 4}.
