@@ -16,7 +16,7 @@ command, the handoff gives the command, not the result.
 
     git rev-parse HEAD                                   # current commit
     git status --short                                   # tree state
-    bash verification/audit-gate.sh                      # state of the whole chain (G1..G10)
+    bash verification/audit-gate.sh                      # state of the whole chain (G1..G11)
     bash verification/fase0_anchor.sh --check            # re-derives the anchor and diffs it
     md5sum docs/paper/main.tex docs/audit/content-audit-pending.md
     grep -c '^### C-' docs/audit/content-audit-pending.md # findings count
@@ -263,7 +263,7 @@ prints one line per guard. It is the single command that closes the loop
 between the README, the paper, the logs and the anchored outputs, and it
 is what a new session should run first:
 
-    bash verification/audit-gate.sh      # PASS=10 FAIL=0 SKIP=0 (exit 0)
+    bash verification/audit-gate.sh      # PASS=11 FAIL=0 SKIP=0 (exit 0)
 
 | Guard | Definition (as implemented in `audit-gate.sh`) |
 |---|---|
@@ -277,15 +277,16 @@ is what a new session should run first:
 | G8 | no `Estimate`/`Verified` mix on one line of `docs/paper/main.tex` |
 | G9 | `pdflatex` on `main.tex` x2: 0 `!` errors and 0 `Undefined`; SKIP without `pdflatex` |
 | G10 | the anchor verifies: the master manifest pairs, **and** the 35 output hashes, **and** the anchored HEAD is an ancestor of HEAD |
+| G11 | the anchor **re-derives**: `bash verification/fase0_anchor.sh --check` exits 0 (the 35 pairs, the seal and the anchored HEAD, recomputed in a temp dir) |
 
 The same gate runs in CI (`.github/workflows/audit-gate.yml`, active since
 `48b6a3c`, fixed in `56bf653`): `fetch-depth: 0` is **required** because G10
-checks the anchored HEAD is an ancestor of the current one; a shallow
-checkout makes G10 FAIL (D10, `bloque-b-report.md` §6.2). G9 degrades to
-SKIP on the runner (no `pdflatex`): CI green at `PASS=9 FAIL=0 SKIP=1`. The
-full finding (why a fixed `fetch-depth: N` does not suffice, and why G10
-fails closed instead of skipping) is recorded as D10 in
-`docs/audit/bloque-b-report.md` §6.2.
+checks the anchored HEAD is an ancestor of the current one and G11 re-derives
+that same ancestor criterion; a shallow checkout makes both FAIL (D10,
+`bloque-b-report.md` §6.2). G9 degrades to SKIP on the runner (no `pdflatex`):
+CI green at `PASS=10 FAIL=0 SKIP=1`. The full finding (why a fixed
+`fetch-depth: N` does not suffice, and why G10 fails closed instead of
+skipping) is recorded as D10 in `docs/audit/bloque-b-report.md` §6.2.
 
 The anchor chain (Bloque B, `794ba7c`) is
 
@@ -293,19 +294,22 @@ The anchor chain (Bloque B, `794ba7c`) is
              <-  verification/audit_manifest.sha256
              <-  docs/paper/main.tex
 
-Two properties to carry forward, both measured rather than argued, with the
-negative tests recorded in `docs/audit/post-closure-audit.md`: G3 is a
-count of zero (it passes vacuously if the evidence log disappears) and G4
-counts orphans *inside* the registry (it does not see a new token that has
-no row). Neither weakens the claims the gate does establish; both are open
-hardening opportunities.
+Two properties, measured rather than argued, with the negative tests recorded
+in `docs/audit/post-closure-audit.md`: G3 was a count of zero and passed
+vacuously when the evidence log disappeared (B-2) — since `120634d` it fails
+closed (`-s "${EVID}"`), so the test is now the guard; G4 counts orphans
+*inside* the registry and does not see a new token that has no row, which is
+still an open hardening opportunity (P-3, deferred).
 
-Fase 0 now ships a versioned generator, `verification/fase0_anchor.sh`, which
+Fase 0 ships a versioned generator, `verification/fase0_anchor.sh`, which
 closes the third gap: it uses no `find` (it reads the closed list
 `verification/output_manifest.txt`), it pins the manifest order so the result
 does not depend on the machine locale, and its `--check` mode re-derives the
 anchor into a temporary directory and diffs it against the committed one
-without writing to the repository.
+without writing to the repository. Since G11 the gate *runs* that `--check` on
+every pass, so the generator's use is verified instead of trusted: the latent
+impact D9 recorded (a re-anchor under another ordering rule would be committed
+silently) is covered by a guard, not by discipline.
 
 
 ## 6. First message for the new session

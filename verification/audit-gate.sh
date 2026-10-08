@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# audit-gate.sh — Gate de auditoria (Bloque B), guardas G1..G10.
+# audit-gate.sh — Gate de auditoria (Bloque B), guardas G1..G11.
 #
 # Las definiciones son las RATIFICADAS por el Auditor en las resoluciones del
 # Bloque B. Cada guarda re-deriva su valor con el comando exacto que lo
@@ -187,6 +187,35 @@ if [ -s "${OUT_SHA}" ] && [ -s "${AUDIT_SHA}" ]; then
     fi
 else
     emit G10 SKIP "sin manifiestos sha256 todavia (Fase 0)"
+fi
+
+# ---- G11: El ancla se re-deriva (Fase 0, generador) -------------------------
+# Definicion: bash verification/fase0_anchor.sh --check  -> exit 0.
+# El generador rehace el ancla completa en un directorio temporal (los 35 pares
+# de output_manifest.sha256, el sello de audit_manifest.sha256 y el criterio de
+# ancestro de HEAD, D7-b) y la compara con la commiteada. No escribe en el repo:
+# mktemp -d + trap (fase0_anchor.sh:66-67).
+# Motivo (D9, bloque-b-report.md §6.2): hasta ahora NINGUNA guarda ejecutaba el
+# generador, asi que su unica proteccion era el uso correcto por parte de quien
+# re-ancla.  Un re-anclaje con otra regla de orden habria quedado registrado en
+# silencio (el "impacto latente" de D9).  G11 convierte ese uso en obligacion
+# verificada, y ademas cierra un estado que G10 deja pasar: si los DOS
+# manifiestos sha256 desaparecen, G10 emite SKIP (audit-gate.sh:177-179) y el
+# gate quedaba verde sin ancla; para un repo cuyo ancla esta commiteada, la
+# ausencia del manifiesto no es "todavia no hay Fase 0" sino manipulacion.
+# Fail-closed: sin generador, o si el generador no reproduce el ancla, FAIL.
+# Requiere historia completa, igual que G10 (D10): en un clon shallow el criterio
+# de ancestro no es evaluable.
+if [ ! -f verification/fase0_anchor.sh ]; then
+    emit G11 FAIL "falta verification/fase0_anchor.sh (generador del ancla)"
+else
+    G11_OUT="$(bash verification/fase0_anchor.sh --check 2>&1)"; G11_RC=$?
+    if [ "${G11_RC}" -eq 0 ]; then
+        emit G11 PASS "ancla re-derivada byte a byte (fase0_anchor.sh --check, exit 0)"
+    else
+        G11_WHY="$(printf '%s\n' "${G11_OUT}" | grep -Ei 'discrepa|NO es ancestro|falta|no existe' | head -1)"
+        emit G11 FAIL "ancla no re-derivable (exit ${G11_RC}): ${G11_WHY:-ver salida del generador}"
+    fi
 fi
 
 echo "audit-gate.sh  repo=${REPO_DIR}"
