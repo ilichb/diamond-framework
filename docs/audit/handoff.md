@@ -311,6 +311,28 @@ every pass, so the generator's use is verified instead of trusted: the latent
 impact D9 recorded (a re-anchor under another ordering rule would be committed
 silently) is covered by a guard, not by discipline.
 
+**Re-anchoring recipe.** Any change to `docs/paper/main.tex` or to
+`verification/baseline_verified/` invalidates the anchor. Re-anchor atomically:
+
+1. Make the change.
+2. If outputs changed: `bash verification/run_all.sh` (deterministic; it rewrites
+   `verification/baseline_verified/` and the closed list
+   `verification/output_manifest.txt`).
+3. `bash verification/fase0_anchor.sh` (it rewrites `output_manifest.sha256` and
+   `audit_manifest.sha256`). Generate *before* committing: the seal records the
+   HEAD at generation time — which then remains an ancestor of the new commit
+   (D7-b) — while the hashes it seals are those of the *new* content.
+4. Commit the change **and** both manifests in the **same** commit. The anchor
+   carries the `sha256` of `main.tex` and of `output_manifest.sha256`, not only
+   the HEAD, so committing the change alone leaves G10 and G11 failing at that
+   commit.
+5. Verify, then push: `bash verification/audit-gate.sh` gives `PASS=11 FAIL=0
+   SKIP=0` locally (in CI `PASS=10 FAIL=0 SKIP=1`: G9 SKIP without `pdflatex`),
+   and `git push` makes CI re-run the same gate on the pushed commit.
+
+No guard executes this recipe. What G11 verifies is that the anchor *re-derives*
+from the current tree, which is exactly what fails if the order above breaks.
+
 
 ## 6. First message for the new session
 

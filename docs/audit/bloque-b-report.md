@@ -532,4 +532,8 @@ commits por detrás del HEAD, es decir harían falta N=4).
 56bf653)`, `PASS=9 FAIL=0 SKIP=1` (G9 SKIP por `pdflatex` ausente:
 `audit-gate.sh:120-135` degrada a SKIP y el cierre sólo rompe por FAIL).
 
+Corridas posteriores, también verdes, sobre los dos commits de documentación que
+siguieron: run `37806740664` (`7ee0d1f`) y run `37808594205` (`496fc48`), ambas
+`PASS=9 FAIL=0 SKIP=1` (valores leídos del log del runner, no de este informe).
+
 
