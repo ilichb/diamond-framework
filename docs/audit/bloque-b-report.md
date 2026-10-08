@@ -574,19 +574,25 @@ sirve para esta prueba**, porque `47b7d1f` ya lleva G11. El temporal va dentro d
     git show 120634d:verification/audit-gate.sh > verification/.tmp_pre_g11_gate.sh
     mv verification/output_manifest.sha256 /tmp/om.bak
     mv verification/audit_manifest.sha256 /tmp/am.bak
-    bash verification/.tmp_pre_g11_gate.sh 2>&1 | grep -E '^G10|^PASS='
+    bash verification/.tmp_pre_g11_gate.sh 2>&1 | grep -E '^G10|^PASS='; echo "exit=${PIPESTATUS[0]}"
     #  G10  SKIP  sin manifiestos sha256 todavia (Fase 0)
     #  PASS=9 FAIL=0 SKIP=1
-    bash verification/audit-gate.sh 2>&1 | grep -E '^G10|^G11|^PASS='
+    #  exit=0
+    bash verification/audit-gate.sh 2>&1 | grep -E '^G10|^G11|^PASS='; echo "exit=${PIPESTATUS[0]}"
     #  G10  SKIP  sin manifiestos sha256 todavia (Fase 0)
     #  G11  FAIL  ancla no re-derivable (exit 1): ... output_manifest.sha256  DISCREPA ...
     #  PASS=9 FAIL=1 SKIP=1
+    #  exit=1
     mv /tmp/om.bak verification/output_manifest.sha256
     mv /tmp/am.bak verification/audit_manifest.sha256
     rm -f verification/.tmp_pre_g11_gate.sh
 
-Exit codes capturados con `$?` (no a través del pipe): PRE-G11 `exit 0` (verde sin
-ancla), con G11 `exit 1`. Restaurado: `PASS=11 FAIL=0 SKIP=0`, `G11 PASS`.
+Los dos exit los imprime el propio bloque, con `${PIPESTATUS[0]}` —el código del
+**script**, no el de `grep`, que es lo que devuelve un pipe sin `PIPESTATUS`—:
+PRE-G11 `exit=0` (verde sin ancla), con G11 `exit=1`. Restaurado:
+`PASS=11 FAIL=0 SKIP=0`, `G11 PASS`. Ejecutar dos de estas pruebas en paralelo
+sobre el mismo árbol invalida la lectura (una mueve los manifiestos que la otra
+está leyendo): las mediciones de este bloque son **secuenciales por diseño**.
 
 *Nota de método.* Esta entrada evita citar por número de línea: los números
 envejecen con cada edición del gate —las citas de D10 (`audit-gate.sh:120-135`,
