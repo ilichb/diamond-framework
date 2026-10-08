@@ -63,10 +63,21 @@ fi
 # ---- G3: Reproducibilidad (0 DRIFT) ----------------------------------------
 # Definicion: grep -c "DRIFT" "${EVID}"  -> debe ser 0.
 # El log solo escribe "DRIFT <fichero>" cuando el cmp byte a byte discrepa.
+# [ADAPTED] precondicion de existencia: un conteo de cero es satisfacible sin
+# log.  Antes de contar se exige que ${EVID} exista y no este vacio (-s); si no,
+# G3 es FAIL.  Sin esta precondicion la guarda pasaba en vacio con un EVID
+# inexistente (prueba negativa B-2 de docs/audit/post-closure-audit.md §3: el
+# mismo ensayo daba G3 PASS con el log ausente).  Hoy ese caso queda enmascarado
+# por G2 (que tambien cae a 0/${want}), pero G2 podria relajarse a un ratio y
+# entonces G3 seria un PASS falso.
 G3="$(count 'DRIFT' "${EVID}")"
-[ "${G3:-0}" -eq 0 ] \
-    && emit G3 PASS "lineas DRIFT = 0" \
-    || emit G3 FAIL "lineas DRIFT = ${G3}"
+if [ ! -s "${EVID}" ]; then
+    emit G3 FAIL "log de evidencia ausente o vacio: ${EVID}"
+elif [ "${G3:-0}" -eq 0 ]; then
+    emit G3 PASS "lineas DRIFT = 0"
+else
+    emit G3 FAIL "lineas DRIFT = ${G3}"
+fi
 
 # ---- G4: Huerfanos resueltos ------------------------------------------------
 # Definicion (literal del Auditor): nº de filas del registro de claims con
