@@ -460,14 +460,16 @@ es `794ba7c`: G10 lo acepta como relación de **ancestro** (D7-b). Los 35 hashes
 de outputs y el de `main.tex` se verifican byte a byte contra el árbol actual, así
 que la evidencia de manipulación es la misma que con igualdad estricta.
 
-### 6.2 Hallazgos de la remediación post-clausura (D9, D10, D11, D12, D13)
+### 6.2 Hallazgos de la remediación post-clausura (D9, D10, D11, D12, D13, D14)
 
 Estos hallazgos no son del cierre del Bloque B: D9 y D10 salen de la auditoría
 post-clausura (`post-closure-audit.md`, P-6 y P-7) y de su remediación; D11 salió
 de la implementación de G11 (commit `5bd9e3b`, sesión de sellado) y lo ratificó
 el Auditor; D12 y D13 salen de la revisión pre-sello del root de D1 (commit
-`d4336ca`) y los ratificó el Auditor. Se registran aquí para que la serie
-D1…D13 quede completa en un solo sitio.
+`d4336ca`) y los ratificó el Auditor; D14 sale de la verificación del estado del
+CI hecha al abrir la Fase 2 (sello externo OpenTimestamps, root de D1 en
+`ae94232`) y la ratificó el Auditor. Se registran aquí para que la serie
+D1…D14 quede completa en un solo sitio.
 
 **D9 — La Fase 0 original era locale-dependiente.**
 
@@ -666,5 +668,36 @@ re-deriva byte a byte desde el árbol— en cuanto se re-ejecutase el harness.
 congelar el log y anclar su hash como artefacto aparte, no dentro del root). No
 está en este commit: se registra para que el recibo del sello externo no afirme
 más cobertura de la que el root tiene.
+
+**D14 — En CI, G9 siempre SKIP: un error de LaTeX sólo lo caza la corrida local.**
+
+*Síntoma.* El runner de GitHub Actions no tiene `pdflatex`, así que G9 emite
+`pdflatex no instalado` y el gate sale `PASS=10 FAIL=0 SKIP=1` (evidencia: CI del
+commit `ae94232`; en la máquina de referencia, con TeX, `PASS=11 FAIL=0 SKIP=0`).
+Un commit que rompa `main.tex` de un modo que sólo `pdflatex` detecte —un entorno
+desbalanceado, una secuencia de control indefinida— pasa el CI en verde y falla
+en cualquier máquina con LaTeX.
+
+*Causa.* G9 exige una instalación de LaTeX y el workflow no la instala: hace
+`pip install -r verification/requirements.txt` y, después, sólo
+`bash verification/audit-gate.sh`. Instalarla sería posible, pero rompería la
+política de fijación del propio workflow, que ancla sus dos actions por SHA
+completo de commit (`actions/checkout@11d5960a…` v4.4.0 y
+`actions/setup-python@a26af69b…` v5.6.0). Un `apt-get install texlive` —o una
+action de terceros que lo haga— no tiene pin equivalente: el archivo del paquete
+cambia con cada release de TeX Live. Añadir LaTeX al CI introduce superficie de
+cadena de suministro no reproducible a cambio de cubrir una sola guarda.
+
+*Decisión.* Dejar G9 SKIP en CI y **declararlo aquí**, en vez de fingir cobertura
+completa. G9 sí corre en la máquina de referencia, y el sello externo de Fase 2
+sella el **código** de la guarda (`audit-gate.sh` está en el root de D1), no su
+resultado: queda atestiguada *la guarda que corre*, con el mismo límite que D13
+declara para los inputs de G2/G3. Complemento que no toca el CI: un hook
+`pre-push` (vive fuera del repo, no versionado; el árbol no declara
+`core.hooksPath`) puede ejecutar `bash verification/audit-gate.sh` antes de
+empujar y capturar el error de LaTeX antes del remoto.
+
+*Residual.* El CI no es sustituto del gate local para corrección a nivel LaTeX.
+Documentado, no cerrado.
 
 

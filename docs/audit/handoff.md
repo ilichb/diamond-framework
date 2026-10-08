@@ -286,7 +286,13 @@ that same ancestor criterion; a shallow checkout makes both FAIL (D10,
 `bloque-b-report.md` §6.2). G9 degrades to SKIP on the runner (no `pdflatex`):
 CI green at `PASS=10 FAIL=0 SKIP=1`. The full finding (why a fixed
 `fetch-depth: N` does not suffice, and why G10 fails closed instead of
-skipping) is recorded as D10 in `docs/audit/bloque-b-report.md` §6.2.
+skipping) is recorded as D10 in `docs/audit/bloque-b-report.md` §6.2. The G9 SKIP
+is itself a registered finding — D14, same §6.2: the runner has no LaTeX, so a
+`main.tex` break that only `pdflatex` catches passes CI and fails only on a
+TeX-equipped machine; the workflow does not install TeX Live because that install
+cannot be pinned by full commit SHA the way its two actions are. The CI baseline
+above (`PASS=10`) is therefore the *maximum* achievable on the runner, not a
+degraded local run.
 
 The anchor chain (Bloque B, `794ba7c`) is
 
