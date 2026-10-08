@@ -13,8 +13,11 @@
 #     directory is irrelevant. The suite is CWD-independent: the three
 #     scripts that emit a file write to a path relative to their own
 #     location, and no script reads a data file.
-#   - Writes nothing into the repository except under OUT_DIR (the
-#     baseline directory). Those outputs are not committed.
+#   - Writes the run outputs under OUT_DIR (the baseline directory) plus a
+#     closed list of their exact paths at verification/output_manifest.txt
+#     (and a canonical copy at OUT_DIR/output_manifest.txt). No `find` glob
+#     is used downstream; Fase 0 hashes exactly the listed files. None of
+#     these is committed by this script.
 #
 # Options:
 #   --resume   Keep the existing manifest and skip any script that already
@@ -58,6 +61,9 @@ fi
 
 mkdir -p "${OUT_DIR}"
 MANIFEST="${OUT_DIR}/manifest.txt"
+# Closed list of the output files this run produces. Emitted at the end as
+# output_manifest.txt so downstream steps (Fase 0 hashing) never glob.
+declare -a OUTPUTS=()
 
 # When resuming, keep the existing manifest and note which scripts are done.
 declare -A DONE=()
@@ -88,6 +94,7 @@ for rel in "${CMDS[@]}"; do
 
     if [ "${RESUME}" -eq 1 ] && [ "${DONE[${name}]:-0}" = "1" ]; then
         echo "run_all.sh: skip (already done): ${name}"
+        OUTPUTS+=("${out_file}")
         continue
     fi
 
@@ -110,8 +117,20 @@ for rel in "${CMDS[@]}"; do
     end="$(date +%s.%N)"
     runtime="$(awk "BEGIN{printf \"%.2f\", ${end} - ${start}}")"
     bytes="$(wc -c < "${out_file}")"
+    OUTPUTS+=("${out_file}")
 
     printf '%-38s %6s %10s %13s\n' "${name}" "${rc}" "${runtime}" "${bytes}" >> "${MANIFEST}"
 done
 
+# Emit the closed output list: exact paths, one per line, non-empty only.
+# Written next to the run outputs (canonical, self-consistent with OUT_DIR)
+# and at the top-level path requested by the audit.
+{
+    for f in "${OUTPUTS[@]}"; do
+        [ -s "${f}" ] && printf '%s\n' "${f}"
+    done
+} > "${OUT_DIR}/output_manifest.txt"
+cp "${OUT_DIR}/output_manifest.txt" "${SCRIPT_DIR}/output_manifest.txt"
+
 echo "run_all.sh: done. Manifest: ${MANIFEST}"
+echo "run_all.sh: output list: ${OUT_DIR}/output_manifest.txt (copy: ${SCRIPT_DIR}/output_manifest.txt)"
