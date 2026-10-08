@@ -314,7 +314,7 @@ la propuesta va en un solo commit, a ratificar:
 Mientras no se ratifique, `main.tex` no se toca: esta auditoría deja el gate
 verde.
 
-### P-6 — La Fase 0 no tiene generador versionado
+### P-6 — La Fase 0 no tenía generador versionado (resuelto)
 
 Los comandos del anclaje existen, en `/tmp/blkA/post.sh`, es decir fuera del
 repo. Ahí se lee que el `output_manifest.sha256` se generó con
@@ -333,13 +333,27 @@ que regenere ambos manifiestos recorriendo `output_manifest.txt` (sin
 comentario de `run_all.sh` para que describa el script y no una regla
 implícita.
 
-### P-7 — `.github/workflows/` existe y está vacío
+**Resuelto.** `verification/fase0_anchor.sh` (commit `48b6a3c`) recorre
+`output_manifest.txt` (lista cerrada, sin `find`), resuelve cada ruta, sella en
+ISO-8601 UTC (`date -u`) y reproduce el ancla byte a byte; `--check` usa la
+semántica de G10/D7-b (el HEAD anclado debe ser ancestro del actual) y es
+determinista salvo la línea de timestamp. El comentario de `run_all.sh`
+(`run_all.sh:18-19`, "No `find` glob is used downstream") pasa a ser cierto tal
+como está: el generador hashea exactamente los ficheros listados. Hallazgo
+colateral de la remediación: la Fase 0 original era **locale-dependiente**
+→ registro **D9** en `bloque-b-report.md` §6.2.
 
-`.github` no tiene ni un fichero versionado (`git ls-files .github` = vacío)
-y `workflows/` es un directorio vacío: un andamio que git no puede seguir y
-que no ejecuta nada. Decisión (una de las dos): añadir un CI mínimo, o
-borrar el andamio. El CI mínimo que este repo admite sin tocar nada más es
-el propio gate, que ya degrada G9 a SKIP cuando no hay `pdflatex`:
+### P-7 — `.github/workflows/` estaba vacío (resuelto)
+
+`.github` no tenía ni un fichero versionado (`git ls-files .github` = vacío) y
+`workflows/` era un directorio vacío: un andamio que git no puede seguir y que
+no ejecuta nada. **Resuelto:** CI activado en `48b6a3c`, corregido en `56bf653`
+(G10 requiere historia completa: `fetch-depth: 0`). Primera corrida verde: run
+`37805524979` (commit `56bf653`; `PASS=9 FAIL=0 SKIP=1`, G9 SKIP por `pdflatex`
+ausente). El CI mínimo que este repo admite sin tocar nada más es el propio
+gate, que ya degrada G9 a SKIP cuando no hay `pdflatex` —el YAML de abajo era
+la propuesta; el fichero implementado es `.github/workflows/audit-gate.yml`
+(Python 3.10, y corre además `python3 verification/eip_cost_check.py`):
 
     name: audit-gate
     on: [push, pull_request]
@@ -353,8 +367,9 @@ el propio gate, que ya degrada G9 a SKIP cuando no hay `pdflatex`:
           - run: pip install -r verification/requirements.txt
           - run: bash verification/audit-gate.sh
 
-Sería la primera ejecución del gate fuera de esta máquina, es decir el
-testigo externo que P-4 pide, y no crea ningún valor tecleado.
+Ha sido la primera ejecución del gate fuera de esta máquina —el testigo
+externo que P-4 pide— y no crea ningún valor tecleado. (El hash raíz del ancla
+sigue sin publicarse fuera del repo: P-4.3 permanece abierto.)
 
 ## 5. Validación de esta pasada
 
@@ -385,8 +400,9 @@ Cadena de custodia del ancla, re-verificada al final de la pasada:
 
 - `docs/paper/main.tex`: es objeto del ancla (P-5). Ninguna edición sin
   ratificación y re-anclaje.
-- `docs/audit/bloque-b-report.md`: sigue con su ` M` (adenda §6.1 a la
-  espera de decisión del Auditor). No se mezcla con esta pasada.
+- `docs/audit/bloque-b-report.md`: salió de su ` M` en el mismo commit que este
+  registro (adenda §6.1 + hallazgos D9/D10 de §6.2). No se mezcló con esta
+  pasada.
 - `docs/audit/session-report.md`: sigue *untracked*, que es la convención
   declarada por los ejes anteriores (`eje-i-claims-report.md:160`,
   `eje-iv-reproduction-report.md:696`). Si se quisiera un `git status`

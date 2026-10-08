@@ -444,3 +444,92 @@ Cambios respecto de la letra de las instrucciones del cierre, todos reportados:
 correcciones D7-b y D8, y el mensaje de commit añade un párrafo describiéndolas
 (las cinco líneas originales se conservan verbatim).
 
+### 6.1 Datos del cierre
+
+| Dato | Valor |
+|---|---|
+| Commit | `794ba7c` (`794ba7ca078d06e3a75f069a5e33f69a13510ea1`) |
+| Mensaje | `feat(audit): close Block B - deterministic baseline, claim registry, and tamper-evident manifest` |
+| Ficheros | 47 (+2487 / −91); incluye los 35 outputs + `manifest.txt` + `output_manifest.txt` |
+| Push | `4d55687..794ba7c  main -> main` (exit 0) — `main` = `origin/main` |
+| Gate en el HEAD nuevo | **PASS=10 FAIL=0 SKIP=0** (exit 0); G10 = `HEAD anclado 3606760 -> actual 794ba7c` |
+| Sin commitear | `docs/audit/session-report.md` (untracked; fuera de tu lista) |
+
+El ancla de Fase 0 registra `3606760` (el HEAD de entonces) y el commit de cierre
+es `794ba7c`: G10 lo acepta como relación de **ancestro** (D7-b). Los 35 hashes
+de outputs y el de `main.tex` se verifican byte a byte contra el árbol actual, así
+que la evidencia de manipulación es la misma que con igualdad estricta.
+
+### 6.2 Hallazgos de la remediación post-clausura (D9, D10)
+
+Estos dos hallazgos no son del cierre del Bloque B: salen de la auditoría
+post-clausura (`post-closure-audit.md`, P-6 y P-7) y de su remediación. Se
+registran aquí para que la serie D1…D10 quede completa en un solo sitio.
+
+**D9 — La Fase 0 original era locale-dependiente.**
+
+*Síntoma.* `output_manifest.sha256` se generó con
+`find … | sort | xargs sha256sum` bajo el **locale del sistema** (la máquina de
+generación corría `es_VE.UTF-8`), no bajo `LC_ALL=C`. El orden commiteado no
+coincide con el de C: se intercambian dos entradas **adyacentes**
+(`recalibrate_top_output.txt` ↔ `r_std_specification_output.txt`), porque la
+colación de glibc ignora `_` y la de C no. Evidencia re-derivada:
+
+    awk '{print $2}' verification/output_manifest.sha256 > /tmp/ord_committed.txt
+    LC_ALL=C sort /tmp/ord_committed.txt | diff /tmp/ord_committed.txt -
+    #  23d22  < verification/baseline_verified/recalibrate_top_output.txt
+    #  24a24  > verification/baseline_verified/recalibrate_top_output.txt
+    #  es_VE.UTF-8 y en_US.UTF-8 SI reproducen el orden commiteado; C no.
+
+*Impacto real.* `fase0_anchor.sh --check` (regenera en temporal y compara pares
+sha256) no reproducía el ancla en una máquina con otro locale.
+
+*Impacto latente.* Si alguien regenera `output_manifest.sha256` bajo otro locale
+y lo commitea, G10 falla por el paso (i): lo que está anclado es el **hash del
+fichero**, no su orden, y el mensaje lo nombra (`manifiesto maestro`). No es el
+caso del CI, que sólo verifica con `sha256sum -c` (order-independent) y nunca
+regenera.
+
+*Fix.* `verification/fase0_anchor.sh` (commit `48b6a3c`), con clave de ordenación
+locale-independiente: `LC_ALL=C` sobre la ruta **sin** guiones bajos
+(`fase0_anchor.sh:110-111`). Reproduce el ancla byte a byte (`cmp` limpio).
+
+**D10 — G10 exige historia completa del repo: el checkout del CI es shallow.**
+
+*Síntoma.* La primera corrida del CI (run `37804484099`, commit `48b6a3c`) falló:
+
+    G10  FAIL  manifiesto no verifica (35 outputs): HEAD '3606760' no ancla '48b6a3c'
+    PASS=8 FAIL=1 SKIP=1
+
+No es defecto del gate, del manifiesto ni del generador: los pasos (i) y (ii) de
+G10 pasaron —el mensaje no lleva sus prefijos `manifiesto maestro;` ni
+`; hashes de outputs`—, es decir los 35 hashes de outputs y el par maestro
+verificaron en el runner.
+
+*Causa.* `actions/checkout@v4` hace **shallow clone** por defecto
+(`fetch-depth: 1`), y así lo muestra el log del propio runner. El commit anclado
+`3606760` no existe en la historia local del runner, así que
+`git merge-base --is-ancestor 3606760 HEAD` sale 128 (`fatal: Not a valid commit
+name`) y G10 cae por esa rama. El stderr de git va a `/dev/null`, así que
+"commit ausente" y "no ancestro" producen el mismo mensaje
+(`audit-gate.sh:171-173`): por eso el síntoma no bastaba y hubo que reproducirlo.
+Reproducido en local con `git clone --depth 1 file://…`: mismo FAIL sobre el
+mismo árbol; tras `git fetch --unshallow` en ese mismo clon: `PASS=10 FAIL=0`.
+
+*Propiedad fail-closed.* En clon shallow G10 emite **FAIL**, no SKIP: no hay
+PASS vacuo. Corolario operativo: cualquier clon local que corra el gate —o
+`fase0_anchor.sh --check`, que usa la misma comprobación de ancestro— necesita
+historia completa, o `git fetch --unshallow`.
+
+*Fix.* `fetch-depth: 0` en `.github/workflows/audit-gate.yml` (commit `56bf653`).
+No sirve un `fetch-depth: N` fijo: la profundidad necesaria para alcanzar el
+commit anclado crece con cada commit (era 3 en `48b6a3c`; hoy el ancla está 3
+commits por detrás del HEAD, es decir harían falta N=4).
+
+*Verificación.* Segunda corrida verde: run `37805524979`, commit `56bf653`,
+`fetch-depth: 0` en el log,
+`G10 PASS manifiesto verifica (35 outputs; HEAD anclado 3606760 -> actual
+56bf653)`, `PASS=9 FAIL=0 SKIP=1` (G9 SKIP por `pdflatex` ausente:
+`audit-gate.sh:120-135` degrada a SKIP y el cierre sólo rompe por FAIL).
+
+
