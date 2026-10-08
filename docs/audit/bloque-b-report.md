@@ -460,13 +460,14 @@ es `794ba7c`: G10 lo acepta como relación de **ancestro** (D7-b). Los 35 hashes
 de outputs y el de `main.tex` se verifican byte a byte contra el árbol actual, así
 que la evidencia de manipulación es la misma que con igualdad estricta.
 
-### 6.2 Hallazgos de la remediación post-clausura (D9, D10, D11)
+### 6.2 Hallazgos de la remediación post-clausura (D9, D10, D11, D12, D13)
 
 Estos hallazgos no son del cierre del Bloque B: D9 y D10 salen de la auditoría
 post-clausura (`post-closure-audit.md`, P-6 y P-7) y de su remediación; D11 salió
 de la implementación de G11 (commit `5bd9e3b`, sesión de sellado) y lo ratificó
-el Auditor. Se registran aquí para que la serie D1…D11 quede completa en un solo
-sitio.
+el Auditor; D12 y D13 salen de la revisión pre-sello del root de D1 (commit
+`d4336ca`) y los ratificó el Auditor. Se registran aquí para que la serie
+D1…D13 quede completa en un solo sitio.
 
 **D9 — La Fase 0 original era locale-dependiente.**
 
@@ -494,7 +495,7 @@ regenera.
 
 *Fix.* `verification/fase0_anchor.sh` (commit `48b6a3c`), con clave de ordenación
 locale-independiente: `LC_ALL=C` sobre la ruta **sin** guiones bajos
-(`fase0_anchor.sh:110-111`). Reproduce el ancla byte a byte (`cmp` limpio).
+(`fase0_anchor.sh:155-156`; re-verificado al cerrar D1, D12). Reproduce el ancla byte a byte (`cmp` limpio).
 
 **D10 — G10 exige historia completa del repo: el checkout del CI es shallow.**
 
@@ -601,5 +602,69 @@ que no resuelve es una afirmación falsa en el árbol. Localización por símbol
 ej. `grep -n 'sin manifiestos sha256 todavia' verification/audit-gate.sh`. Sin
 este registro, dentro de dos sesiones «G11 cubre el caso» se leería sin saber por
 qué existía el caso.
+
+**D12 — Las citas por número de línea (`fichero.sh:NNN`) envejecen con cada edición.**
+
+*Síntoma.* La extensión D1 (commit `d4336ca`, 2 ficheros, 78+/3−) insertó ~44
+líneas en `fase0_anchor.sh` (creación de `anchor_root.sha256`). Dos citas vivas
+quedaron apuntando a código ajeno: `verification/audit-gate.sh:197` citaba
+`fase0_anchor.sh:66-67` para el par `mktemp -d` + `trap`, que tras D1 vive en
+110-111; y la entrada **D9** de este informe citaba (en su *Fix*)
+`fase0_anchor.sh:110-111` para el bloque `awk` / `LC_ALL=C sort`, que tras D1
+vive en 155-156. El daño es doble: las dos citas seguían *resolviendo* —a la
+línea equivocada— y, como los dos rangos se intercambiaron, una comprobación de
+que «el número existe» las habría dado por buenas.
+
+*Impacto real.* Ninguna guarda lee estas citas: G1–G11 no inspeccionan
+`bloque-b-report.md` ni `handoff.md` (`grep -n 'bloque-b\|handoff'
+verification/audit-gate.sh` sólo devuelve comentarios). El impacto es de
+verificabilidad humana: una cita que no resuelve al contenido citado es una
+afirmación falsa en el árbol. Ya estaba previsto en la *Nota de método* de D11
+(«los números envejecen con cada edición del gate»).
+
+*Fix (pre-sello).* Se corrigen las dos citas (110-111 y 155-156) y los
+comentarios de `fase0_anchor.sh` que hablaban de «los 2 pares» / «los 2
+manifiestos» para lo que el root cubre completo (10 pares / 3 artefactos de
+ancla).
+
+*Defecto transitorio conocido; mitigación estructural diferida.* Toda edición por
+encima de una línea citada rompe la cita. Disciplina mientras no exista guarda:
+(i) por encima de una cita, son seguras sólo las ediciones que no cambian el
+número de líneas —así se hizo en este commit—; (ii) las citas se re-verifican
+tras editar (esta entrada se escribió así: `grep -n 'mktemp -d'
+verification/fase0_anchor.sh` = 110; `grep -n 'LC_ALL=C sort'
+verification/fase0_anchor.sh` = 156; valores al commit que introduce esta
+entrada). Mitigación futura: anclar por contenido —`grep -n` sobre el símbolo,
+como la *Nota de método* de D11— y, opcionalmente, una guarda **G12** que
+verifique que toda cita `fichero.sh:NNN` resuelve al contenido citado. Esta
+entrada evita citar por número: se apoya en símbolos.
+
+**D13 — `anchor_root.sha256` no certifica los artefactos crudos que G2/G3 consumen.**
+
+*Síntoma.* G2 compara `grep -c "EXIT 0" "${EVID}"` contra el número de filas con
+exit numérico de `"${MANIFEST}"`; G3 cuenta `DRIFT` en el mismo `${EVID}` y falla
+cerrado desde `120634d` (`-s "${EVID}"`). Las definiciones están en
+`grep -n 'EVID=\|MANIFEST=' verification/audit-gate.sh`: `${EVID}` =
+`verification/fase1_determinism_evidence.txt` y `${MANIFEST}` =
+`verification/baseline_verified/manifest.txt`. Los dos están versionados, pero
+**ninguno está dentro de `anchor_root.sha256`**, que cubre el ancla, el
+verificador y los tres inputs de `docs/audit/`.
+
+*Impacto latente.* Un actor con permiso de escritura y capacidad de reescribir
+historia —el escenario que el sello externo ataca— puede borrar líneas `DRIFT`
+del log, o añadir/quitar filas del manifiesto de baseline, sin que el root lo
+delate: el root certifica *qué guarda corre*, no la *entrada cruda que la guarda
+lee*.
+
+*Por qué el root los excluye (decisión, no olvido).* Los dos los reescribe el
+harness en cada corrida: el log registra la fecha de la corrida y la suma de
+`runtime_s` del manifiesto, y `manifest.txt` lleva el `runtime_s` de cada script.
+Incluirlos en el root rompería la propiedad que G11 verifica —el root se
+re-deriva byte a byte desde el árbol— en cuanto se re-ejecutase el harness.
+
+*Remedio pendiente.* Exige partir el log en una parte estable y otra volátil (o
+congelar el log y anclar su hash como artefacto aparte, no dentro del root). No
+está en este commit: se registra para que el recibo del sello externo no afirme
+más cobertura de la que el root tiene.
 
 

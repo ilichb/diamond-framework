@@ -194,7 +194,7 @@ fi
 # El generador rehace el ancla completa en un directorio temporal (los 35 pares
 # de output_manifest.sha256, el sello de audit_manifest.sha256 y el criterio de
 # ancestro de HEAD, D7-b) y la compara con la commiteada. No escribe en el repo:
-# mktemp -d + trap (fase0_anchor.sh:66-67).
+# mktemp -d + trap (fase0_anchor.sh:110-111; re-verificado al cerrar D1, D12).
 # Motivo (D9, bloque-b-report.md §6.2): hasta ahora NINGUNA guarda ejecutaba el
 # generador, asi que su unica proteccion era el uso correcto por parte de quien
 # re-ancla.  Un re-anclaje con otra regla de orden habria quedado registrado en

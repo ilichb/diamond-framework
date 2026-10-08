@@ -29,15 +29,15 @@
 #
 # El sello UTC es la unica linea no determinista: registra *cuando* se
 # produjo el ancla. Lo determinista, y lo que G10 verifica, es la cadena de
-# hashes (HEAD + los 2 pares sha256), que se reproduce identica.
+# audit_manifest.sha256 (HEAD + los 2 pares sha256: main.tex y el manifiesto
+# de outputs), que se reproduce identica.
 #
 # D1 EXTENSION (2026-10-08). El generador tambien emite
-# verification/anchor_root.sha256, que hashea los 10 ficheros de la
-# cadena de custodia completa: el ancla (main.tex + los 2 manifiestos),
-# el verificador (audit-gate.sh, este generador, run_all.sh, el
-# workflow de CI), y los inputs estables que el verificador audita
-# (claim-registry.csv, numerical-verification.md,
-# content-audit-pending.md).
+# verification/anchor_root.sha256, que hashea los 10 ficheros de la cadena
+# de custodia completa: el ancla (main.tex + output_manifest.txt +
+# output_manifest.sha256), el verificador (audit-gate.sh, este generador,
+# run_all.sh y el workflow de CI), y los inputs estables que audita
+# (claim-registry.csv, numerical-verification.md, content-audit-pending.md).
 #
 # El root es determinista byte a byte: sin header, sin timestamp, sin
 # HEAD. El sellado externo (OpenTimestamps) del root es el testigo
@@ -186,10 +186,10 @@ printf 'fase0_anchor: %d outputs -> %s\n' "${n}" "${OUT_SHA_REL}"
 printf 'fase0_anchor: sello UTC %s, HEAD %s\n' "${TS}" "${HEAD_REV}"
 
 # ---- 5. --check: prueba de determinismo contra el ancla commiteada ---------
-# Lo determinista es la cadena derivada de ficheros: los 2 pares sha256 y el
-# propio output_manifest.sha256.  Lo NO determinista es el timestamp y el HEAD
-# anclado (el generador sella el HEAD *actual*, y la guarda G10 acepta el HEAD
-# anclado como ancestro del actual: D7-b).
+# Lo determinista es la cadena derivada de ficheros: los 35 pares de
+# output_manifest.sha256, los 2 pares de audit_manifest.sha256 y los 10 pares
+# del root.  Lo NO determinista es el timestamp y el HEAD anclado (el generador
+# sella el HEAD *actual*, y G10 lo acepta como ancestro del actual: D7-b).
 if [ "${CHECK}" -eq 1 ]; then
     status=0
     if cmp -s "${OUT_DIR}/output_manifest.sha256" "${OUT_SHA_REL}"; then

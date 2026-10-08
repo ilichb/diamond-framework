@@ -290,9 +290,30 @@ skipping) is recorded as D10 in `docs/audit/bloque-b-report.md` §6.2.
 
 The anchor chain (Bloque B, `794ba7c`) is
 
-    outputs  <-  verification/output_manifest.sha256
-             <-  verification/audit_manifest.sha256
+    outputs  <-  verification/output_manifest.sha256       (35 pairs)
+             <-  verification/audit_manifest.sha256        (HEAD + 2 pairs)
              <-  docs/paper/main.tex
+
+Fase 0 (D1, `d4336ca`) adds a third, byte-deterministic artefact on top of the
+two above — no header, no timestamp, no HEAD, so it re-derives anywhere:
+
+    verification/anchor_root.sha256   (10 pairs) commits
+
+      the anchor    docs/paper/main.tex
+                    verification/output_manifest.txt
+                    verification/output_manifest.sha256
+      the verifier  verification/audit-gate.sh
+                    verification/fase0_anchor.sh
+                    verification/run_all.sh
+                    .github/workflows/audit-gate.yml
+      the inputs    docs/audit/claim-registry.csv
+                    docs/audit/numerical-verification.md
+                    docs/audit/content-audit-pending.md
+
+G11 *re-derives* that root with `fase0_anchor.sh --check` and diffs it against
+the committed file. The external timestamp (OpenTimestamps) is taken over the
+root's digest, and its receipts live in `docs/audit/anchor-receipts.md`, outside
+the root: including them would be circular.
 
 Three properties, measured rather than argued, with the negative tests recorded
 in `docs/audit/post-closure-audit.md`: G3 was a count of zero and passed
@@ -316,20 +337,24 @@ impact D9 recorded (a re-anchor under another ordering rule would be committed
 silently) is covered by a guard, not by discipline.
 
 **Re-anchoring recipe.** Any change to `docs/paper/main.tex` or to
-`verification/baseline_verified/` invalidates the anchor. Re-anchor atomically:
+`verification/baseline_verified/` invalidates the two older artefacts, and any
+change to one of the ten files listed above — the anchor, the verifier, or the
+three audit inputs — invalidates `anchor_root.sha256` as well (G11 and the
+external seal follow it). Re-anchor atomically:
 
 1. Make the change.
 2. If outputs changed: `bash verification/run_all.sh` (deterministic; it rewrites
    `verification/baseline_verified/` and the closed list
    `verification/output_manifest.txt`).
-3. `bash verification/fase0_anchor.sh` (it rewrites `output_manifest.sha256` and
-   `audit_manifest.sha256`). Generate *before* committing: the seal records the
+3. `bash verification/fase0_anchor.sh` (it rewrites the **three** artefacts:
+   `output_manifest.sha256`, `audit_manifest.sha256` and
+   `anchor_root.sha256`). Generate *before* committing: the seal records the
    HEAD at generation time — which then remains an ancestor of the new commit
    (D7-b) — while the hashes it seals are those of the *new* content.
-4. Commit the change **and** both manifests in the **same** commit. The anchor
-   carries the `sha256` of `main.tex` and of `output_manifest.sha256`, not only
-   the HEAD, so committing the change alone leaves G10 and G11 failing at that
-   commit.
+4. Commit the change **and all three artefacts** in the **same** commit. The
+   anchor carries the `sha256` of `main.tex` and of `output_manifest.sha256`,
+   and the root carries the ten hashes it commits, so committing the change
+   alone leaves G10 and G11 failing at that commit.
 5. Verify, then push: `bash verification/audit-gate.sh` gives `PASS=11 FAIL=0
    SKIP=0` locally (in CI `PASS=10 FAIL=0 SKIP=1`: G9 SKIP without `pdflatex`),
    and `git push` makes CI re-run the same gate on the pushed commit.
