@@ -25,9 +25,10 @@ texto y la derivación en vivo difieren, gana la derivación.
 | SHA-256 del recibo | `e78cab51c6075e03b8c8ac69ddc442005d71b57d79d13d357e8a4814f05998b9` |
 | Cliente | `ots` v0.7.2 (`opentimestamps-client` 0.7.2, `opentimestamps` 0.4.5, Python 3.10.12) |
 | Envío a calendarios | 4 *(4 líneas `Submitting to remote calendar` en la salida del cliente)* |
-| Atestaciones | 4, **pendientes** de confirmación en Bitcoin |
-| Verificación | `ots verify verification/anchor_root.sha256.ots` → `exit 1`, con 4 líneas `Pending confirmation in Bitcoin blockchain` |
-| Copia out-of-band | **pendiente** — ver §R-1.3 |
+| Atestaciones | 4, todas `PendingAttestation` **dentro del `.ots` commitado** (derivado de `ots info`, no de la salida del cliente) |
+| Verificación | `ots verify verification/anchor_root.sha256.ots` → `exit 1` (estado del recibo, no fallo): sondea los cuatro calendarios; sin nodo Bitcoin local no puede cerrar el estado |
+| Agregación en Bitcoin | **observada** el 2026-10-08: bloques `970536` y `970537` — ver §R-1.5 |
+| Copia out-of-band | **enviada** el `2026-10-08T22:50:12Z`, `Message-ID <3e1b76af-7944-45a0-8688-290e7eb41a29@gmail.com>` — ver §R-1.3 |
 
 ### R-1.1 Los cuatro calendarios
 
@@ -72,16 +73,66 @@ segunda vía sería una afirmación, no una medición.
 
 ### R-1.3 Copia out-of-band
 
-Estado: **no enviada**. El canal decidido es correo con **dos destinatarios**
-(`To: ilichblanco@andromedacomputer.net` más una `Cc` en un proveedor distinto de
-`andromedacomputer.net`, de modo que el testigo cruce dos dominios de confianza
-independientes de GitHub). La dirección de la `Cc` aún no está fijada.
+Estado: **enviada**. Un solo mensaje: la carpeta `Enviados` de la cuenta Gmail
+contiene exactamente un registro con este asunto, y los otros registros con ese
+texto están en `Borradores`/`Todos` y no en `Enviados`, es decir son borradores
+nunca enviados. Todo lo que sigue sale de las **copias recibidas** —las que
+cruzaron el transporte y volvieron—, no de la copia local del enviado.
 
-Se deja dicho en vez de escribir la frase «emailed …», porque un recibo que
-afirma un envío que no ocurrió es peor que un recibo que declara la ausencia:
-mientras la copia de este repositorio sea la **única** copia, no hay testigo
-contra la manipulación del propio repositorio. Ilich envía el `.ots` y un commit
-posterior de sólo documentación registra la fecha y la `Cc` reales.
+| campo | valor |
+|---|---|
+| Fecha (`Date`) | `Thu, 8 Oct 2026 18:50:12 -0400` = **2026-10-08T22:50:12Z** |
+| `Message-ID` | `<3e1b76af-7944-45a0-8688-290e7eb41a29@gmail.com>` |
+| `From` | `Gmail <andromedacomputerca@gmail.com>` |
+| `To` | `ilichblanco@andromedacomputer.net` (entregado: `Delivery-date` 22:50:57Z) |
+| `Cc` | `marketing@andromedacomputer.net` (entregado: `Delivery-date` 22:50:57Z) |
+| Adjunto | `anchor_root.sha256.ots`, 945 B, sha256 `e78cab51…` — **idéntico byte a byte** al del repo |
+| Cuerpo | 2201 B, sha256 `b47eb5dc2696f0a05b20c138fd4c98a3cd37337a156fc8d6ae87c58fb912d304` |
+| Registro completo | copia del `Cc`: 10440 B, `eb42c463…`; copia del `To`: 10444 B, `e17bfa5b…` |
+| Recepción | 4 saltos: cliente → `smtp.gmail.com` (22:50:14Z) → `mail-vk1-f180.google.com` (22:50:36Z; la copia del `To` entra por `mail-ua1-f52.google.com`) → `dfw-s05.nixihost.com` (esmtps, TLS1.3, Exim 4.100.1) → entrega local LMTP (22:50:57Z) |
+| Firmas DKIM | `DKIM-Signature` y `X-Google-DKIM-Signature`, ambas `v=1; a=rsa-sha256; d=gmail.com; s=20251104`; `t=1791499815` (22:50:15Z), `x=1792104615` (2026-10-15T22:50:15Z) |
+
+Cadena de custodia, sin adornos:
+
+- **El adjunto recibido sella el compromiso.** Guardado desde la copia recibida:
+  945 B, sha256 `e78cab51…`, `cmp` idéntico al del repo, y `ots verify` sobre esa
+  copia (con el objetivo al lado) dice `Assuming target filename is
+  'anchor_root.sha256'` y **no** dice `File does not match`: el compromiso dentro
+  del `.ots` es exactamente `83001ca2…`.
+- **Cinturón y tirantes.** El cuerpo lleva además el `.ots` en base64 entre
+  marcadores, en 20 líneas; decodificado da 945 B y `e78cab51…`, el mismo valor.
+  Si un proveedor descartase adjuntos, el testigo viaja igual.
+- **Firmas de Google, verificadas aquí.** Con `dkimpy`, aislando cada cabecera (se
+  borra la otra y se repite la verificación): `DKIM-Signature` → `True` y
+  `X-Google-DKIM-Signature` → `True`. DKIM firma el **cuerpo entero**, adjunto
+  incluido. El instrumento se probó antes de creerle: cambiar un carácter del
+  digest o del asunto en la copia recibida devuelve `False`.
+- **Estabilidad entre buzones.** Los dos registros recibidos difieren en 38 líneas
+  (envolvente, `Received`, entrega) y por eso sus hashes completos difieren; el
+  **cuerpo** y el **adjunto** son idénticos en ambos. El valor estable es el
+  `Message-ID` más los dos hashes de parte, no el hash del registro entero.
+- **Dos proveedores, un dominio y un titular.** La cadena cruza Google (firma y
+  almacén) y `nixihost`/`andromedacomputer.net` (recepción y almacén); ninguno de
+  los dos es GitHub. Pero la `Cc` **no cumple** lo que esta sección pedía antes:
+  `marketing@andromedacomputer.net` está en el **mismo dominio** que el `To`, así
+  que los dos destinos comparten dominio, DNS y servidor de correo — **un solo
+  fallo de dominio, no dos**. Y los tres buzones son de la misma persona: la
+  independencia es **a nivel de proveedor, no a nivel de tercero**. Se declara la
+  desviación en vez de dar por cumplido un requisito que no se cumplió.
+- **La firma caduca.** `x=1792104615` = 2026-10-15T22:50:15Z: pasada esa fecha un
+  verificador *puede* rechazar la firma por expirada. Las copias del mensaje
+  siguen existiendo; lo que caduca es la atestación criptográfica de Google, y
+  rehacerla exige que la clave de `20251104._domainkey.gmail.com` siga publicada.
+- No hay cabeceras `ARC-*` ni `Authentication-Results` en la copia recibida: el MX
+  de destino **no** añadió veredicto propio. La única atestación de tercero es la
+  de Google.
+
+Lo que esto **no** prueba: que el `.ots` esté confirmado. El enviado es el
+**pendiente** (`e78cab51…`); lo que el correo fija es que ese recibo pendiente
+existía el 2026-10-08T22:50:12Z, en dos buzones y con la firma de Google. Quien
+tenga el adjunto puede completarlo por su cuenta con `ots upgrade`, porque los
+calendarios ya agregaron (§R-1.5). El `.ots` completado todavía no vive en el
+repo.
 
 ### R-1.4 Reproducción
 
@@ -91,3 +142,45 @@ posterior de sólo documentación registra la fecha y la `Cc` reales.
     sha256sum verification/anchor_root.sha256.ots                # e78cab51…
     ots verify verification/anchor_root.sha256.ots               # pending -> exit 1
     ots upgrade verification/anchor_root.sha256.ots              # tras la confirmación en Bitcoin
+
+Evidencia del envío (§R-1.3), leída del propio almacén de Thunderbird
+(`~/.thunderbird/<perfil>/ImapMail/…`) y no de la pantalla: se localiza el
+registro por su `Message-ID`, se compara el adjunto y se validan las firmas.
+
+    python3 -m pip install --user dkimpy
+    python3 -c 'import dkim,sys;print(dkim.verify(open(sys.argv[1],"rb").read()))' recibido.eml
+    # aislando cada firma (se borra la otra cabecera y se repite): True en las dos
+    # guardado desde la copia recibida: 945 B, sha256 e78cab51…, cmp con el del repo
+    # ots verify sobre esa copia: «Assuming target filename…», sin «File does not match»
+
+### R-1.5 Agregación en Bitcoin (medido después del sellado)
+
+El sellado fue a las `21:34:07Z` y las cuatro atestaciones quedaron pendientes.
+Medido después, **sobre una copia en `/tmp`**: el `.ots` del repo no se toca.
+
+    cp verification/anchor_root.sha256 verification/anchor_root.sha256.ots /tmp/probe/ && cd /tmp/probe
+    ots upgrade anchor_root.sha256.ots   # exit 0: «Got 2 attestation(s) from cache» + «Success! Timestamp complete»
+    ots info anchor_root.sha256.ots      # sigue habiendo 4 PendingAttestation, y dos BitcoinBlockHeaderAttestation
+    sha256sum anchor_root.sha256.ots     # 6b28be97…  (el completado; el commitado sigue siendo e78cab51…)
+
+Dos calendarios agregaron el compromiso a un bloque:
+
+- `BitcoinBlockHeaderAttestation(970536)`, merkle root `e2376ba95d40…`, bloque de
+  `2026-10-08T21:48:49Z`
+- `BitcoinBlockHeaderAttestation(970537)`, merkle root `a87a055e88c2…`, bloque de
+  `2026-10-08T22:00:55Z`
+
+Las dos raíces coinciden con las que imprime `ots info` y con las que devuelve un
+explorador público para esas alturas. Eso **no** es verificación criptográfica
+completa (haría falta el encabezado del bloque, es decir un nodo) y el explorador
+es un tercero: se cita como medición, no como prueba. El cliente resolvió las
+atestaciones desde su caché `~/.cache/ots`, poblada en una verificación previa.
+
+Nota de cronología: el correo salió a las `22:50:12Z`, **después** de los dos
+bloques. El testigo externo cubre por tanto el `.ots` pendiente, cuyo compromiso
+es anterior a `21:48:49Z` según la cadena de Bitcoin (la hora de un bloque la
+declara el minero, acotada por la regla de *median-time-past*).
+
+Promover el estado completado —`ots upgrade` en el repo y reescritura de R-1,
+R-1.2 y R-1.4 con el hash nuevo y el número de bloque— es un cambio aparte,
+**no hecho**.
