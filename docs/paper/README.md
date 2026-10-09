@@ -42,12 +42,14 @@ The page count follows the content, so it is read from the build:
 
     cd docs/paper && pdflatex -interaction=nonstopmode -halt-on-error main.tex && pdfinfo main.pdf | grep Pages
 
-At `794ba7c` that prints `Pages: 34`. Release snapshots are archived under
-`releases/`; the latest is `releases/diamond-framework-2026-10-03.pdf`
-(31 pages, 624450 bytes, SHA-256 `bacd6242…cde`). Snapshots are frozen
-documents: they are not re-exported when the source advances, so a rebuild
-of the current source is no longer byte-comparable to them — see
-`releases/README.md`. Only PDFs under `releases/` are tracked by git.
+At `ab485c1` that prints `Pages: 34`. Release snapshots are archived under
+`releases/`; the latest is `releases/diamond-framework-2026-10-08.pdf`
+(34 pages, 530095 bytes, SHA-256 `4a442fe4…be7`), frozen from the source
+of `ab485c1`. The 2026-10-03 snapshot stays as published and is no longer
+the artifact of record. Snapshots are frozen documents: they are not
+re-exported when the source advances, so a rebuild of the current source
+is not byte-comparable to them — see `releases/README.md`. Only PDFs
+under `releases/` are tracked by git.
 
 ## Troubleshooting
 
