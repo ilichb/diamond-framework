@@ -200,6 +200,141 @@ Boundaries that are **not** covered by M1 and must not be assumed from it:
   mock, so no claim is made about the pairing check or the recursive SNARK (M3).
 - No admission, slashing or reputation-weight logic (M2).
 
+### 5.2 Amendment M2: AVIPValidatorManager, registry hardening, and the admissible domain
+
+**Objective.** Implement the hybrid admission rule, close the parameter-injection
+and DoS vectors M1 left open, state the ZK circuit semantics explicitly, and
+record the economic effect of restricting the domain to `||T||_F >= Θ_r`
+(paper, "Zero-Knowledge Threshold Proof").
+
+#### 5.2.1 One source of truth for the certified norm
+
+The M1 sketch let the manager receive `tensorNorm` as a free parameter. The
+registry did validate `root` and `epoch` (anything else reverted with
+`PublicInputMismatch`), but the `norm` the manager used to compute `C_R` was
+**not bound to the proof**: two sources of truth for the same quantity.
+
+M2 removes the caller-supplied array. The manager passes only `certifiedNorm`;
+the registry reads `root = commitmentOf(epoch)` from its own state and builds the
+statement itself:
+
+    statement = [uint256(root), epoch, certifiedNorm]
+
+and the registry signature becomes:
+
+```solidity
+function verifyThreshold(uint256 epoch, uint256 certifiedNorm, bytes calldata proof)
+    external
+    view
+    returns (bool);
+```
+
+The `validator` argument is gone: with that statement it had no binding role. As
+a `view` function the registry writes no state, so the DoS that let an attacker
+burn `thresholdProven[epoch][validator]` in their own transaction is closed, and
+a ~20k-gas SSTORE disappears. In the real circuit (M3) the binding is
+arithmetic: the norm is a public input, so a false `certifiedNorm` changes `vk_x`
+and the pairing fails. In M2 the verifier is a mock, so no soundness claim is
+made until M3.
+
+#### 5.2.2 Circuit semantics and the M3 bridge
+
+- **The circuit proves equality; the manager proves the threshold.** The circuit
+  proves `||T||_F = certifiedNorm`; the manager enforces
+  `certifiedNorm >= Θ_r` and reverts with `NormBelowThreshold`.
+- **Declared deviation from the paper (main.tex §4.1, "Circuit
+  Specification").** §4.1 specifies a circuit that verifies `||T||_F >= Θ_r`
+  (`eq:threshold`). The implementation deviates on purpose: keeping `Θ_r` out of
+  the circuit keeps the economic policy parameter out of the trusted-setup
+  ceremony, so changing `Θ_r` does not require a new ceremony. Because the
+  circuit certifies the exact norm, the manager's comparison reproduces the
+  paper's predicate on-chain, without redundant constraints. The proof stays
+  reusable across `Θ_r` values; the price is that the exact `||T||_F` becomes
+  public, which the paper already assumes (§4.1: "The tensor `T` is public ...
+  the proof exists for succinctness, not for privacy").
+- **Mock caveat.** Until M3, `MockThresholdVerifier` performs no pairing check;
+  no claim is made about the pairing or the recursive SNARK.
+- **Open M3 risk (Merkle <-> Pedersen bridge).** M1 commits a keccak256 Merkle
+  root; the paper (§4.3, "Repair Options", Option B) proves the norm over a
+  Pedersen commitment with Bulletproofs. keccak256 inside a SNARK is
+  prohibitively expensive, so this is not a cosmetic migration. M3 must choose
+  between: (a) making Pedersen the canonical on-chain commitment, which breaks
+  `verifyEntry` inclusion proofs and invalidates previously posted roots — a
+  commitment-scheme migration, not a change of the freshness rule, which is
+  computed from the declared `changedEntries` alone; (b) proving the equivalence
+  between the Merkle root and the Pedersen commitment inside the circuit
+  (expensive); or (c) keeping Merkle as the canonical on-chain commitment, using
+  Pedersen strictly for the norm proof and linking the two in the off-chain data
+  layer (M7). This risk stays explicitly open for M3.
+
+#### 5.2.3 The admissible domain and the optimal fee
+
+- **Admissible domain.** With `Θ_r = 0.5`, a validator with `||T||_F < 0.5` is
+  rejected by the **manager**. `T = 0` is therefore no longer an admissible type.
+- **Worst-case admissible type.** The paper's worst case is `(omega_max, T = 0)`
+  — the highest private cost of capital combined with the lowest reputation
+  (main.tex §6.4, "The Uniform Posted Price"). On the admissible domain it
+  becomes `(omega_max, ||T||_F = Θ_r = 0.5)`:
+  - `C_R(0.5) = 0.8 * 0.5 / (1 + 0.5) = 0.26666...` (`266666666666666666`)
+  - `S_f*(0.5) = max(S_min, Θ - C_R(0.5)) = 0.73333...` (`733333333333333334`)
+  - `F_0* = pi_val - omega_max * S_f*(0.5) = 0.15 - 0.10 * 0.73333... =`
+    `0.07666...` (`76666666666666667`), i.e. 1.53x the paper's `0.05`.
+- **M2 decision.** `F0_STAR = 5e16` (0.05), the paper's value (main.tex §6.4,
+  `F_0* = pi_val - omega_max * Θ = 0.15 - 0.10 * 1.0 = 0.0500`), stays the
+  constant. It is IR-safe — a lower fee only relaxes `U >= 0` — but sub-optimal:
+  it collects ~65% of the optimum on the admissible domain. The paper's claim
+  that the saturation is exact holds for the unrestricted domain only.
+- **Provenance note.** `verification/mechanism/fee_specification.py` and
+  `financial_floor_sensitivity.py` describe the domain *without* the `Θ_r`
+  restriction. They are **not** modified: their outputs are listed in the sealed
+  `verification/output_manifest.txt`, so editing them would invalidate the
+  anchor. The claim that 0.05 is a safe lower bound — rather than the exact
+  optimum of the admissible domain — is recorded here, and can be promoted to
+  `docs/audit/claim-registry.csv` in the next batched re-anchor (§9).
+- **Custody.** M2 exposes the `F0*`/`S_f*` policy. It does not implement token
+  custody or transfer (ERC-20 or native); that is delegated to a future treasury
+  module.
+
+#### 5.2.4 Anti-replay, state, and contract documentation
+
+- **Anti-replay lives in the manager.** `verifyThreshold` is `view`, so the
+  registry keeps no per-validator state; double admission is impossible because
+  `admit` requires `!isAdmitted[validator]`. `thresholdProven` and the
+  `ThresholdProven` event are removed.
+- **Collateral as a `view`.** `collateralOf(validator)` returns
+  `Θ - requiredStake[validator]` and stores nothing, so there is no second source
+  of truth. The identity holds by parameter construction, not by luck: the
+  saturation `C_R^inf = 0.8` and `S_min = Θ - C_R^inf = 0.2` guarantee
+  `Θ - C_R(r) >= S_min` for every finite `r`, so `requiredStake` is `Θ - C_R` and
+  never the floor standing alone. It would only fail if `S_min` were raised above
+  `Θ - C_R^inf`.
+- **Events.** `ValidatorAdmitted(address indexed validator, uint256 stake, uint256
+  collateral)` unchanged, exactly as `IAVIPValidatorManager` declares it, plus
+  `AdmissionEvaluated(address indexed validator, uint256 epoch, uint256
+  certifiedNorm, uint256 collateral, uint256 requiredStake)` for audit
+  traceability of the certified norm and the amounts derived from it.
+- **Error migration.**
+  - manager: adds `NormBelowThreshold`, `InsufficientFinancialStake`,
+    `AlreadyAdmitted`; `ZeroValidator` moves here (`admit(address)` still rejects
+    `address(0)`).
+  - registry: adds `InvalidZKProof`; `UnknownEpoch` is retained and becomes
+    load-bearing, because the registry now reads the root from
+    `commitmentOf(epoch)`. The other seven M1 errors (`NotSequencer`,
+    `ZeroSequencer`, `ZeroRoot`, `NonSequentialEpoch`, `GenesisDelta`,
+    `FreshnessViolation`, `VerifierNotSet`) are unchanged.
+  - removed from the registry: `PublicInputMismatch` (no caller-supplied inputs
+    left) and `ThresholdAlreadyProven`.
+- **Contract NatSpec** (contracts are not sealed, so this is safe): both
+  `AVIPRegistry.sol` (which documents "validation of the threshold proof
+  `||T||_F >= Theta_r`") and the reference-parameter block of
+  `IAVIPRegistry.sol` (which lists `Θ_r`) must be reworded to "certifies the
+  exact norm; the threshold is enforced by `AVIPValidatorManager`".
+- **Verifier and mock.** `IZKThresholdVerifier` keeps the exact Groth16 shape
+  `verify(uint256[2] a, uint256[2][2] b, uint256[2] c, uint256[] input)`; the
+  registry decodes the `bytes proof`. The existing `MockThresholdVerifier` moves
+  out of `AVIPRegistry.t.sol` into `test/mocks/MockThresholdVerifier.sol`, so
+  there is one mock, not two.
+
 ## 6. Interfaces and parameter provenance
 
 The contract boundary is fixed by three **provisional interfaces** (types only,
@@ -207,27 +342,30 @@ no logic):
 
 | File | Key surface |
 |------|-------------|
-| `contracts/interfaces/IAVIPRegistry.sol` | `postCommitment(epoch, root, changedEntries)`, `commitmentOf(epoch)`, `changedEntriesOf(epoch)`, `tensorSize()`, `maxDeltaEntries()`, `latestEpoch()`, `verifyEntry(root, leaf, proof)`, `verifyThreshold(epoch, validator, proof)` |
-| `contracts/interfaces/IAVIPValidatorManager.sol` | `stakeOf`, `collateralOf`, `requiredStake`, `isAdmitted`, `admit`, `slash(validator, amount, reason)` |
+| `contracts/interfaces/IAVIPRegistry.sol` | `postCommitment(epoch, root, changedEntries)`, `commitmentOf(epoch)`, `changedEntriesOf(epoch)`, `tensorSize()`, `maxDeltaEntries()`, `latestEpoch()`, `verifyEntry(root, leaf, proof)`, `verifyThreshold(epoch, certifiedNorm, proof)` (view) |
+| `contracts/interfaces/IAVIPValidatorManager.sol` | `stakeOf`, `collateralOf`, `requiredStake`, `isAdmitted`, `admit`, `slash(validator, amount, reason)`; events `ValidatorAdmitted(validator, stake, collateral)`, `AdmissionEvaluated(validator, epoch, certifiedNorm, collateral, requiredStake)` |
 | `contracts/interfaces/IZKThresholdVerifier.sol` | `verify(a, b, c, publicInputs)` (Groth16 shape over BN254) |
 
 They are provisional: a signature change is not a breaking change while nothing
 is deployed. M1 changed exactly one signature — `postCommitment` now carries the
 declared epoch delta, because the freshness rule of the Data Layer needs it —
-and added the readers that rule implies. Every parameter they mention has a
-provenance:
+and added the readers that rule implies. M2 changes `verifyThreshold` (§5.2):
+it becomes `view`, drops the `validator` argument, builds the statement
+`[root, epoch, certifiedNorm]` internally, and moves threshold enforcement to
+the manager. Every parameter they mention has a provenance:
 
 | Parameter | Value | Provenance |
 |-----------|-------|------------|
 | `Θ` (admission threshold) | `1.0` | Payment Rule; frozen at genesis |
 | `C_R(r)` | `0.8r/(1+r)` | Reputation Dynamics / Payment Rule (closed form) |
 | `C_R^∞`, `S_min` | `0.8`, `0.2` | `verification/mechanism/financial_floor_sensitivity.py` |
-| `Θ_r` (Frobenius threshold) | `0.5` **[CONJECTURE]** | ZK section |
+| `Θ_r` (Frobenius threshold) | `0.5` **[CONJECTURE]** | ZK section [CONJECTURE]; enforced in `AVIPValidatorManager`, not in the registry (§5.2.2) |
 | `C·D·H` (tensor size) | `500` | Tensor Compression |
 | `γ` (freshness) | `0.10` | Data Layer; `simulate_data_layer_v3.py` |
 | `S_slash` | `10` | Data Layer; `simulate_data_layer_v3.py` |
 | `q99` (right tail) | `9.0542` | Collusion; `calibration_modularity.py` |
 | left-tail boundary | `−λ_min > 9.1371` | Collusion; `bipartite_power.py` |
+| `F0_STAR` (uniform posted price) | `5e16` (0.05) | Payment Rule (main.tex §6.4); enforced in `AVIPValidatorManager`; IR-safe lower bound on the admissible domain, whose true optimum is 0.07666... (§5.2.3) |
 
 ## 7. Conventions for new code
 
