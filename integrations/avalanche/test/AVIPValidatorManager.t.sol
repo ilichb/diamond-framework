@@ -47,8 +47,9 @@ import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
 ///   admissible domain is *recorded* in the plan (§5.2.3), not asserted here:
 ///   the sealed `verification/mechanism/` scripts describe the unrestricted
 ///   domain, and no fee is collected on-chain in M2.
-/// - Reputation weights (M4), the RMT detector, the data layer that decides a
-///   slash (M7), and gas or latency: not asserted.
+/// - Reputation weights and voting power dynamics (M6), the RMT detector (M5),
+///   the data layer that decides a slash (M7), custody and fund movement (M8),
+///   and gas or latency: not asserted.
 contract AVIPValidatorManagerTest is Test {
     uint256 internal constant ONE = 1e18;
     uint256 internal constant THETA = 1e18;

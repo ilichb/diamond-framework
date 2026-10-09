@@ -30,9 +30,11 @@ import {IAVIPValidatorManager} from "./interfaces/IAVIPValidatorManager.sol";
 ///          rule (`!isAdmitted[validator]`).
 ///
 ///      NOT implemented here, deliberately:
-///        - **custody.** `financialStake` is declared, not escrowed; there is no
-///          token transfer in this contract (§5.2.3, treasury module later);
-///        - **reputation weights** / voting power (M4);
+///        - **custody** and slashing fund management (deferred to M8, the
+///          Treasury Module): `financialStake` is declared, not escrowed, and
+///          there is no token transfer in this contract (§5.2.3). M2 exposes the
+///          `F0*`/`S_f*` policy but holds no funds, so there is nothing to seize;
+///        - **reputation weights** / voting power dynamics (deferred to M6);
 ///        - **the data layer** that decides a slash: this contract only receives
 ///          the decision, from one authorised address (M7).
 contract AVIPValidatorManager is IAVIPValidatorManager {
