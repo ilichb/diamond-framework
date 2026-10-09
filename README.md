@@ -6,8 +6,8 @@
 
 [![Status: research in progress](https://img.shields.io/badge/status-research%20in%20progress-yellow)](#status)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](verification)
-[![Solidity 0.8.24](https://img.shields.io/badge/solidity-0.8.24-blue)](integrations/avalanche)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](verification)
+[![Solidity 0.8.33](https://img.shields.io/badge/solidity-0.8.33-blue)](integrations/avalanche)
 [![Paper: in revision](https://img.shields.io/badge/paper-in%20revision-orange)](docs/paper)
 
 [Overview](#overview) · [Status](#status) · [Repository layout](#repository-layout) ·
@@ -46,7 +46,10 @@ The core insight is an opportunity-cost argument:
 - **Not a finished protocol.** Sections 2 through 11 are written and verified; the open items are external audit, real-data calibration, and testnet benchmarks.
 - **Not audited.** No external security review has been performed and nothing here is deployed to mainnet.
 - **Not formally verified.** All proofs are mathematical arguments, not machine-checked proofs.
-- **Not a production implementation.** `src/` contains reference implementations, not production code.
+- **Not a production implementation.** `src/` holds the layout of the off-chain components
+  (`reputation/`, `rmt/`, `zk/`) and their design notes; the implementations themselves are
+  not written yet. What exists, what is missing and in what order it is being built is in
+  [`docs/architecture/implementation-plan.md`](docs/architecture/implementation-plan.md).
 
 ---
 
@@ -82,10 +85,11 @@ diamond-framework/
 │   ├── audit/            # numerical verification log + falsification history
 │   └── paper/            # theoretical paper (PDF / LaTeX)
 ├── integrations/
-│   └── avalanche/        # chain integration reference code
-│       ├── contracts/    # Solidity 0.8.24
-│       └── scripts/      # deployment and benchmarking
-├── src/                  # reference implementations (not production code)
+│   └── avalanche/        # chain integration (Foundry, solc 0.8.33)
+│       ├── benchmarks/   # gas benchmarks (separate Foundry project)
+│       ├── contracts/    # on-chain code (registry implemented; rest pending)
+│       └── scripts/      # deployment scripts (not written yet)
+├── src/                  # off-chain layers: design notes only, not implemented
 │   ├── reputation/       # reputation dynamics
 │   ├── rmt/              # spectral collusion detection
 │   └── zk/               # threshold proof circuits

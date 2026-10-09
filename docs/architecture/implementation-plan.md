@@ -21,12 +21,14 @@ The repository contains three things today, all verified:
    harness, an audit gate G1–G11 and a tamper-evident anchor),
 3. the **EVM gas benchmarks** (`integrations/avalanche/benchmarks/`, Foundry).
 
-The repository does **not** contain the protocol. `src/reputation/`,
-`src/rmt/`, `src/zk/`, `integrations/avalanche/contracts/` and
-`integrations/avalanche/scripts/` are placeholder directories holding only a
-`.gitkeep`. `avalanche-integration.md` §*Status of the code* states it
-explicitly: `AVIPRegistry.sol`, `AVIPValidatorManager.sol` and the off-chain
-prover are *"specified in this document but not yet implemented"*.
+The repository did **not** contain the protocol when this plan was written.
+`src/reputation/`, `src/rmt/`, `src/zk/`, `integrations/avalanche/contracts/`
+and `integrations/avalanche/scripts/` were placeholder directories holding only
+a `.gitkeep`, and `avalanche-integration.md` §*Status of the code* said exactly
+that: `AVIPRegistry.sol`, `AVIPValidatorManager.sol` and the off-chain prover
+were *"specified in this document but not yet implemented"*. The first
+implementation now exists — `AVIPRegistry.sol` (milestone M1, §5) — and every
+other gap keeps the status it had.
 
 This plan closes that gap. It does not reopen what is already verified: the
 paper's claims, their scripts and their anchor are inputs, not work items.
@@ -51,6 +53,7 @@ submission.
 | Numerical record | `docs/audit/numerical-verification.md` | **yes** (pair #9) |
 | Content audit (C-01…C-50) | `docs/audit/content-audit-pending.md` | **yes** (pair #10) |
 | Gas benchmarks (Foundry) | `integrations/avalanche/benchmarks/` | no |
+| Reputation registry (M1) | `integrations/avalanche/contracts/AVIPRegistry.sol` + `test/AVIPRegistry.t.sol` | no |
 
 Local gate status at the time of writing: `PASS=11 FAIL=0 SKIP=0`;
 `bash verification/fase0_anchor.sh --check` exits 0
@@ -72,15 +75,17 @@ Local gate status at the time of writing: `PASS=11 FAIL=0 SKIP=0`;
 | A10 | Unit tests for everything above | required by `CONTRIBUTING.md` |
 | A11 | Deferred benchmarks (recursive SNARK proving time, Teleporter latency) | paper §9.4; architecture §7 |
 
-### 2.3 Documental inconsistencies (cheap, zero anchor risk)
+Status: **A1 is closed** by M1 (§5). A2–A11 are open.
 
-| # | Inconsistency | Evidence |
-|---|---------------|----------|
-| B1 | README says `src/` contains "reference implementations" — it held only `.gitkeep` | `README.md:49` |
-| B2 | README badge requires "Python 3.11+"; this machine has 3.10.12 and the suite passes | `README.md:9` |
-| B3 | `benchmarks/README.md` is `forge init` boilerplate; it does not document the benchmark | 64 generic lines |
-| B4 | `CITATION.cff` publishes a GitHub `url` and a release date for a private, unreleased repo | `CITATION.cff` |
-| B5 | The paper cites **solc 0.8.33**; the README badge and the benchmark artefact cite **0.8.24** | `main.tex:1172` vs `README.md:10`, `benchmarks/results/gas_ingest_output.txt:4` |
+### 2.3 Documental inconsistencies (closed in P2; zero anchor risk)
+
+| # | Inconsistency | Evidence | Resolution |
+|---|---------------|----------|------------|
+| B1 | README said `src/` holds "reference implementations"; it held only `.gitkeep` | `README.md:49` | README now says the off-chain layers are design notes, links this plan, and the layout block no longer claims "reference code" |
+| B2 | README badge required "Python 3.11+"; this machine runs 3.10.12 and the suite passes | `README.md:9` | badge lowered to 3.10+ |
+| B3 | `benchmarks/README.md` was `forge init` boilerplate; it did not document the benchmark | 64 generic lines | rewritten: what is measured, how to reproduce it offline, artefact provenance, what is **not** tested |
+| B4 | `CITATION.cff` published a GitHub `url` and a release date for a private, unreleased repo | `CITATION.cff` | `url` and `date-released` removed; an `abstract` states there is no release, tag or DOI |
+| B5 | The paper cites **solc 0.8.33**; the README badge and one benchmark artefact cite **0.8.24** | `main.tex:1172` vs `benchmarks/results/gas_ingest_output.txt:4` | badge aligned to 0.8.33, which is what both Foundry projects pin; the 0.8.24 artefact is left untouched as evidence and its provenance is documented in `benchmarks/README.md` |
 
 ### 2.4 Paper apparatus gaps (require a re-anchor — later phase)
 
@@ -158,7 +163,7 @@ claim they trace to; **no invented constants**.
 
 | # | Milestone | Gap | Deliverable | Acceptance |
 |---|-----------|-----|-------------|------------|
-| M1 | Reputation registry | A1 | `contracts/AVIPRegistry.sol` | Merkle root per epoch; inclusion proof; rejects a root violating `γ·N = 0.10·500` (Data Layer) |
+| M1 | Reputation registry | A1 | `contracts/AVIPRegistry.sol` — **done** | Merkle root per epoch; inclusion proof; rejects a root violating `γ·N = 0.10·500` (Data Layer) |
 | M2 | Validator manager | A2 | `contracts/AVIPValidatorManager.sol` | `S_f*(T) = max{0.2, Θ − C_R(T)}` with `C_R(r)=0.8r/(1+r)`; admission and slashing events; vectors match `verification/mechanism/` |
 | M3 | ZK verifier | A3 | `contracts/verifiers/Groth16Verifier.sol` | Groth16 k=4 over BN254 via 0x06/0x07/0x08; gas ≈ 206k (cross-check `GasBenchmarks.sol`) |
 | M4 | Off-chain prover | A4, A11 | `src/zk/` (Rust) | Pedersen commit of the 500-entry tensor; Bulletproofs proof (0 R1CS, ~0.72 KB); recursive SNARK; reports local proving time |
@@ -172,6 +177,29 @@ separate milestone: it is a gate on every milestone. A11 is split:
 the recursive SNARK proving time is delivered by M4; the Teleporter latency
 stays deferred until a live testnet exists.
 
+### 5.1 M1 as delivered
+
+`contracts/AVIPRegistry.sol` + `test/AVIPRegistry.t.sol` (30 tests,
+`forge test --offline` green). Accepted:
+
+- one Merkle root per epoch, 0-based and strictly sequential (`postCommitment`
+  rejects gaps, re-posting and a zero root);
+- inclusion proofs under the convention documented in the contract
+  (`keccak256` leaf prefix, sorted pairs, single-leaf root = leaf hash), checked
+  against an 8-leaf tree and against the full 500-leaf tensor;
+- a declared delta above the freshness bound `γ·N = 0.10 × 500 = 50` is
+  rejected with `FreshnessViolation`; genesis must declare the whole tensor.
+
+Boundaries that are **not** covered by M1 and must not be assumed from it:
+
+- The freshness bound is enforced on the delta the sequencer **declares**. The
+  registry does not hold the tensor and cannot recompute it; the paper places
+  soundness on the data layer's fraud proof (gap A7, milestone M7).
+- `verifyThreshold` binds the proof to `(root, epoch)` and forwards it to
+  `IZKThresholdVerifier`, but that verifier does not exist yet: the tests use a
+  mock, so no claim is made about the pairing check or the recursive SNARK (M3).
+- No admission, slashing or reputation-weight logic (M2).
+
 ## 6. Interfaces and parameter provenance
 
 The contract boundary is fixed by three **provisional interfaces** (types only,
@@ -179,12 +207,15 @@ no logic):
 
 | File | Key surface |
 |------|-------------|
-| `contracts/interfaces/IAVIPRegistry.sol` | `postCommitment(epoch, root)`, `commitmentOf(epoch)`, `tensorSize()`, `verifyEntry(root, leaf, proof)`, `verifyThreshold(epoch, validator, proof)` |
+| `contracts/interfaces/IAVIPRegistry.sol` | `postCommitment(epoch, root, changedEntries)`, `commitmentOf(epoch)`, `changedEntriesOf(epoch)`, `tensorSize()`, `maxDeltaEntries()`, `latestEpoch()`, `verifyEntry(root, leaf, proof)`, `verifyThreshold(epoch, validator, proof)` |
 | `contracts/interfaces/IAVIPValidatorManager.sol` | `stakeOf`, `collateralOf`, `requiredStake`, `isAdmitted`, `admit`, `slash(validator, amount, reason)` |
 | `contracts/interfaces/IZKThresholdVerifier.sol` | `verify(a, b, c, publicInputs)` (Groth16 shape over BN254) |
 
 They are provisional: a signature change is not a breaking change while nothing
-is deployed. Every parameter they mention has a provenance:
+is deployed. M1 changed exactly one signature — `postCommitment` now carries the
+declared epoch delta, because the freshness rule of the Data Layer needs it —
+and added the readers that rule implies. Every parameter they mention has a
+provenance:
 
 | Parameter | Value | Provenance |
 |-----------|-------|------------|
@@ -217,6 +248,9 @@ is deployed. Every parameter they mention has a provenance:
 - **Numbers**: any numeric constant in code carries a provenance comment
   (paper section or `verification/` script). Unsupported constants are rejected
   in review.
+- **Lint**: `forge build` and `forge lint` stay silent. A lint that cannot be
+  fixed without hurting readability is excluded **by id** in `foundry.toml`
+  with its reason written next to it (today: `asm-keccak256`).
 
 ## 8. Testing policy
 
@@ -265,10 +299,10 @@ stable — the same reason the protection phase is last.
 | # | Decision | Options | Recommendation |
 |---|----------|---------|----------------|
 | D-1 | Language of `src/` | Rust (as the architecture's prover) vs Python | **Rust** — the architecture names a Rust prover and `cargo` is available; Python is already the language of `verification/`, which stays as-is |
-| D-2 | `AVIP` prefix | Expand it (`Andromeda Validator Incentive Protocol…`) vs keep the acronym | Decide before M1 so the contract names are final |
+| D-2 | `AVIP` prefix | Expand it (`Andromeda Validator Incentive Protocol…`) vs keep the acronym | Still open. M1 landed with the architecture's names, so the decision no longer blocks M1; it now only affects how the prefix is documented |
 | D-3 | Foundry project layout | New project at `integrations/avalanche/` (current) vs moving the benchmarks inside it | **Keep current**: the benchmarks are cited by the paper and by C-20; moving them would invalidate their recorded paths |
 | D-4 | Code license vs paper license | MIT for code (already) and separate license for the paper | Decide in the protection phase |
-| D-5 | solc drift | Paper says 0.8.33, badge says 0.8.24, machine has 0.8.33 | Align the badge to 0.8.33 (gap B5) and pin 0.8.33 in `foundry.toml` (already done) |
+| D-5 | solc drift | Paper says 0.8.33, badge said 0.8.24, machine has 0.8.33 | **Closed in P2**: badge aligned to 0.8.33, both Foundry projects pin 0.8.33; the one 0.8.24 artefact is documented, not edited |
 
 ## 11. Out of scope here
 
@@ -283,24 +317,32 @@ stable — the same reason the protection phase is last.
 
 | Phase | Content | Anchor risk |
 |-------|---------|-------------|
-| **P1 (now)** | This plan + Foundry skeleton + provisional interfaces | none |
-| P2 | B-gaps: align README/CITATION/quota with reality (B1–B5) | none |
-| P3 | M1 → M2 → M3 (on-chain core) | none |
+| **P1 (done)** | This plan + Foundry skeleton + provisional interfaces | none |
+| **P2 (done)** | B-gaps: README, `CITATION.cff`, benchmark README, badges aligned with reality (B1–B5) | none |
+| **P3 (in progress — M1 done)** | M1 ✅ → M2 → M3 (on-chain core) | none |
 | P4 | M4 → M5 → M6 (off-chain) | none |
 | P5 | M7 (data layer, deploy scripts, AWM) | none |
 | P6 | C-gaps: paper apparatus (C1–C4), one batch | **re-anchor** |
 | P7 | Protection + arXiv | **re-anchor** if `main.tex` changes |
 
-**Immediate next step: M1 — `AVIPRegistry.sol` + `test/AVIPRegistry.t.sol`.**
+**Next step: M2 — `AVIPValidatorManager.sol` + `test/AVIPValidatorManager.t.sol`**
+(hybrid admission `CoA = S_f + C_R(T) >= Θ` and the slashing rule, with vectors
+matched against `verification/mechanism/`).
 
-Delivered by P1 (this change set): `docs/architecture/implementation-plan.md`,
+Delivered by P1: `docs/architecture/implementation-plan.md`,
 `integrations/avalanche/foundry.toml`, `integrations/avalanche/.gitignore`,
-`contracts/README.md`, `contracts/interfaces/{IAVIPRegistry,IAVIPValidatorManager,IZKThresholdVerifier}.sol`,
-`test/README.md`, `scripts/README.md`, `src/README.md`. Validated locally:
-`forge build --offline` → *"Compiling 3 files with Solc 0.8.33 — Compiler run
-successful!"*; no file in the sealed list (§3) was touched.
+`contracts/README.md`,
+`contracts/interfaces/{IAVIPRegistry,IAVIPValidatorManager,IZKThresholdVerifier}.sol`,
+`test/README.md`, `scripts/README.md`, `src/README.md`.
 
+Delivered by P2: the B-gap fixes listed in §2.3 — `README.md` (badges B2/B5, `src/`
+description B1, layout block), `CITATION.cff` (B4) and
+`integrations/avalanche/benchmarks/README.md` (B3, plus the B5 provenance note).
 
-
-
-
+Delivered by M1: `contracts/AVIPRegistry.sol`,
+`contracts/interfaces/IAVIPRegistry.sol` (signature + errors + readers),
+`test/AVIPRegistry.t.sol`, `contracts/.gitkeep` removed, and the `[lint]` block
+in `foundry.toml`. Validated locally: `forge build --offline --force` → *clean
+compile with Solc 0.8.33, no warnings*; `forge test --offline` → *30 passed, 0
+failed* for the registry suite, with the 10 pre-existing benchmark tests still
+passing. No file in the sealed list (§3) was touched.

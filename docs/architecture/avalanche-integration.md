@@ -9,11 +9,13 @@ integration is specified but not yet deployed to a live network. The
 benchmarks reported here are local.
 
 **Status of the code.** The repository contains the gas benchmarks
-(`integrations/avalanche/benchmarks/`) and placeholder directories for
-the contracts and the deployment scripts. `AVIPRegistry.sol`,
-`AVIPValidatorManager.sol` and the off-chain prover are specified in
-this document but not yet implemented. Nothing described here has been
-deployed to a live network, and none of it has been audited.
+(`integrations/avalanche/benchmarks/`) and the first protocol contract,
+`AVIPRegistry.sol` (milestone M1 of
+[`implementation-plan.md`](implementation-plan.md)), with its unit tests.
+`AVIPValidatorManager.sol`, the on-chain verifier, the deployment scripts and
+the off-chain prover are specified in this document but not yet implemented.
+Nothing described here has been deployed to a live network, and none of it has
+been audited.
 
 ## 1. Target Architecture
 

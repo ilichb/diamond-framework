@@ -21,8 +21,10 @@ cache_path = "cache"
 remappings = ["forge-std/=benchmarks/lib/forge-std/src/"]
 # solc 0.8.33: it is the version the paper cites for the gas measurements
 # (main.tex §9: "a local Foundry instance with Solc 0.8.33") and the only
-# version installed on this machine (~/.local/share/svm/0.8.33). The badge in
-# README.md still says 0.8.24 — tracked as gap B5 in the implementation plan.
+# version installed on this machine (~/.local/share/svm/0.8.33). The README
+# badge was aligned to 0.8.33 when gap B5 was closed; the one artefact still
+# produced with 0.8.24 is benchmarks/results/gas_ingest_output.txt, whose
+# provenance is documented in benchmarks/README.md.
 solc = "0.8.33"
 # Avalanche C-Chain is Cancun-equivalent (Etna); do not target Prague.
 evm_version = "cancun"
@@ -33,3 +35,11 @@ optimizer = false
 [fmt]
 line_length = 100
 tab_width = 4
+
+[lint]
+# `asm-keccak256` suggests replacing `keccak256(abi.encodePacked(...))` with a
+# hand-written assembly loop. The inclusion-proof hashing is kept readable on
+# purpose: the gas optimisation is a tracked item (implementation plan §7), not
+# something to apply before there is a gas budget to hit.
+exclude_lints = ["asm-keccak256"]
+

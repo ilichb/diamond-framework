@@ -1,6 +1,8 @@
 # `integrations/avalanche/test/` — Foundry tests
 
-Status: **empty**. No test exists yet because no implementation exists yet.
+Status: **`AVIPRegistry.t.sol`** — 30 tests over the M1 registry, green with
+`forge test --offline`. `AVIPValidatorManager.t.sol` does not exist yet, because
+that contract does not exist yet.
 
 ## Rule (from `CONTRIBUTING.md`)
 
