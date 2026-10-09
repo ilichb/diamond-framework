@@ -14,10 +14,15 @@ claim in the Diamond Framework paper.
 - `data-layer/` — Fraud proof incentive equilibrium.
 - `bootstrap/` — Genesis transition and reputation models.
 
-Three helpers orchestrate and check the suite; they are not part of the
-numbered claims: `run_all.sh` (harness), `audit-gate.sh` (guards G1..G10) and
+Three shell helpers orchestrate and check the suite; they are not part of the
+numbered claims: `run_all.sh` (harness), `audit-gate.sh` (guards G1..G11) and
 `fase0_anchor.sh` (Fase 0 anchor generator — `--check` re-derives the anchor
-into a temporary directory and diffs it against the committed one).
+into a temporary directory and diffs it against the committed one). A fourth
+helper, `verification/eip_cost_check.py`, is the script behind guard G7: it
+recomputes the EIP gas cost recorded as F-017 and exits 0. It is not a numbered
+entry either, and it is why `find verification -maxdepth 2 -name '*.py'` counts
+36 while the catalogue lists 35 — the extra `.py` writes no output (see
+`docs/audit/post-closure-audit.md:136`).
 
 ## Running
 
