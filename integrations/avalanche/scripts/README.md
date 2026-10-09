@@ -1,8 +1,10 @@
 # `integrations/avalanche/scripts/` — Deployment scripts
 
 Status: **empty**. Nothing is deployed anywhere: not to mainnet, not to a
-testnet. See `docs/architecture/avalanche-integration.md` §6 (Deployment
-Phases) and §3 (statement that nothing here has been audited).
+testnet. Neither M1 nor M2 added a script — deployment belongs to M7/P5
+(`docs/architecture/implementation-plan.md` §12). See
+`docs/architecture/avalanche-integration.md` §6 (Deployment Phases) and §3
+(statement that nothing here has been audited).
 
 ## Intended layout
 

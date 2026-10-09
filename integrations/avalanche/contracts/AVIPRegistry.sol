@@ -7,10 +7,14 @@ import {IZKThresholdVerifier} from "./interfaces/IZKThresholdVerifier.sol";
 /// @title AVIPRegistry
 /// @notice Reputation registry of the Diamond Framework on the C-Chain: one
 ///         Merkle root per epoch over the reputation tensor `T`
-///         (`N = C*D*H = 500` entries), plus validation of the threshold proof
-///         `||T||_F >= Theta_r`.
+///         (`N = C*D*H = 500` entries), plus verification of the succinct proof
+///         that the committed tensor has Frobenius norm `certifiedNorm`.
 ///
-/// @dev Milestone M1 of `docs/architecture/implementation-plan.md`.
+/// @dev Milestone M1 of `docs/architecture/implementation-plan.md`, amended by
+///      M2 §5.2. The registry certifies the *exact* norm and stays `view` (it
+///      keeps no per-validator state, so no caller can lock another validator
+///      out); the admission threshold `||T||_F >= Theta_r` is enforced by
+///      `AVIPValidatorManager` (§5.2.2).
 ///
 ///      Freshness (paper, Data Layer: "two consecutive epochs cannot differ in
 ///      more than `gamma * N` entries", `gamma = 0.10`, `N = 500`): the
@@ -50,10 +54,6 @@ contract AVIPRegistry is IAVIPRegistry {
     ///         while no verifier is configured, in which case
     ///         `verifyThreshold` reverts instead of accepting anything.
     IZKThresholdVerifier public verifier;
-
-    /// @notice Whether `(epoch, validator)` already produced an accepted
-    ///         threshold proof.
-    mapping(uint256 => mapping(address => bool)) public thresholdProven;
 
     mapping(uint256 => bytes32) private _roots;
     mapping(uint256 => uint32) private _changedEntries;
@@ -158,36 +158,28 @@ contract AVIPRegistry is IAVIPRegistry {
     }
 
     /// @inheritdoc IAVIPRegistry
-    function verifyThreshold(uint256 epoch, address validator, bytes calldata proof)
+    function verifyThreshold(uint256 epoch, uint256 certifiedNorm, bytes calldata proof)
         external
+        view
         returns (bool)
     {
         bytes32 root = _roots[epoch];
         if (root == bytes32(0)) revert UnknownEpoch(epoch);
-        if (validator == address(0)) revert ZeroValidator();
-        if (thresholdProven[epoch][validator]) revert ThresholdAlreadyProven(epoch, validator);
 
         IZKThresholdVerifier currentVerifier = verifier;
         if (address(currentVerifier) == address(0)) revert VerifierNotSet();
 
-        (
-            uint256[2] memory a,
-            uint256[2][2] memory b,
-            uint256[2] memory c,
-            uint256[] memory publicInputs
-        ) = abi.decode(proof, (uint256[2], uint256[2][2], uint256[2], uint256[]));
+        (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c) =
+            abi.decode(proof, (uint256[2], uint256[2][2], uint256[2]));
 
-        // Bind the proof to this epoch's commitment: a proof for one root
-        // cannot be replayed against another epoch's root.
-        if (publicInputs.length < 2) revert PublicInputMismatch();
-        if (publicInputs[0] != uint256(root) || publicInputs[1] != epoch) {
-            revert PublicInputMismatch();
-        }
+        // The statement is built here, from this registry's own state: the
+        // caller cannot supply it, so the norm the manager uses for `C_R`
+        // cannot diverge from the norm the proof certifies (§5.2.1).
+        uint256[] memory statement = new uint256[](3);
+        statement[0] = uint256(root);
+        statement[1] = epoch;
+        statement[2] = certifiedNorm;
 
-        if (!currentVerifier.verify(a, b, c, publicInputs)) return false;
-
-        thresholdProven[epoch][validator] = true;
-        emit ThresholdProven(epoch, validator);
-        return true;
+        return currentVerifier.verify(a, b, c, statement);
     }
 }

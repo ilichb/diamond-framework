@@ -164,7 +164,7 @@ claim they trace to; **no invented constants**.
 | # | Milestone | Gap | Deliverable | Acceptance |
 |---|-----------|-----|-------------|------------|
 | M1 | Reputation registry | A1 | `contracts/AVIPRegistry.sol` — **done** | Merkle root per epoch; inclusion proof; rejects a root violating `γ·N = 0.10·500` (Data Layer) |
-| M2 | Validator manager | A2 | `contracts/AVIPValidatorManager.sol` | `S_f*(T) = max{0.2, Θ − C_R(T)}` with `C_R(r)=0.8r/(1+r)`; admission and slashing events; vectors match `verification/mechanism/` |
+| M2 | Validator manager | A2 | `contracts/AVIPValidatorManager.sol` — **done** | `S_f*(T) = max{0.2, Θ − C_R(T)}` with `C_R(r)=0.8r/(1+r)`; admission and slashing events; vectors match `verification/mechanism/` |
 | M3 | ZK verifier | A3 | `contracts/verifiers/Groth16Verifier.sol` | Groth16 k=4 over BN254 via 0x06/0x07/0x08; gas ≈ 206k (cross-check `GasBenchmarks.sol`) |
 | M4 | Off-chain prover | A4, A11 | `src/zk/` (Rust) | Pedersen commit of the 500-entry tensor; Bulletproofs proof (0 R1CS, ~0.72 KB); recursive SNARK; reports local proving time |
 | M5 | RMT detector | A5 | `src/rmt/` | Reproduces `q99 = 9.0542` (right tail) and `−λ_min > 9.1371` (left tail) from `verification/rmt/`, without editing it |
@@ -312,38 +312,103 @@ made until M3.
   collateral)` unchanged, exactly as `IAVIPValidatorManager` declares it, plus
   `AdmissionEvaluated(address indexed validator, uint256 epoch, uint256
   certifiedNorm, uint256 collateral, uint256 requiredStake)` for audit
-  traceability of the certified norm and the amounts derived from it.
+  traceability of the certified norm and the amounts derived from it, plus
+  `ValidatorEjected(address indexed validator, uint256 stake, uint256
+  requiredStake)` — see the next bullet.
+- **Slashing revokes the admission, it does not zero the stake.** `slash` is
+  authority-only and bounded by `stakeOf`, and when the remaining stake falls
+  below `requiredStake` the validator is ejected. This is a design decision taken
+  while implementing M2, not a line of the plan: without it `isAdmitted` stops
+  implying `stakeOf >= S_f*`, which is the definition of admission. The stake
+  keeps whatever is left (M2 holds no funds, so there is nothing to seize), and
+  re-admission is a new `admit` call with a fresh proof for the then-current
+  epoch. `M2` also leaves the *consequences* of an ejection (removal from the
+  validator set, weight) to M4/M7.
 - **Error migration.**
   - manager: adds `NormBelowThreshold`, `InsufficientFinancialStake`,
-    `AlreadyAdmitted`; `ZeroValidator` moves here (`admit(address)` still rejects
-    `address(0)`).
+    `AlreadyAdmitted`, `NotValidator`, `NotSlashAuthority`, `SlashExceedsStake`,
+    `ZeroRegistry`, `ZeroSlashAuthority`; `ZeroValidator` moves here (`admit`
+    still rejects `address(0)`).
   - registry: adds `InvalidZKProof`; `UnknownEpoch` is retained and becomes
     load-bearing, because the registry now reads the root from
-    `commitmentOf(epoch)`. The other seven M1 errors (`NotSequencer`,
-    `ZeroSequencer`, `ZeroRoot`, `NonSequentialEpoch`, `GenesisDelta`,
-    `FreshnessViolation`, `VerifierNotSet`) are unchanged.
+    `commitmentOf(epoch)` (it is also what reports `latestEpoch() == type(uint256).max`
+    on a registry with nothing posted). The other seven M1 errors
+    (`NotSequencer`, `ZeroSequencer`, `ZeroRoot`, `NonSequentialEpoch`,
+    `GenesisDelta`, `FreshnessViolation`, `VerifierNotSet`) are unchanged.
   - removed from the registry: `PublicInputMismatch` (no caller-supplied inputs
     left) and `ThresholdAlreadyProven`.
 - **Contract NatSpec** (contracts are not sealed, so this is safe): both
-  `AVIPRegistry.sol` (which documents "validation of the threshold proof
-  `||T||_F >= Theta_r`") and the reference-parameter block of
-  `IAVIPRegistry.sol` (which lists `Θ_r`) must be reworded to "certifies the
-  exact norm; the threshold is enforced by `AVIPValidatorManager`".
+  `AVIPRegistry.sol` and the reference-parameter block of `IAVIPRegistry.sol`
+  were reworded to "certifies the exact norm; the threshold is enforced by
+  `AVIPValidatorManager`".
 - **Verifier and mock.** `IZKThresholdVerifier` keeps the exact Groth16 shape
   `verify(uint256[2] a, uint256[2][2] b, uint256[2] c, uint256[] input)`; the
-  registry decodes the `bytes proof`. The existing `MockThresholdVerifier` moves
-  out of `AVIPRegistry.t.sol` into `test/mocks/MockThresholdVerifier.sol`, so
-  there is one mock, not two.
+  registry decodes the `bytes proof`. The existing `MockThresholdVerifier` was
+  moved out of `AVIPRegistry.t.sol` into `test/mocks/MockThresholdVerifier.sol`,
+  so there is one mock, not two. While doing so it was made to *check* rather
+  than merely answer: it requires `a[0]` to be the expected element and the
+  `keccak256` of the statement to be the expected one, so "the registry forwards
+  `(a, b, c)` unchanged" and "the registry builds `[root, epoch, certifiedNorm]`
+  itself" are asserted by the double instead of assumed. A consequence found
+  while testing: `abi.decode` does not require the whole payload to be consumed,
+  so a legacy `(a, b, c, publicInputs)` blob still decodes with the trailing
+  array unread. That is harmless — the caller cannot inject a public input either
+  way — and is now asserted as a property
+  (`test_verifyThreshold_ignoresTrailingBytesInTheProof`) rather than left as an
+  accident.
+
+### 5.3 M2 as delivered
+
+Delivered: `contracts/AVIPValidatorManager.sol`,
+`contracts/interfaces/IAVIPValidatorManager.sol` (signatures, events, errors),
+`test/AVIPValidatorManager.t.sol`, `test/mocks/MockThresholdVerifier.sol`
+(extracted from the registry test, see §5.2.4), and the §5.2 amendment applied to
+`AVIPRegistry.sol` + `IAVIPRegistry.sol` + `AVIPRegistry.t.sol`.
+
+Order of the checks in `admit` (nothing is written before the last one passes):
+`validator != 0` → `msg.sender == validator` → `!isAdmitted[validator]` →
+`certifiedNorm >= Θ_r` → `financialStake >= S_f*(certifiedNorm)` →
+`registry.verifyThreshold(registry.latestEpoch(), certifiedNorm, proof)`, whose
+`false` becomes `InvalidZKProof`.
+
+Deviations from §5.2, all deliberate and all stated in code:
+
+1. **`slash` ejects.** §5.2.4 asked only for a bounded, authority-only slash. The
+   implementation also revokes the admission when the remaining stake drops below
+   `requiredStake` (new `ValidatorEjected` event): otherwise `isAdmitted` would
+   stop implying `stakeOf >= S_f*`. The stake is not zeroed — M2 has no custody
+   and nothing to seize.
+2. **`registry` and `slashAuthority` are storage, not `immutable`.** They are
+   fixed by the constructor and have no setter; storage keeps one shape across
+   the two contracts (`AVIPRegistry` declares `sequencer`/`verifier` the same way)
+   and keeps `forge lint` silent.
+3. **`requiredStakeFor(norm)` and `collateralFor(norm)` are `public`.** §5.2 only
+   named the per-validator readers. Exposing the policy *on a norm* is what lets
+   M4 and the off-chain prover compute `C_R` and `S_f*` without reading
+   per-validator state, and what the tests use to assert monotonicity, concavity,
+   saturation and the inert floor over ranges of `r`.
+4. **A proof for an older epoch cannot be replayed.** `admit` reads
+   `registry.latestEpoch()` instead of taking an epoch argument; on a registry
+   with nothing posted that is `type(uint256).max` and the call reverts with
+   `UnknownEpoch`.
+5. **The proof blob is `(a, b, c)`** and trailing bytes are ignored by ABI
+   decoding (§5.2.4, last bullet): asserted as a property, not assumed.
+
+Validated locally: `forge build --offline --force` → clean with Solc 0.8.33, no
+warnings, no `forge lint` notes; `forge test --offline` → **66 passed** (32
+registry + 34 manager, two of them fuzz — the admission invariant and the policy);
+`bash verification/audit-gate.sh` → `PASS=11 FAIL=0`, i.e. the anchor is
+untouched, as expected since nothing under `integrations/` is sealed (§3).
 
 ## 6. Interfaces and parameter provenance
 
-The contract boundary is fixed by three **provisional interfaces** (types only,
-no logic):
+The contract boundary is fixed by three **interfaces** (types only, no logic —
+M1 and M2 now implement two of them):
 
 | File | Key surface |
 |------|-------------|
 | `contracts/interfaces/IAVIPRegistry.sol` | `postCommitment(epoch, root, changedEntries)`, `commitmentOf(epoch)`, `changedEntriesOf(epoch)`, `tensorSize()`, `maxDeltaEntries()`, `latestEpoch()`, `verifyEntry(root, leaf, proof)`, `verifyThreshold(epoch, certifiedNorm, proof)` (view) |
-| `contracts/interfaces/IAVIPValidatorManager.sol` | `stakeOf`, `collateralOf`, `requiredStake`, `isAdmitted`, `admit`, `slash(validator, amount, reason)`; events `ValidatorAdmitted(validator, stake, collateral)`, `AdmissionEvaluated(validator, epoch, certifiedNorm, collateral, requiredStake)` |
+| `contracts/interfaces/IAVIPValidatorManager.sol` | `stakeOf`, `collateralOf`, `requiredStake`, `isAdmitted`, `admit(validator, financialStake, certifiedNorm, proof)`, `slash(validator, amount, reason)`; events `ValidatorAdmitted(validator, stake, collateral)`, `AdmissionEvaluated(validator, epoch, certifiedNorm, collateral, requiredStake)`, `ValidatorEjected(validator, stake, requiredStake)` |
 | `contracts/interfaces/IZKThresholdVerifier.sol` | `verify(a, b, c, publicInputs)` (Groth16 shape over BN254) |
 
 They are provisional: a signature change is not a breaking change while nothing
@@ -381,8 +446,8 @@ the manager. Every parameter they mention has a provenance:
   excludes `*.key`/`*.pem`); no deployment script targets mainnet.
 - **Docs**: every new directory ships a `README.md` stating what exists, what
   does not, and the milestone it belongs to.
-- **Git**: one milestone per branch (`feature/m1-registry`), per
-  `CONTRIBUTING.md` §Workflow.
+- **Git**: one milestone per branch (`feature/m1-registry`,
+  `feature/m2-validator-manager`), per `CONTRIBUTING.md` §Workflow.
 - **Numbers**: any numeric constant in code carries a provenance comment
   (paper section or `verification/` script). Unsupported constants are rejected
   in review.
@@ -457,15 +522,17 @@ stable — the same reason the protection phase is last.
 |-------|---------|-------------|
 | **P1 (done)** | This plan + Foundry skeleton + provisional interfaces | none |
 | **P2 (done)** | B-gaps: README, `CITATION.cff`, benchmark README, badges aligned with reality (B1–B5) | none |
-| **P3 (in progress — M1 done)** | M1 ✅ → M2 → M3 (on-chain core) | none |
+| **P3 (in progress — M1, M2 done)** | M1 ✅ → M2 ✅ → M3 (on-chain core) | none |
 | P4 | M4 → M5 → M6 (off-chain) | none |
 | P5 | M7 (data layer, deploy scripts, AWM) | none |
 | P6 | C-gaps: paper apparatus (C1–C4), one batch | **re-anchor** |
 | P7 | Protection + arXiv | **re-anchor** if `main.tex` changes |
 
-**Next step: M2 — `AVIPValidatorManager.sol` + `test/AVIPValidatorManager.t.sol`**
-(hybrid admission `CoA = S_f + C_R(T) >= Θ` and the slashing rule, with vectors
-matched against `verification/mechanism/`).
+**Next step: M3 — `contracts/verifiers/Groth16Verifier.sol`** (Groth16 k=4 over
+BN254 through precompiles `0x06`/`0x07`/`0x08`, gas ≈ 206k cross-checked against
+`benchmarks/GasBenchmarks.sol`), so that `AVIPRegistry.verifyThreshold` stops
+calling a mock and `Θ_r = 0.5` `[CONJECTURE]` acquires a real circuit and trusted
+setup.
 
 Delivered by P1: `docs/architecture/implementation-plan.md`,
 `integrations/avalanche/foundry.toml`, `integrations/avalanche/.gitignore`,
@@ -484,3 +551,13 @@ in `foundry.toml`. Validated locally: `forge build --offline --force` → *clean
 compile with Solc 0.8.33, no warnings*; `forge test --offline` → *30 passed, 0
 failed* for the registry suite, with the 10 pre-existing benchmark tests still
 passing. No file in the sealed list (§3) was touched.
+
+Delivered by M2: `contracts/AVIPValidatorManager.sol`,
+`contracts/interfaces/IAVIPValidatorManager.sol` (signature, events, errors),
+`test/AVIPValidatorManager.t.sol`, the shared
+`test/mocks/MockThresholdVerifier.sol`, and the §5.2 amendment applied to
+`AVIPRegistry.sol` / `IAVIPRegistry.sol` / `AVIPRegistry.t.sol` (§5.3 itemises the
+deviations). Validated locally: `forge build --offline --force` → clean with Solc
+0.8.33, no warnings; `forge test --offline` → *66 passed, 0 failed* (32 registry +
+34 manager); `bash verification/audit-gate.sh` → *PASS=11, FAIL=0*, because
+nothing under `integrations/` is sealed.

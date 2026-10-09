@@ -6,20 +6,29 @@ pragma solidity ^0.8.24;
 ///         epoch over the reputation tensor `T` and validates the
 ///         zero-knowledge threshold proof.
 ///
-/// @dev PROVISIONAL INTERFACE. There is no implementation yet (milestone M1).
-///      The boundary below is derived from
-///      `docs/architecture/avalanche-integration.md` §1-§3 and from the paper:
+/// @dev Implemented by `AVIPRegistry.sol` (milestone M1, amended by M2 §5.2 of
+///      `docs/architecture/implementation-plan.md`). The boundary below is
+///      derived from `docs/architecture/avalanche-integration.md` §1-§3 and
+///      from the paper:
 ///
 ///        - admission rule      `CoA(i) = S_f(i) + C_R(T(i)) >= Theta(t)`
-///                              (main.tex, section "Payment Rule")
-///        - threshold predicate `||T||_F >= Theta_r`
-///                              (main.tex, section "Zero-Knowledge Threshold Proof")
+///                              (main.tex, section "Payment Rule"); enforced by
+///                              `AVIPValidatorManager`, NOT by the registry.
+///        - certified norm      `||T||_F = certifiedNorm`
+///                              (main.tex, section "Zero-Knowledge Threshold
+///                              Proof"). The registry certifies the exact norm;
+///                              the threshold `||T||_F >= Theta_r` is enforced
+///                              by `AVIPValidatorManager` (§5.2.2).
 ///
 ///      Reference parameters (design constants, not measured here):
 ///        - `Theta   = 1.0`            admission threshold, frozen at genesis
-///        - `Theta_r = 0.5`            [CONJECTURE], main.tex
 ///        - `C*D*H   = 500` entries    reference tensor configuration
 ///        - `gamma   = 0.10`           epoch freshness bound (Data Layer)
+///
+///      `Theta_r = 0.5` [CONJECTURE] is deliberately NOT a registry parameter:
+///      the circuit proves equality (`||T||_F = certifiedNorm`) and the economic
+///      threshold lives in `AVIPValidatorManager`, so changing it does not
+///      require a new trusted-setup ceremony (§5.2.2).
 ///
 ///      The registry does NOT store the tensor: it stores roots and verifies
 ///      inclusion proofs for the entries the admission rule needs
@@ -35,9 +44,6 @@ interface IAVIPRegistry {
         uint256 indexed epoch, bytes32 root, uint32 changedEntries, uint64 timestamp
     );
 
-    /// @notice Emitted when a threshold proof is accepted for a validator.
-    event ThresholdProven(uint256 indexed epoch, address indexed validator);
-
     error NotSequencer(address caller);
     error ZeroSequencer();
     error ZeroRoot();
@@ -45,10 +51,16 @@ interface IAVIPRegistry {
     error GenesisDelta(uint32 changedEntries, uint32 tensorSize);
     error FreshnessViolation(uint32 changedEntries, uint32 maxDeltaEntries);
     error UnknownEpoch(uint256 epoch);
-    error ZeroValidator();
     error VerifierNotSet();
-    error PublicInputMismatch();
-    error ThresholdAlreadyProven(uint256 epoch, address validator);
+
+    /// @notice A proof that fails the pairing check is a *verdict*, not a
+    ///         registry error: `verifyThreshold` returns `false` for it, the
+    ///         same shape as `verifyEntry`. This error is how the admission
+    ///         layer turns that verdict into a revert:
+    ///         `AVIPValidatorManager.admit` raises it (§5.2.4). Declared here
+    ///         because it names a property of the proof, and raised there
+    ///         because admission, not verification, is the decision.
+    error InvalidZKProof();
 
     /// @notice Posts the Merkle root of the reputation tensor for `epoch`.
     /// @dev Enforces the freshness constraint of the paper's Data Layer section
@@ -92,16 +104,24 @@ interface IAVIPRegistry {
         view
         returns (bool);
 
-    /// @notice Validates the threshold proof `||T||_F >= Theta_r` for
-    ///         `validator` against the commitment of `epoch`.
-    /// @dev `proof` decodes to `(a, b, c, publicInputs)`. The registry enforces
-    ///      `publicInputs[0] == uint256(commitmentOf(epoch))` and
-    ///      `publicInputs[1] == epoch` before delegating the pairing check to
-    ///      `IZKThresholdVerifier`; the layout of the remaining public inputs is
-    ///      fixed by the verifier milestone (M3).
-    ///      Not `view`: a proof accepted once for `(epoch, validator)` is
-    ///      recorded and cannot be replayed.
-    function verifyThreshold(uint256 epoch, address validator, bytes calldata proof)
+    /// @notice Verifies that the reputation tensor committed for `epoch` has
+    ///         Frobenius norm exactly `certifiedNorm`.
+    /// @dev `proof` decodes to the Groth16 shape `(a, b, c)` only: there is no
+    ///      caller-supplied public-input array. The registry reads
+    ///      `root = commitmentOf(epoch)` from its own state and builds the
+    ///      statement itself,
+    ///
+    ///          statement = [uint256(root), epoch, certifiedNorm]
+    ///
+    ///      so `certifiedNorm` is bound to the proof arithmetically in M3: it is
+    ///      a public input, a false value changes `vk_x` and the pairing fails.
+    ///      A `false` return means the verifier rejected the proof; the only
+    ///      reverts are configuration errors (`UnknownEpoch`, `VerifierNotSet`).
+    ///      `view` on purpose: the registry keeps no per-validator state, so no
+    ///      caller can consume another validator's proof slot. Anti-replay lives
+    ///      in `AVIPValidatorManager` (`!isAdmitted[validator]`), §5.2.4.
+    function verifyThreshold(uint256 epoch, uint256 certifiedNorm, bytes calldata proof)
         external
+        view
         returns (bool);
 }

@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {AVIPRegistry} from "../contracts/AVIPRegistry.sol";
 import {IAVIPRegistry} from "../contracts/interfaces/IAVIPRegistry.sol";
-import {IZKThresholdVerifier} from "../contracts/interfaces/IZKThresholdVerifier.sol";
+import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
 
 /// WHAT IS TESTED
 /// --------------
@@ -20,9 +20,15 @@ import {IZKThresholdVerifier} from "../contracts/interfaces/IZKThresholdVerifier
 ///    valid proofs for a single-leaf tree, an 8-leaf tree and the full 500-leaf
 ///    tensor, and rejects a tampered leaf, a foreign proof, a foreign root and
 ///    root zero.
-/// 6. Threshold delegation: the registry binds the proof to `(root, epoch)` via
-///    `publicInputs[0..1]`, forwards `(a, b, c)` unchanged, propagates the
-///    verifier's answer, records the accepted proof and rejects a replay.
+/// 6. Norm certification (M1, amended by M2 §5.2): the registry reads the root
+///    from its own state, builds the statement `[root, epoch, certifiedNorm]`,
+///    forwards `(a, b, c)` unchanged and propagates the verifier's answer. A
+///    legacy proof that still carries a caller-supplied input array decodes (the
+///    trailing bytes are ignored, never read) while a truncated one does not.
+///    The call is `view` and idempotent: the same proof verifies any number of
+///    times, so no caller can consume another validator's proof slot (this is
+///    the test that closes the M1 DoS). The registry itself enforces no
+///    threshold: `certifiedNorm = 0` is a valid statement for it.
 ///
 /// WHAT IS NOT TESTED
 /// ------------------
@@ -33,32 +39,18 @@ import {IZKThresholdVerifier} from "../contracts/interfaces/IZKThresholdVerifier
 ///   The registry does not hold the tensor, so it cannot recompute that delta:
 ///   a lying sequencer is not caught here, that is the data layer's fraud proof
 ///   (gap A7, milestone M7).
-/// - No admission, slashing or reputation-weight logic (milestone M2).
+/// - No admission, slashing or reputation-weight logic: that is
+///   `AVIPValidatorManager` (milestone M2, `test/AVIPValidatorManager.t.sol`).
+///   In particular the threshold `||T||_F >= Theta_r` is NOT enforced here
+///   (§5.2.2).
 /// - No gas or latency claim: these tests assert behaviour only.
-contract MockThresholdVerifier is IZKThresholdVerifier {
-    bool internal immutable ANSWER;
-    uint256 internal immutable EXPECTED_A0;
-
-    constructor(bool answer_, uint256 expectedA0_) {
-        ANSWER = answer_;
-        EXPECTED_A0 = expectedA0_;
-    }
-
-    function verify(
-        uint256[2] calldata a,
-        uint256[2][2] calldata,
-        uint256[2] calldata,
-        uint256[] calldata
-    ) external view returns (bool) {
-        require(a[0] == EXPECTED_A0, "mock: proof not forwarded unchanged");
-        return ANSWER;
-    }
-}
-
 contract AVIPRegistryTest is Test {
     uint32 internal constant N = 500; // C*D*H, paper "Tensor Compression"
     uint32 internal constant GAMMA_N = 50; // 0.10 * 500, paper "Data Layer"
     uint256 internal constant PROOF_A0 = 42;
+    // 0.5 in WAD. Arbitrary as far as the registry is concerned: it certifies
+    // the norm and enforces no threshold (§5.2.2).
+    uint256 internal constant NORM = 500_000_000_000_000_000;
 
     AVIPRegistry internal registry;
     address internal sequencer;
@@ -238,106 +230,176 @@ contract AVIPRegistryTest is Test {
         assertFalse(registry.verifyEntry(root, eight[3], proofs[4]));
     }
 
-    // ------------------------------------------------------ threshold proofs
+    // ------------------------------------------------------ norm certification
 
-    function test_verifyThreshold_forwardsAndRecordsTheProof() public {
-        _setVerifier(true);
+    function test_verifyThreshold_buildsTheStatementFromItsOwnState() public {
+        _setVerifier(true, epoch0Root, 0, NORM);
 
-        assertTrue(registry.verifyThreshold(0, validator, _encodeProof(PROOF_A0, epoch0Root, 0, 3)));
-        assertTrue(registry.thresholdProven(0, validator));
+        // The mock reverts unless the statement it receives is exactly
+        // `[uint256(commitmentOf(0)), 0, NORM]` (§5.2.1).
+        assertTrue(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)));
+    }
+
+    function test_verifyThreshold_bindsTheStatementToTheEpochRoot() public {
+        vm.prank(sequencer);
+        registry.postCommitment(1, keccak256("epoch-1"), 1);
+        _setVerifier(true, keccak256("epoch-1"), 1, NORM);
+
+        // The root of epoch 1 is not the root of epoch 0: a statement built for
+        // the wrong epoch is rejected by the verifier.
+        vm.expectRevert("mock: unexpected statement");
+        registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0));
+
+        // The statement for epoch 1 carries epoch 1's root and is accepted.
+        assertTrue(registry.verifyThreshold(1, NORM, _encodeProof(PROOF_A0)));
+    }
+
+    function test_verifyThreshold_bindsTheStatementToTheCertifiedNorm() public {
+        _setVerifier(true, epoch0Root, 0, NORM);
+
+        // The norm is publicInputs[2]: a different value is a different
+        // statement, so the verifier rejects it. This is the slot the manager
+        // uses for `C_R`, and it cannot diverge from the proof (§5.2.1).
+        vm.expectRevert("mock: unexpected statement");
+        registry.verifyThreshold(0, NORM + 1, _encodeProof(PROOF_A0));
+    }
+
+    function test_verifyThreshold_forwardsTheProofUnchanged() public {
+        _setVerifier(true, epoch0Root, 0, NORM);
+
+        // The mock requires `a[0] == PROOF_A0`: a mutated blob is detected, so
+        // the successful cases above really do forward the decoded elements.
+        vm.expectRevert("mock: proof not forwarded unchanged");
+        registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0 + 1));
     }
 
     function test_verifyThreshold_propagatesARejection() public {
-        _setVerifier(false);
+        _setVerifier(false, epoch0Root, 0, NORM);
 
-        assertFalse(
-            registry.verifyThreshold(0, validator, _encodeProof(PROOF_A0, epoch0Root, 0, 3))
-        );
-        assertFalse(registry.thresholdProven(0, validator));
+        assertFalse(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)));
     }
 
-    function test_verifyThreshold_emitsTheEvent() public {
-        _setVerifier(true);
-        bytes memory proof = _encodeProof(PROOF_A0, epoch0Root, 0, 3);
+    function test_verifyThreshold_enforcesNoThreshold() public {
+        // The registry answers "is the norm exactly this?"; it does not answer
+        // "is the norm high enough?". `certifiedNorm = 0` is a well-formed
+        // statement and the admission bound lives in `AVIPValidatorManager`
+        // (§5.2.2).
+        _setVerifier(true, epoch0Root, 0, 0);
 
-        vm.expectEmit(true, true, false, false, address(registry));
-        emit IAVIPRegistry.ThresholdProven(0, validator);
-        registry.verifyThreshold(0, validator, proof);
+        assertTrue(registry.verifyThreshold(0, 0, _encodeProof(PROOF_A0)));
     }
 
-    function test_verifyThreshold_rejectsAProofBoundToAnotherRoot() public {
-        _setVerifier(true);
+    function test_verifyThreshold_isIdempotent() public {
+        _setVerifier(true, epoch0Root, 0, NORM);
 
-        bytes memory proof = _encodeProof(PROOF_A0, keccak256("another-root"), 0, 3);
-        vm.expectRevert(IAVIPRegistry.PublicInputMismatch.selector);
-        registry.verifyThreshold(0, validator, proof);
+        // M1 consumed `thresholdProven[epoch][validator]` here. The function is
+        // `view` now, so the same proof verifies again and again.
+        uint256 epochBefore = registry.latestEpoch();
+        bytes32 rootBefore = registry.commitmentOf(0);
+
+        assertTrue(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)));
+        assertTrue(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)));
+
+        assertEq(registry.latestEpoch(), epochBefore);
+        assertEq(registry.commitmentOf(0), rootBefore);
     }
 
-    function test_verifyThreshold_rejectsAProofBoundToAnotherEpoch() public {
-        _setVerifier(true);
+    /// @dev Named after the M1 DoS this amendment closes: a third party used to
+    ///      call `verifyThreshold(0, victim, proof)` and burn the victim's proof
+    ///      slot in the attacker's own transaction, locking the victim out for
+    ///      the price of gas. There is no per-validator slot left to burn.
+    function test_verifyThreshold_cannotLockAnotherValidatorOut() public {
+        address victim = makeAddr("victim");
+        _setVerifier(true, epoch0Root, 0, NORM);
 
-        bytes memory proof = _encodeProof(PROOF_A0, epoch0Root, 1, 3);
-        vm.expectRevert(IAVIPRegistry.PublicInputMismatch.selector);
-        registry.verifyThreshold(0, validator, proof);
+        vm.prank(stranger);
+        assertTrue(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)));
+
+        vm.prank(victim);
+        assertTrue(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)));
     }
 
-    function test_verifyThreshold_rejectsTruncatedPublicInputs() public {
-        _setVerifier(true);
+    function test_verifyThreshold_ignoresTrailingBytesInTheProof() public {
+        _setVerifier(true, epoch0Root, 0, NORM);
 
-        vm.expectRevert(IAVIPRegistry.PublicInputMismatch.selector);
-        registry.verifyThreshold(0, validator, _encodeProof(PROOF_A0, epoch0Root, 0, 1));
+        // The M1 blob was `(a, b, c, publicInputs)` and `abi.decode` does not
+        // require the whole payload to be consumed: the three elements still
+        // decode and the trailing array is simply not read. That is harmless,
+        // because the public inputs are built by the registry and a caller
+        // cannot inject one (§5.2.1); it is asserted here so the tolerance is a
+        // documented property and not an accident.
+        assertTrue(registry.verifyThreshold(0, NORM, _encodeLegacyProof(PROOF_A0, 3)));
+    }
+
+    function test_verifyThreshold_rejectsATruncatedProof() public {
+        _setVerifier(true, epoch0Root, 0, NORM);
+
+        // Too few bytes is a decode failure: `(a, b, c)` is the whole blob.
+        vm.expectRevert();
+        registry.verifyThreshold(0, NORM, abi.encode(_a(PROOF_A0), _b()));
     }
 
     function test_verifyThreshold_revertsOnAnUnknownEpoch() public {
-        _setVerifier(true);
+        _setVerifier(true, epoch0Root, 0, NORM);
 
+        // `UnknownEpoch` is load-bearing in M2: it is the only way the registry
+        // can report that `latestEpoch()` had nothing to read.
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.UnknownEpoch.selector, 9));
-        registry.verifyThreshold(9, validator, _encodeProof(PROOF_A0, epoch0Root, 9, 3));
+        registry.verifyThreshold(9, NORM, _encodeProof(PROOF_A0));
     }
 
     function test_verifyThreshold_revertsWithoutAVerifier() public {
         vm.expectRevert(IAVIPRegistry.VerifierNotSet.selector);
-        registry.verifyThreshold(0, validator, _encodeProof(PROOF_A0, epoch0Root, 0, 3));
-    }
-
-    function test_verifyThreshold_rejectsAZeroValidator() public {
-        _setVerifier(true);
-
-        vm.expectRevert(IAVIPRegistry.ZeroValidator.selector);
-        registry.verifyThreshold(0, address(0), _encodeProof(PROOF_A0, epoch0Root, 0, 3));
-    }
-
-    function test_verifyThreshold_rejectsAReplay() public {
-        _setVerifier(true);
-        bytes memory proof = _encodeProof(PROOF_A0, epoch0Root, 0, 3);
-
-        assertTrue(registry.verifyThreshold(0, validator, proof));
-        vm.expectRevert(
-            abi.encodeWithSelector(IAVIPRegistry.ThresholdAlreadyProven.selector, 0, validator)
-        );
-        registry.verifyThreshold(0, validator, proof);
+        registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0));
     }
 
     // ----------------------------------------------------------------- helpers
 
-    function _setVerifier(bool answer) internal {
-        MockThresholdVerifier mock = new MockThresholdVerifier(answer, PROOF_A0);
+    function _setVerifier(bool answer, bytes32 root, uint256 epoch, uint256 norm) internal {
+        MockThresholdVerifier mock =
+            new MockThresholdVerifier(answer, PROOF_A0, _statement(root, epoch, norm));
         vm.prank(sequencer);
         registry.setVerifier(address(mock));
     }
 
-    function _encodeProof(uint256 a0, bytes32 root, uint256 epoch, uint256 inputCount)
+    /// @dev The statement the registry is expected to build itself, §5.2.1.
+    function _statement(bytes32 root, uint256 epoch, uint256 norm)
         internal
         pure
         returns (bytes memory)
     {
-        uint256[2] memory a = [a0, uint256(2)];
-        uint256[2][2] memory b = [[uint256(3), uint256(4)], [uint256(5), uint256(6)]];
-        uint256[2] memory c = [uint256(7), uint256(8)];
+        uint256[] memory statement = new uint256[](3);
+        statement[0] = uint256(root);
+        statement[1] = epoch;
+        statement[2] = norm;
+        return abi.encode(statement);
+    }
+
+    /// @dev The M2 `proof` blob: the Groth16 elements only.
+    function _encodeProof(uint256 a0) internal pure returns (bytes memory) {
+        return abi.encode(_a(a0), _b(), _c());
+    }
+
+    /// @dev The M1 `proof` blob, kept to assert it no longer decodes.
+    function _encodeLegacyProof(uint256 a0, uint256 inputCount)
+        internal
+        pure
+        returns (bytes memory)
+    {
         uint256[] memory publicInputs = new uint256[](inputCount);
-        if (inputCount > 0) publicInputs[0] = uint256(root);
-        if (inputCount > 1) publicInputs[1] = epoch;
-        return abi.encode(a, b, c, publicInputs);
+        return abi.encode(_a(a0), _b(), _c(), publicInputs);
+    }
+
+    function _a(uint256 a0) internal pure returns (uint256[2] memory) {
+        return [a0, uint256(2)];
+    }
+
+    function _b() internal pure returns (uint256[2][2] memory) {
+        return [[uint256(3), uint256(4)], [uint256(5), uint256(6)]];
+    }
+
+    function _c() internal pure returns (uint256[2] memory) {
+        return [uint256(7), uint256(8)];
     }
 
     function _hashLeaf(bytes32 leaf) internal pure returns (bytes32) {
