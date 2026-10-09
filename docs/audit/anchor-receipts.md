@@ -170,7 +170,7 @@ promueve luego el resultado al repo).
     cp verification/anchor_root.sha256 verification/anchor_root.sha256.ots /tmp/probe/ && cd /tmp/probe
     ots upgrade anchor_root.sha256.ots   # exit 0: «Got 2 attestation(s) from cache» + «Success! Timestamp complete»
     ots info anchor_root.sha256.ots      # sigue habiendo 4 PendingAttestation, y dos BitcoinBlockHeaderAttestation
-    sha256sum anchor_root.sha256.ots     # 6b28be97…  (el completado; el commitado sigue siendo e78cab51…)
+    sha256sum anchor_root.sha256.ots     # 6b28be97…  (medido antes de promover; desde §R-1.6 el commitado es éste)
 
 Dos calendarios agregaron el compromiso a un bloque:
 
