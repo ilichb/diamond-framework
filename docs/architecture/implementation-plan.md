@@ -1014,6 +1014,17 @@ Measured over the §5.5.6 fixture, on this machine:
 | Proof | 128 B compressed, **256 B on-chain** (`8 × 256`-bit) |
 | Durations (stderr, load-dependent) | setup **6.6 s**, prove **3.9 s**, verify **1.3 ms** |
 
+The wrapper's `+830` is not the `190` that a "one constraint per bit above the
+bound" reading predicts, and the difference is a finding rather than a footnote:
+`FpVar::to_bits_le` in `ark-r1cs-std 0.6.0` allocates the 254 bits of the
+decomposition *and* checks the packed value is in the field
+(`to_non_unique_bits_le` plus `enforce_in_field_le`), so the gadget costs 485
+witnesses and 640 constraints before the 190 zero-checks are added.
+`tests/groth16_statement_shape.rs` therefore derives the wrapper's delta by
+running the gadget on a constraint system of its own, the way the wrapper
+allocates it, instead of quoting a number — which is also what lets the figure
+move when the crate does, without the table turning into a lie.
+
 The last row closes the first half of **A11**, and it closes it by measurement
 rather than by argument: the outer prover takes `3.9 s` against the **120 s**
 threshold §5.5.4 declared before the run — a factor of 30 — so the paper's
