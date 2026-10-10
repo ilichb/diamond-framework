@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {IAVIPRegistry} from "./interfaces/IAVIPRegistry.sol";
 import {IZKThresholdVerifier} from "./interfaces/IZKThresholdVerifier.sol";
+import {Bn254} from "./verifiers/Bn254.sol";
 
 /// @title AVIPRegistry
 /// @notice Reputation registry of the Diamond Framework on the C-Chain: one
@@ -11,10 +12,10 @@ import {IZKThresholdVerifier} from "./interfaces/IZKThresholdVerifier.sol";
 ///         that the committed tensor has Frobenius norm `certifiedNorm`.
 ///
 /// @dev Milestone M1 of `docs/architecture/implementation-plan.md`, amended by
-///      M2 §5.2. The registry certifies the *exact* norm and stays `view` (it
-///      keeps no per-validator state, so no caller can lock another validator
-///      out); the admission threshold `||T||_F >= Theta_r` is enforced by
-///      `AVIPValidatorManager` (§5.2.2).
+///      M2 §5.2 and by M3 §5.4. The registry certifies the *exact* norm and
+///      stays `view` (it keeps no per-validator state, so no caller can lock
+///      another validator out); the admission threshold `||T||_F >= Theta_r` is
+///      enforced by `AVIPValidatorManager` (§5.2.2).
 ///
 ///      Freshness (paper, Data Layer: "two consecutive epochs cannot differ in
 ///      more than `gamma * N` entries", `gamma = 0.10`, `N = 500`): the
@@ -31,8 +32,12 @@ import {IZKThresholdVerifier} from "./interfaces/IZKThresholdVerifier.sol";
 ///
 ///      Deliberately NOT implemented here:
 ///        - the data layer and its fraud proof (gap A7, milestone M7);
-///        - the admission and slashing rules (`AVIPValidatorManager`, M2);
-///        - the pairing check itself (`IZKThresholdVerifier`, M3).
+///        - the admission and slashing rules (`AVIPValidatorManager`, M2).
+///
+///      The pairing check itself is no longer a gap: `Bn254` (M3) decodes the
+///      blob and `contracts/verifiers/Groth16Verifier.sol` (M3) runs it. The
+///      registry knows the verifier only through `IZKThresholdVerifier`, so the
+///      tests can still install the mock.
 contract AVIPRegistry is IAVIPRegistry {
     /// @notice Entries per epoch, `C * D * H` (paper, Tensor Compression).
     uint32 public constant TENSOR_SIZE = 500;
@@ -169,8 +174,12 @@ contract AVIPRegistry is IAVIPRegistry {
         IZKThresholdVerifier currentVerifier = verifier;
         if (address(currentVerifier) == address(0)) revert VerifierNotSet();
 
+        // M3 moved the decoding into `Bn254`: the blob must carry at least the
+        // eight canonical field elements of `(a, b, c)` (`MalformedProof`
+        // otherwise), each below `FIELD_MODULUS` (`CoordinateOutOfRange`
+        // otherwise). Trailing bytes are still ignored, never read.
         (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c) =
-            abi.decode(proof, (uint256[2], uint256[2][2], uint256[2]));
+            Bn254.decodeProof(proof);
 
         // The statement is built here, from this registry's own state: the
         // caller cannot supply it, so the norm the manager uses for `C_R`

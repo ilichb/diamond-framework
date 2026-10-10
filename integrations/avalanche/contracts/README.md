@@ -1,9 +1,11 @@
 # `integrations/avalanche/contracts/` — On-chain protocol code
 
-Status: **two implementations**. `AVIPRegistry.sol` (milestone M1) and
-`AVIPValidatorManager.sol` (milestone M2) are written and tested. The only file
-here without an implementation is `interfaces/IZKThresholdVerifier.sol`: the
-threshold proof is still verified against a test double. See
+Status: **four implementations**. `AVIPRegistry.sol` (milestone M1) and
+`AVIPValidatorManager.sol` (milestone M2) are written and tested, and M3 adds
+`verifiers/Bn254.sol` (library) plus `verifiers/Groth16Verifier.sol`. The only
+file here without an implementation is `interfaces/IZKThresholdVerifier.sol`:
+the interface is real and `Groth16Verifier` implements it, but nothing is
+deployed. See
 [`docs/architecture/implementation-plan.md`](../../../docs/architecture/implementation-plan.md)
 and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/avalanche-integration.md).
 
@@ -11,12 +13,13 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
 
 | Path | Status | Milestone |
 |------|--------|-----------|
-| `AVIPRegistry.sol` | **Implemented + tested** (`../test/AVIPRegistry.t.sol`, 32 tests) | M1, amended in M2 |
+| `AVIPRegistry.sol` | **Implemented + tested** (`../test/AVIPRegistry.t.sol`, 32 tests) | M1, amended in M2 (decode) and M3 (`Bn254.decodeProof`) |
 | `AVIPValidatorManager.sol` | **Implemented + tested** (`../test/AVIPValidatorManager.t.sol`, 34 tests) | M2 |
 | `interfaces/IAVIPRegistry.sol` | Implemented (provisional types, real signatures) | M1, amended in M2 |
 | `interfaces/IAVIPValidatorManager.sol` | Implemented (provisional types, real signatures) | M2 |
-| `interfaces/IZKThresholdVerifier.sol` | Interface only — no implementation | M3 |
-| `verifiers/` | **Not implemented** | M3 |
+| `interfaces/IZKThresholdVerifier.sol` | Implemented by `verifiers/Groth16Verifier.sol` | M3 |
+| `verifiers/Bn254.sol` | **Implemented + tested** (`../test/Bn254.t.sol`, 16 tests) | M3 |
+| `verifiers/Groth16Verifier.sol` | **Implemented + tested** (`../test/Groth16Verifier.t.sol`, 18 tests) | M3 |
 
 ### What `AVIPRegistry` fixes
 
@@ -35,9 +38,10 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
   `||T||_F >= Theta_r` is the manager's job (§5.2.2 of the plan), which keeps
   economic parameters out of the circuit and the trusted setup. With no proof in
   the blob the registry reverts with `InvalidZKProof`.
-- **Not covered here**: the data layer's fraud proof, the pairing check (the
-  verifier is mocked) and the admission rule, which lives in
-  `AVIPValidatorManager`. See the header of `../test/AVIPRegistry.t.sol` and
+- **Not covered here**: the data layer's fraud proof and the admission rule,
+  which lives in `AVIPValidatorManager`. The blob is decoded by
+  `Bn254.decodeProof` (M3); the pairing itself is `Groth16Verifier`. See the
+  header of `../test/AVIPRegistry.t.sol` and
   [`docs/architecture/implementation-plan.md`](../../../docs/architecture/implementation-plan.md) §5.
 
 ### What `AVIPValidatorManager` fixes
@@ -61,12 +65,50 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
   the remaining stake drops below that validator's `requiredStake`, the validator
   is ejected (`ValidatorEjected`). The stake is not zeroed, because there is
   nothing to seize.
-- **Not covered here**: token custody/transfer, removal from the validator set,
-  weight recomputation and reward distribution — those are M4/M7.
+- **Not covered here**: token custody/transfer and fund movement (M8, the Treasury
+  Module), removal from the validator set, weight recomputation and reward
+  distribution (M6/M7).
 
 The names `AVIPRegistry` and `AVIPValidatorManager` come from the target
 architecture (`docs/architecture/avalanche-integration.md` §1–§2), which
 specifies both contracts and states that they are *not yet implemented*.
+
+### What M3 fixes (`verifiers/`)
+
+- **`Bn254.sol` is a wrapper, not a curve implementation.** It encodes input for
+  the EIP-196/EIP-197 precompiles (`0x06` `ecAdd`, `0x07` `ecMul`, `0x08`
+  `ecPairing`) and decodes the proof blob. It does not implement field or group
+  arithmetic, so a reviewer does not have to audit a BN254 library.
+- **The identity is handled before the precompile.** EIP-196 has no encoding for
+  the point at infinity (`(0, 0)` is off-curve, so `0x06`/`0x07` would fail), and
+  `e(O, Q) = 1`, so `Groth16Verifier` drops any pair containing the identity
+  instead of pushing a malformed G1 point. This is what makes an identity `a`
+  (possible in a real proof) verify rather than revert.
+- **`Fp2` is reordered exactly once.** A prover emits `pi_b = [[x0, x1],
+  [y0, y1]]` in the natural order `(real, imaginary)`; EIP-197 wants the
+  imaginary coefficient first. The swap lives in `Bn254.pushPair` and nowhere
+  else, so the test vector in `../test/Bn254.t.sol` pins it.
+- **The Verifying Key is installed in the constructor**, not baked into the byte
+  code, so the same contract can be deployed for a new trusted setup. The
+  constructor validates `alpha`, `beta`, `gamma`, `delta` and every `vk_x` on the
+  curve (a key with an off-curve point reverts with `PrecompileFailed`), and
+  `verifyingKeyDigest()` exposes `keccak256` of the installed key so a deployment
+  can be checked against the ceremony transcript.
+- **A rejected proof returns `false`; a malformed one reverts.** `verify` follows
+  the circom convention: a well-formed proof of another equation (or the wrong
+  statement) is a `false` verdict, while a non-canonical coordinate, an off-curve
+  point or a wrong-length statement is a revert with a named error. Note the
+  asymmetry documented in `Bn254`: `0x08` on a rejected input **consumes the
+  whole gas budget**, so a caller must not treat "out of gas" as a `false`.
+- **The public inputs are the registry's, and the fixture is a placeholder.** The
+  statement is `[root, epoch, certifiedNorm]` built by `AVIPRegistry`; nothing
+  else is read from the caller. `../test/fixtures/Groth16Fixtures.sol` is a
+  **synthetic** BN254 instance produced by
+  `../scripts/generate_groth16_fixtures.py` (see its header for what that does and
+  does not prove): it exercises the verifier against the real precompiles, but it
+  is not a circuit, has no witness and makes no soundness claim. Replacing it with
+  a proof from the real circuit is a re-generation, not a rewrite: only the
+  Verifying Key and the fixture change.
 
 ## Interfaces are provisional
 

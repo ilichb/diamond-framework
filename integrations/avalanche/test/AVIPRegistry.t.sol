@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {AVIPRegistry} from "../contracts/AVIPRegistry.sol";
 import {IAVIPRegistry} from "../contracts/interfaces/IAVIPRegistry.sol";
+import {Bn254} from "../contracts/verifiers/Bn254.sol";
 import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
 
 /// WHAT IS TESTED
@@ -20,11 +21,13 @@ import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
 ///    valid proofs for a single-leaf tree, an 8-leaf tree and the full 500-leaf
 ///    tensor, and rejects a tampered leaf, a foreign proof, a foreign root and
 ///    root zero.
-/// 6. Norm certification (M1, amended by M2 §5.2): the registry reads the root
-///    from its own state, builds the statement `[root, epoch, certifiedNorm]`,
-///    forwards `(a, b, c)` unchanged and propagates the verifier's answer. A
+/// 6. Norm certification (M1, amended by M2 §5.2 and M3): the registry reads the
+///    root from its own state, builds the statement `[root, epoch, certifiedNorm]`,
+///    decodes the blob with `Bn254.decodeProof` (exactly the first 256 bytes) and
+///    forwards `(a, b, c)` unchanged to the verifier, propagating its answer. A
 ///    legacy proof that still carries a caller-supplied input array decodes (the
-///    trailing bytes are ignored, never read) while a truncated one does not.
+///    trailing bytes are ignored, never read) while a truncated one reverts with
+///    `Bn254.MalformedProof`.
 ///    The call is `view` and idempotent: the same proof verifies any number of
 ///    times, so no caller can consume another validator's proof slot (this is
 ///    the test that closes the M1 DoS). The registry itself enforces no
@@ -322,20 +325,21 @@ contract AVIPRegistryTest is Test {
     function test_verifyThreshold_ignoresTrailingBytesInTheProof() public {
         _setVerifier(true, epoch0Root, 0, NORM);
 
-        // The M1 blob was `(a, b, c, publicInputs)` and `abi.decode` does not
-        // require the whole payload to be consumed: the three elements still
-        // decode and the trailing array is simply not read. That is harmless,
-        // because the public inputs are built by the registry and a caller
-        // cannot inject one (§5.2.1); it is asserted here so the tolerance is a
-        // documented property and not an accident.
+        // The M1 blob was `(a, b, c, publicInputs)`. `Bn254.decodeProof` reads
+        // exactly `PROOF_LENGTH = 256` bytes and never the rest, so the three
+        // elements still decode and the trailing array is simply not read. That
+        // is harmless, because the public inputs are built by the registry and a
+        // caller cannot inject one (§5.2.1); it is asserted here so the
+        // tolerance is a documented property and not an accident.
         assertTrue(registry.verifyThreshold(0, NORM, _encodeLegacyProof(PROOF_A0, 3)));
     }
 
     function test_verifyThreshold_rejectsATruncatedProof() public {
         _setVerifier(true, epoch0Root, 0, NORM);
 
-        // Too few bytes is a decode failure: `(a, b, c)` is the whole blob.
-        vm.expectRevert();
+        // Too few bytes is a decode failure: `(a, b, c)` is the whole blob and
+        // the error names the length that arrived (64 + 128 = 192 bytes).
+        vm.expectRevert(abi.encodeWithSelector(Bn254.MalformedProof.selector, 192));
         registry.verifyThreshold(0, NORM, abi.encode(_a(PROOF_A0), _b()));
     }
 

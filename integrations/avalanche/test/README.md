@@ -1,18 +1,24 @@
 # `integrations/avalanche/test/` — Foundry tests
 
-Status: **66 tests over two contracts, all green with `forge test --offline`**:
+Status: **100 tests over four contracts (plus two libraries), all green with
+`forge test --offline`**:
 
 | File | Tests | Scope |
 |------|-------|-------|
 | `AVIPRegistry.t.sol` | 32 | M1 registry: Merkle convention, sequential epochs, freshness bound, statement binding of `verifyThreshold` |
 | `AVIPValidatorManager.t.sol` | 34 | M2 manager: `C_R`/`S_f*` parameters, admission, anti-replay, slashing and ejection, plus 2 fuzz tests |
-| `mocks/MockThresholdVerifier.sol` | — | the `IZKThresholdVerifier` double used by both suites |
+| `Bn254.t.sol` | 16 | M3 library: field/group parameters, proof decoding (length, canonicality, trailing bytes) and the `0x06`/`0x07`/`0x08` wrappers |
+| `Groth16Verifier.t.sol` | 18 | M3 verifier: key installation and digest, accept/reject verdicts, off-curve revert, gas, and the `AVIPRegistry`/`AVIPValidatorManager` integration |
+| `fixtures/Groth16Fixtures.sol` | — | **generated** by `../scripts/generate_groth16_fixtures.py`; do not edit by hand |
+| `mocks/MockThresholdVerifier.sol` | — | the `IZKThresholdVerifier` double used by the M1/M2 suites |
 
 `mocks/MockThresholdVerifier.sol` does not simply answer `true`: it asserts the
 `(a, b, c)` it receives and the `keccak256` of the public statement it is called
 with, and reverts otherwise. That is what makes "the registry forwards the proof
 unchanged" and "the registry builds `[root, epoch, certifiedNorm]` itself"
-properties of the double rather than assumptions of the test.
+properties of the double rather than assumptions of the test. The M3 suites are
+the ones that run the real pairing check (`Groth16Verifier`), and they still keep
+the double for the M1/M2 semantics.
 
 ## Rule (from `CONTRIBUTING.md`)
 
@@ -30,7 +36,11 @@ block or comment:
 ## Conventions
 
 - One test file per contract: `test/AVIPRegistry.t.sol`,
-  `test/AVIPValidatorManager.t.sol`; shared doubles in `test/mocks/`.
+  `test/AVIPValidatorManager.t.sol`, `test/Groth16Verifier.t.sol`; libraries are
+  tested through `test/Bn254.t.sol` plus the harness in the same file (a
+  library's `internal` functions are inlined, so they need a wrapper contract
+  to be observed from outside). Shared doubles in `test/mocks/`, generated
+  fixtures in `test/fixtures/`.
 - `forge-std` is reused from the benchmarks project via the remapping in
   `../foundry.toml`; do not vendor a second copy.
 - Numeric assertions must trace to a paper claim or to a `verification/`

@@ -1,0 +1,52 @@
+Groth16 fixtures for test/Groth16Verifier.t.sol
+==============================================
+
+Produced by scripts/generate_groth16_fixtures.py (deterministic: the script
+emits the same bytes on every run; `forge fmt` then formats them, so the
+committed fixture is the script's output after `forge fmt`).
+
+WHAT THIS IS
+  A synthetic Groth16 instance over BN254: no circuit, no trusted setup, no
+  witness. The pairing equation is solved in the exponents, where it is
+  linear, so the verifier's happy path (and its failure paths) can be
+  exercised against the real 0x06/0x07/0x08 precompiles.
+
+PARAMETERS AND SELF-CHECKS
+  p                  = 21888242871839275222246405745257275088696311157297823662689037894645226208583
+  r                  = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+  G1 on curve        = True
+  G2 on curve        = True
+  r * G1 == O        = True
+  r * G2 == O        = True
+  (r + 1) * G1 == G1 = True
+  (r + 1) * G2 == G2 = True
+
+STATEMENT
+  root  = 86442290903294350648273222779976636221758675587005340531248271500348333491074
+  epoch = 0
+  norm  = 500000000000000000
+
+SOLVED SCALARS (public, derived from SHA-256 of fixed labels)
+  alpha = 13257406981876826309627815668705952898764629958987927509464351892826073919467
+  beta  = 16993371743881154407330868623776472091567929465168074598672998296834888689485
+  gamma = 5194935182829032189173049938301065467727616788905887046179072508914077532612
+  delta = 10547378603404968894427056091318586018628159797470922429596032008655835759000
+  a     = 21575345860857954655041117407717908573498053526494283266573394959351080184994
+  b     = 5256928904010775935338721775429442651220412741593666298471258951097275260077
+  c     = 9872181237885429791006260795084359047463516698533958871726417972280085446818
+  vk_x  = 5158296248942296259349451566670732428008114522082180322073244927554315935892
+  ic    = 17754767827018210424319172320094984460213454290918125202202909005165435337665, 8188783133125375291937532783638495406434788940501096336936892962027644590380, 4252949342313381376290647776192590681160582067020209494112369458220303367294, 1802315331346165355961373115016736070944721845613668605565957878739039718808
+
+EQUATION
+  -a*b + alpha*beta + vk_x*gamma + c*delta mod r = 0 (c was solved for)
+
+EVERY EMITTED POINT IS ON THE CURVE
+  True
+
+WHAT THIS IS NOT
+  A proof of anything. There is no witness and no circuit, so these
+  fixtures carry no soundness claim. What they carry is a claim about the
+  wrapper: that the decoding, the vk_x accumulation, the EIP-197
+  reordering and the pairing call behave. test/Groth16Verifier.t.sol
+  re-establishes the pairing half of that claim inside the EVM, which is
+  what makes it evidence.

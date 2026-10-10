@@ -9,13 +9,16 @@ integration is specified but not yet deployed to a live network. The
 benchmarks reported here are local.
 
 **Status of the code.** The repository contains the gas benchmarks
-(`integrations/avalanche/benchmarks/`) and the first protocol contract,
-`AVIPRegistry.sol` (milestone M1 of
-[`implementation-plan.md`](implementation-plan.md)), with its unit tests.
-`AVIPValidatorManager.sol`, the on-chain verifier, the deployment scripts and
-the off-chain prover are specified in this document but not yet implemented.
-Nothing described here has been deployed to a live network, and none of it has
-been audited.
+(`integrations/avalanche/benchmarks/`) and the three implemented pieces of the
+protocol, each with its unit tests: `AVIPRegistry.sol` (milestone M1),
+`AVIPValidatorManager.sol` (milestone M2) and the on-chain Groth16 verifier
+`verifiers/Bn254.sol` + `verifiers/Groth16Verifier.sol` (milestone M3) — the
+verifier runs the pairing check through the `0x06`/`0x07`/`0x08` precompiles,
+but against a **placeholder** verifying key: the circuit and its trusted setup do
+not exist yet (see §5.4 of [`implementation-plan.md`](implementation-plan.md)).
+The deployment scripts, the off-chain prover and the data layer are specified in
+this document but not yet implemented. Nothing described here has been deployed
+to a live network, and none of it has been audited.
 
 ## 1. Target Architecture
 
