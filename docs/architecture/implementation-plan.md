@@ -506,9 +506,12 @@ separate document that would drift from it. No `Cargo.toml` dependency and no
 circuit is added until this section is reviewed.
 
 The two risks §5.4 handed to M4 (the Ristretto ↔ BN254 mismatch, and the range
-proof) are addressed here by *measurement*, and one of them turns out to be
-partly decidable from the published crate sources before a line of circuit code
-exists.
+proof) are settled here, and neither waits for circuit code: the range proof is
+decided analytically — mandatory, with its width derived — and the curve
+mismatch is **dissolved by dropping the variant that carries it** (§5.5.5),
+because the statement Option B needs turns out not to be expressible through a
+deployable API. The measurement methods are still written down, with their
+thresholds declared before any run, so that a future V1 inherits them.
 
 Provenance of every constant used below — none of it invented:
 
@@ -522,6 +525,7 @@ Provenance of every constant used below — none of it invented:
 | Bulletproofs at `N=500` | `≈6.5e6` gas off-chain, `0.72 KB` | `main.tex` L498, cited by `threshold_quantization.py` L25, L48 |
 | Paper's design table | A: 1,080,501 constr. / ~470M gas; A′: 240,261 / ~30M; B: 0 / ~6.5M; proof sizes 0.20 / 0.20 / 0.72 KB | `main.tex` L487–490 |
 | Recursive proof cost / proving time | `≈250k` gas; proving time **not measured**, estimated "tens of seconds" | `main.tex` L518, L520 |
+| `bulletproofs 5.0.0` deployable surface | `RangeProof`, `LinearProof` (⟨a,b⟩ with **b public**), `range_proof_mpc`; the R1CS API is behind `yoloproofs`, "UNSUITABLE FOR DEPLOYMENT" | crate `README.md` L43–50, L165–167; `src/lib.rs` L47–49 |
 
 #### 5.5.1 The relation: equality, not the paper's bit
 
@@ -562,7 +566,9 @@ Three things can actually be built in `src/zk/`, and they are not equivalent:
 | **V3** — Option A′ revisited | Poseidon over the 500 entries, in-circuit | the same circuit: `Σ T_i²` + range | one Groth16/BN254, no recursion | no: everything native |
 
 V1 is the paper's own construction and the only one that needs the recursion of
-`subsec:recursive`. V2 keeps the paper's commitment primitive (Pedersen,
+`subsec:recursive`; §5.5.5 records why it leaves the implementation path, which
+is what makes V2 and V3 the live candidates for `D-M4-0`. V2 keeps the paper's
+commitment primitive (Pedersen,
 `sec:zk` L428–440) but moves the linear/non-linear split from the proof system
 into the circuit. V3 keeps Option A′'s primitive and drops the one-proof-per-entry
 batching that the paper set aside on an **unmeasured practicality claim**, not on
@@ -575,7 +581,9 @@ over BN254 with `input = [root, epoch, certifiedNorm]` — so **M3's verifier an
 every Solidity file are unchanged by the choice**; only the key changes.
 
 D-M4-0 is resolved in M4a **by measurement**, against thresholds declared before
-the runs (§5.5.4, §5.5.6). The paper's `[CONJECTURE]` ("too large for practical
+the runs (§5.5.4, §5.5.6), but the branch it decides is narrower than it was when
+this section was drafted: §5.5.5 takes V1 out of the implementation path on
+crate-level evidence, so M4a compares V2 against V3. The paper's `[CONJECTURE]` ("too large for practical
 Groth16 proving on consumer hardware") is not treated as a result: §9 requires
 that a claim contradicting it carry its own backing script before it can reach
 `main.tex`.
@@ -614,14 +622,15 @@ is not tight and cannot be argued away by a clever witness: any `k ≤ 122` is
 wraparound-free, and every entry outside `[0, 2^60)` is excluded by *bits*, not
 by a numerical comparison that could overflow.
 
-Where the check is paid differs by variant, and this is exactly what M4a measures:
+Where the check is paid differs by variant:
 
 - **V2 / V3**: it is free in the sense that the scalar is *defined* as
   `Σ_j 2^j · b_j` from `k` Booleans, so out-of-range witnesses are not
   representable and no separate proof object exists;
-- **V1**: it is an **aggregated Bulletproofs range proof of 30,000 bits** — a
-  second non-linear object whose verifier must itself sit inside the BN254
-  circuit, i.e. risks 1 and 2 compound instead of cancelling.
+- **V1** (archived, §5.5.5): it would be an **aggregated Bulletproofs range proof
+  of 30,000 bits** — a second non-linear object whose verifier must itself sit
+  inside the BN254 circuit, so risks 1 and 2 compound instead of cancelling. That
+  compounding is part of why V1 is not the cheap option it looks like.
 
 One published number needs care, and M4a reports its own: `0.72 KB` (`main.tex`
 L498) is quoted from the literature for `N = 500`, and
@@ -630,10 +639,13 @@ L498) is quoted from the literature for `N = 500`, and
 the aggregated proof of 30,000 bits and marks the paper's figure as the estimate
 it is.
 
-#### 5.5.4 Risk 1 — the Ristretto ↔ BN254 mismatch, and how it is measured
+#### 5.5.4 Risk 1 — the Ristretto ↔ BN254 mismatch, and how it would be measured
 
-This measurement does not start from the literature; it starts from the crate
-sources, inspected for this plan:
+Status after §5.5.5: **off the critical path.** The mismatch exists only in V1,
+which §5.5.5 drops, so this measurement no longer gates the build. It is kept
+because it is the quantified evidence a P6 amendment needs, and because it is
+the method M4a would run if V1 ever returned. It does not start from the
+literature; it starts from the crate sources, inspected for this plan:
 
 - `ark-r1cs-std 0.6.0` **has** non-native field arithmetic, under a renamed
   module: `fields::emulated_fp::EmulatedFpVar<TargetF, BaseF>`, with
@@ -650,10 +662,10 @@ sources, inspected for this plan:
   `bulletproofs 5.0.0` ("a pure-Rust implementation of Bulletproofs using
   Ristretto"), `curve25519-dalek 5.0.0`, `merlin 3.0.0`.
 
-So V1 cannot delegate the emulation: a Ristretto/Curve25519 point operation
-inside `Fr_BN254` has to be written on top of `EmulatedFpVar`. That is a
-*measured implementation obligation*, and it also fixes the method —
-**unit cost × operation count**, not a guess:
+So V1 could not delegate the emulation: a Ristretto/Curve25519 point operation
+inside `Fr_BN254` would have to be written on top of `EmulatedFpVar`. That was
+the obligation that made this subsection necessary, and it fixes the method —
+**unit cost × operation count**, not a guess — for anyone who re-opens V1:
 
 1. measure `c_emu`: constraints for one emulated multiplication in a 255-bit
    target field, for both `OptimizationType::OptimizedForConstraints` and
@@ -667,13 +679,15 @@ inside `Fr_BN254` has to be written on top of `EmulatedFpVar`. That is a
 4. report `c_emu / c_nat`, both key sizes and both proving times.
 
 Thresholds, declared **before** measuring so the verdict cannot be
-reverse-engineered:
+reverse-engineered (they are kept, and they bind any future re-opening of V1):
 
 - `c_emu / c_nat ≤ 100` **and** outer proving `≤ 120 s` on the reference machine
-  ⇒ V1 stays alive. The time bound is deliberately loose against the paper's own
-  unverified estimate, "in the range of tens of seconds on a modern CPU" (L520),
-  which is exactly what M4 exists to replace with a measurement;
-- otherwise **V1 is dropped on the measurement**, and M4b builds V2 or V3.
+  would have kept V1 alive. The time bound is deliberately loose against the
+  paper's own unverified estimate, "in the range of tens of seconds on a modern
+  CPU" (L520), which is exactly what M4 exists to replace with a measurement;
+- below them **V1 would be dropped on the measurement** — and §5.5.5 has already
+  brought that outcome forward on crate-level evidence, so M4b builds V2 or V3
+  without waiting for this bench.
 
 For V2/V3 the same metric is measured natively, and it yields the number the
 paper lacks: the constraint count of computing a 500-entry commitment *and* the
@@ -707,19 +721,62 @@ That is §4.5's failure mode returning one level down.
 This is a **structural gap, not an implementation detail**, and it is why V1 is
 not "V2 with extra steps":
 
-- M4a must either name the fixing it uses, with references, or drop V1. Readings
-  to evaluate as implementation notes: a two-base commitment with a challenge
-  forcing `a = b`, an evaluation-style argument for `⟨T,T⟩`, or a Pedersen
-  commitment living in the *same* curve as the outer circuit — which is V2, and
-  V2 has no such gap because the circuit computes `Σ T_i²` from the very
-  witnesses it commits to;
-- if no fixing survives, M4's normative result is that **the paper's Option B
-  cannot certify a norm as stated**, and that result travels to the P6 batch
-  through §9 (with its script) instead of being written into `main.tex`.
+- The fixings were evaluated against the crates themselves, not from memory, so
+  the verdict is recorded here instead of being deferred to M4a.
+  - **What the statement needs.** `Σ T_i² = v` is *quadratic* in `T`: it needs
+    multiplication gates (`a_i · a_i = c_i`) plus a linear sum. The bare IPA
+    cannot supply that, because it proves `⟨a,b⟩ = v` for **independent** `a,b`.
+  - **The deployable surface of `bulletproofs 5.0.0` cannot express it.**
+    `lib.rs` exposes `RangeProof`, `LinearProof` and `range_proof_mpc`; the
+    inner-product module is private (`mod inner_product_proof;`). `LinearProof`
+    documents itself as proving "`<a, b> = c` where `a` is secret and `b` is
+    **public**" (GHL'21 §E.3) — a *cross* product, and with `b` chosen by the
+    prover (`b = (v/⟨a,a⟩)·a`) it is satisfiable for any `a`, so it never says
+    `a = b` and never certifies a norm.
+  - **The one API that can express it is declared unfit for deployment.** The
+    quadratic relation *is* expressible through `bulletproofs::r1cs`
+    (`ConstraintSystem`, `Prover`, `Verifier`, `R1CSProof`; `src/r1cs/`), whose
+    documented relation is exactly `a_L ∘ a_R = a_O` plus linear constraints
+    over committed high-level variables (`docs/notes-r1cs.md`): allocating the
+    variables is what forces both sides to be the *same* `T`. But the crate's
+    own README gates it — the API "is provided **FOR EXPERIMENTS ONLY**", "is
+    not covered by semver compatibility and is **SUBJECT TO CHANGE WITHOUT
+    NOTICE**", and "The `yoloproofs` feature ... is **UNSTABLE AND UNSUITABLE
+    FOR DEPLOYMENT**, and **PROVIDED FOR TESTING ONLY**". The gate is in the
+    source: `#[cfg(feature = "yoloproofs")] pub mod r1cs;` (`src/lib.rs`
+    L47–49). The README adds that the feature "is disabled in the published
+    version of the crate, so it can only be used by specifying a git dependency
+    on the `develop` branch", which contradicts §5.5.6's reproducibility
+    requirement.
+  - **The paper's numbers are not the numbers for its own statement.**
+    `main.tex` L490 lists `Option B` at `0` R1CS constraints and L510 estimates
+    `0.72 KB` from `2N` scalar multiplications; both describe the *bare* IPA. A
+    500-entry norm consumes 500 squaring gates plus a linear constraint, and the
+    recursive SNARK must then verify *that* verifier instead of the plain one.
+    The paper also never writes the relation: L442 says only that the prover
+    "commits to `T` in some form and proves knowledge of a witness satisfying the
+    inequality", and L510 rests soundness on "the special-soundness of the
+    Bulletproofs protocol and the binding property of the Pedersen commitment",
+    neither of which ties the two IPA halves to the committed `T`.
+- **Verdict recorded here rather than deferred to a bench: V1 is dropped from the
+  implementation path.** Not because the relation is unprovable in general — a
+  proper arithmetic-circuit argument proves it — but because the only form
+  implementable with the chosen crate rests on an API its authors declare
+  unsuitable for deployment, and because its cost is not the cost the paper
+  quotes. V2 and V3 show no such gap: their circuit computes `Σ T_i²` from the
+  very witnesses it commits to.
+- The normative result travels to the P6 batch through §9, anchored on the M4a
+  note: **Option B as stated specifies no relation that implies the norm, and
+  the general-purpose primitive it names cannot express one through a deployable
+  API.**
 
-Because of this, the honest ordering inside M4a is: settle §5.5.5 first, measure
-§5.5.4 and §5.5.3 second. There is no point benching an emulated Ristretto IPA
-whose statement does not imply the property the protocol needs.
+Consequence for the ordering: §5.5.5 no longer needs an experiment. Because V1
+goes, **risk 1 is dissolved rather than measured** — the curve mismatch exists
+only in V1 — and §5.5.4 becomes the record of what the dropped variant *would*
+have cost, i.e. evidence for the P6 amendment instead of a gate on the build.
+M4a's live measurement is the native one: the constraint count of commitment,
+norm and range inside a single circuit (§5.5.3), which is the number the paper
+lacks.
 
 #### 5.5.6 M4a and M4b as two gates
 
@@ -731,16 +788,18 @@ gas) — a drift there is a regression, not a new measurement.
 
 **M4a — the inner layer, measured.** Deliverables:
 
-- `src/zk/src/` modules and `benches/`: the emulated-field unit bench (§5.5.4),
-  the aggregated-range-proof bench (§5.5.3), the native commitment + norm
-  circuit (V2/V3), and the `⟨T,T⟩` statement written down for V1 with its fixing
-  or its rejection (§5.5.5);
+- `src/zk/src/` modules and `benches/`: the aggregated-range-proof bench
+  (§5.5.3), the native commitment + norm circuit (V2/V3), and the `⟨T,T⟩`
+  statement written down for V1 with the rejection §5.5.5 records. The
+  emulated-field unit bench (§5.5.4) is **optional**: it runs only if V1 is ever
+  re-opened, and no bench of the emulated IPA is scheduled;
 - a deterministic fixture: one fixed 500-entry tensor from a fixed seed, byte
   identical across runs — the off-chain analogue of
   `scripts/generate_groth16_fixtures.py` (§5.4);
-- a note with the measured table: constraints per variant, key size, proving
-  time, proof size, `c_emu / c_nat`, and the **D-M4-0 verdict** quoting the
-  thresholds declared *before* the runs (§5.5.4).
+- a note with the measured table: constraints per variant (V2 and V3), key size,
+  proving time, proof size, the `c_emu / c_nat` figure §5.5.4 keeps on the record
+  for the amendment, and the **D-M4-0 verdict** (V2 vs V3) quoting the
+  thresholds declared *before* the runs (§5.5.3, §5.5.4).
 
 Acceptance: `cargo build` and `cargo test` clean, and every number in the note
 reproducible by one documented command. The crate builds offline today because
@@ -884,7 +943,7 @@ stable — the same reason the protection phase is last.
 | D-3 | Foundry project layout | New project at `integrations/avalanche/` (current) vs moving the benchmarks inside it | **Keep current**: the benchmarks are cited by the paper and by C-20; moving them would invalidate their recorded paths |
 | D-4 | Code license vs paper license | MIT for code (already) and separate license for the paper | Decide in the protection phase |
 | D-5 | solc drift | Paper says 0.8.33, badge said 0.8.24, machine has 0.8.33 | **Closed in P2**: badge aligned to 0.8.33, both Foundry projects pin 0.8.33; the one 0.8.24 artefact is documented, not edited |
-| D-6 | M4 primitive (`D-M4-0`) | V1 paper-literal (Ristretto + Bulletproofs + recursion) vs V2 native Pedersen in-circuit vs V3 Poseidon in-circuit | **Measured in M4a** (§5.5.2), against the thresholds declared before the runs (§5.5.4); V1 is also conditional on the fixing §5.5.5 requires |
+| D-6 | M4 primitive (`D-M4-0`) | V1 paper-literal (Ristretto + Bulletproofs + recursion) vs V2 native Pedersen in-circuit vs V3 Poseidon in-circuit | **Narrowed in the plan**: V1 leaves the implementation path (§5.5.5 — the `yoloproofs` gate), so `D-M4-0` is now V2 vs V3, measured in M4a by the native constraint count (§5.5.3) |
 
 ## 11. Out of scope here
 
@@ -909,9 +968,10 @@ stable — the same reason the protection phase is last.
 
 **Next step: M4 — the off-chain prover**, planned in §5.5 and not started:
 `src/zk/` holds the crate (`99db3fe`) with no dependencies, and the milestone is
-gated on the §5.5 review. M4a settles the structural gap that decides the paper's
-Option B (§5.5.5) and *measures* the two risks §5.4 handed over — the
-Ristretto ↔ BN254 mismatch (§5.5.4) and the range proof (§5.5.3); M4b derives the
+gated on the §5.5 review. The structural gap that decides the paper's Option B
+is already settled (§5.5.5: V1 dropped), so M4a *measures* what remains — the
+native constraint count with the mandatory range proof (§5.5.3), alongside the
+Ristretto ↔ BN254 figure §5.5.4 keeps for the amendment; M4b derives the
 real key that replaces the M3 placeholder, with **no Solidity change**. What M4
 turns into a real proof is the M3 fixture. M3 closed the **on-chain** half of A3:
 `AVIPRegistry.verifyThreshold` no longer calls a mock, the pairing runs through
