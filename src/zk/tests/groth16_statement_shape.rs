@@ -1,11 +1,12 @@
-//! M4b: the contract-facing shape of the key, and what the statement wrapper
+//! M4b/M4c: the contract-facing shape of the key, and what the statement wrapper
 //! costs on top of §5.5.6's pinned V3.
 //!
 //! A small tensor on purpose: the assertions are about *shape* (how many public
-//! inputs, how many `ic` entries, whether every statement component is bound),
-//! not about the 500-entry cost, which `scripts/m4b_report.sh` measures. It runs
-//! the same `groth16::measure` the driver runs, so a change that breaks the
-//! driver breaks this too.
+//! inputs, how many `ic` entries, whether every statement component is bound) and
+//! about *derived* differences between §5.5.2's two variants, not about the
+//! 500-entry cost, which `scripts/m4b_report.sh` measures. It runs the same
+//! `groth16::measure` the driver runs, so a change that breaks the driver breaks
+//! this too.
 
 use ark_bn254::Fr;
 use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar};
@@ -107,5 +108,155 @@ fn a_different_statement_does_not_reuse_the_proof() {
     assert_ne!(
         at_zero.proof_canonical_digest,
         at_one.proof_canonical_digest
+    );
+}
+
+// ---- M4c: §5.5.2's two variants, through the same wrapper ---------------------
+
+/// V2′ goes through the *same* statement wrapper as V3 — the same three public
+/// inputs, in the same order — so `AVIPRegistry` cannot tell the variants apart
+/// and the rows of `D-M4-0`'s duel are comparable. Checked on the circuits, with
+/// no key: the shape is a property of the wrapper, not of this run.
+#[test]
+fn both_variants_carry_the_contract_shape() {
+    let (entries, norm) = small();
+    let (v3, r3) = native::synthesize(groth16::variant_circuit_for(
+        groth16::Variant::V3,
+        &entries,
+        norm,
+        0,
+    ));
+    let (v2, r2) = native::synthesize(groth16::variant_circuit_for(
+        groth16::Variant::V2Pedersen,
+        &entries,
+        norm,
+        0,
+    ));
+    r3.expect("V3 must synthesize");
+    r2.expect("V2′ must synthesize");
+    assert_eq!(v3.instance_variables, groth16::IC_LEN);
+    assert_eq!(
+        v2.instance_variables,
+        groth16::IC_LEN,
+        "one wrapper, one shape"
+    );
+    assert!(v3.satisfied, "V3 must be satisfied at its own root");
+    assert!(
+        v2.satisfied,
+        "V2′ must be satisfied at the commitment it computes outside the circuit"
+    );
+}
+
+/// The duel's headline number, **derived** rather than quoted: the wrapper is the
+/// same code in both arms, so the gap between the two keys is exactly the gap
+/// between the two commitments at the same `N`. The direction is asserted because
+/// that is what `D-M4-0` turns on — `scripts/m4b_output.txt` carries the `N = 500`
+/// numbers this test deliberately does not pay for.
+#[test]
+fn the_variant_gap_is_the_commitments_gap() {
+    let (entries, norm) = small();
+    let params = native::poseidon_params();
+    let (v3_native, _) = native::synthesize(native::PoseidonNormCircuit {
+        commitment: native::poseidon_commitment(&entries, &params),
+        entries: entries.clone(),
+        certified_norm_wad: norm,
+        params,
+    });
+    let params = native::v2::PedersenParams::new(entries.len());
+    let (v2_native, _) = native::synthesize(native::v2::PedersenNormCircuit {
+        commitment: params.commitment(&entries),
+        entries: entries.clone(),
+        certified_norm_wad: norm,
+        params,
+    });
+    let (v3, _) = native::synthesize(groth16::variant_circuit_for(
+        groth16::Variant::V3,
+        &entries,
+        norm,
+        0,
+    ));
+    let (v2, _) = native::synthesize(groth16::variant_circuit_for(
+        groth16::Variant::V2Pedersen,
+        &entries,
+        norm,
+        0,
+    ));
+
+    assert_eq!(
+        v2.constraints - v2_native.constraints,
+        v3.constraints - v3_native.constraints,
+        "the wrapper is the same code, so it must cost the same on both sides"
+    );
+    assert_eq!(
+        v2.constraints - v3.constraints,
+        v2_native.constraints - v3_native.constraints
+    );
+    assert_eq!(
+        v2.witness_variables - v3.witness_variables,
+        v2_native.witness_variables - v3_native.witness_variables
+    );
+    assert!(
+        v2_native.constraints > v3_native.constraints,
+        "at this N the Pedersen commitment is the costly one"
+    );
+    assert!(
+        v2.constraints > v3.constraints,
+        "and the wrapper neither hides nor reverses that"
+    );
+}
+
+/// A commitment is not a digest: the two variants' roots are different `Fr`
+/// values, so neither variant's proof can be replayed as the other's statement.
+#[test]
+fn the_two_variants_have_different_roots() {
+    let (entries, norm) = small();
+    assert_ne!(
+        groth16::variant_root(groth16::Variant::V3, &entries, norm, 0),
+        groth16::variant_root(groth16::Variant::V2Pedersen, &entries, norm, 0)
+    );
+}
+
+/// V2′ end to end: the key the contract would need, the proof, every component of
+/// the statement bound, and the verdict the two measurements imply. The same
+/// assertions M4b made of V3, plus the one M4c adds — that they are two different
+/// statements — and the decision read as a value rather than as a substring.
+#[test]
+fn the_v2_prime_pipeline_meets_the_contracts_shape() {
+    let (entries, norm) = small();
+    let v3 = groth16::measure(&entries, norm, 0);
+    let v2 = groth16::measure_variant(groth16::Variant::V2Pedersen, &entries, norm, 0);
+
+    assert_eq!(v2.variant, groth16::Variant::V2Pedersen);
+    assert_eq!(v2.key.ic, groth16::IC_LEN);
+    assert_eq!(v2.instance_variables, groth16::IC_LEN);
+    assert_eq!(v2.proof_on_chain_bytes, 8 * 32);
+    assert!(v2.verifies, "V2′'s honest statement must verify");
+    assert!(
+        v2.binding.epoch && v2.binding.root && v2.binding.norm,
+        "every component of V2′'s statement must be bound"
+    );
+    assert!(v2.render().contains("over V2′"), "the table must name it");
+
+    assert_ne!(v2.vk_canonical_digest, v3.vk_canonical_digest);
+    assert_ne!(v2.proof_canonical_digest, v3.proof_canonical_digest);
+
+    // The verdict is computed from the two measurements, never written into the
+    // string, so this is the same decision `scripts/m4b_output.txt` renders for
+    // `N = 500` — with the numbers quoted there instead of here.
+    let (winner, why) = groth16::duel_verdict(&v3, &v2);
+    assert_eq!(winner, groth16::Variant::V3);
+    assert!(
+        why.contains("more constraints"),
+        "the reason must name the gap: {}",
+        why
+    );
+    assert!(
+        groth16::render_duel(&v3, &v2).contains(&format!(
+            "  decision                  {} — {} pays {}",
+            winner.name(),
+            groth16::Variant::V2Pedersen.name(),
+            why
+        )),
+        "the table must state the verdict the numbers imply"
     );
 }

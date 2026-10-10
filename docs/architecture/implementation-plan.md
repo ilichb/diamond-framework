@@ -170,7 +170,7 @@ claim they trace to; **no invented constants**.
 | M1 | Reputation registry | A1 | `contracts/AVIPRegistry.sol` — **done** | Merkle root per epoch; inclusion proof; rejects a root violating `γ·N = 0.10·500` (Data Layer) |
 | M2 | Validator manager | A2 | `contracts/AVIPValidatorManager.sol` — **done** | `S_f*(T) = max{0.2, Θ − C_R(T)}` with `C_R(r)=0.8r/(1+r)`; admission and slashing events; vectors match `verification/mechanism/` |
 | M3 | ZK verifier | A3 | `contracts/verifiers/Groth16Verifier.sol` — **done** (§5.4) | Groth16 k=4 over BN254 via 0x06/0x07/0x08; gas ≈ 206k (cross-check `GasBenchmarks.sol`; 223,445 measured on the deployed shape, §5.4) |
-| M4 | Off-chain prover | A4, A11 | `src/zk/` (Rust) | Pedersen commit of the 500-entry tensor; Bulletproofs proof (0 R1CS, ~0.72 KB); recursive SNARK; reports local proving time |
+| M4 | Off-chain prover | A4, A11 | `src/zk/` (Rust) — **M4a, M4b and M4c done** (§5.5.8–§5.5.10) | Bulletproofs aggregated range proof over the 500-entry tensor (`512 × 64` padded, measured 1248 B against the paper's 0.72 KB, §5.5.8); the in-circuit commitment is **V3** — `D-M4-0` closed in M4c (§5.5.10); the derived key and proof are accepted by the frozen contracts (§5.5.9); reports local proving time (**3.9 s** against §5.5.4's 120 s gate); the *paper-literal* recursive SNARK stays open (§5.5.7) |
 | M5 | RMT detector | A5 | `src/rmt/` | Reproduces `q99 = 9.0542` (right tail) and `−λ_min > 9.1371` (left tail) from `verification/rmt/`, without editing it |
 | M6 | Reputation dynamics | A6 | `src/reputation/` | `C_R(r)` closed form + epoch commitment; positivity under multiplicative jumps (paper §2) |
 | M7 | Data layer, deploy, AWM | A7, A8, A9 | `src/` + `scripts/` + contracts | Fraud-proof equilibrium `n*(B)=⌊B/B*⌋`, `S_slash=10` (Data Layer); `Deploy*.s.sol` to Fuji; 3 AWM message types |
@@ -630,7 +630,11 @@ this section was drafted: §5.5.5 takes V1 out of the implementation path on
 crate-level evidence, so M4a compares V2 against V3. The paper's `[CONJECTURE]` ("too large for practical
 Groth16 proving on consumer hardware") is not treated as a result: §9 requires
 that a claim contradicting it carry its own backing script before it can reach
-`main.tex`.
+`main.tex`. **The measurement closed the decision in M4c (§5.5.10): V3** — by
+59,250 constraints (94,438 against 153,688) and by one curve, because V2′'s
+commitment costs 240 constraints per entry against Poseidon's ≈121. The verdict is
+returned by `duel_verdict` rather than declared here, so the branch is a computed
+value and not a preference (§10 D-6).
 
 #### 5.5.3 Why the range proof is mandatory, and how its width is derived
 
@@ -873,7 +877,7 @@ gas) — a drift there is a regression, not a new measurement.
 
 - `src/zk/src/` modules and `benches/`: the aggregated-range-proof bench
   (§5.5.3), the native commitment + norm circuit — **V3** as implemented, and
-  **V2′** (Pedersen over Baby Jubjub, §5.5.2) once it lands, because V2 as
+  **V2′** (Pedersen over Baby Jubjub, §5.5.2), landed in §5.5.10, because V2 as
   written is blocked at the type level — and the `⟨T,T⟩` statement written down
   for V1 with the rejection §5.5.5 records. The emulated-field unit bench
   (§5.5.4) is **optional**: it runs only if V1 is ever re-opened, and no bench of
@@ -1077,9 +1081,105 @@ M4a's 32,768-bit range proof); `cargo clippy --all-targets -- -D warnings` and
 M4b's, and `forge fmt --check` clean; `m4b_report.sh` twice → `m4b_output.txt`
 byte-identical; the M4a acceptance re-run → `m4a_output.txt` unchanged.
 
-Still open, and unchanged by M4b: **V2′** and therefore `D-M4-0` (§5.5.2,
-§10 D-6); the Pedersen ↔ Merkle bridge (M7, §5.5.7); a multi-party ceremony and
-an audit (§11).
+Still open when M4b was delivered: **V2′** and therefore `D-M4-0` (§5.5.2,
+§10 D-6) — both closed in §5.5.10 — and, unchanged by it, the Pedersen ↔ Merkle
+bridge (M7, §5.5.7) and a multi-party ceremony and an audit (§11).
+
+#### 5.5.10 M4c — V2′, and `D-M4-0` closed
+
+Recorded on the same terms as §5.5.8 and §5.5.9. M4c built the branch §5.5.2 had
+repaired *on paper* — **V2′**, Pedersen over Baby Jubjub — and measured it through
+**M4b's own statement wrapper**, so the decision compares two rows of one table
+rather than two pipelines whose wrappers could drift apart. It added a `v2` module
+to `src/zk/src/native.rs` (one seeded parameter set, the fixed-base gadget, the
+circuit), the variant switch to `src/zk/src/groth16.rs` (`Variant`,
+`variant_circuit_for`, `variant_key_and_proof`, `variant_root`, `measure_variant`,
+`render_duel`, `duel_verdict`), six tests to `native.rs` and four to
+`src/zk/tests/groth16_statement_shape.rs`, and one new dependency to the crate
+(`ark-ed-on-bn254 = "=0.6.0"` with `r1cs` + `std`, `Cargo.lock` committed —
+`cargo build --offline` still succeeds, so the offline property §5.5.6 requires is
+intact). The duel is
+pinned in `src/zk/scripts/m4b_output.txt` **below** M4b's V3 section, and that
+section is byte-identical to the file §5.5.9 committed: M4c added a measurement
+rather than disturbing one. **No file under `integrations/avalanche/` was edited**,
+which is what a V3 verdict means — the key M4b installed is the key that ships.
+
+**Why Baby Jubjub, and what the bits are for.** V2 as written is blocked because
+G1 coordinates are `Fq` while the wrapper's constraint field is `Fr` (§5.5.2).
+Baby Jubjub's **base** field *is* `Fr_BN254`, so the coordinates fall inside the
+circuit natively — that is the entire repair — but its **scalar** field is a
+*different* prime, so a scalar cannot be a witness of this circuit either. The
+gadget therefore takes the `T_i` **as 60 bits**, the decomposition §5.5.3's range
+check already pays for (discarding it and re-decomposing would pay twice), and the
+bases are constants: public parameters do not have to be variables. `root` is the
+commitment's **x-coordinate**, because the frozen statement carries one `uint256`
+for it; binding a full point would need a second word and is an M7 / §5.5.7
+question, not a variant question — both variants expose the same three public
+inputs, in the same order, with the same `ic = 4`.
+
+**The duel, measured through one wrapper** (`m4b_output.txt`; `V2′`'s bare circuit
+is the row `m4a_output.txt` prints):
+
+| Quantity | V3 | V2′ |
+|---|---|---|
+| Constraints in `[root, epoch, certifiedNorm]` | **94,438** | **153,688** (+59,250, +62.7%) |
+| Witness variables | 93,189 | 152,439 |
+| `a` / `b_g1` / `b_g2` / `l` queries | 93,193 / 93,193 / 93,193 / 93,189 | 152,443 / 152,443 / 152,443 / 152,439 |
+| `h` query | 131,071 | 262,143 |
+| `ic` (what the contract reads) | 4 | 4 |
+| Proof | 256 B on-chain | 256 B on-chain |
+| Setup / prove / verify (stderr, one run) | 6.5 s / **3.9 s** / 1.3 ms | 10.0 s / **6.3 s** / 1.3 ms |
+| Curves an implementation must carry | **1** (BN254: the commitment is field arithmetic) | **2** (BN254 + Baby Jubjub) |
+| Commitment's share at 500 entries (§5.5.8) | Poseidon **60,748** | Pedersen **119,998** |
+
+The gap is entirely in the commitment, and the two scripts prove it rather than
+assert it: V2′'s wrapper costs +830 constraints over its own bare circuit — the
+same `epoch < 2^64` bound M4b added to V3 — so 153,688 − 830 = 152,858, and
+152,858 − 32,860 = 119,998 *is* the Pedersen share in `m4a_output.txt`. A test
+asserts that subtraction for both arms, so the two files cannot diverge silently.
+The `h` query crossing 2^18 is the same 62.7% seen from the prover's side — 59,250
+constraints can push a query past a power-of-two boundary — and the measured
+proving time moves with it (V3 `3.9–4.1 s` over two runs, V2′ `6.3 s`), well inside
+§5.5.4's 120 s budget for *either* variant. The constraint count, not the clock, is
+what decides.
+
+**Why V3 wins, and how much of a margin it is.** Per entry: Poseidon ≈121
+constraints (60,748 / 500), Pedersen 240 — `ENTRY_BITS = 60` consumed in 2-bit
+windows, 30 windows of 8 constraints each, which `native.rs`'s tests *derive* from
+the gadget (affine in the entry count, one constant per window) instead of pinning
+the number. The verdict is therefore **comfortable on the measured gadget and near
+a tie on a hypothetical one**: `ark-r1cs-std 0.6.0` exposes only the 2-bit
+`precomputed_base_scalar_mul_le` for `AffineVar`, and at *4* bits the Pedersen
+share would roughly halve to ≈60,000, within a few hundred constraints of
+Poseidon's 60,748. That is an estimate read off the gadget, not a second
+measurement, and it is recorded because it is what makes the *second* criterion
+load-bearing rather than decorative: if the constraints ever draw level, the
+tie-break is that V2′ costs a second curve — a second parameter set, a second
+setup, a second set of audits — while V3 stays inside BN254.
+
+**The verdict is computed, not transcribed.** `render_duel` prints the two rows;
+the sentence beneath them comes from `duel_verdict`, which compares constraints
+first and curve count second, and a test asserts the decision on the measurements
+rather than on a substring of the table. §5.5.4 declares no numeric threshold for
+*this* branch — the plan commits only to deciding "on the measured cost" — so a
+hand-written verdict would be a claim with no derivation, exactly what §5.5.8's
+methods exist to avoid. The table prints the criterion beside the numbers it
+applies to.
+
+Validated: `cargo test` → *29 passed, 0 failed, 1 ignored* (6 of the 29 are V2′'s,
+in `native.rs`; 4 are the new ones in `tests/groth16_statement_shape.rs`; the
+ignored one is M4a's 32,768-bit range proof); `cargo clippy --all-targets -- -D
+warnings` and `cargo fmt --check` clean; `cargo build --offline` from the committed
+lock; both report scripts re-run → their committed outputs byte-identical
+(`m4b_output.txt`'s V3 section included, which is M4b's acceptance re-run);
+`bash verification/audit-gate.sh` → *PASS=11, FAIL=0*. Nothing under
+`integrations/avalanche/` was touched, so §5.5.9's contract validation stands
+exactly as recorded (107 passing tests, 223,445 gas through the verifier).
+
+Still open, and unchanged by M4c: the *paper-literal* recursive construction
+(§5.5.5, §5.5.7); the Pedersen ↔ Merkle bridge (M7); a multi-party ceremony and an
+audit (§11). `D-M4-0` is closed as **V3** (§10 D-6), which is the variant M4b had
+already installed, so no artefact on either side of the boundary changes.
 
 ## 6. Interfaces and parameter provenance
 
@@ -1189,7 +1289,7 @@ stable — the same reason the protection phase is last.
 | D-3 | Foundry project layout | New project at `integrations/avalanche/` (current) vs moving the benchmarks inside it | **Keep current**: the benchmarks are cited by the paper and by C-20; moving them would invalidate their recorded paths |
 | D-4 | Code license vs paper license | MIT for code (already) and separate license for the paper | Decide in the protection phase |
 | D-5 | solc drift | Paper says 0.8.33, badge said 0.8.24, machine has 0.8.33 | **Closed in P2**: badge aligned to 0.8.33, both Foundry projects pin 0.8.33; the one 0.8.24 artefact is documented, not edited |
-| D-6 | M4 primitive (`D-M4-0`) | V1 paper-literal (Ristretto + Bulletproofs + recursion) vs V2 native Pedersen in-circuit vs V3 Poseidon in-circuit | **Narrowed twice**: V1 leaves the implementation path (§5.5.5 — the `yoloproofs` gate) and V2 as *written* is blocked at the type level, so its native repair **V2′** (Pedersen over Baby Jubjub) is what `D-M4-0` compares against V3. M4a has measured both sides' shared half — the norm at 32,860 constraints, Poseidon adding 60,748 (§5.5.8); the verdict waits on V2′ |
+| D-6 | M4 primitive (`D-M4-0`) | V1 paper-literal (Ristretto + Bulletproofs + recursion) vs V2 native Pedersen in-circuit vs V3 Poseidon in-circuit | **Closed in M4c (§5.5.10) as V3**: V1 leaves the implementation path (§5.5.5 — the `yoloproofs` gate), V2 as *written* is blocked at the type level, and its native repair **V2′** (Pedersen over Baby Jubjub) was built and measured against V3 through the same statement wrapper — 153,688 vs 94,438 constraints (+59,250, +62.7%, the commitment's 240-per-entry against Poseidon's ≈121), two curves against one, prove 6.3 s against 3.9–4.1 s (stderr, load-dependent; the pinned files carry only counts, sizes and digests). V3 is the variant M4b already installed, so no artefact changes |
 
 ## 11. Out of scope here
 
@@ -1212,18 +1312,22 @@ stable — the same reason the protection phase is last.
 | P6 | C-gaps: paper apparatus (C1–C4), one batch | **re-anchor** |
 | P7 | Protection + arXiv | **re-anchor** if `main.tex` changes |
 
-**Next step: V2′ — the one thing `D-M4-0` still waits on — or M5 if the decision
-is deferred.** M4a and M4b are delivered (§5.5.8, §5.5.9): the crate under
-`src/zk/` measures the inner layer *and* derives the real key, and every number
+**Next step: the *paper-literal* recursive construction of §5.5.7 — the last thing
+M4's amendment owes — or M5 if it is deferred.** M4a, M4b and M4c are delivered
+(§5.5.8, §5.5.9, §5.5.10): the crate under
+`src/zk/` measures the inner layer, derives the real key, and decides `D-M4-0` on
+both variants through one statement wrapper, and every number
 either note quotes is in `src/zk/scripts/{m4a,m4b}_output.txt`, reproduced by one
 command each. M4b replaced the M3 placeholder with a real key over V3, proved the
 deterministic fixture end to end, and got it accepted by the unmodified
 `Groth16Verifier` and `AVIPRegistry.verifyThreshold` — the fixture is a real proof
-now, not a solved equation. What remains of M4 is (i) **V2′**, without which
-`D-M4-0` cannot be decided (§5.5.2, §10 D-6); M4b's pipeline is circuit-agnostic
-(it calls `circuit_for`), so choosing V2′ later is a change to that function and a
-re-run rather than a new pipeline — and (ii) the *paper-literal* recursive
-construction, which §5.5.7 keeps open. M3 closed
+now, not a solved equation. M4c then built **V2′** and measured it against V3
+through that same wrapper, which is what closed `D-M4-0` as **V3** (§5.5.10) — the
+variant M4b had already installed, so the decision cost no artefact. What remains
+of M4 is the *paper-literal* recursive
+construction, which §5.5.7 keeps open; the pipeline is variant-agnostic,
+so re-opening the decision is a change to `variant_circuit_for` and a re-run
+rather than a new pipeline. M3 closed
 the **on-chain** half of A3:
 `AVIPRegistry.verifyThreshold` no longer calls a mock, the pairing runs through
 precompiles `0x06`/`0x07`/`0x08`, and `Θ_r = 0.5` `[CONJECTURE]` is enforced on a
@@ -1312,3 +1416,22 @@ unchanged, which is the M4a acceptance re-run §5.5.6 asks for. The setup is a
 threshold, is what closes the proving-time half of A11 (the Teleporter half still
 needs a live subnet, §11). What M4b did **not** deliver is V2′, and therefore the
 `D-M4-0` verdict is still open (§5.5.2).
+
+Delivered by M4c (§5.5.10): `src/zk/src/native.rs`'s `v2` module (the seeded
+Baby Jubjub parameters, the fixed-base gadget that takes the entries' bits, the
+circuit) and the variant switch of `src/zk/src/groth16.rs` (`Variant`,
+`variant_circuit_for`, `variant_key_and_proof`, `variant_root`, `measure_variant`,
+`render_duel`, `duel_verdict`), with `src/zk/src/{m4b,report}.rs` measuring and
+printing both arms. The pinned `src/zk/scripts/m4b_output.txt` gained the
+`D-M4-0` duel (35 lines) and `src/zk/scripts/m4a_output.txt` gained V2′'s circuit
+and share (5 lines) — both **additions only**, and the V3 section of
+`m4b_output.txt` is byte-identical to the file M4b committed, which is the
+acceptance re-run §5.5.6 asks for in the form that matters here. Nothing under
+`integrations/avalanche/` was edited, because the verdict is V3. Validated locally:
+`cargo test` → *29 passed, 0 failed, 1 ignored*; `cargo clippy --all-targets -- -D
+warnings` and `cargo fmt --check` clean; `cargo build --offline` from the committed
+lock (§5.5.6's offline property, kept through the one new pinned dependency); both
+report scripts re-run → their committed outputs byte identical;
+`bash verification/audit-gate.sh` → *PASS=11, FAIL=0*. What M4c delivered,
+measured rather than argued, is the verdict M4a and M4b could not: **V3**. What it
+did **not** deliver is the paper-literal recursive construction (§5.5.7).

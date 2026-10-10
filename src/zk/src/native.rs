@@ -5,8 +5,9 @@
 //! every variable in the circuit lives in `Fr`. The norm is `Fr` arithmetic; a
 //! commitment is native only if its group is defined over `Fr`.
 //!
-//! That is why the variants differ, and why §5.5.2's V2 row cannot be taken
-//! literally — see [`v2`] for the recorded evidence.
+//! That is why the variants differ. §5.5.2's V2 row cannot be taken literally
+//! (its group is defined over `Fq`) — see [`v2`] for the recorded evidence *and*
+//! for **V2′**, the native repair, which this module implements.
 
 use std::time::{Duration, Instant};
 
@@ -61,24 +62,40 @@ pub fn synthesize<C: ConstraintSynthesizer<Fr>>(
     (cost, result)
 }
 
-/// Allocate the entries as `k = 60` Booleans each and rebuild the scalar from
-/// them. This *is* the range check of §5.5.3: an out-of-range entry has no
-/// witness, so no numerical comparison that could overflow is needed.
+/// The entries as `k = 60` Booleans each. This *is* the range check of §5.5.3: an
+/// out-of-range entry has no witness, so no numerical comparison that could
+/// overflow is needed.
+///
+/// Exposed separately because a commitment can consume the *bits* directly — V2′
+/// does (§5.5.2), since Baby Jubjub's scalar field is not `Fr_BN254` — and it
+/// would then pay for a second decomposition if it had to start from
+/// [`allocate_entries`]'s `FpVar`s.
+pub fn allocate_entry_bits(
+    cs: &ConstraintSystemRef<Fr>,
+    entries: &[u64],
+) -> Result<Vec<Vec<Boolean<Fr>>>, SynthesisError> {
+    entries
+        .iter()
+        .map(|e| {
+            (0..ENTRY_BITS)
+                .map(|j| {
+                    let bit = (e >> j) & 1 == 1;
+                    Boolean::new_witness(cs.clone(), || Ok(bit))
+                })
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .collect()
+}
+
+/// [`allocate_entry_bits`], with each entry rebuilt as an `Fr` element.
 pub fn allocate_entries(
     cs: &ConstraintSystemRef<Fr>,
     entries: &[u64],
 ) -> Result<Vec<FpVar<Fr>>, SynthesisError> {
-    let mut out = Vec::with_capacity(entries.len());
-    for e in entries {
-        let bits: Vec<Boolean<Fr>> = (0..ENTRY_BITS)
-            .map(|j| {
-                let bit = (e >> j) & 1 == 1;
-                Boolean::new_witness(cs.clone(), || Ok(bit))
-            })
-            .collect::<Result<_, _>>()?;
-        out.push(Boolean::le_bits_to_fp(&bits)?);
-    }
-    Ok(out)
+    allocate_entry_bits(cs, entries)?
+        .iter()
+        .map(|bits| Boolean::le_bits_to_fp(bits))
+        .collect()
 }
 
 /// `Σ T_i²`, in `Fr`. The plan's worst case (`N·1e36 = 5e38`, 129 bits) lives
@@ -262,7 +279,21 @@ impl ConstraintSynthesizer<Fr> for PoseidonNormCircuit {
 /// curve defined **over `Fr`** (`ark-ed-on-bn254`, Baby Jubjub), which is native
 /// but is *not* "Pedersen over BN254 G1" — or V3, which needs no curve at all.
 pub mod v2 {
+    use ark_ec::{AdditiveGroup, CurveGroup, PrimeGroup, VariableBaseMSM};
+    use ark_ed_on_bn254::{EdwardsConfig, EdwardsProjective, Fr as JubjubScalar};
     use ark_ff::PrimeField;
+    use ark_r1cs_std::{
+        alloc::AllocVar,
+        eq::EqGadget,
+        groups::{CurveVar, curves::twisted_edwards::AffineVar},
+    };
+    use rand_chacha::ChaCha20Rng;
+    use rand_core::{RngCore, SeedableRng};
+
+    use super::{
+        Boolean, ConstraintSynthesizer, ConstraintSystemRef, ENTRY_BITS, FpVar, Fr, SynthesisError,
+        allocate_entry_bits, enforce_floor_norm, sum_of_squares,
+    };
 
     /// One line for the measured table.
     pub const STATUS: &str = "V2 as written (Pedersen over BN254 G1 in a Fr circuit): \
@@ -276,10 +307,149 @@ pub mod v2 {
             ark_bn254::Fr::MODULUS_BIT_SIZE as u64,
         )
     }
+
+    // ---- V2′: the native repair -------------------------------------------------
+
+    /// The dev seed for V2′'s Pedersen bases. Committed on purpose, exactly like
+    /// `groth16::SETUP_SEED`: it makes the parameter set reproducible, **and** it
+    /// makes the discrete-log relations between the bases public, so this
+    /// commitment binds nobody. §11 owns what a deployment would need.
+    pub const PEDERSEN_SEED: [u8; 32] = *b"AVIP-M4-v2p-dev-bases-0000000001";
+
+    /// The public parameters of V2′: `n` Pedersen bases over Baby Jubjub, with
+    /// the `ENTRY_BITS` power-of-two multiples the fixed-base gadget consumes.
+    ///
+    /// Baby Jubjub's **base field is `Fr_BN254`** (`ark_ed_on_bn254::Fq =
+    /// ark_bn254::Fr`), which is why its coordinates are native in the
+    /// Groth16/BN254 circuit — and why V2′ is *not* V2: they are different groups.
+    /// Its **scalar field is a different 251-bit prime**, so an in-circuit scalar
+    /// cannot be an `FpVar<Fr_BN254>`. It is the entry's bit decomposition, which
+    /// is exactly what §5.5.3's range check already allocates.
+    #[derive(Clone, Debug)]
+    pub struct PedersenParams {
+        bases: Vec<EdwardsProjective>,
+        multiples: Vec<Vec<EdwardsProjective>>,
+    }
+
+    impl PedersenParams {
+        /// `n` bases from [`PEDERSEN_SEED`]: `Gᵢ = sᵢ·G`, each `sᵢ` drawn from
+        /// the seed and reduced into Baby Jubjub's scalar field.
+        pub fn new(n: usize) -> Self {
+            let mut rng = ChaCha20Rng::from_seed(PEDERSEN_SEED);
+            let generator = EdwardsProjective::generator();
+            let bases: Vec<EdwardsProjective> = (0..n)
+                .map(|_| {
+                    let mut bytes = [0u8; 32];
+                    rng.fill_bytes(&mut bytes);
+                    generator * JubjubScalar::from_le_bytes_mod_order(&bytes)
+                })
+                .collect();
+            let multiples = bases
+                .iter()
+                .map(|base| {
+                    let mut powers = Vec::with_capacity(ENTRY_BITS);
+                    let mut point = *base;
+                    for _ in 0..ENTRY_BITS {
+                        powers.push(point);
+                        point.double_in_place();
+                    }
+                    powers
+                })
+                .collect();
+            Self { bases, multiples }
+        }
+
+        /// The `n` bases, for the out-of-circuit commitment.
+        pub fn bases(&self) -> &[EdwardsProjective] {
+            &self.bases
+        }
+
+        /// Per base, `[Gᵢ, 2Gᵢ, …, 2^(ENTRY_BITS−1)Gᵢ]`: the tables the gadget
+        /// looks up.
+        pub fn multiples(&self) -> &[Vec<EdwardsProjective>] {
+            &self.multiples
+        }
+
+        /// `Σ Tᵢ·Gᵢ`, **outside** the circuit, by one multi-scalar
+        /// multiplication. This is a second, independent implementation of the
+        /// gadget's semantics, and a test asserts the two agree — so "the circuit
+        /// proves the commitment" is checked rather than believed.
+        pub fn commitment(&self, entries: &[u64]) -> EdwardsProjective {
+            let scalars: Vec<JubjubScalar> =
+                entries.iter().copied().map(JubjubScalar::from).collect();
+            let affine = EdwardsProjective::normalize_batch(&self.bases);
+            EdwardsProjective::msm(&affine, &scalars).expect("one base per entry, by construction")
+        }
+
+        /// The commitment's x-coordinate: the single field element the frozen
+        /// statement has room for (`uint256 root`). A full point would need two
+        /// words, which is a §5.5.7 (M7) question — the statement shape is M3's
+        /// and neither this decision nor the measurement moves it.
+        pub fn commitment_x(&self, entries: &[u64]) -> Fr {
+            self.commitment(entries).into_affine().x
+        }
+    }
+
+    /// `Σᵢ Σⱼ bᵢⱼ·2ʲ·Gᵢ` — the fixed-base Pedersen commitment the circuit proves.
+    ///
+    /// The bases are **public parameters**, known outside the circuit, so the
+    /// gadget's tables are constants and each 2-bit window costs two lookups and
+    /// one addition. `bits` are the entries' bit decompositions: the same Booleans
+    /// §5.5.3's range check already pays for, so the commitment adds no
+    /// decomposition of its own.
+    pub fn pedersen_commit(
+        bits: &[Vec<Boolean<Fr>>],
+        params: &PedersenParams,
+    ) -> Result<AffineVar<EdwardsConfig, FpVar<Fr>>, SynthesisError> {
+        let mut commit = AffineVar::<EdwardsConfig, FpVar<Fr>>::zero();
+        for (entry_bits, multiples) in bits.iter().zip(params.multiples()) {
+            commit.precomputed_base_scalar_mul_le(entry_bits.iter().zip(multiples.iter()))?;
+        }
+        Ok(commit)
+    }
+
+    /// V2′ of §5.5.2: Pedersen over Baby Jubjub, recomputed in-circuit, plus the
+    /// norm both variants share.
+    ///
+    /// Public inputs: the commitment's x-coordinate and the certified norm. The
+    /// statement's third word (`epoch`) belongs to the wrapper [`crate::groth16`]
+    /// adds, and that wrapper is the same for V2′ and V3 — which is what makes the
+    /// two variants' costs comparable line by line.
+    pub struct PedersenNormCircuit {
+        /// Witness: the `N` WAD entries.
+        pub entries: Vec<u64>,
+        /// Public: the norm the statement certifies, in WAD.
+        pub certified_norm_wad: u64,
+        /// Public, as its x-coordinate: the Pedersen commitment, from
+        /// [`PedersenParams::commitment`].
+        pub commitment: EdwardsProjective,
+        /// The public parameters, from [`PedersenParams::new`].
+        pub params: PedersenParams,
+    }
+
+    impl ConstraintSynthesizer<Fr> for PedersenNormCircuit {
+        fn generate_constraints(self, cs: ConstraintSystemRef<Fr>) -> Result<(), SynthesisError> {
+            let committed = FpVar::new_input(cs.clone(), || Ok(self.commitment.into_affine().x))?;
+            let certified = FpVar::new_input(cs.clone(), || Ok(Fr::from(self.certified_norm_wad)))?;
+
+            let bits = allocate_entry_bits(&cs, &self.entries)?;
+            let entries: Vec<FpVar<Fr>> = bits
+                .iter()
+                .map(|entry_bits| Boolean::le_bits_to_fp(entry_bits))
+                .collect::<Result<_, _>>()?;
+            let squares = sum_of_squares(&entries)?;
+            enforce_floor_norm(squares, certified)?;
+
+            let point = pedersen_commit(&bits, &self.params)?;
+            point.affine_xy()?.0.enforce_equal(&committed)
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use ark_ec::AdditiveGroup;
+
     use super::*;
 
     /// Small tensor: the shape tests run in debug time.
@@ -370,5 +540,136 @@ mod tests {
     fn fq_and_fr_are_different_fields() {
         assert_eq!(v2::field_facts(), (254, 254));
         assert_ne!(ark_bn254::Fq::MODULUS, ark_bn254::Fr::MODULUS);
+    }
+
+    /// V2′'s parameters come from one committed seed: two constructions, one set
+    /// of bases. Without this the "reproducible measurement" of §5.5.6 would hold
+    /// for V3 only.
+    #[test]
+    fn v2p_params_are_reproducible() {
+        let first = v2::PedersenParams::new(4);
+        let second = v2::PedersenParams::new(4);
+        assert_eq!(first.bases(), second.bases());
+        assert_eq!(first.multiples()[3][2], first.bases()[3].double().double());
+    }
+
+    /// The circuit must certify `Σ Tᵢ·Gᵢ` and nothing else. The commitment fed to
+    /// it here comes from `PedersenParams::commitment`, i.e. from one **multi-scalar
+    /// multiplication outside the circuit** — while the gadget recomputes the same
+    /// point from 2-bit-window tables. Satisfied therefore means the two
+    /// implementations agree, which is the cross-check V2′ needs to be believed.
+    #[test]
+    fn v2p_circuit_is_satisfied_at_the_true_commitment() {
+        let entries = small();
+        let params = v2::PedersenParams::new(entries.len());
+        let (cost, result) = synthesize(v2::PedersenNormCircuit {
+            commitment: params.commitment(&entries),
+            entries: entries.clone(),
+            certified_norm_wad: norm_wad(&entries),
+            params,
+        });
+        result.expect("synthesis");
+        assert!(cost.satisfied, "true commitment and norm must satisfy");
+        assert_eq!(
+            cost.instance_variables, 3,
+            "commitment, norm and the constant"
+        );
+        assert!(cost.witness_variables >= entries.len() * ENTRY_BITS);
+    }
+
+    /// Binding, checked rather than asserted: the same witness with another
+    /// tensor's commitment must not satisfy the circuit.
+    #[test]
+    fn v2p_circuit_rejects_a_forged_commitment() {
+        let entries = small();
+        let mut forged_entries = entries.clone();
+        forged_entries[0] += 1;
+        let params = v2::PedersenParams::new(entries.len());
+        assert_ne!(
+            params.commitment_x(&entries),
+            params.commitment_x(&forged_entries),
+            "another tensor commits to another x"
+        );
+        let (cost, result) = synthesize(v2::PedersenNormCircuit {
+            commitment: params.commitment(&forged_entries),
+            entries,
+            certified_norm_wad: norm_wad(&forged_entries),
+            params,
+        });
+        result.expect("synthesis");
+        assert!(!cost.satisfied, "a foreign commitment must not certify");
+    }
+
+    #[test]
+    fn v2p_circuit_rejects_a_forged_norm() {
+        let entries = small();
+        let params = v2::PedersenParams::new(entries.len());
+        let (cost, result) = synthesize(v2::PedersenNormCircuit {
+            commitment: params.commitment(&entries),
+            entries: entries.clone(),
+            certified_norm_wad: norm_wad(&entries) + 1,
+            params,
+        });
+        result.expect("synthesis");
+        assert!(!cost.satisfied, "a forged norm must not be satisfiable");
+    }
+
+    /// The commitment part of the cost: V2′'s circuit minus the norm circuit,
+    /// which for the same entries is exactly the Pedersen gadget's share.
+    fn commitment_cost(n: usize) -> usize {
+        commitment_cost_of(&vec![1u64; n])
+    }
+
+    fn commitment_cost_of(entries: &[u64]) -> usize {
+        let certified = norm_wad(entries);
+        let params = v2::PedersenParams::new(entries.len());
+        let (with_commit, first) = synthesize(v2::PedersenNormCircuit {
+            commitment: params.commitment(entries),
+            entries: entries.to_vec(),
+            certified_norm_wad: certified,
+            params,
+        });
+        first.expect("synthesis");
+        let (norm_only, second) = synthesize(NormCircuit {
+            entries: entries.to_vec(),
+            certified_norm_wad: certified,
+        });
+        second.expect("synthesis");
+        with_commit.constraints - norm_only.constraints
+    }
+
+    /// `ENTRY_BITS = 60` bits are consumed in 2-bit windows, so the gadget's cost
+    /// is **affine in the entry count**: adding `k` entries costs the same
+    /// whatever the count, which the first equality states by doubling an
+    /// increment. The second is the window structure: the per-entry cost divides
+    /// by the 30 windows, i.e. every window costs the same. Both are derived from
+    /// the gadget rather than pinned as numbers (§5.5.9's method for the wrapper),
+    /// so a future `ark-r1cs-std` that windows differently still satisfies them.
+    #[test]
+    fn v2p_commitment_cost_is_affine_in_the_entries() {
+        let (eight, sixteen, thirty_two) =
+            (commitment_cost(8), commitment_cost(16), commitment_cost(32));
+        assert_eq!(
+            (sixteen - eight) * 2,
+            thirty_two - sixteen,
+            "the per-entry cost is constant: {eight}, {sixteen}, {thirty_two}"
+        );
+        let windows = ENTRY_BITS.div_ceil(2);
+        let per_entry = (thirty_two - sixteen) / 16;
+        assert_eq!(
+            per_entry % windows,
+            0,
+            "every 2-bit window costs the same: {per_entry} over {windows} windows"
+        );
+    }
+
+    /// One circuit, one shape: the commitment's cost does not depend on the
+    /// entries' values, only on their count. (The window tables are constants, so
+    /// a value that flips more bits cannot cost more.)
+    #[test]
+    fn v2p_commitment_cost_does_not_depend_on_the_values() {
+        let sparse = vec![1u64; 16];
+        let dense: Vec<u64> = (1..=16).map(|i| (1u64 << 59) + i as u64).collect();
+        assert_eq!(commitment_cost_of(&sparse), commitment_cost_of(&dense));
     }
 }

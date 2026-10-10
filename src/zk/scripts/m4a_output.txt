@@ -19,6 +19,11 @@ native BN254 circuit, constraint field Fr (§5.5.2)
   V3 norm only            : 32860 constraints, 31957 witnesses, 2 public, satisfied=true
   V3 Poseidon + norm      : 93608 constraints, 92704 witnesses, 3 public, satisfied=true
   Poseidon share          : 60748 constraints
+  V2′ Pedersen + norm     : 152858 constraints, 151954 witnesses, 3 public, satisfied=true
+  Pedersen share          : 119998 constraints
 
 V2 status
   V2 as written (Pedersen over BN254 G1 in a Fr circuit): blocked — non-native, and 0.6.0 has no non-native curve gadget (§5.5.4); V2' (Pedersen over Baby Jubjub, base field Fr) is the native repair
+  V2′ is the repair named above: the `V2′ Pedersen + norm` row is its
+  circuit, and `m4b_output.txt` is its key, proof and proving time —
+  the file where D-M4-0's verdict is rendered.

@@ -27,3 +27,38 @@ proof — fixture, seeded so two runs agree byte for byte
   rejected after epoch+1  : true
   rejected after root+1   : true
   rejected after norm+1   : true
+
+D-M4-0 — §5.5.2's two variants: one wrapper, one fixture, one pair of seeds
+==================================================
+
+  quantity                  V3                V2′               Δ
+  constraints               94438             153688            +59250 (+62.7%)
+  witness variables         93189             152439            +59250 (+63.6%)
+  instance variables        4                 4                 same
+  a_query                   93193             152443            +59250 (+63.6%)
+  b_g1_query                93193             152443            +59250 (+63.6%)
+  b_g2_query                93193             152443            +59250
+  h_query                   131071            262143            +131072 (+100.0%)
+  l_query                   93189             152439            +59250 (+63.6%)
+  ic (contract-facing)      4                 4                 same
+  proof on-chain bytes      256               256               same
+  verifies                  true              true              
+  every component bound     true              true              
+  §5.5.4 prove ≤ 120 s      true              true              
+
+  keccak256(canonical vk)   : V3 effaacab146027fb9f22619f87ca485e46f1421c44d53b006c1471c03746aa09
+                              V2′ 2c903a5f83803377fb4291697cdda349c8923fdd309e28cdf834dc3f72137fad
+  keccak256(canonical proof): V3 92f1c3afb44d458ab83f2d2f82d16dffe73707128087fedaea4feea22cbf49f8
+                              V2′ cb29f02f89bd5710a56a6ffde708e1b4454c20e5dfaa28b232f833c01c460a6f
+
+curves an implementation must carry (a fact about the variant)
+  V3                        1 — BN254: the commitment is field arithmetic and needs no group
+  V2′                       2 — BN254 + Baby Jubjub (the commitment's group), whose base field
+                            is Fr_BN254, i.e. native in this circuit
+
+verdict (D-M4-0)
+  criterion                 §5.5.4 declares no numeric threshold here — the decision
+                            is "decided on the measured cost", so the rows above are
+                            the criterion: constraints first (the key's size and the
+                            prover's work follow from them), curves to break a tie
+  decision                  V3 — V2′ pays 59250 more constraints (153688 vs 94438) and 1 more curve

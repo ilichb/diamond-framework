@@ -18,8 +18,10 @@
 //!
 //! Thresholds: §5.5.4 declares the ones that bind a future re-opening of V1
 //! (`c_emu / c_nat ≤ 100` and outer proving `≤ 120 s`). The plan declares **no**
-//! numeric threshold for V2 vs V3; `D-M4-0` is decided on the measured cost, and
-//! this report states the numbers it will be decided from.
+//! numeric threshold for V2 vs V3; `D-M4-0` is decided on the measured cost, so
+//! this table states the circuit's half of those numbers — V2′'s row, next to
+//! V3's — and `groth16::render_duel` (in `m4b_output.txt`) states the key's half
+//! and the computed verdict.
 
 use std::fmt::Write;
 
@@ -40,6 +42,10 @@ pub struct M4aReport {
     /// V3 without the commitment, i.e. the norm alone — the part both variants
     /// share, so the paper's missing number is visible on its own.
     pub v3_norm_only: CircuitCost,
+    /// V2′ (§5.5.2, the native repair): Pedersen over Baby Jubjub + the same norm.
+    /// `D-M4-0` decides between this and [`Self::v3`], and this row is the
+    /// circuit half of that decision — the key half is `m4b_output.txt`'s duel.
+    pub v2_prime: CircuitCost,
     pub v2_status: &'static str,
 }
 
@@ -61,8 +67,17 @@ pub fn run() -> M4aReport {
         params,
     });
     let (v3_norm_only, _) = native::synthesize(native::NormCircuit {
-        entries,
+        entries: entries.clone(),
         certified_norm_wad,
+    });
+    // V2′'s parameters and circuit, sized to the same fixture: the comparison is
+    // only honest if both variants commit to the same tensor.
+    let params = native::v2::PedersenParams::new(entries.len());
+    let (v2_prime, _) = native::synthesize(native::v2::PedersenNormCircuit {
+        commitment: params.commitment(&entries),
+        entries: entries.clone(),
+        certified_norm_wad,
+        params,
     });
 
     M4aReport {
@@ -74,6 +89,7 @@ pub fn run() -> M4aReport {
         range_proof,
         v3,
         v3_norm_only,
+        v2_prime,
         v2_status: native::v2::STATUS,
     }
 }
@@ -153,9 +169,33 @@ impl M4aReport {
                 .constraints
                 .saturating_sub(self.v3_norm_only.constraints)
         );
+        let _ = writeln!(
+            s,
+            "  V2′ Pedersen + norm     : {} constraints, {} witnesses, {} public, satisfied={}",
+            self.v2_prime.constraints,
+            self.v2_prime.witness_variables,
+            self.v2_prime.instance_variables,
+            self.v2_prime.satisfied
+        );
+        let _ = writeln!(
+            s,
+            "  Pedersen share          : {} constraints",
+            self.v2_prime
+                .constraints
+                .saturating_sub(self.v3_norm_only.constraints)
+        );
         let _ = writeln!(s);
         let _ = writeln!(s, "V2 status");
         let _ = writeln!(s, "  {}", self.v2_status);
+        let _ = writeln!(
+            s,
+            "  V2′ is the repair named above: the `V2′ Pedersen + norm` row is its"
+        );
+        let _ = writeln!(
+            s,
+            "  circuit, and `m4b_output.txt` is its key, proof and proving time —"
+        );
+        let _ = writeln!(s, "  the file where D-M4-0's verdict is rendered.");
         s
     }
 

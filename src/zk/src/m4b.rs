@@ -5,6 +5,11 @@
 //! `scripts/m4b_output.txt` and the durations to stderr, the way the M4a driver
 //! treats its table.
 //!
+//! Since M4c the run measures **both** variants of §5.5.2 — the pinned V3 table
+//! first, then the `D-M4-0` duel against V2′ — because the decision is defined as
+//! "on the measured cost" and a second script would measure half of it. The V3
+//! section is byte-identical to the pre-M4c file.
+//!
 //! `--smoke` runs the same code over the fixture's first 8 entries, so the
 //! pipeline can be checked in seconds before paying for the 93k-constraint key.
 //! The table keeps its shape; only `N` differs.
@@ -34,5 +39,18 @@ fn main() {
 
     let measurement = groth16::measure(&entries, certified_norm_wad, 0);
     print!("{}", measurement.render());
+
+    // D-M4-0 (§5.5.2): the same pipeline over V2′, so the verdict is a
+    // measurement rather than a preference. The same fixture, the same seeds and
+    // the same statement wrapper — the duel's rows differ only in the commitment.
+    let alternative = groth16::measure_variant(
+        groth16::Variant::V2Pedersen,
+        &entries,
+        certified_norm_wad,
+        0,
+    );
+    print!("{}", groth16::render_duel(&measurement, &alternative));
+
     eprint!("{}", measurement.render_timings());
+    eprint!("{}", alternative.render_timings());
 }
