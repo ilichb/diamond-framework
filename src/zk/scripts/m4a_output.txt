@@ -1,0 +1,24 @@
+AVIP M4a — measured table (plan §5.5.6)
+==========================================
+
+fixture (deterministic, seed 0x4d34415649500001)
+  entries                 : 500
+  max entry               : 997018160544453691 (< 2^60)
+  Σ T_i² (WAD²)           : 163681579836462123700241066803052981730
+  certifiedNorm (WAD)     : 12793810215743475835
+  keccak256(digest)       : c2309377a00b109a6c44d83a5cc759108977ffe207fba6f83215a9cdf77d9aa9
+
+aggregated Bulletproofs range proof (§5.5.3)
+  values × bits           : 512 × 64 = 32768 bits
+  proof size              : 1248 bytes (1.219 KB), 39 elements
+  predicted 2·lg(n)+9     : 39 elements (1248 bytes)
+  paper's estimate        : 736 bytes → measured ratio 1.696×
+  generator set           : 65536 points; value commitments 16384 bytes
+
+native BN254 circuit, constraint field Fr (§5.5.2)
+  V3 norm only            : 32860 constraints, 31957 witnesses, 2 public, satisfied=true
+  V3 Poseidon + norm      : 93608 constraints, 92704 witnesses, 3 public, satisfied=true
+  Poseidon share          : 60748 constraints
+
+V2 status
+  V2 as written (Pedersen over BN254 G1 in a Fr circuit): blocked — non-native, and 0.6.0 has no non-native curve gadget (§5.5.4); V2' (Pedersen over Baby Jubjub, base field Fr) is the native repair

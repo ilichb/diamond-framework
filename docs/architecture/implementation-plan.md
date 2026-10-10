@@ -525,7 +525,7 @@ Provenance of every constant used below — none of it invented:
 | Bulletproofs at `N=500` | `≈6.5e6` gas off-chain, `0.72 KB` | `main.tex` L498, cited by `threshold_quantization.py` L25, L48 |
 | Paper's design table | A: 1,080,501 constr. / ~470M gas; A′: 240,261 / ~30M; B: 0 / ~6.5M; proof sizes 0.20 / 0.20 / 0.72 KB | `main.tex` L487–490 |
 | Recursive proof cost / proving time | `≈250k` gas; proving time **not measured**, estimated "tens of seconds" | `main.tex` L518, L520 |
-| `bulletproofs 5.0.0` deployable surface | `RangeProof`, `LinearProof` (⟨a,b⟩ with **b public**), `range_proof_mpc`; the R1CS API is behind `yoloproofs`, "UNSUITABLE FOR DEPLOYMENT" | crate `README.md` L43–50, L165–167; `src/lib.rs` L47–49 |
+| `bulletproofs 5.0.0` deployable surface | `RangeProof`, `LinearProof` (⟨a,b⟩ with **b public**), `range_proof_mpc`; the R1CS API (`yoloproofs`) is **UNSUITABLE FOR DEPLOYMENT** and **fails to build** (E0599 ×3, `r1cs/proof.rs` L180–182 vs `curve25519-dalek` 4.1.3) | `README.md` L43–50, L165–167; `src/lib.rs` L47–49; verified build (§5.5.5) |
 
 #### 5.5.1 The relation: equality, not the paper's bit
 
@@ -550,6 +550,25 @@ Arithmetic consequence of the range in the table: entries are non-negative and
 `‖T‖_F = certifiedNorm ≥ 0`, so equality is tested on **squares**,
 `Σ_i T_i² = certifiedNorm²`, with no square root in the circuit.
 
+M4a corrected that last line, and the correction is recorded here rather than
+only in the code. Over WAD integers the exact form has **no witness** unless
+`Σ T_i²` happens to be a perfect square: with entries `[1..8]`, `Σ T_i² = 204`
+and `⌊√204⌋ = 14`, so `204 ≠ 196`, and the two sides of the relation cannot be
+made equal. A tensor whose sum of squares is a perfect square is a measure-zero
+event, not a case a protocol can require. The relation the circuit enforces is
+therefore the **floor**,
+
+    certifiedNorm = ⌊√(Σ T_i²)⌋, encoded as  c² ≤ Σ T_i² < (c+1)²,
+
+which is satisfiable for every tensor and needs no comparison gadget: `c` is
+bounded by 64 bits, `Σ T_i² < 2^129` follows from `N·k` (§5.5.3), so both
+inequalities are decided by "this difference is below `2^130`", and a negative
+difference wraps to ≈`r − 2^129` and cannot pass. This preserves the contract's
+semantics because `Θ_r` is an integer: `⌊‖T‖_F⌋ ≥ Θ_r ⟺ ‖T‖_F ≥ Θ_r`, so
+`AVIPRegistry.verifyThreshold` and `collateralFor` reach the same decision they
+reached with the exact form. The statement shape `[root, epoch, certifiedNorm]`
+of M3 is unchanged, so no Solidity file moves.
+
 #### 5.5.2 Three implementable variants (decision D-M4-0)
 
 The paper fixes the primitive in Option B (Pedersen + Bulletproofs) but leaves
@@ -562,8 +581,33 @@ Three things can actually be built in `src/zk/`, and they are not equivalent:
 | | Commitment | Norm proved by | Outer proof | Curve mismatch |
 |---|---|---|---|---|
 | **V1** — paper literal | Pedersen over Ristretto (dalek) | Bulletproofs IPA over `⟨T,T⟩` | recursive SNARK/BN254 verifying the IPA | **yes**: Curve25519 ops inside `Fr_BN254` |
-| **V2** — native adaptation | Pedersen over BN254 G1, recomputed **inside** the circuit | the same circuit: `Σ T_i²`, range folded into the bit decomposition | one Groth16/BN254, no recursion | no: everything native |
+| **V2** — native adaptation | Pedersen over BN254 G1, recomputed **inside** the circuit | the same circuit: `Σ T_i²`, range folded into the bit decomposition | one Groth16/BN254, no recursion | **yes**: `Fq` coordinates inside an `Fr` circuit — corrected in M4a, below |
 | **V3** — Option A′ revisited | Poseidon over the 500 entries, in-circuit | the same circuit: `Σ T_i²` + range | one Groth16/BN254, no recursion | no: everything native |
+
+The **V2 row is corrected by M4a**, on type-level evidence rather than on
+inspection. "Everything native" does not survive "Pedersen over BN254 G1,
+recomputed inside the circuit": a G1 point has coordinates in `Fq`
+(`ark_bn254::g1::Config` declares `COEFF_A: Fq`) while the outer proof M4b
+installs is a Groth16 proof over BN254 whose **constraint field is `Fr`**, and
+`Fq ≠ Fr`. The type check says it directly —
+`ProjectiveVar<ark_bn254::g1::Config, FpVar<Fr>>` does not compile:
+
+    error[E0277]: the trait bound `FpVar<...FrConfig...>:
+                  FieldVar<Fp<...FqConfig...>, Fp<...FqConfig...>>` is not satisfied
+    note: required by a bound in `ProjectiveVar`
+
+because `ark-r1cs-std 0.6.0` implements `FieldVar<F, F> for FpVar<F>` and
+nothing else (`src/fields/fp/mod.rs` L856). The only `FpVar` satisfying
+`ProjectiveVar`'s bound for BN254 G1 is `FpVar<Fq>`, whose constraint field is
+`Fq`, and no pairing curve with scalar field `Fq` exists to prove *that*
+circuit. The native repair is a Pedersen group defined **over `Fr`** — Baby
+Jubjub, `ark-ed-on-bn254`, whose base field *is* `Fr_BN254` — which is native
+but is no longer "Pedersen over BN254 G1". So V2 as written meets the V1 wall one
+level down: it needs `Fq` inside `Fr`, i.e. the emulated-field cost §5.5.4
+quantifies, through the non-native **curve** gadget §5.5.4 established
+`ark-r1cs-std 0.6.0` does not have. M4a therefore compares V3 against **V2′**
+(Pedersen over Baby Jubjub), and the probe is kept in
+`src/zk/tests/field_nativity_probe.rs` so the finding stays re-runnable.
 
 V1 is the paper's own construction and the only one that needs the recursion of
 `subsec:recursive`; §5.5.5 records why it leaves the implementation path, which
@@ -635,9 +679,41 @@ Where the check is paid differs by variant:
 One published number needs care, and M4a reports its own: `0.72 KB` (`main.tex`
 L498) is quoted from the literature for `N = 500`, and
 `threshold_quantization.py` already treats it as **per threshold** (L145–146:
-`k × 0.72 KB`, "una prueba de rango por umbral"). M4a measures the real size of
-the aggregated proof of 30,000 bits and marks the paper's figure as the estimate
-it is.
+`k × 0.72 KB`, "una prueba de rango por umbral").
+
+**M4a measured it, and the aggregate §5.5.3 writes down is not constructible.**
+Two parameters of this bulletproof are not available in the aggregated API of
+`bulletproofs 5.0.0`:
+
+- the width must be one of `n ∈ {8, 16, 32, 64}` — `range_proof/dealer.rs` L45
+  and `range_proof/party.rs` L44 reject everything else, for proving *and* for
+  verifying — so the derived `k = 60` cannot be used and the measurement runs at
+  `k = 64`, the nearest supported width above it. Nothing is lost: §5.5.3 already
+  shows any `k ≤ 122` is wraparound-free;
+- the value count must be a power of two (`Dealer::new`:
+  `if !m.is_power_of_two() { return Err(MPCError::InvalidAggregation) }`,
+  `dealer.rs` L48). `N = 500` is not one, so an aggregated proof covers 512
+  values (twelve zero-padded) and the object is `512 × 64 = 32,768` bits, not
+  `30,000`.
+
+Measured on the reference machine, with the deterministic fixture:
+**1248 bytes (39 elements), 1.696× the paper's `0.72 KB`**, over a generator set
+of `2 · 64 · 512 = 65,536` points. The size matches the format's own prediction,
+`2·lg(n) + 9` elements for `n` bits (`RangeProof::to_bytes`, crate
+`range_proof/mod.rs` L477–487), which is the check that the measurement is not
+misread. The paper's figure is therefore the estimate it is — and it is an
+*under*-estimate, by a factor of 1.70, before any `k × 0.72 KB` multiplication
+for thresholds or the padding for `N = 500`. Both API restrictions are pinned by
+fast tests in `src/zk/src/range_proof.rs`, so the finding is re-runnable rather
+than remembered.
+
+The durations are reported separately, and that separation is itself a decision
+worth recording: proving took **3.2–5.4 s** and verifying **0.27–0.44 s** across
+runs of the *same* revision — `verify` alone moved by 66% between two
+consecutive runs — so they cannot sit in a committed table that re-running must
+reproduce byte for byte (§5.5.6). `scripts/m4a_report.sh` writes the
+deterministic quantities to `scripts/m4a_output.txt` and prints the durations to
+stderr; the split, and the two-run check that confirmed it, are in §5.5.8.
 
 #### 5.5.4 Risk 1 — the Ristretto ↔ BN254 mismatch, and how it would be measured
 
@@ -733,21 +809,28 @@ not "V2 with extra steps":
     **public**" (GHL'21 §E.3) — a *cross* product, and with `b` chosen by the
     prover (`b = (v/⟨a,a⟩)·a`) it is satisfiable for any `a`, so it never says
     `a = b` and never certifies a norm.
-  - **The one API that can express it is declared unfit for deployment.** The
-    quadratic relation *is* expressible through `bulletproofs::r1cs`
-    (`ConstraintSystem`, `Prover`, `Verifier`, `R1CSProof`; `src/r1cs/`), whose
-    documented relation is exactly `a_L ∘ a_R = a_O` plus linear constraints
-    over committed high-level variables (`docs/notes-r1cs.md`): allocating the
-    variables is what forces both sides to be the *same* `T`. But the crate's
-    own README gates it — the API "is provided **FOR EXPERIMENTS ONLY**", "is
-    not covered by semver compatibility and is **SUBJECT TO CHANGE WITHOUT
-    NOTICE**", and "The `yoloproofs` feature ... is **UNSTABLE AND UNSUITABLE
-    FOR DEPLOYMENT**, and **PROVIDED FOR TESTING ONLY**". The gate is in the
-    source: `#[cfg(feature = "yoloproofs")] pub mod r1cs;` (`src/lib.rs`
-    L47–49). The README adds that the feature "is disabled in the published
+  - **The one API that can express it does not build.** The quadratic relation
+    *is* expressible in `bulletproofs::r1cs` (`ConstraintSystem`, `Prover`,
+    `Verifier`, `R1CSProof`; `src/r1cs/`), whose documented relation is exactly
+    `a_L ∘ a_R = a_O` plus linear constraints over committed high-level
+    variables (`docs/notes-r1cs.md`): using the *same* variable on both sides of
+    `multiply` is what forces both halves to be one `T`. But the module is gated
+    (`#[cfg(feature = "yoloproofs")] #[cfg(feature = "std")] pub mod r1cs;`,
+    `src/lib.rs` L47–49) and **enabling that feature does not compile** —
+    verified, not quoted: with
+    `bulletproofs = { version = "=5.0.0", features = ["yoloproofs"] }` the build
+    stops with three `E0599`s in `src/r1cs/proof.rs` L180–182 (`no method named
+    ok_or found for struct CtOption<Scalar>`), because the module still expects
+    the `curve25519-dalek` 3.x signature `Option<Scalar>` while the dependency it
+    declares (`4.1.1`, resolved to `4.1.3`) returns `CtOption<Scalar>`
+    (`scalar.rs` L261). The published crate therefore ships that feature as dead
+    code, which is why its README says the API "is disabled in the published
     version of the crate, so it can only be used by specifying a git dependency
-    on the `develop` branch", which contradicts §5.5.6's reproducibility
-    requirement.
+    on the `develop` branch". A git dependency contradicts §5.5.6's
+    reproducibility requirement, and the crate additionally declares the feature
+    **UNSTABLE AND UNSUITABLE FOR DEPLOYMENT** and **PROVIDED FOR TESTING ONLY**,
+    outside semver compatibility (`README.md` L43–50, L165–167). Reproduced by
+    `src/zk/scripts/check-yoloproofs-gate.sh`.
   - **The paper's numbers are not the numbers for its own statement.**
     `main.tex` L490 lists `Option B` at `0` R1CS constraints and L510 estimates
     `0.72 KB` from `2N` scalar multiplications; both describe the *bare* IPA. A
@@ -789,16 +872,18 @@ gas) — a drift there is a regression, not a new measurement.
 **M4a — the inner layer, measured.** Deliverables:
 
 - `src/zk/src/` modules and `benches/`: the aggregated-range-proof bench
-  (§5.5.3), the native commitment + norm circuit (V2/V3), and the `⟨T,T⟩`
-  statement written down for V1 with the rejection §5.5.5 records. The
-  emulated-field unit bench (§5.5.4) is **optional**: it runs only if V1 is ever
-  re-opened, and no bench of the emulated IPA is scheduled;
+  (§5.5.3), the native commitment + norm circuit — **V3** as implemented, and
+  **V2′** (Pedersen over Baby Jubjub, §5.5.2) once it lands, because V2 as
+  written is blocked at the type level — and the `⟨T,T⟩` statement written down
+  for V1 with the rejection §5.5.5 records. The emulated-field unit bench
+  (§5.5.4) is **optional**: it runs only if V1 is ever re-opened, and no bench of
+  the emulated IPA is scheduled;
 - a deterministic fixture: one fixed 500-entry tensor from a fixed seed, byte
   identical across runs — the off-chain analogue of
   `scripts/generate_groth16_fixtures.py` (§5.4);
-- a note with the measured table: constraints per variant (V2 and V3), key size,
+- a note with the measured table: constraints per variant (V2′ and V3), key size,
   proving time, proof size, the `c_emu / c_nat` figure §5.5.4 keeps on the record
-  for the amendment, and the **D-M4-0 verdict** (V2 vs V3) quoting the
+  for the amendment, and the **D-M4-0 verdict** (V2′ vs V3) quoting the
   thresholds declared *before* the runs (§5.5.3, §5.5.4).
 
 Acceptance: `cargo build` and `cargo test` clean, and every number in the note
@@ -806,6 +891,20 @@ reproducible by one documented command. The crate builds offline today because
 it has no dependencies; each dependency added must keep that property or the
 exception must be stated in the note. Non-goals: no ceremony, no production
 circuit, no on-chain change, no testnet-latency claim.
+
+**Both clauses are now answered, and one of them by a correction.** The offline
+property survived the dependency tree: with `target/debug` deleted,
+`cargo fetch --offline` and `cargo build --offline` both succeed (25.7 s) from
+the committed lock, so `src/zk/` keeps the workspace's offline character. The one
+command that cannot follow is `scripts/check-yoloproofs-gate.sh`, which builds a
+throwaway crate against `bulletproofs` to re-verify §5.5.5; that exception is
+stated in the note and in the script. The reproducibility clause did *not* hold
+on the first try, which is worth recording because it was not a bug in a
+computation: the report wrote wall-clock durations into its table, and re-running
+it changed those lines while every counted quantity stayed identical. Durations
+therefore left the table for stderr (§5.5.8), and the committed table is now
+byte-stable under re-runs. The general rule this leaves behind: a pinned artefact
+may hold only quantities the pinned command reproduces.
 
 **M4b — the outer layer and the composition.** Deliverables:
 
@@ -834,6 +933,62 @@ circuit, no on-chain change, no testnet-latency claim.
   procedure, anchored on the M4a script.
 - A production-grade circuit: M4 proves the pipeline and its cost, not a
   deployment.
+
+#### 5.5.8 M4a — the first measurement pass, as delivered
+
+Recorded here because the plan is the milestone's record (§5.5). The crate
+`src/zk/` now has exact pins (`=0.6.0` for the `ark-*` family, `=5.0.0` for
+`bulletproofs`, `=4.1.3` / `=3.0.0`), a committed `Cargo.lock`, a deterministic
+fixture, the aggregated range-proof bench and the native circuit, with
+`cargo test` (13 tests) and `cargo clippy --all-targets` clean. Every number is
+reproduced by `src/zk/scripts/m4a_report.sh`, which writes
+`src/zk/scripts/m4a_output.txt`; the crate's `README.md` is the note §5.5.6 asks
+for.
+
+Measured on this machine, over the frozen fixture
+(keccak `c2309377a00b109a…d77d9aa9`, `Σ T_i² = 1.6368e38 < r`, entries `< 2^60`):
+
+| Quantity | Measured |
+|---|---|
+| Aggregated range proof | `512 × 64 = 32,768` bits → **1248 B** (1.696× the paper's `0.72 KB`), 39 elements |
+| V3: Poseidon commitment + norm | **93,608 constraints**, 92,704 witnesses, satisfied |
+| V3: norm alone (shared with V2′) | **32,860 constraints**, 31,957 witnesses, satisfied |
+| Durations (stderr, load-dependent) | prove **3.2–5.4 s**, verify **0.27–0.44 s**, synthesized 16 ms / 73 ms |
+
+The first three rows are the pinned ones: `scripts/m4a_report.sh` reproduced
+`m4a_output.txt` byte for byte on two consecutive runs. The fourth row is why the
+script has the shape it has. A first version wrote the durations into the table,
+and re-running it **drifted** — `prove/verify` went from `3.300 s / 0.272 s` to
+`5.427 s / 0.442 s` with every counted quantity identical, because the machine was
+loaded. That breaks §5.5.6's acceptance ("every number in the note reproducible by
+one documented command") in a way that would be easy to mistake for a real
+change, so `render` now emits only counters and sizes and `render_timings` sends
+the clocks to stderr. The durations still bound what M4b will cost, but they are
+an observation about *this* machine, not a property of the revision.
+
+Two readings of those numbers belong in the record. The norm alone costs
+`32,860` constraints at `N = 500` with `k = 60` folded in, which is where the
+paper's missing number lives; Poseidon over 500 entries adds `60,748`, i.e. the
+commitment is the dominant term, not the norm. And `93,608` sits below the
+paper's Option A′ (`240,261`, `main.tex` L488) by a factor of 2.6, so the plan
+does **not** have to treat the paper's `[CONJECTURE]` ("still too large for
+practical Groth16 proving on consumer hardware", L502) as settled: M4b's proving
+time is the measurement that decides it, and §9 requires the backing script
+before any amendment reaches `main.tex`.
+
+Three deviations were found by building the thing rather than by reading it, and
+each is recorded where it bites: §5.5.1 (the exact-square relation has no
+witness; the floor is what the circuit certifies), §5.5.2 (V2's "no curve
+mismatch" does not hold for `BN254 G1` inside an `Fr` circuit) and §5.5.3 (the
+aggregated proof's width and value count). A fourth is an upstream limitation
+that M4a works around rather than reports: `CmpGadget for [T]` in
+`ark-r1cs-std 0.6.0` compares incorrectly, so the norm's inequalities are decided
+by a bounded difference instead.
+
+**Not yet delivered in M4a**, and therefore not yet decided: **V2′** (Pedersen
+over `ark-ed-on-bn254`, the native repair of §5.5.2), key size, proving time, and
+the `D-M4-0` verdict itself — M4a compares V3 against V2′, not against the V2 row
+as §5.5.2 originally wrote it.
 
 ## 6. Interfaces and parameter provenance
 
@@ -943,7 +1098,7 @@ stable — the same reason the protection phase is last.
 | D-3 | Foundry project layout | New project at `integrations/avalanche/` (current) vs moving the benchmarks inside it | **Keep current**: the benchmarks are cited by the paper and by C-20; moving them would invalidate their recorded paths |
 | D-4 | Code license vs paper license | MIT for code (already) and separate license for the paper | Decide in the protection phase |
 | D-5 | solc drift | Paper says 0.8.33, badge said 0.8.24, machine has 0.8.33 | **Closed in P2**: badge aligned to 0.8.33, both Foundry projects pin 0.8.33; the one 0.8.24 artefact is documented, not edited |
-| D-6 | M4 primitive (`D-M4-0`) | V1 paper-literal (Ristretto + Bulletproofs + recursion) vs V2 native Pedersen in-circuit vs V3 Poseidon in-circuit | **Narrowed in the plan**: V1 leaves the implementation path (§5.5.5 — the `yoloproofs` gate), so `D-M4-0` is now V2 vs V3, measured in M4a by the native constraint count (§5.5.3) |
+| D-6 | M4 primitive (`D-M4-0`) | V1 paper-literal (Ristretto + Bulletproofs + recursion) vs V2 native Pedersen in-circuit vs V3 Poseidon in-circuit | **Narrowed twice**: V1 leaves the implementation path (§5.5.5 — the `yoloproofs` gate) and V2 as *written* is blocked at the type level, so its native repair **V2′** (Pedersen over Baby Jubjub) is what `D-M4-0` compares against V3. M4a has measured both sides' shared half — the norm at 32,860 constraints, Poseidon adding 60,748 (§5.5.8); the verdict waits on V2′ |
 
 ## 11. Out of scope here
 
@@ -966,14 +1121,14 @@ stable — the same reason the protection phase is last.
 | P6 | C-gaps: paper apparatus (C1–C4), one batch | **re-anchor** |
 | P7 | Protection + arXiv | **re-anchor** if `main.tex` changes |
 
-**Next step: M4 — the off-chain prover**, planned in §5.5 and not started:
-`src/zk/` holds the crate (`99db3fe`) with no dependencies, and the milestone is
-gated on the §5.5 review. The structural gap that decides the paper's Option B
-is already settled (§5.5.5: V1 dropped), so M4a *measures* what remains — the
-native constraint count with the mandatory range proof (§5.5.3), alongside the
-Ristretto ↔ BN254 figure §5.5.4 keeps for the amendment; M4b derives the
-real key that replaces the M3 placeholder, with **no Solidity change**. What M4
-turns into a real proof is the M3 fixture. M3 closed the **on-chain** half of A3:
+**Next step: M4b — the outer layer — preceded by V2′.** M4a is delivered
+(§5.5.8): the crate under `src/zk/` measures the inner layer, and every number the
+note quotes is in `src/zk/scripts/m4a_output.txt`, reproduced by one command. What
+remains of M4 is (i) **V2′**, without which `D-M4-0` cannot be decided (§5.5.2,
+§10 D-6), and (ii) **M4b**, which derives the real Groth16 key that replaces the
+M3 placeholder and proves the deterministic fixture end to end, with **no
+Solidity change**. What M4 turns into a real proof is the M3 fixture. M3 closed
+the **on-chain** half of A3:
 `AVIPRegistry.verifyThreshold` no longer calls a mock, the pairing runs through
 precompiles `0x06`/`0x07`/`0x08`, and `Θ_r = 0.5` `[CONJECTURE]` is enforced on a
 proof that a validator cannot forge for another statement.
@@ -1028,3 +1183,18 @@ its two tests updated (§5.4). Validated locally: `forge build --offline` clean,
 `Groth16Verifier`), the last suite including a real pairing and the
 registry/manager integration; the measured `verify` cost is 223,445 gas against
 the benchmark's inlined-key ≈206k.
+
+Delivered by M4a (§5.5.8): `src/zk/Cargo.toml` + committed `Cargo.lock` with exact
+pins, `src/zk/src/{lib,fixture,native,range_proof,report,main}.rs`,
+`src/zk/benches/m4a.rs`, `src/zk/scripts/{m4a_report.sh,check-yoloproofs-gate.sh}`
+with the measured `src/zk/scripts/m4a_output.txt`, `src/zk/fixtures/tensor_digest.txt`,
+`src/zk/tests/field_nativity_probe.rs` and `src/zk/README.md`. Validated locally:
+`cargo test` → *13 passed, 0 failed, 1 ignored* (the ignored one is the
+32,768-bit aggregated proof, run under `--release`); `cargo clippy --all-targets`
+and `cargo fmt --check` clean; `cargo fetch --offline` + `cargo build --offline`
+from an empty `target/` (25.7 s), so the crate keeps the offline property M4a's
+acceptance requires; `scripts/m4a_report.sh` twice → `m4a_output.txt` byte
+identical; `bash verification/audit-gate.sh` → *PASS=11, FAIL=0*, with no
+sealed file touched. The one dependency-fetch exception is the §5.5.5 gate
+script, which builds a throwaway crate and says so. What M4a did **not** deliver
+is V2′ and the `D-M4-0` verdict (§5.5.8).

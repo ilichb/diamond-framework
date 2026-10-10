@@ -2,5 +2,53 @@
 name = "avip_zk_prover"
 version = "0.1.0"
 edition = "2024"
+description = "AVIP off-chain prover — M4a measurements (plan 5.5)"
+publish = false
+
+# Exact pins, matching the provenance table of plan 5.5 (ark-* family 0.6.0,
+# bulletproofs 5.0.0). `default-features = false` on the ark crates keeps
+# `parallel`/`rayon` out, so a measurement does not depend on thread scheduling.
+#
+# Offline note (plan 5.5.6): the crate built offline while it had no
+# dependencies. With these pins the *first* `cargo fetch` needs the registry
+# cache; after that `cargo build --offline` works, and `Cargo.lock` is committed
+# so the graph is fixed. The one probe that does need a fetch is
+# `scripts/check-yoloproofs-gate.sh`, and that is stated in the M4a note.
 
 [dependencies]
+# Native BN254 R1CS toolchain: variants V2 and V3 of plan 5.5.3.
+ark-bn254 = { version = "=0.6.0", default-features = false, features = ["curve"] }
+ark-ec = { version = "=0.6.0", default-features = false, features = ["std"] }
+ark-ff = { version = "=0.6.0", default-features = false, features = ["std"] }
+ark-relations = { version = "=0.6.0", default-features = false, features = ["std"] }
+ark-r1cs-std = { version = "=0.6.0", default-features = false, features = ["std"] }
+ark-serialize = { version = "=0.6.0", default-features = false, features = ["derive", "std"] }
+ark-std = { version = "=0.6.0", default-features = false, features = ["std"] }
+# Poseidon sponge + its R1CS constraints: the V3 commitment.
+ark-crypto-primitives = { version = "=0.6.0", default-features = false, features = ["constraints", "sponge"] }
+
+# Off-chain aggregated range proof (plan 5.5.3): the width is k = 60 bits per
+# entry, N·k = 30,000 bits, and the paper's 0.72 KB is the estimate M4a measures.
+bulletproofs = { version = "=5.0.0", default-features = false, features = ["std"] }
+curve25519-dalek = { version = "=4.1.3", default-features = false, features = ["rand_core", "serde"] }
+merlin = { version = "=3.0.0", default-features = false }
+
+# Deterministic RNG for the fixture (plan 5.5.6): one fixed seed, byte-identical
+# across runs.
+rand_chacha = "=0.3.1"
+rand_core = { version = "=0.6.4", features = ["std"] }
+# Keccak-256 digest of the fixture: the anchor that makes "byte identical across
+# runs" checkable, and the same family as the on-chain `keccak256` root of M3.
+# Already in the graph as a `bulletproofs` dependency.
+sha3 = "=0.10.9"
+
+[dev-dependencies]
+hex = "=0.4.3"
+
+[[bin]]
+name = "m4a-report"
+path = "src/main.rs"
+
+[[bench]]
+name = "m4a"
+harness = false
