@@ -26,9 +26,11 @@ The repository did **not** contain the protocol when this plan was written.
 and `integrations/avalanche/scripts/` were placeholder directories holding only
 a `.gitkeep`, and `avalanche-integration.md` §*Status of the code* said exactly
 that: `AVIPRegistry.sol`, `AVIPValidatorManager.sol` and the off-chain prover
-were *"specified in this document but not yet implemented"*. The first
-implementation now exists — `AVIPRegistry.sol` (milestone M1, §5) — and every
-other gap keeps the status it had.
+were *"specified in this document but not yet implemented"*. Three
+implementations now exist — `AVIPRegistry.sol` (milestone M1, §5.1),
+`AVIPValidatorManager.sol` (M2, §5.3) and the verifier pair
+`contracts/verifiers/{Bn254,Groth16Verifier}.sol` (M3, §5.4) — and the other
+gaps keep the status they had.
 
 This plan closes that gap. It does not reopen what is already verified: the
 paper's claims, their scripts and their anchor are inputs, not work items.
@@ -66,7 +68,7 @@ Local gate status at the time of writing: `PASS=11 FAIL=0 SKIP=0`;
 | A1 | `AVIPRegistry.sol` | `contracts/.gitkeep`; architecture §2, §6.1 |
 | A2 | `AVIPValidatorManager.sol` | `contracts/.gitkeep`; architecture §2, §6.1 |
 | A3 | On-chain ZK verifier (`verifiers/`) | only gas benchmarks exist; architecture §3 |
-| A4 | Off-chain prover (Pedersen + Bulletproofs + recursive SNARK) | `src/zk/.gitkeep`; architecture §6.2 |
+| A4 | Off-chain prover (Pedersen + Bulletproofs + recursive SNARK) | `src/zk/` (Rust crate `avip_zk_prover`, M4); architecture §6.2 |
 | A5 | Production RMT detector | `src/rmt/.gitkeep`; today only `verification/rmt/` simulations |
 | A6 | On-chain reputation dynamics (`C_R`, epoch commitment) | `src/reputation/.gitkeep` |
 | A7 | Data layer: event ingestion, transport, fraud proof | architecture §5, §6.3 |
@@ -75,7 +77,9 @@ Local gate status at the time of writing: `PASS=11 FAIL=0 SKIP=0`;
 | A10 | Unit tests for everything above | required by `CONTRIBUTING.md` |
 | A11 | Deferred benchmarks (recursive SNARK proving time, Teleporter latency) | paper §9.4; architecture §7 |
 
-Status: **A1 is closed** by M1 (§5). A2–A11 are open.
+Status: **A1, A2 and A3 are closed** by M1, M2 and M3 (§5.1, §5.3, §5.4).
+A4–A11 are open. The `Evidence` column records what the gap looked like when this
+plan was written, not its current status.
 
 ### 2.3 Documental inconsistencies (closed in P2; zero anchor risk)
 
@@ -165,17 +169,26 @@ claim they trace to; **no invented constants**.
 |---|-----------|-----|-------------|------------|
 | M1 | Reputation registry | A1 | `contracts/AVIPRegistry.sol` — **done** | Merkle root per epoch; inclusion proof; rejects a root violating `γ·N = 0.10·500` (Data Layer) |
 | M2 | Validator manager | A2 | `contracts/AVIPValidatorManager.sol` — **done** | `S_f*(T) = max{0.2, Θ − C_R(T)}` with `C_R(r)=0.8r/(1+r)`; admission and slashing events; vectors match `verification/mechanism/` |
-| M3 | ZK verifier | A3 | `contracts/verifiers/Groth16Verifier.sol` | Groth16 k=4 over BN254 via 0x06/0x07/0x08; gas ≈ 206k (cross-check `GasBenchmarks.sol`) |
+| M3 | ZK verifier | A3 | `contracts/verifiers/Groth16Verifier.sol` — **done** (§5.4) | Groth16 k=4 over BN254 via 0x06/0x07/0x08; gas ≈ 206k (cross-check `GasBenchmarks.sol`; 223,445 measured on the deployed shape, §5.4) |
 | M4 | Off-chain prover | A4, A11 | `src/zk/` (Rust) | Pedersen commit of the 500-entry tensor; Bulletproofs proof (0 R1CS, ~0.72 KB); recursive SNARK; reports local proving time |
 | M5 | RMT detector | A5 | `src/rmt/` | Reproduces `q99 = 9.0542` (right tail) and `−λ_min > 9.1371` (left tail) from `verification/rmt/`, without editing it |
 | M6 | Reputation dynamics | A6 | `src/reputation/` | `C_R(r)` closed form + epoch commitment; positivity under multiplicative jumps (paper §2) |
 | M7 | Data layer, deploy, AWM | A7, A8, A9 | `src/` + `scripts/` + contracts | Fraud-proof equilibrium `n*(B)=⌊B/B*⌋`, `S_slash=10` (Data Layer); `Deploy*.s.sol` to Fuji; 3 AWM message types |
+| M8 | Treasury / custody | A2 (deferred half) | contracts + scripts | Token custody and fund movement: escrow of `financialStake`, slashing that retains or burns, collection of `F_0*`; in M2 every one of those is declared, never moved (§5.2.3) |
 
 Ordering rationale: M1 → M2 → M3 are on-chain and unblock each other; M4 and M5
 are the heavy off-chain work; M6 and M7 close the loop. A10 (tests) is not a
 separate milestone: it is a gate on every milestone. A11 is split:
 the recursive SNARK proving time is delivered by M4; the Teleporter latency
 stays deferred until a live testnet exists.
+
+M8 is not part of the original ordering: it is the custody half that M2 left
+open (§5.2.3), split out rather than appended to M4. M4 is off-chain and its
+acceptance gate is `cargo test`; custody moves funds on-chain and is
+security-sensitive, so it gets its own amendment, its own invariants (fund
+conservation, non-standard ERC-20, reentrancy) and its own phase. Note that the
+labels inside `AVIPValidatorManager.sol` used to read "M4" for the reputation
+weights: that is **M6**, and the stale label was corrected.
 
 ### 5.1 M1 as delivered
 
@@ -196,8 +209,9 @@ Boundaries that are **not** covered by M1 and must not be assumed from it:
   registry does not hold the tensor and cannot recompute it; the paper places
   soundness on the data layer's fraud proof (gap A7, milestone M7).
 - `verifyThreshold` binds the proof to `(root, epoch)` and forwards it to
-  `IZKThresholdVerifier`, but that verifier does not exist yet: the tests use a
-  mock, so no claim is made about the pairing check or the recursive SNARK (M3).
+  `IZKThresholdVerifier`. Since M3 that interface is implemented by
+  `Groth16Verifier` and the tests exercise the real pairing check (§5.4); the
+  recursive SNARK is still M4.
 - No admission, slashing or reputation-weight logic (M2).
 
 ### 5.2 Amendment M2: AVIPValidatorManager, registry hardening, and the admissible domain
@@ -234,8 +248,11 @@ a `view` function the registry writes no state, so the DoS that let an attacker
 burn `thresholdProven[epoch][validator]` in their own transaction is closed, and
 a ~20k-gas SSTORE disappears. In the real circuit (M3) the binding is
 arithmetic: the norm is a public input, so a false `certifiedNorm` changes `vk_x`
-and the pairing fails. In M2 the verifier is a mock, so no soundness claim is
-made until M3.
+and the pairing fails. Since M3 the verifier is real (`Groth16Verifier`, §5.4),
+so this is now a tested property: `test/Groth16Verifier.t.sol` passes a genuine
+proof for `Θ_r` together with a declared `Θ_r + 1` and gets `InvalidZKProof`. The
+*norm itself* is still only as sound as the circuit and the Pedersen ↔ Merkle
+bridge, which do not exist yet (M4, §5.4).
 
 #### 5.2.2 Circuit semantics and the M3 bridge
 
@@ -291,9 +308,10 @@ made until M3.
   anchor. The claim that 0.05 is a safe lower bound — rather than the exact
   optimum of the admissible domain — is recorded here, and can be promoted to
   `docs/audit/claim-registry.csv` in the next batched re-anchor (§9).
-- **Custody.** M2 exposes the `F0*`/`S_f*` policy. It does not implement token
-  custody or transfer (ERC-20 or native); that is delegated to a future treasury
-  module.
+- **Custody (M8).** M2 exposes the `F0*`/`S_f*` policy. It does not implement token
+  custody or transfer (ERC-20 or native); that is delegated to the **M8 Treasury
+  Module** (§5), the milestone that owns fund movement. This is why
+  `financialStake` is *declared*, never escrowed.
 
 #### 5.2.4 Anti-replay, state, and contract documentation
 
@@ -323,7 +341,7 @@ made until M3.
   keeps whatever is left (M2 holds no funds, so there is nothing to seize), and
   re-admission is a new `admit` call with a fresh proof for the then-current
   epoch. `M2` also leaves the *consequences* of an ejection (removal from the
-  validator set, weight) to M4/M7.
+  validator set, weight) to M6/M7.
 - **Error migration.**
   - manager: adds `NormBelowThreshold`, `InsufficientFinancialStake`,
     `AlreadyAdmitted`, `NotValidator`, `NotSlashAuthority`, `SlashExceedsStake`,
@@ -391,14 +409,372 @@ Deviations from §5.2, all deliberate and all stated in code:
    `registry.latestEpoch()` instead of taking an epoch argument; on a registry
    with nothing posted that is `type(uint256).max` and the call reverts with
    `UnknownEpoch`.
-5. **The proof blob is `(a, b, c)`** and trailing bytes are ignored by ABI
-   decoding (§5.2.4, last bullet): asserted as a property, not assumed.
+5. **The proof blob is `(a, b, c)`** and trailing bytes are ignored (§5.2.4, last
+   bullet): asserted as a property, not assumed. (Since M3 the ignoring is done
+   by `Bn254.decodeProof` rather than by `abi.decode`; the property is unchanged
+   and the truncated case now reverts with `Bn254.MalformedProof`, §5.4.)
 
 Validated locally: `forge build --offline --force` → clean with Solc 0.8.33, no
 warnings, no `forge lint` notes; `forge test --offline` → **66 passed** (32
 registry + 34 manager, two of them fuzz — the admission invariant and the policy);
 `bash verification/audit-gate.sh` → `PASS=11 FAIL=0`, i.e. the anchor is
 untouched, as expected since nothing under `integrations/` is sealed (§3).
+
+### 5.4 M3 as delivered
+
+Delivered: `contracts/verifiers/Bn254.sol` (library),
+`contracts/verifiers/Groth16Verifier.sol`, `test/Bn254.t.sol`,
+`test/Groth16Verifier.t.sol`, `test/fixtures/Groth16Fixtures.sol` (generated by
+`scripts/generate_groth16_fixtures.py` and committed together with its
+transcript), plus the one-line change in `AVIPRegistry.verifyThreshold` promised
+by §5.2.4 (`abi.decode` → `Bn254.decodeProof`) and its two tests updated.
+
+The verifier implements `IZKThresholdVerifier` **unchanged**: `verify(a, b, c,
+input)` returns `true` iff
+
+    e(−A, B) · e(α, β) · e(vk_x, γ) · e(C, δ) = 1,   vk_x = IC[0] + Σ_i input[i] · IC[i+1]
+
+over BN254 with `i < 3` and `input = [root, epoch, certifiedNorm]`. Four pairs,
+three of them constant: the only `0x07` calls are the two `vk_x` multiples plus
+one `0x06` add.
+
+Numbers, measured rather than asserted: `verify` costs **223,445 gas** in the
+harness (`test_verify_costsAboutFourPairings`), of which
+`45,000 + 34,000 × 4 = 181,000` is EIP-197 alone — consistent with the paper's
+`181,142` for the pairing step. The paper's `≈206k` (`benchmarks/src/
+GasBenchmarks.sol`) is a verifier with the key **inlined in the byte code**; the
+deployed shape reloads the key from storage and copies the arrays into calldata,
+which is the difference. The benchmark is the cross-check, not the target: this
+milestone quotes both numbers instead of forcing them to agree.
+
+Deviations and boundaries, all deliberate:
+
+1. **The fixture is synthetic and this is the honest limitation.**
+   `Groth16Fixtures.sol` holds a BN254 instance built by
+   `scripts/generate_groth16_fixtures.py`: `A`, `B`, `C` and a verifying key
+   whose pairing equation holds **by construction** (the script solves the scalar
+   in the exponent for `C`), with `[root, epoch, 5e17]` as the statement that
+   verifies. The real `keccak256` Merkle root is kept as `input[0]` (it is far
+   below `r`, so it is a valid scalar). There is no circuit, no witness, no
+   trusted setup and **no soundness claim**: what the tests prove is that the
+   wrapper drives the **real precompiles** correctly and that every reject path
+   returns `false` rather than reverting.
+   `test/Groth16Verifier.t.sol::test_fixtureCertifiesTheManagersThreshold` pins
+   the fixture's statement to `Θ_r`, so regenerating it cannot silently drift
+   away from the parameter the manager enforces.
+2. **A rejected proof is a `false`; a malformed one reverts.** Circom convention.
+   `0x08` on a rejected input **consumes the entire gas budget** (measured
+   ≈ 1.06e9 in `test_constructor_rejectsAKeyWithAnOffCurvePoint` and the
+   off-curve proof test), so `verify` cannot answer `false` for a malformed
+   proof: it reverts with `PrecompileFailed`/`CoordinateOutOfRange`. A caller
+   that budgets gas per call must therefore treat "out of gas" as a failure and
+   not as a rejection. Documented in `Bn254.sol` and in the test header.
+3. **The Verifying Key is data, not code.** The constructor installs it and
+   validates every point on the curve; `verifyingKeyDigest()` exposes
+   `keccak256` of the installed key so a deployment can be checked against the
+   ceremony transcript. Since no ceremony exists yet, that digest currently
+   certifies the generator's placeholder key — it is the hook, not the evidence.
+4. **Decision on the open Merkle ↔ Pedersen risk of §5.2.2: option (c).** The
+   Keccak Merkle root stays the canonical on-chain commitment, so `verifyEntry`
+   and every previously posted root keep their meaning and the freshness rule
+   (which reads only the declared `changedEntries`) is untouched. The circuit
+   proves the norm over a Pedersen commitment, and linking the two is the
+   off-chain data layer's job (M7). The registry never sees a Pedersen
+   commitment. Residual risk, stated rather than closed: an accepted norm is a
+   norm of *some* committed tensor, and M3 alone does not prove it is the tensor
+   behind the posted Merkle root.
+5. **Only the on-chain half of A3 is closed.** The off-chain prover (Pedersen,
+   Bulletproofs, recursive SNARK) and therefore any real proof remain M4 (planned
+   in §5.5), and no
+   proving-time or testnet-latency claim is made (§9: a new quantitative claim
+   needs a backing script before it can reach `main.tex`).
+
+Validated locally: `forge build --offline` clean, `forge fmt --check` clean, no
+`forge lint` notes; `forge test --offline` → **100 passed** (32 registry + 34
+manager + 16 `Bn254` + 18 `Groth16Verifier`), including the integration pair that
+runs a real proof through `AVIPRegistry.verifyThreshold` and through
+`AVIPValidatorManager.admit`.
+
+### 5.5 M4 as planned (off-chain prover)
+
+Status: **plan, not code.** `src/zk/` is the `cargo init` output committed as
+`99db3fe` (`avip_zk_prover`, edition 2024): no dependencies, no significant
+source, nothing to run but the generated `main`. This section is the gate §12
+requires, and it follows the amendment pattern of §5.2 (M2) and §5.4 (M3): the
+milestone's design, deviations and acceptance live with the plan, not in a
+separate document that would drift from it. No `Cargo.toml` dependency and no
+circuit is added until this section is reviewed.
+
+The two risks §5.4 handed to M4 (the Ristretto ↔ BN254 mismatch, and the range
+proof) are addressed here by *measurement*, and one of them turns out to be
+partly decidable from the published crate sources before a line of circuit code
+exists.
+
+Provenance of every constant used below — none of it invented:
+
+| Quantity | Value | Source |
+|---|---|---|
+| Tensor, `N` entries | `T ∈ [0,1]^(C×D×H)`, `C·D·H = 500` | `main.tex` `eq:tensor` (L318, L322–324) |
+| Object compared to `Θ_r` | the norm `‖T‖_F` | `main.tex` L324 |
+| `Θ_r` | `0.5` | `main.tex` L444–445; enforced on chain since M2 |
+| WAD convention | `1.0 = 1e18` | M3 fixture statement `[root, epoch, 5e17]` (§5.4) |
+| Simulated norm range | `‖T‖_F ∈ [0, 3]` | `main.tex` L831; `threshold_quantization.py` L20, L40 |
+| Bulletproofs at `N=500` | `≈6.5e6` gas off-chain, `0.72 KB` | `main.tex` L498, cited by `threshold_quantization.py` L25, L48 |
+| Paper's design table | A: 1,080,501 constr. / ~470M gas; A′: 240,261 / ~30M; B: 0 / ~6.5M; proof sizes 0.20 / 0.20 / 0.72 KB | `main.tex` L487–490 |
+| Recursive proof cost / proving time | `≈250k` gas; proving time **not measured**, estimated "tens of seconds" | `main.tex` L518, L520 |
+
+#### 5.5.1 The relation: equality, not the paper's bit
+
+`main.tex` §4.1 (`eq:threshold`) poses `‖T‖_F ≥ Θ_r` and returns a **bit**.
+§5.2.2 already deviated deliberately: the circuit proves
+**`‖T‖_F = certifiedNorm`**, and the *manager* applies `≥`. That is why the M3
+statement is `[root, epoch, certifiedNorm]` and why `verifyThreshold` already
+rejects a certificate that does not clear `Θ_r`.
+
+The deviation is not cosmetic: it is what lets M4 close half of `Finding C-01`.
+`verification/zk/threshold_quantization.py` (sealed) showed that the bit cannot
+feed `eq:allocation` — `S_f*(T) = max{S_min, Θ − C_R(T)}` needs `C_R(T)` as a
+**continuous** function of `‖T‖_F` (script L9–11, L127–128) — and that the paper
+never connects the two (L166–184). With equality the certificate is a *value*,
+and the on-chain readers `requiredStakeFor(norm)` / `collateralFor(norm)`
+(§5.3 item 3) compute `C_R` from it. C-01's **soundness** layer stays closed
+exactly as §4.3–4.4 intended; its **allocability** layer stops being blocked by
+the circuit. What remains open is what M3 already left open: linking the Pedersen
+commitment to the posted Keccak root (option (c), §5.4 item 4 → **M7**).
+
+Arithmetic consequence of the range in the table: entries are non-negative and
+`‖T‖_F = certifiedNorm ≥ 0`, so equality is tested on **squares**,
+`Σ_i T_i² = certifiedNorm²`, with no square root in the circuit.
+
+#### 5.5.2 Three implementable variants (decision D-M4-0)
+
+The paper fixes the primitive in Option B (Pedersen + Bulletproofs) but leaves
+the recursion framework explicitly open: "The choice of recursion framework
+(Groth16 recursion, Plonk recursion, Halo2 recursion) is not fixed in this
+paper. All three produce constant-size on-chain proofs at similar gas cost; the
+difference is the proving time and the trusted setup requirements" (§4.3).
+Three things can actually be built in `src/zk/`, and they are not equivalent:
+
+| | Commitment | Norm proved by | Outer proof | Curve mismatch |
+|---|---|---|---|---|
+| **V1** — paper literal | Pedersen over Ristretto (dalek) | Bulletproofs IPA over `⟨T,T⟩` | recursive SNARK/BN254 verifying the IPA | **yes**: Curve25519 ops inside `Fr_BN254` |
+| **V2** — native adaptation | Pedersen over BN254 G1, recomputed **inside** the circuit | the same circuit: `Σ T_i²`, range folded into the bit decomposition | one Groth16/BN254, no recursion | no: everything native |
+| **V3** — Option A′ revisited | Poseidon over the 500 entries, in-circuit | the same circuit: `Σ T_i²` + range | one Groth16/BN254, no recursion | no: everything native |
+
+V1 is the paper's own construction and the only one that needs the recursion of
+`subsec:recursive`. V2 keeps the paper's commitment primitive (Pedersen,
+`sec:zk` L428–440) but moves the linear/non-linear split from the proof system
+into the circuit. V3 keeps Option A′'s primitive and drops the one-proof-per-entry
+batching that the paper set aside on an **unmeasured practicality claim**, not on
+a measurement: "With 240,261 constraints the circuit is still too large for
+practical Groth16 proving on consumer hardware" (L502 — the neighbouring
+Option A claim carries the explicit `[CONJECTURE]` tag, and L537 records that
+"The proving time of the recursive proof is not measured."). All three emit
+the **same public statement** — a Groth16 proof
+over BN254 with `input = [root, epoch, certifiedNorm]` — so **M3's verifier and
+every Solidity file are unchanged by the choice**; only the key changes.
+
+D-M4-0 is resolved in M4a **by measurement**, against thresholds declared before
+the runs (§5.5.4, §5.5.6). The paper's `[CONJECTURE]` ("too large for practical
+Groth16 proving on consumer hardware") is not treated as a result: §9 requires
+that a claim contradicting it carry its own backing script before it can reach
+`main.tex`.
+
+#### 5.5.3 Why the range proof is mandatory, and how its width is derived
+
+This is risk 2, and it is not a corner case: **without a range proof the equality
+is trivial to forge.** The commitment lives over the free scalars of `Fr`, so a
+validator with no reputation can pick witnesses satisfying
+`Σ T_i² ≡ certifiedNorm² (mod r)` while none of the `T_i` is an admissible score.
+The degenerate witness `T_1 = r − 1` gives `T_1² ≡ 1 (mod r)` — computed:
+`(r−1)² mod r = 1` — so a single entry absorbs arbitrary leftovers. This is the
+same failure class §4.5 records for the original construction (a property of a
+value the prover controls completely), one level down. The range check is
+therefore part of the relation in **all three** variants; it is not an
+optimisation.
+
+Its width is derivable rather than conventional. With WAD, an entry is at most
+`1e18`, and `2^60 = 1152921504606846976 > 1e18`, so
+
+    k = 60 bits per entry is sufficient, and N·k = 30,000 bits in total.
+
+There is no wraparound in the norm provided `N·2^(2k) < r_BN254`. Computed:
+
+| Quantity | Value |
+|---|---|
+| `r_BN254` | `21888242871839275222246405745257275088548364400416034343698204186575808495617` (`log2 r = 253.60`) |
+| `N·2^120` at `k = 60` | `6.646e38` |
+| margin `r / (N·2^120)` | `3.29e37` |
+| largest `k` with `N·2^(2k) < r` | `122` |
+| `Σ T_i²` worst case, WAD | `N·1e36 = 5e38 < r` |
+| `certifiedNorm²` at `‖T‖_F = 3` | `9e36` |
+
+`k = 60` sits inside the 62 bits of headroom the arithmetic allows, so the bound
+is not tight and cannot be argued away by a clever witness: any `k ≤ 122` is
+wraparound-free, and every entry outside `[0, 2^60)` is excluded by *bits*, not
+by a numerical comparison that could overflow.
+
+Where the check is paid differs by variant, and this is exactly what M4a measures:
+
+- **V2 / V3**: it is free in the sense that the scalar is *defined* as
+  `Σ_j 2^j · b_j` from `k` Booleans, so out-of-range witnesses are not
+  representable and no separate proof object exists;
+- **V1**: it is an **aggregated Bulletproofs range proof of 30,000 bits** — a
+  second non-linear object whose verifier must itself sit inside the BN254
+  circuit, i.e. risks 1 and 2 compound instead of cancelling.
+
+One published number needs care, and M4a reports its own: `0.72 KB` (`main.tex`
+L498) is quoted from the literature for `N = 500`, and
+`threshold_quantization.py` already treats it as **per threshold** (L145–146:
+`k × 0.72 KB`, "una prueba de rango por umbral"). M4a measures the real size of
+the aggregated proof of 30,000 bits and marks the paper's figure as the estimate
+it is.
+
+#### 5.5.4 Risk 1 — the Ristretto ↔ BN254 mismatch, and how it is measured
+
+This measurement does not start from the literature; it starts from the crate
+sources, inspected for this plan:
+
+- `ark-r1cs-std 0.6.0` **has** non-native field arithmetic, under a renamed
+  module: `fields::emulated_fp::EmulatedFpVar<TargetF, BaseF>`, with
+  `NonNativeFieldConfig`, `OptimizationType` and `MulResultVar` (found by
+  unpacking the published crate tarball, 117,561 bytes).
+- `ark-r1cs-std 0.6.0` has **no non-native curve gadget**. `groups/` contains
+  only `curves/`; the `CurveVar` trait lives in
+  `groups/curves/short_weierstrass`, is implemented for curves whose base field
+  *is* the R1CS field, and `AffineVar` is parameterised by
+  `F: FieldVar<P::BaseField, …>`. There is no `groups::non_native` module and no
+  `NonNativeAffineVar` type.
+- Same crate family, versions confirmed from the registry: `ark-groth16 0.6.0`,
+  `ark-bn254 0.6.0`, `ark-ff 0.6.0`; and for V1:
+  `bulletproofs 5.0.0` ("a pure-Rust implementation of Bulletproofs using
+  Ristretto"), `curve25519-dalek 5.0.0`, `merlin 3.0.0`.
+
+So V1 cannot delegate the emulation: a Ristretto/Curve25519 point operation
+inside `Fr_BN254` has to be written on top of `EmulatedFpVar`. That is a
+*measured implementation obligation*, and it also fixes the method —
+**unit cost × operation count**, not a guess:
+
+1. measure `c_emu`: constraints for one emulated multiplication in a 255-bit
+   target field, for both `OptimizationType::OptimizedForConstraints` and
+   `OptimizedForWeight`;
+2. multiply by the operation counts, taken from the paper rather than assumed:
+   the on-chain Bulletproofs verification for `n = 500` "requires `2n` scalar
+   multiplications and `2n` point additions" (L1170), i.e. 1,000 group
+   operations of each kind, on Curve25519 emulated inside `Fr_BN254`;
+3. report the product as an **upper bound with its assumptions**, next to the
+   native baseline `c_nat` for the same point operation over BN254;
+4. report `c_emu / c_nat`, both key sizes and both proving times.
+
+Thresholds, declared **before** measuring so the verdict cannot be
+reverse-engineered:
+
+- `c_emu / c_nat ≤ 100` **and** outer proving `≤ 120 s` on the reference machine
+  ⇒ V1 stays alive. The time bound is deliberately loose against the paper's own
+  unverified estimate, "in the range of tens of seconds on a modern CPU" (L520),
+  which is exactly what M4 exists to replace with a measurement;
+- otherwise **V1 is dropped on the measurement**, and M4b builds V2 or V3.
+
+For V2/V3 the same metric is measured natively, and it yields the number the
+paper lacks: the constraint count of computing a 500-entry commitment *and* the
+norm inside one circuit. One concrete observation from the source that M4a
+tests: the ready-made gadget `CurveVar::precomputed_base_multiscalar_mul_le`
+loops `for (bits, bases) in scalars.zip(bases) { … precomputed_base_scalar_mul_le(…) }`
+— one double-and-add **per entry**, i.e. `N·k` doublings — whereas a transposed
+(two-dimensional) MSM shares `k` doublings across all `N` bases. M4a benches both
+and reports which one is used.
+
+#### 5.5.5 The gap that decides V1: the IPA proves a bilinear statement
+
+This is the risk `threshold_quantization.py` already flagged from the other side
+(L178–180: "Bulletproofs es nativo para enunciados lineales, asi que C_R(T) no
+es expresable sobre el commitment sin revelar ||T||_F"), applied to the norm
+itself rather than to `C_R`.
+
+The IPA proves `∃ a, b : P = ⟨g,a⟩ + ⟨h,b⟩ ∧ ⟨a,b⟩ = v`, where `a` and `b` are
+**independent** vectors and `v` is public. The norm needs `⟨T,T⟩` — the *same*
+vector on both sides — while the Pedersen commitment to the tensor uses a single
+base vector. Nothing in the protocol as written ties the two halves to the
+committed `T`, so what is proved is a statement about a *split* of `T`
+(`a + b = T` over one shared base), not about `‖T‖²`. A prover who controls the
+split is not proving a norm: under the single-base reading `P = ⟨g, a+b⟩`, a
+witness with `T = 0` and `a + b = 0` gives `⟨a,b⟩ = −⟨a,a⟩`, and `−1` *is* a
+square in `Fr_BN254` (`r ≡ 1 mod 4`; computed `Legendre(−1) = 1`, with
+`√−1 = 2^((r+3)/8)` because `(2^((r+3)/8))² = r − 1`), so `⟨a,a⟩ ≡ −c²` is
+solvable and the degenerate witness clears the equality for an **arbitrary** `c`.
+That is §4.5's failure mode returning one level down.
+
+This is a **structural gap, not an implementation detail**, and it is why V1 is
+not "V2 with extra steps":
+
+- M4a must either name the fixing it uses, with references, or drop V1. Readings
+  to evaluate as implementation notes: a two-base commitment with a challenge
+  forcing `a = b`, an evaluation-style argument for `⟨T,T⟩`, or a Pedersen
+  commitment living in the *same* curve as the outer circuit — which is V2, and
+  V2 has no such gap because the circuit computes `Σ T_i²` from the very
+  witnesses it commits to;
+- if no fixing survives, M4's normative result is that **the paper's Option B
+  cannot certify a norm as stated**, and that result travels to the P6 batch
+  through §9 (with its script) instead of being written into `main.tex`.
+
+Because of this, the honest ordering inside M4a is: settle §5.5.5 first, measure
+§5.5.4 and §5.5.3 second. There is no point benching an emulated Ristretto IPA
+whose statement does not imply the property the protocol needs.
+
+#### 5.5.6 M4a and M4b as two gates
+
+Both gates are Rust-only. **Neither changes Solidity**: M4b installs a derived key
+into the existing verifier contract, and `AVIPRegistry`'s constructor already
+takes the verifier address (§5.4 item 3). The registry and the manager are
+untouched, so the measured `verify` cost must stay at the M3 figure (223,445
+gas) — a drift there is a regression, not a new measurement.
+
+**M4a — the inner layer, measured.** Deliverables:
+
+- `src/zk/src/` modules and `benches/`: the emulated-field unit bench (§5.5.4),
+  the aggregated-range-proof bench (§5.5.3), the native commitment + norm
+  circuit (V2/V3), and the `⟨T,T⟩` statement written down for V1 with its fixing
+  or its rejection (§5.5.5);
+- a deterministic fixture: one fixed 500-entry tensor from a fixed seed, byte
+  identical across runs — the off-chain analogue of
+  `scripts/generate_groth16_fixtures.py` (§5.4);
+- a note with the measured table: constraints per variant, key size, proving
+  time, proof size, `c_emu / c_nat`, and the **D-M4-0 verdict** quoting the
+  thresholds declared *before* the runs (§5.5.4).
+
+Acceptance: `cargo build` and `cargo test` clean, and every number in the note
+reproducible by one documented command. The crate builds offline today because
+it has no dependencies; each dependency added must keep that property or the
+exception must be stated in the note. Non-goals: no ceremony, no production
+circuit, no on-chain change, no testnet-latency claim.
+
+**M4b — the outer layer and the composition.** Deliverables:
+
+- the chosen circuit's Groth16 key, derived for real, replacing the M3
+  placeholder; `AVIPRegistry`, `IAVIPRegistry` and `AVIPValidatorManager` are not
+  edited, and `verifyingKeyDigest()` (§5.4 item 3) is the hook that publishes
+  `keccak256` of the installed key;
+- the development setup, with its depth stated in plain words: universal phase 1
+  reused plus **one** phase-2 contributor, transcript committed. A single
+  contributor is a development setup and carries **no** security claim; a real
+  multi-party ceremony stays out of scope (§11);
+- one real proof for the deterministic fixture, accepted end to end by the
+  existing `Groth16Verifier` and by `AVIPRegistry.verifyThreshold`. The M3
+  synthetic fixture in `test/fixtures/Groth16Fixtures.sol` is retired, or kept
+  **only** as the precompile-driving test §5.4 item 1 describes it as;
+- the M4a acceptance re-run on the frozen revision.
+
+#### 5.5.7 What M4 does not close
+
+- The Pedersen ↔ Merkle bridge: unchanged, option (c), **M7** (§5.4 item 4).
+- Treasury and custody, `P5`: **M8** with its own amendment — the label fix
+  `e33ce98` exists to keep that boundary.
+- Multi-party ceremony, external audit, mainnet: §11.
+- Any change to `main.tex`: if M4a's verdict contradicts the paper's
+  `[CONJECTURE]` about Option A′, it enters the P6 batch through §9's re-anchor
+  procedure, anchored on the M4a script.
+- A production-grade circuit: M4 proves the pipeline and its cost, not a
+  deployment.
 
 ## 6. Interfaces and parameter provenance
 
@@ -431,6 +807,8 @@ the manager. Every parameter they mention has a provenance:
 | `q99` (right tail) | `9.0542` | Collusion; `calibration_modularity.py` |
 | left-tail boundary | `−λ_min > 9.1371` | Collusion; `bipartite_power.py` |
 | `F0_STAR` (uniform posted price) | `5e16` (0.05) | Payment Rule (main.tex §6.4); enforced in `AVIPValidatorManager`; IR-safe lower bound on the admissible domain, whose true optimum is 0.07666... (§5.2.3) |
+| Groth16 public inputs `k` | `3` (`[root, epoch, certifiedNorm]`) | §5.2.1; fixed by `AVIPRegistry.verifyThreshold` and `Groth16Verifier` (§5.4) |
+| pairings per verification | `4` | Groth16: `e(−A,B)·e(α,β)·e(vk_x,γ)·e(C,δ)` (§5.4) |
 
 ## 7. Conventions for new code
 
@@ -506,6 +884,7 @@ stable — the same reason the protection phase is last.
 | D-3 | Foundry project layout | New project at `integrations/avalanche/` (current) vs moving the benchmarks inside it | **Keep current**: the benchmarks are cited by the paper and by C-20; moving them would invalidate their recorded paths |
 | D-4 | Code license vs paper license | MIT for code (already) and separate license for the paper | Decide in the protection phase |
 | D-5 | solc drift | Paper says 0.8.33, badge said 0.8.24, machine has 0.8.33 | **Closed in P2**: badge aligned to 0.8.33, both Foundry projects pin 0.8.33; the one 0.8.24 artefact is documented, not edited |
+| D-6 | M4 primitive (`D-M4-0`) | V1 paper-literal (Ristretto + Bulletproofs + recursion) vs V2 native Pedersen in-circuit vs V3 Poseidon in-circuit | **Measured in M4a** (§5.5.2), against the thresholds declared before the runs (§5.5.4); V1 is also conditional on the fixing §5.5.5 requires |
 
 ## 11. Out of scope here
 
@@ -522,17 +901,33 @@ stable — the same reason the protection phase is last.
 |-------|---------|-------------|
 | **P1 (done)** | This plan + Foundry skeleton + provisional interfaces | none |
 | **P2 (done)** | B-gaps: README, `CITATION.cff`, benchmark README, badges aligned with reality (B1–B5) | none |
-| **P3 (in progress — M1, M2 done)** | M1 ✅ → M2 ✅ → M3 (on-chain core) | none |
+| **P3 (done — M1, M2, M3)** | M1 ✅ → M2 ✅ → M3 ✅ (on-chain core, §5.4) | none |
 | P4 | M4 → M5 → M6 (off-chain) | none |
-| P5 | M7 (data layer, deploy scripts, AWM) | none |
+| P5 | M7 (data layer, deploy scripts, AWM) + M8 (treasury/custody) | none |
 | P6 | C-gaps: paper apparatus (C1–C4), one batch | **re-anchor** |
 | P7 | Protection + arXiv | **re-anchor** if `main.tex` changes |
 
-**Next step: M3 — `contracts/verifiers/Groth16Verifier.sol`** (Groth16 k=4 over
-BN254 through precompiles `0x06`/`0x07`/`0x08`, gas ≈ 206k cross-checked against
-`benchmarks/GasBenchmarks.sol`), so that `AVIPRegistry.verifyThreshold` stops
-calling a mock and `Θ_r = 0.5` `[CONJECTURE]` acquires a real circuit and trusted
-setup.
+**Next step: M4 — the off-chain prover**, planned in §5.5 and not started:
+`src/zk/` holds the crate (`99db3fe`) with no dependencies, and the milestone is
+gated on the §5.5 review. M4a settles the structural gap that decides the paper's
+Option B (§5.5.5) and *measures* the two risks §5.4 handed over — the
+Ristretto ↔ BN254 mismatch (§5.5.4) and the range proof (§5.5.3); M4b derives the
+real key that replaces the M3 placeholder, with **no Solidity change**. What M4
+turns into a real proof is the M3 fixture. M3 closed the **on-chain** half of A3:
+`AVIPRegistry.verifyThreshold` no longer calls a mock, the pairing runs through
+precompiles `0x06`/`0x07`/`0x08`, and `Θ_r = 0.5` `[CONJECTURE]` is enforced on a
+proof that a validator cannot forge for another statement.
+
+What M3 does **not** close, and must not be read into it (§5.4):
+
+- the circuit and the trusted setup do not exist, so the deployed key would
+  currently be the generator's placeholder and `verifyingKeyDigest()` has no
+  ceremony to match;
+- the fixture is synthetic and carries no soundness claim: it proves the wrapper
+  drives the precompiles and rejects correctly, not that a norm is true;
+- the Pedersen ↔ Merkle bridge is *decided* (option (c), §5.4) but not
+  *implemented*: linking the norm's commitment to the posted Keccak root is the
+  data layer's job in M7.
 
 Delivered by P1: `docs/architecture/implementation-plan.md`,
 `integrations/avalanche/foundry.toml`, `integrations/avalanche/.gitignore`,
@@ -561,3 +956,15 @@ deviations). Validated locally: `forge build --offline --force` → clean with S
 0.8.33, no warnings; `forge test --offline` → *66 passed, 0 failed* (32 registry +
 34 manager); `bash verification/audit-gate.sh` → *PASS=11, FAIL=0*, because
 nothing under `integrations/` is sealed.
+
+Delivered by M3: `contracts/verifiers/Bn254.sol`,
+`contracts/verifiers/Groth16Verifier.sol`, `test/Bn254.t.sol`,
+`test/Groth16Verifier.t.sol`, the generated `test/fixtures/Groth16Fixtures.sol`
+plus `scripts/generate_groth16_fixtures.py` and its transcript, and the
+`abi.decode` → `Bn254.decodeProof` change in `AVIPRegistry.verifyThreshold` with
+its two tests updated (§5.4). Validated locally: `forge build --offline` clean,
+`forge fmt --check` clean, no `forge lint` notes; `forge test --offline` →
+*100 passed, 0 failed* (32 registry + 34 manager + 16 `Bn254` + 18
+`Groth16Verifier`), the last suite including a real pairing and the
+registry/manager integration; the measured `verify` cost is 223,445 gas against
+the benchmark's inlined-key ≈206k.
