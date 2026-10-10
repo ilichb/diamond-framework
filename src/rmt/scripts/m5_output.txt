@@ -1,0 +1,50 @@
+avip_rmt_detector — M5 sealed reproduction (plan §5.6)
+======================================================
+protocol: n=500  d_bar=20  N_H0=2000  N_H1=500
+stream:   numpy.random.default_rng(42) = PCG64, resumed by src/rmt/src/pcg64.rs
+sealed:   verification/rmt/{calibration_modularity.py,bipartite_power.py,clique_spectra.py}
+
+[H0] null distribution of the modularity spectrum B = W - dd^T/(2m)
+  right  s[-1] = lambda_max(B): mean=8.7679  std=0.1115  q99=9.0542  q95=8.9663
+  left  -s[0] = -lambda_min(B): mean=8.8601  std=0.1101  q99=9.1371  q95=9.0428
+  SE(q99) = 0.016802 from the sealed four-decimal moments (0.016803 unrounded; z = 2.5677  SE/q99 = 0.1856 %)
+  bulk edge 2*sqrt(d_bar) = 8.9443
+
+[thresholds] the sealed calibration of detector.rs
+  alpha=0.01: lambda_max(B) > 9.0542  or  -lambda_min(B) > 9.1371
+  alpha=0.05: lambda_max(B) > 8.9663  or  -lambda_min(B) > 9.0428
+  (the detector reads the 0.01 row; both tails, one rejection each)
+
+[right tail] clique power, s[-1] = lambda_max(B)
+  config        lambda_max_mean   TPR@0.01   TPR@0.05   CI95(TPR@0.01)
+  k=1 m=20             9.7452       0.9720       0.9820   [0.9536, 0.9832]
+  k=3 m=20            10.2714       1.0000       1.0000   [0.9924, 1.0000]
+  k=5 m=20            10.5294       1.0000       1.0000   [0.9924, 1.0000]
+  k=1 m=40            14.2441       1.0000       1.0000   [0.9924, 1.0000]
+  k=3 m=40            16.2281       1.0000       1.0000   [0.9924, 1.0000]
+
+[left tail] bipartite polarization, -s[0] = -lambda_min(B)
+  config                    p_within  p_between      mean   TPR@0.01          CI95
+  bipartite 250/250, rb=2    0.0267     0.0534    9.6602    0.9900   [0.9768, 0.9957]
+  bipartite 250/250, rb=5    0.0133     0.0667   14.8292    1.0000   [0.9924, 1.0000]
+  bipartite 250/250, rb=10   0.0073     0.0728   17.5907    1.0000   [0.9924, 1.0000]
+  bipartite 100/400, rb=5    0.0176     0.0878   16.6116    1.0000   [0.9924, 1.0000]
+  bipartite 100/400, rb=10   0.0103     0.1031   22.3561    1.0000   [0.9924, 1.0000]
+  bipartite 50/450, rb=10    0.0153     0.1528   27.6546    1.0000   [0.9924, 1.0000]
+
+[clique_spectra] one draw of the sealed generator (seed 42)
+  H0 degrees: min=10 max=33 mean=19.88 std=4.22
+  matrix   stat     lambda(H0)   lambda(H1)   bulk_edge   gap(H1)
+  W        s[-2]        8.6896      10.6439      8.9443     +1.6996
+  A_sym    s[-2]        0.4254       0.4316      0.4472     -0.0156
+  B        s[-1]        8.6896      10.7011      8.9443     +1.7569
+  B s[0] on the null draw (left tail, not in the sealed table) = -8.8786
+  H1 degrees: inside=27.85 outside=20.0938
+  detector/null draw: m=4970  lambda_max(B)=8.6896  -lambda_min(B)=8.8786  -> quiet
+  detector/plant draw: m=5101  lambda_max(B)=10.7011  -lambda_min(B)=8.7634  -> clique
+
+[M4 fixture] detector wired to src/zk/fixtures/tensor_digest.txt
+  digest = c2309377a00b109a6c44d83a5cc759108977ffe207fba6f83215a9cdf77d9aa9
+  (the paper defines no T -> W map; the digest seeds the graph, see §10)
+  graph: n=500  m=4991  lambda_max(B)=8.7612  -lambda_min(B)=8.7899  -> quiet
+

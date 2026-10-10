@@ -77,9 +77,10 @@ Local gate status at the time of writing: `PASS=11 FAIL=0 SKIP=0`;
 | A10 | Unit tests for everything above | required by `CONTRIBUTING.md` |
 | A11 | Deferred benchmarks (recursive SNARK proving time, Teleporter latency) | paper §9.4; architecture §7 |
 
-Status: **A1, A2 and A3 are closed** by M1, M2 and M3 (§5.1, §5.3, §5.4).
-A4–A11 are open. The `Evidence` column records what the gap looked like when this
-plan was written, not its current status.
+Status: **A1, A2 and A3 are closed** by M1, M2 and M3 (§5.1, §5.3, §5.4);
+**A4 is closed by M4** except the paper-literal recursive construction (§5.5.7
+stays open) and **A5 by M5** (§5.6). A6–A11 are open. The `Evidence` column records
+what the gap looked like when this plan was written, not its current status.
 
 ### 2.3 Documental inconsistencies (closed in P2; zero anchor risk)
 
@@ -171,7 +172,7 @@ claim they trace to; **no invented constants**.
 | M2 | Validator manager | A2 | `contracts/AVIPValidatorManager.sol` — **done** | `S_f*(T) = max{0.2, Θ − C_R(T)}` with `C_R(r)=0.8r/(1+r)`; admission and slashing events; vectors match `verification/mechanism/` |
 | M3 | ZK verifier | A3 | `contracts/verifiers/Groth16Verifier.sol` — **done** (§5.4) | Groth16 k=4 over BN254 via 0x06/0x07/0x08; gas ≈ 206k (cross-check `GasBenchmarks.sol`; 223,445 measured on the deployed shape, §5.4) |
 | M4 | Off-chain prover | A4, A11 | `src/zk/` (Rust) — **M4a, M4b and M4c done** (§5.5.8–§5.5.10) | Bulletproofs aggregated range proof over the 500-entry tensor (`512 × 64` padded, measured 1248 B against the paper's 0.72 KB, §5.5.8); the in-circuit commitment is **V3** — `D-M4-0` closed in M4c (§5.5.10); the derived key and proof are accepted by the frozen contracts (§5.5.9); reports local proving time (**3.9 s** against §5.5.4's 120 s gate); the *paper-literal* recursive SNARK stays open (§5.5.7) |
-| M5 | RMT detector | A5 | `src/rmt/` | Reproduces `q99 = 9.0542` (right tail) and `−λ_min > 9.1371` (left tail) from `verification/rmt/`, without editing it |
+| M5 | RMT detector | A5 | `src/rmt/` — **done** (§5.6) | Reproduces `q99 = 9.0542` (right tail) and `−λ_min > 9.1371` (left tail) from `verification/rmt/`, without editing it |
 | M6 | Reputation dynamics | A6 | `src/reputation/` | `C_R(r)` closed form + epoch commitment; positivity under multiplicative jumps (paper §2) |
 | M7 | Data layer, deploy, AWM | A7, A8, A9 | `src/` + `scripts/` + contracts | Fraud-proof equilibrium `n*(B)=⌊B/B*⌋`, `S_slash=10` (Data Layer); `Deploy*.s.sol` to Fuji; 3 AWM message types |
 | M8 | Treasury / custody | A2 (deferred half) | contracts + scripts | Token custody and fund movement: escrow of `financialStake`, slashing that retains or burns, collection of `F_0*`; in M2 every one of those is declared, never moved (§5.2.3) |
@@ -1181,6 +1182,123 @@ Still open, and unchanged by M4c: the *paper-literal* recursive construction
 audit (§11). `D-M4-0` is closed as **V3** (§10 D-6), which is the variant M4b had
 already installed, so no artefact on either side of the boundary changes.
 
+### 5.6 M5 as delivered (off-chain RMT detector)
+
+Status: **delivered.** `src/rmt/` is the crate `avip_rmt_detector` (edition 2024,
+**no dependencies at all**), and its one documented command is
+`src/rmt/scripts/m5_report.sh`. The acceptance is §5's row: *reproduces
+`q99 = 9.0542` (right tail) and `−λ_min > 9.1371` (left tail) from
+`verification/rmt/`, without editing it*.
+
+The acceptance is met **exactly**, not statistically: the reproduced table agrees
+with the sealed one in every quoted digit — the null moments and quantiles, the
+five clique configurations, the six bipartite configurations (block densities
+included) and the single-draw `W`/`A_sym`/`B` table. `verification/rmt/` is
+untouched: no script, output or manifest line was edited.
+
+**Why an exact reproduction is possible.** The sealed scripts are Monte Carlo, so
+matching them means resuming the *same* stream, not drawing the same ensemble from
+a different generator — the latter would only agree within its own sampling error
+(`q99` has SE 0.0168, so `9.0542` and `9.0710` would both be "reproduced"). Every
+sealed draw comes from `np.random.default_rng(42)`, i.e. PCG64 seeded through
+`SeedSequence(42)`, so `src/rmt/src/pcg64.rs` implements that generator: the
+XSL-RR output, the LCG step, numpy's `next_double`, and the LCG jump-ahead. The
+fixture `fixtures/numpy_pcg64_seed42.txt` pins the reference stream (raw `u64`s,
+double bit patterns, the first H0 draw's checksums), and the tests assert the Rust
+stream against it **bit for bit**. `SeedSequence` itself is not reimplemented: its
+128-bit PCG64 output for seed 42 is a constant carrying a regeneration command,
+asserted against that pinned stream.
+
+`graph.rs` then transcribes the three sealed generators call for call, including
+the detail that decides whether the stream stays aligned: numpy draws a **full
+`n × n`** block of uniforms per replicate and the scripts keep `i < j`, so a
+generator that drew only the upper triangle would consume the wrong window. The
+estimators follow the sealed conventions — numpy's default `quantile`
+(`method="linear"`, `idx = q·(n−1)`), the population `std` (`ddof = 0`), the
+Wilson interval of `bipartite_power.py`, and the SE derivation of
+`q99_standard_error.py` recomputed from the **four-decimal** moments that script
+reuses (hence `0.016802`; the same arithmetic on unrounded moments gives
+`0.016803`, and the pinned table prints both, so the difference is the rounding
+and nothing else).
+
+| Quantity | Sealed value | Reproduced by |
+|---|---|---|
+| null `λ_max(B)` | mean `8.7679`, std `0.1115`, q99 `9.0542`, q95 `8.9663` | `null_distribution` |
+| null `−λ_min(B)` | mean `8.8601`, std `0.1101`, q99 `9.1371`, q95 `9.0428` | `null_distribution` |
+| right-tail power | means `9.7452`…`16.2281`, TPR@0.01 `0.9720`…`1.0000` | `clique_power` |
+| left-tail power | means `9.6602`…`27.6546`, densities `0.0267`/`0.0534`… | `bipartite_power` |
+| single draw | `W` `8.6896`/`10.6439`, `A_sym` `0.4254`/`0.4316`, `B` `8.6896`/`10.7011` | `clique_spectra_table` |
+| degrees (H0) | `min=10`, `max=33`, `mean=19.88`, `std=4.22` | `Graph::degree_stats` |
+| detection time | `0.060 s` per 500-node graph (release, min of 5; stderr) | `benches/m5.rs` |
+
+**Parallel, and nevertheless bit-reproducible.** A phase runs in chunks
+(`CHUNK = 50` replicates) and each chunk seeks its own window with
+`Pcg64::advance`, which is the PCG jump-ahead; results are reassembled in
+replicate order, so the phase's numbers do not depend on the worker count.
+Parallelism changes the duration, never the pinned file — M4a's rule for
+durations, applied to a Monte Carlo phase.
+
+**The detector.** `detector.rs` exposes `B = W − ddᵀ/(2m)`, the two order
+statistics, the sealed thresholds and a `Detection` struct with both decisions and
+a `Verdict`. The spectrum comes from Householder tridiagonalization plus Sturm
+bisection for the order statistic asked for (no eigenvectors, and no Lanczos: the
+null's extremal eigenvalues sit inside a dense bulk, which is exactly where a
+Krylov error bound is hard to trust). `jacobi_eigenvalues` is a second,
+independent solver used only as a reference; the tests assert the two agree to
+`1e-9` on random matrices *and* that the reduction preserves the trace and the
+Frobenius norm — a transcription error in the Householder step cannot survive
+both. Analytic spectra (cycle, complete graph) and the paper's structural identity
+`λ_max(B) = λ₂(W)` on regular graphs are asserted too, as is the identity that
+makes `s[-1]` the right statistic (`B·1 = 0`, F-018).
+
+**The drift guard, in both directions.** `fixtures/sealed_reference.txt` holds the
+sealed lines M5 reproduces, verbatim. `scripts/m5_report.sh` checks (a) that every
+one of those lines is still present in `verification/rmt/results/` — so an edit
+under the sealed tree fails the script instead of silently invalidating the
+reproduction — and (b) that every four-decimal number in them appears in the
+pinned output. `cargo test` repeats the same comparison against the thresholds and
+the single-draw table, and `cargo test --release -- --ignored` runs the full
+protocol against them.
+
+**Two deviations, both stated.**
+1. **The tensor → graph map does not exist in the paper.** `W` is the
+   collaboration graph (`eq:collab`) while `T` is the reputation tensor
+   (`eq:tensor`, one validator's 500 entries); §collusion never relates them. M5
+   does not invent a map: `fixture.rs` binds the detector's synthetic input to the
+   bytes M4 committed (`src/zk/fixtures/tensor_digest.txt`, read with
+   `include_str!`, so a missing artefact is a build failure) and the pinned table
+   prints that digest beside the detection it produced. The missing map is §10
+   **D-7**, open.
+2. **Scope.** M5 reproduces `calibration_modularity.py`, `bipartite_power.py` and
+   `clique_spectra.py`. Deliberately not reproduced, with the reason: the
+   `heavy_tail_*` scripts (Chung–Lu nulls, 15–24 min each; their conclusion —
+   the threshold does not transfer, F-019/F-020/F-021 — is a property of the
+   sealed output, not of a Rust reimplementation); `clique_spectra_seeds.py`
+   (needs numpy's bounded-integer path for `default_rng(SEED).integers(...)`,
+   which M5 does not reimplement, so the multi-seed gap distribution stays a
+   sealed claim); `max_statistic.py` and `recalibrate_top.py` (same ensembles as
+   the null phase, and the reproduced H0 already carries the `s[-1]` conclusion);
+   `asym_weights.py` (ratios of expected weights, not a spectral claim). None of
+   this touches the acceptance criterion, which names the two thresholds.
+
+**Non-goals, as §5's row declares.** No on-chain slashing logic: `Detection` is a
+struct a caller reads, and turning it into an AWM message or a `slash` call is
+M7/M8. No calibration on real collaboration graphs (§10, open). No claim that a
+dense `O(n³)` eigensolver is the deployment shape: it is what reproduces the
+sealed calibration and what the benchmark times, and a sparse method is future
+work rather than a hidden assumption.
+
+Validated: `cargo test` → *36 passed, 0 failed, 1 ignored* (32 unit + 4 integration;
+the ignored one is the full protocol, which `cargo test --release -- --ignored`
+runs green);
+`cargo clippy --all-targets -- -D warnings` and `cargo fmt --check` clean;
+`cargo build --offline` with no registry (the crate has no dependencies);
+`src/rmt/scripts/m5_report.sh` → the pinned file reproduced and the drift guard
+green in both directions; `bash verification/audit-gate.sh` → *PASS=11, FAIL=0*.
+The full protocol takes **≈145 s** on this machine (144.8 s and 140.0 s in two
+runs; stderr, load-dependent) for 7,502 graphs, and one detection — what an epoch
+monitor would run — takes **0.060 s** (`benches/m5.rs`, minimum of five).
+
 ## 6. Interfaces and parameter provenance
 
 The contract boundary is fixed by three **interfaces** (types only, no logic —
@@ -1290,6 +1408,7 @@ stable — the same reason the protection phase is last.
 | D-4 | Code license vs paper license | MIT for code (already) and separate license for the paper | Decide in the protection phase |
 | D-5 | solc drift | Paper says 0.8.33, badge said 0.8.24, machine has 0.8.33 | **Closed in P2**: badge aligned to 0.8.33, both Foundry projects pin 0.8.33; the one 0.8.24 artefact is documented, not edited |
 | D-6 | M4 primitive (`D-M4-0`) | V1 paper-literal (Ristretto + Bulletproofs + recursion) vs V2 native Pedersen in-circuit vs V3 Poseidon in-circuit | **Closed in M4c (§5.5.10) as V3**: V1 leaves the implementation path (§5.5.5 — the `yoloproofs` gate), V2 as *written* is blocked at the type level, and its native repair **V2′** (Pedersen over Baby Jubjub) was built and measured against V3 through the same statement wrapper — 153,688 vs 94,438 constraints (+59,250, +62.7%, the commitment's 240-per-entry against Poseidon's ≈121), two curves against one, prove 6.3 s against 3.9–4.1 s (stderr, load-dependent; the pinned files carry only counts, sizes and digests). V3 is the variant M4b already installed, so no artefact changes |
+| D-7 | The tensor → collaboration-graph map (`T → W`) | (a) invent a projection from the reputation tensor's entries onto validator pairs; (b) leave `W` as an input of the detector, with no derivation from `T` in the repository; (c) calibrate on a real collaboration graph once one exists | **Open, and left open by M5 (§5.6)**: `eq:collab` defines `W` as interactions between validators and `eq:tensor` defines `T` as one validator's scores, and §collusion never relates them, so any projection would be an invented constant-free but claim-bearing choice. M5's `fixture.rs` therefore only *binds* the detector's synthetic input to M4's committed digest (a wiring, printed as such in the pinned table), and the detector's contract is `detect(&Graph, &Calibration)`. Closing this needs real interaction data, which §11 lists as unavailable |
 
 ## 11. Out of scope here
 
@@ -1307,13 +1426,14 @@ stable — the same reason the protection phase is last.
 | **P1 (done)** | This plan + Foundry skeleton + provisional interfaces | none |
 | **P2 (done)** | B-gaps: README, `CITATION.cff`, benchmark README, badges aligned with reality (B1–B5) | none |
 | **P3 (done — M1, M2, M3)** | M1 ✅ → M2 ✅ → M3 ✅ (on-chain core, §5.4) | none |
-| P4 | M4 → M5 → M6 (off-chain) | none |
+| P4 | M4 ✅ (M4a/M4b/M4c) → M5 ✅ → M6 (off-chain) | none |
 | P5 | M7 (data layer, deploy scripts, AWM) + M8 (treasury/custody) | none |
 | P6 | C-gaps: paper apparatus (C1–C4), one batch | **re-anchor** |
 | P7 | Protection + arXiv | **re-anchor** if `main.tex` changes |
 
-**Next step: the *paper-literal* recursive construction of §5.5.7 — the last thing
-M4's amendment owes — or M5 if it is deferred.** M4a, M4b and M4c are delivered
+**Next step: M6 (off-chain reputation dynamics, `src/reputation/`)** — with the
+*paper-literal* recursive construction of §5.5.7 still owed by M4's amendment.
+M4a, M4b and M4c are delivered
 (§5.5.8, §5.5.9, §5.5.10): the crate under
 `src/zk/` measures the inner layer, derives the real key, and decides `D-M4-0` on
 both variants through one statement wrapper, and every number
@@ -1323,8 +1443,14 @@ deterministic fixture end to end, and got it accepted by the unmodified
 `Groth16Verifier` and `AVIPRegistry.verifyThreshold` — the fixture is a real proof
 now, not a solved equation. M4c then built **V2′** and measured it against V3
 through that same wrapper, which is what closed `D-M4-0` as **V3** (§5.5.10) — the
-variant M4b had already installed, so the decision cost no artefact. What remains
-of M4 is the *paper-literal* recursive
+variant M4b had already installed, so the decision cost no artefact. **M5 is
+delivered too** (§5.6): `src/rmt/` reproduces the sealed RMT calibration
+*exactly* — `q99 = 9.0542` right and `9.1371` left, plus both power tables and the
+single-draw `W`/`A_sym`/`B` table — by resuming numpy's own PCG64 stream, and it
+does so without touching `verification/rmt/`; the crate has **no dependencies**,
+its one command is `src/rmt/scripts/m5_report.sh`, and the thresholds it decides
+with are checked against the sealed lines by that script and by `cargo test`. What
+remains of M4 is the *paper-literal* recursive
 construction, which §5.5.7 keeps open; the pipeline is variant-agnostic,
 so re-opening the decision is a change to `variant_circuit_for` and a re-run
 rather than a new pipeline. M3 closed

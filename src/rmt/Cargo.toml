@@ -1,0 +1,28 @@
+[package]
+name = "avip_rmt_detector"
+version = "0.1.0"
+edition = "2024"
+description = "AVIP off-chain RMT collusion detector — M5 (plan 5.6)"
+publish = false
+
+# No dependencies, on purpose: the detector is std-only, so unlike `src/zk`
+# (whose first build needs the ark-*/bulletproofs registry cache, plan 5.5.6)
+# this crate builds with `cargo build --offline` from a clean checkout with no
+# registry at all. The one thing M5 re-implements instead of depending on is the
+# sealed calibration's random stream — `numpy.random.default_rng(42)`, i.e.
+# PCG64 — because resuming *that* stream is what makes the reproduced quantiles
+# the sealed ones (see `src/pcg64.rs` and `fixtures/numpy_pcg64_seed42.txt`).
+
+[dependencies]
+
+# The one documented command of plan §5.6: reproduces the sealed RMT
+# calibration and pins the table to `scripts/m5_output.txt`.
+[[bin]]
+name = "m5-report"
+path = "src/main.rs"
+
+# Detection time on one 500-node graph (plan §5.6: "benchmark de tiempo de
+# detección"). `harness = false`, like M4a's bench: it prints to stdout.
+[[bench]]
+name = "m5"
+harness = false

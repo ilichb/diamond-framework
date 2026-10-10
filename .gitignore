@@ -56,3 +56,4 @@ verification/**/results/*.pkl
 # verification/baseline_verified/, which is the committed, anchored baseline).
 verification/baseline_2026-10-06/
 src/zk/target/
+src/rmt/target/
