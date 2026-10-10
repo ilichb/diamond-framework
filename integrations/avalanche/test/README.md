@@ -1,6 +1,6 @@
 # `integrations/avalanche/test/` — Foundry tests
 
-Status: **100 tests over four contracts (plus two libraries), all green with
+Status: **107 tests over four contracts (plus two libraries), all green with
 `forge test --offline`**:
 
 | File | Tests | Scope |
@@ -9,7 +9,9 @@ Status: **100 tests over four contracts (plus two libraries), all green with
 | `AVIPValidatorManager.t.sol` | 34 | M2 manager: `C_R`/`S_f*` parameters, admission, anti-replay, slashing and ejection, plus 2 fuzz tests |
 | `Bn254.t.sol` | 16 | M3 library: field/group parameters, proof decoding (length, canonicality, trailing bytes) and the `0x06`/`0x07`/`0x08` wrappers |
 | `Groth16Verifier.t.sol` | 18 | M3 verifier: key installation and digest, accept/reject verdicts, off-curve revert, gas, and the `AVIPRegistry`/`AVIPValidatorManager` integration |
+| `M4bRealKey.t.sol` | 7 | M4b: the real key over the V3 circuit and the real fixture proof, accepted by `Groth16Verifier.verify` and by `AVIPRegistry.verifyThreshold` with no contract change, with every statement component bound |
 | `fixtures/Groth16Fixtures.sol` | — | **generated** by `../scripts/generate_groth16_fixtures.py`; do not edit by hand |
+| `fixtures/M4bGroth16Fixtures.sol` | — | **generated** by `../../../../src/zk/scripts/m4b_fixture.sh` (the Rust crate that owns the circuit); do not edit by hand |
 | `mocks/MockThresholdVerifier.sol` | — | the `IZKThresholdVerifier` double used by the M1/M2 suites |
 
 `mocks/MockThresholdVerifier.sol` does not simply answer `true`: it asserts the

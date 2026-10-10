@@ -990,6 +990,86 @@ over `ark-ed-on-bn254`, the native repair of §5.5.2), key size, proving time, a
 the `D-M4-0` verdict itself — M4a compares V3 against V2′, not against the V2 row
 as §5.5.2 originally wrote it.
 
+#### 5.5.9 M4b — the outer layer, as delivered
+
+Recorded on the same terms as §5.5.8: the plan is the milestone's record. M4b
+derived the real key and proved the fixture end to end. It added
+`src/zk/src/groth16.rs` (the statement circuit, the seeded development setup, the
+end-to-end prover, the binding checks), the two drivers `src/zk/src/m4b.rs` and
+`src/zk/src/m4b_fixture.rs`, `src/zk/tests/groth16_statement_shape.rs`, and
+`src/zk/scripts/{m4b_report.sh,m4b_fixture.sh}` with the pinned
+`src/zk/scripts/m4b_output.txt`. On the contract side it added
+`integrations/avalanche/test/fixtures/M4bGroth16Fixtures.sol` (emitted by
+`src/zk`) and `integrations/avalanche/test/M4bRealKey.t.sol`, and edited no
+contract: nothing under `integrations/avalanche/contracts/` changed.
+
+Measured over the §5.5.6 fixture, on this machine:
+
+| Quantity | Measured |
+|---|---|
+| V3 in the statement wrapper, `[root, epoch, certifiedNorm]` | **94,438 constraints**, 93,189 witnesses, 4 instance variables, satisfied |
+| The wrapper's own cost over V3 (`93,608`) | **+830 constraints (+0.9%)**, all of it `epoch < 2^64`; derived in the test from the gadget, not pinned |
+| Key: `a` / `b_g1` / `b_g2` / `h` / `l` queries | 93,193 / 93,193 / 93,193 / 131,071 / 93,189 |
+| `ic` | **4**, so `numPublicInputs() = 3` — what `Groth16Verifier` requires and what `AVIPRegistry` reads |
+| Proof | 128 B compressed, **256 B on-chain** (`8 × 256`-bit) |
+| Durations (stderr, load-dependent) | setup **6.6 s**, prove **3.9 s**, verify **1.3 ms** |
+
+The last row closes the first half of **A11**, and it closes it by measurement
+rather than by argument: the outer prover takes `3.9 s` against the **120 s**
+threshold §5.5.4 declared before the run — a factor of 30 — so the paper's
+`[CONJECTURE]` ("still too large for practical Groth16 proving on consumer
+hardware", L502) does not hold at this circuit size on this machine. Three things
+that number is *not*: a recursive SNARK (M4 proves one layer, §5.5.7), a claim
+about a ceremony-grade key, or an on-chain cost (M3's 223,445 gas stands).
+
+**What makes it a proof rather than a shape.** M3's fixture solves the Groth16
+equation for `c` with no witness; M4b's has one. The fixture is the deterministic
+500-entry tensor of §5.5.6, the circuit is V3 (`Σ T_i²` and its floor predicate,
+plus the Poseidon commitment of the same entries), and the statement is the vector
+`AVIPRegistry.verifyThreshold` builds from its own storage:
+`[commitmentOf(epoch), epoch, certifiedNorm]`. `test/M4bRealKey.t.sol` installs
+the real key in the frozen `Groth16Verifier` and gets `true` back, then posts the
+certifying root as the sequencer and gets `true` from `verifyThreshold` itself.
+
+**The epoch is bound, and the test that says so is the interesting one.** An
+*unused* public input keeps the identity as its `gamma_abc_g1` entry, so the
+pairing equation ignores it and a statement with a fresh epoch would verify
+against an epoch-0 proof. `groth16.rs` therefore constrains `epoch < 2^64`
+in-circuit, and the Solidity test *checks* the consequence instead of asserting
+it: the same root is posted at epoch 1 and the epoch-0 proof is rejected there.
+The off-chain counterpart (`binding.epoch/root/norm`) runs on every report.
+
+**A development setup, stated in plain words.** One phase-2 contributor
+(`SETUP_SEED`), with the proving randomness seeded too (`PROOF_SEED`); both are
+committed and both are written into the fixture. The toxic waste is therefore
+derivable by anyone and **forgeries are free**: the key is an instrument for
+measuring the pipeline and for exercising the frozen verifier, not a key that
+carries a claim. The ceremony that would carry one is §11, and the generated
+fixture says this in its own header.
+
+**Two encoders, one digest.** `verifyingKeyDigest()` is `keccak256(abi.encode(vk))`
+over the contract's own layout; M4b recomputes it in Rust from the ABI layout and
+the Solidity test compares the two. That check earned its place immediately: the
+first Rust encoder wrote 24 words (768 B) and the contract produced 25 (800 B),
+because a struct *with a dynamic member* is itself dynamic and `abi.encode` heads
+it with an offset to its contents. A hand-written "same bytes" comment would have
+shipped the wrong digest; the test did not.
+
+**The M3 fixture is kept, and only as what §5.5.6 allows.** Its off-curve,
+identity, arity and gas-bound tests are exactly what a real key cannot produce
+(`Groth16Verifier.t.sol` still measures 223,445 gas through it), so it stays as
+the precompile-driving test, and its header says so.
+
+Validated: `cargo test` → *19 passed, 0 failed, 1 ignored* (the ignored one is
+M4a's 32,768-bit range proof); `cargo clippy --all-targets -- -D warnings` and
+`cargo fmt --check` clean; `forge test` → *107 passed, 0 failed*, 7 of them
+M4b's, and `forge fmt --check` clean; `m4b_report.sh` twice → `m4b_output.txt`
+byte-identical; the M4a acceptance re-run → `m4a_output.txt` unchanged.
+
+Still open, and unchanged by M4b: **V2′** and therefore `D-M4-0` (§5.5.2,
+§10 D-6); the Pedersen ↔ Merkle bridge (M7, §5.5.7); a multi-party ceremony and
+an audit (§11).
+
 ## 6. Interfaces and parameter provenance
 
 The contract boundary is fixed by three **interfaces** (types only, no logic —
@@ -1121,13 +1201,18 @@ stable — the same reason the protection phase is last.
 | P6 | C-gaps: paper apparatus (C1–C4), one batch | **re-anchor** |
 | P7 | Protection + arXiv | **re-anchor** if `main.tex` changes |
 
-**Next step: M4b — the outer layer — preceded by V2′.** M4a is delivered
-(§5.5.8): the crate under `src/zk/` measures the inner layer, and every number the
-note quotes is in `src/zk/scripts/m4a_output.txt`, reproduced by one command. What
-remains of M4 is (i) **V2′**, without which `D-M4-0` cannot be decided (§5.5.2,
-§10 D-6), and (ii) **M4b**, which derives the real Groth16 key that replaces the
-M3 placeholder and proves the deterministic fixture end to end, with **no
-Solidity change**. What M4 turns into a real proof is the M3 fixture. M3 closed
+**Next step: V2′ — the one thing `D-M4-0` still waits on — or M5 if the decision
+is deferred.** M4a and M4b are delivered (§5.5.8, §5.5.9): the crate under
+`src/zk/` measures the inner layer *and* derives the real key, and every number
+either note quotes is in `src/zk/scripts/{m4a,m4b}_output.txt`, reproduced by one
+command each. M4b replaced the M3 placeholder with a real key over V3, proved the
+deterministic fixture end to end, and got it accepted by the unmodified
+`Groth16Verifier` and `AVIPRegistry.verifyThreshold` — the fixture is a real proof
+now, not a solved equation. What remains of M4 is (i) **V2′**, without which
+`D-M4-0` cannot be decided (§5.5.2, §10 D-6); M4b's pipeline is circuit-agnostic
+(it calls `circuit_for`), so choosing V2′ later is a change to that function and a
+re-run rather than a new pipeline — and (ii) the *paper-literal* recursive
+construction, which §5.5.7 keeps open. M3 closed
 the **on-chain** half of A3:
 `AVIPRegistry.verifyThreshold` no longer calls a mock, the pairing runs through
 precompiles `0x06`/`0x07`/`0x08`, and `Θ_r = 0.5` `[CONJECTURE]` is enforced on a
@@ -1198,3 +1283,21 @@ identical; `bash verification/audit-gate.sh` → *PASS=11, FAIL=0*, with no
 sealed file touched. The one dependency-fetch exception is the §5.5.5 gate
 script, which builds a throwaway crate and says so. What M4a did **not** deliver
 is V2′ and the `D-M4-0` verdict (§5.5.8).
+
+Delivered by M4b (§5.5.9): `src/zk/src/{groth16,m4b,m4b_fixture}.rs`,
+`src/zk/tests/groth16_statement_shape.rs`, `src/zk/scripts/{m4b_report.sh,m4b_fixture.sh}`
+with the pinned `src/zk/scripts/m4b_output.txt`, and on the contract side
+`integrations/avalanche/test/fixtures/M4bGroth16Fixtures.sol` (emitted by
+`src/zk`) plus `integrations/avalanche/test/M4bRealKey.t.sol`. No file under
+`integrations/avalanche/contracts/` was edited: the real key and the real proof
+are accepted by the contracts exactly as M3 froze them. Validated locally:
+`cargo test` → *19 passed, 0 failed, 1 ignored*; `cargo clippy --all-targets -- -D
+warnings` and `cargo fmt --check` clean; `forge test` → *107 passed, 0 failed*
+(7 of them M4b's) and `forge fmt --check` clean; `scripts/m4b_report.sh` twice →
+`m4b_output.txt` byte identical; `scripts/m4a_report.sh` → `m4a_output.txt`
+unchanged, which is the M4a acceptance re-run §5.5.6 asks for. The setup is a
+**development** setup — one contributor, committed seeds, no security claim
+(§5.5.4) — and the measured outer proving time, `3.9 s` against a declared `120 s`
+threshold, is what closes the proving-time half of A11 (the Teleporter half still
+needs a live subnet, §11). What M4b did **not** deliver is V2′, and therefore the
+`D-M4-0` verdict is still open (§5.5.2).

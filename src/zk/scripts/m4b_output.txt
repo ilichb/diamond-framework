@@ -1,0 +1,29 @@
+AVIP M4b — real Groth16 key + end-to-end prover over V3
+plan §5.5.4 (key) and §5.5.9 (delivery)
+==================================================
+
+statement — the vector `AVIPRegistry.verifyThreshold` builds, in its order
+  [0] root                : 14881564148789680950073164612164838307833922018127128489011700125541095929892
+  [1] epoch               : 0
+  [2] certifiedNorm (WAD) : 12793810215743475835
+
+V3 in the statement wrapper (§5.5.6's circuit + the bound epoch)
+  constraints             : 94438
+  instance variables      : 4 (3 public + the constant)
+  witness variables       : 93189
+
+Groth16 development key — one contributor, seeded, no security claim
+  a_query / b_g1_query    : 93193 / 93193
+  b_g2_query              : 93193
+  h_query / l_query       : 131071 / 93189
+  ic                      : 4 (public inputs + 1, what Groth16Verifier requires)
+  keccak256(canonical)    : effaacab146027fb9f22619f87ca485e46f1421c44d53b006c1471c03746aa09
+
+proof — fixture, seeded so two runs agree byte for byte
+  a ‖ b ‖ c (compressed)  : 128 bytes
+  on-chain encoding       : 256 bytes (8 × uint256)
+  keccak256(canonical)    : 92f1c3afb44d458ab83f2d2f82d16dffe73707128087fedaea4feea22cbf49f8
+  verifies                : true
+  rejected after epoch+1  : true
+  rejected after root+1   : true
+  rejected after norm+1   : true

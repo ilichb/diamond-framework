@@ -26,6 +26,11 @@ ark-serialize = { version = "=0.6.0", default-features = false, features = ["der
 ark-std = { version = "=0.6.0", default-features = false, features = ["std"] }
 # Poseidon sponge + its R1CS constraints: the V3 commitment.
 ark-crypto-primitives = { version = "=0.6.0", default-features = false, features = ["constraints", "sponge"] }
+# Groth16 over BN254 (M4b, plan 5.5.4): the outer proof `AVIPRegistry` verifies.
+# `std` does *not* pull `parallel`/rayon — that is a separate feature — so a
+# measurement does not depend on thread scheduling (the M4a discipline). The
+# crate is in the same 0.6.0 family as the rest, so `--offline` still resolves.
+ark-groth16 = { version = "=0.6.0", default-features = false, features = ["std"] }
 
 # Off-chain aggregated range proof (plan 5.5.3): the width is k = 60 bits per
 # entry, N·k = 30,000 bits, and the paper's 0.72 KB is the estimate M4a measures.
@@ -48,6 +53,18 @@ hex = "=0.4.3"
 [[bin]]
 name = "m4a-report"
 path = "src/main.rs"
+
+# M4b driver (plan 5.5.9): the real Groth16 key over V3 and the end-to-end prover.
+[[bin]]
+name = "m4b-report"
+path = "src/m4b.rs"
+
+# The Solidity fixture emitter: writes the real key and the real proof into
+# `integrations/avalanche/test/fixtures/M4bGroth16Fixtures.sol`. Run through
+# `scripts/m4b_fixture.sh`, which follows it with `forge fmt`.
+[[bin]]
+name = "m4b-fixture"
+path = "src/m4b_fixture.rs"
 
 [[bench]]
 name = "m4a"

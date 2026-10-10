@@ -25,6 +25,22 @@ testable before the real circuit exists. The real circuit and ceremony are a
 parallel workstream; when they land, regenerate the fixture and the key — the
 verifier contract does not change.
 
+## `../../src/zk/scripts/m4b_fixture.sh` (milestone M4b)
+
+The M4b analogue, and the one that produces a *real* instance:
+`../test/fixtures/M4bGroth16Fixtures.sol` is emitted by the Rust crate that owns
+the circuit (`src/zk`), so it is generated where the key is derived rather than by
+a script that imitates it. It writes the development key over V3, the fixture
+proof, the statement `[root, epoch, certifiedNorm]` and the on-chain
+`keccak256(abi.encode(vk))` digest; `test/M4bRealKey.t.sol` then verifies all of
+it against the frozen contracts, with no contract change. Read plan §5.5.9 before
+quoting a number: the setup is a *development* setup — one phase-2 contributor
+with the seeds committed — so the key carries no security claim.
+
+```shell
+src/zk/scripts/m4b_fixture.sh
+```
+
 ## Intended layout (deployment, M7)
 
 | Script | Purpose | Phase |

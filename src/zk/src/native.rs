@@ -107,7 +107,7 @@ const CERTIFIED_BOUND_BITS: usize = 64;
 /// `ark-r1cs-std 0.6.0` are not used, and `CmpGadget for [T]` is not correct for
 /// this purpose (its `∧ᵢ (aᵢ > bᵢ ∨ equal_up_to_i)` rejects `"10" ≥ "09"`),
 /// so the inequalities below are decided by a bound plus a difference.
-fn enforce_below_pow2(value: &FpVar<Fr>, bound_bits: usize) -> Result<(), SynthesisError> {
+pub fn enforce_below_pow2(value: &FpVar<Fr>, bound_bits: usize) -> Result<(), SynthesisError> {
     for bit in value.to_bits_le()?.iter().skip(bound_bits) {
         bit.enforce_equal(&Boolean::FALSE)?;
     }
