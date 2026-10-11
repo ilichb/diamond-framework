@@ -70,16 +70,16 @@ Local gate status at the time of writing: `PASS=11 FAIL=0 SKIP=0`;
 | A3 | On-chain ZK verifier (`verifiers/`) | only gas benchmarks exist; architecture §3 |
 | A4 | Off-chain prover (Pedersen + Bulletproofs + recursive SNARK) | `src/zk/` (Rust crate `avip_zk_prover`, M4); architecture §6.2 |
 | A5 | Production RMT detector | `src/rmt/.gitkeep`; today only `verification/rmt/` simulations |
-| A6 | On-chain reputation dynamics (`C_R`, epoch commitment) | `src/reputation/.gitkeep` |
+| A6 | Reputation dynamics: the off-chain `C_R` crate (the on-chain reader already ships in M2) | `src/reputation/` (crate `avip_reputation`, M6); on-chain half in `AVIPValidatorManager.collateralFor` (M2) |
 | A7 | Data layer: event ingestion, transport, fraud proof | architecture §5, §6.3 |
 | A8 | Deployment scripts | `scripts/.gitkeep`; architecture §6 |
 | A9 | Teleporter / AWM (3 message types) | architecture §4; README roadmap "Pending" |
 | A10 | Unit tests for everything above | required by `CONTRIBUTING.md` |
 | A11 | Deferred benchmarks (recursive SNARK proving time, Teleporter latency) | paper §9.4; architecture §7 |
 
-Status: **A1, A2 and A3 are closed** by M1, M2 and M3 (§5.1, §5.3, §5.4);
-**A4 is closed by M4** except the paper-literal recursive construction (§5.5.7
-stays open) and **A5 by M5** (§5.6). A6–A11 are open, except that **M7a (§5.8)**
+Status: **A1, A2, A3 and A6 are closed** by M1, M2, M3 and M6 (§5.1, §5.3, §5.4,
+§5.7); **A4 is closed by M4** except the paper-literal recursive construction
+(§5.5.7 stays open) and **A5 by M5** (§5.6). A7–A11 are open; M7a (§5.8)
 delivered A8's scripts, so what is missing there is the deployment itself, not the
 code. The `Evidence` column records what the gap looked like when this plan was
 written, not its current status.
@@ -175,7 +175,7 @@ claim they trace to; **no invented constants**.
 | M3 | ZK verifier | A3 | `contracts/verifiers/Groth16Verifier.sol` — **done** (§5.4) | Groth16 k=4 over BN254 via 0x06/0x07/0x08; gas ≈ 206k (cross-check `GasBenchmarks.sol`; 223,445 measured on the deployed shape, §5.4) |
 | M4 | Off-chain prover | A4, A11 | `src/zk/` (Rust) — **M4a, M4b and M4c done** (§5.5.8–§5.5.10) | Bulletproofs aggregated range proof over the 500-entry tensor (`512 × 64` padded, measured 1248 B against the paper's 0.72 KB, §5.5.8); the in-circuit commitment is **V3** — `D-M4-0` closed in M4c (§5.5.10); the derived key and proof are accepted by the frozen contracts (§5.5.9); reports local proving time (**3.9 s** against §5.5.4's 120 s gate); the *paper-literal* recursive SNARK stays open (§5.5.7) |
 | M5 | RMT detector | A5 | `src/rmt/` — **done** (§5.6) | Reproduces `q99 = 9.0542` (right tail) and `−λ_min > 9.1371` (left tail) from `verification/rmt/`, without editing it |
-| M6 | Reputation dynamics | A6 | `src/reputation/` | `C_R(r)` closed form + epoch commitment; positivity under multiplicative jumps (paper §2) |
+| M6 | Reputation dynamics | A6 | `src/reputation/` — **done** (§5.7.1) | `C_R(r)` closed form, WAD parity with M2's deployed reader (`collateralFor(Θ_R)`/`requiredStakeFor(Θ_R)` pinned) + the epoch commitment in M1's convention; positivity under multiplicative jumps (paper §2) — F-001 reproduced: additive **40.2510%** against the sealed **40.5800%** (0.3290 pp, inside `3·SE`), multiplicative **0.000000%** by construction; the IDE solver reproduces `cr_ide_solver_output.txt` (14-point grid, two regimes, `r_0`, monotone, `π(r)/r → 0.799992`) |
 | M7 | Data layer, deploy, AWM | A7, A8, A9 | `src/` + `scripts/` + contracts — **M7a done** (§5.8) | Fraud-proof equilibrium `n*(B)=⌊B/B*⌋`, `S_slash=10` (Data Layer); the phase-1 `Deploy*.s.sol` exist and are verified offline, a Fuji deployment is still open; 3 AWM message types |
 | M8 | Treasury / custody | A2 (deferred half) | contracts + scripts | Token custody and fund movement: escrow of `financialStake`, slashing that retains or burns, collection of `F_0*`; in M2 every one of those is declared, never moved (§5.2.3) |
 
@@ -1301,6 +1301,170 @@ The full protocol takes **≈145 s** on this machine (144.8 s and 140.0 s in two
 runs; stderr, load-dependent) for 7,502 graphs, and one detection — what an epoch
 monitor would run — takes **0.060 s** (`benches/m5.rs`, minimum of five).
 
+### 5.7 M6 as delivered (reputation dynamics)
+
+Status: **done** — §5.7.1 records the delivered artefacts, the four deviations and
+the validation evidence. `src/reputation/` is the crate `avip_reputation` (edition
+2024, **no dependencies**, `publish = false`), with 53 tests, zero clippy warnings
+and a byte-stable report artefact; its one documented command is
+`src/reputation/scripts/m6_report.sh`. §5's row is the acceptance: *the closed form
+`C_R(r)` and the epoch commitment, plus positivity under multiplicative jumps*.
+The rest of this section is the plan M6 was held to — kept, not rewritten, so the
+outcome can be read against it.
+
+**The pieces, and who owns each.** M6 sits inside a data flow three neighbours
+already touch, so the boundaries are part of the deliverable and not an appendix to
+it:
+
+| piece | owner | trace |
+|---|---|---|
+| `C_R(r) = 0.8 r/(1+r)` at `r = ‖T‖_F`, and `S_f* = max{S_min, Θ − C_R(r)}` | **M6** (off-chain, `f64`) **and M2** (on-chain, WAD) | §2.5 and `\ref{sec:payment}`; M2 already ships the deployed reader, so M6's obligation is **parity with it**, not a second decision |
+| the operator `C_R` satisfies: `L[C_R]`, `π = −L[C_R]` | **M6** | `\eqref{eq:fokker}`, `\eqref{eq:integro}`, `\eqref{eq:running-reward}`; the sealed evaluation is `verification/stochastics/cr_ide_solver.py` (C-24, closed `9d96b76`) |
+| per-epoch reputation state → commitment payload and root | **M6** maps it; **M1** verifies it; **M7** transports it | `\ref{sec:datalayer}`; `AVIPRegistry.verifyInclusion` fixes the convention, so the map is not free |
+| `T[c,d,h] = f_c(events)` (ingestion) and the fraud proof | **M7** — *not* M6 | `\eqref{eq:ingestion}`; guessing `f_c` here would be the same class of error as inventing `W` (D-7) |
+| escrow of `financialStake`, slashing that retains or burns | **M8** | §5.2.3 |
+| the `T → W` map | **nobody**: §10 **D-7** stays open, option (b) | §5.6 also binds `W` as an input; a heuristic projection would be a claim-bearing invention, which is what (b) rejected |
+
+**Acceptance criteria.** Each one is either a number the repository already sealed
+or a property the paper states; no new constant enters.
+
+1. **`C_R` and `S_f*`, three ways.** In WAD, with the *exact* Solidity expression
+   (`(CR_INF · r) / (ONE + r)` on a 256-bit intermediate, floor division) and in the
+   `f64` closed form. Reproduce (a) the constants the frozen contract's own tests
+   pin — `collateralFor(THETA_R) = 266_666_666_666_666_666` and
+   `requiredStakeFor(THETA_R) = 733_333_333_333_333_334`, with monotonicity,
+   concavity and saturation `C_R(1e30) < CR_INF`; and (b)
+   `verification/mechanism/results/financial_floor_sensitivity_output.txt`:
+   `C_R^∞ = 0.800`, `C_R(1e9) = 0.800000`, `S_min = Θ − C_R^∞ = 0.200` and the sweep
+   `C_R^∞ ∈ {0.5,…,1.0} → S_min ∈ {0.5,…,0.0}`.
+2. **The integro-differential check, to the sealed six decimals.** The 14-point grid
+   `r ∈ {1e-3, …, 50}` of
+   `verification/stochastics/results/cr_ide_solver_output.txt`, in both regimes
+   (`α, σ_0 = 0.5, 0.8` and `2.0, 0.5`), `λ = 0.8`, `ν = δ_{0.85}`: `C_R`, `C_R'`,
+   `C_R''`, `L[C_R]` and `π`; plus the summary — `r_0 = 0.325039 / 0.611879`,
+   `π(0.5) = +0.142752 / −0.170136`, `π(1.0) = +0.489946 / +0.450946`,
+   `min π = −0.398195 / −1.594912`, monotone on `[r_0, ∞)`, `π(r)/r → 0.799992`.
+   C-24 was closed by *that* script; M6's claim is narrower and is stated as such —
+   the same operator, computed by an independent implementation, on the same grid.
+3. **Positivity under jumps (F-001), in whichever mode the probe justifies.** Sealed
+   parameters (`α = 0.5`, `R̄ = 1.0`, `σ_0 = 0.8`, `λ = 0.8`, mean jump `0.15`,
+   `R_0 = 0.3`, `T = 5`, `dt = 0.001`, `100_000` paths, seed `42`): the additive
+   scheme fails at **40.58%** and the multiplicative one at **0.000000%**
+   (`min R = 0.000000`). `bin/m6-probe` first decides whether the crate can resume
+   numpy's stream for the *whole* script — `normal`, `poisson` and `exponential`,
+   not only `uniform` — and the pinned output states the mode it used:
+   - **exact**: every sealed digit, by reproduction; or
+   - **statistical**: the rate with its sampling error
+     (`SE = √(p(1−p)/n) = 0.155` pp at 100k paths for 40.58%), and the multiplicative
+     branch reported as **bounded by construction** — the sealed script clips
+     `R + drift + diff` at zero *before* applying the jump, so `0.0000%` is a
+     property of the specification, and the informative checks are `min R ≥ 0` plus
+     Feller's condition `2αR̄ = 1.0 ≥ σ_0² = 0.64` (`\eqref{eq:wellcond}`).
+   The mode is printed in `m6_output.txt` itself, so the file cannot be read as an
+   exact reproduction when it is not one.
+4. **The epoch commitment, in M1's convention.** `commitment.rs` maps a per-epoch
+   reputation state (`(validator, r)` entries plus the epoch) to a payload and a
+   Merkle root using **M1's exact hashing** — leaf
+   `keccak256(abi.encodePacked(leaf))`, pair `keccak256(abi.encodePacked(min, max))`
+   sorted — so the root M7 posts is verifiable by `AVIPRegistry.verifyInclusion`
+   **unchanged**; it enforces the same freshness bound
+   `γ·N = (500 · 1000)/10_000 = 50` entries per epoch (`\eqref{eq:freshness}`).
+   Keccak-256 is checked against independent values in
+   `fixtures/keccak256_vectors.txt`, generated with `cast keccak` — the same Keccak
+   the contracts call.
+5. **The gate.** `cargo test` green; `cargo clippy --all-targets -- -D warnings` and
+   `cargo fmt --check` clean; `cargo build --offline` with no registry;
+   `src/reputation/scripts/m6_report.sh` reproduces `scripts/m6_output.txt` behind
+   the two-direction drift guard of §5.6; `bash verification/audit-gate.sh` →
+   `PASS=11, FAIL=0`, with `verification/` untouched.
+
+**Deliberately not reproduced**, with the reason (the §5.6 discipline):
+`verification/stochastics/dt_convergence.py` (it measures the Euler bias of the
+*MFPT*, `\eqref{eq:mfpt}`/`\eqref{eq:gamma}`, not the positivity claim),
+`mfpt_jump_diffusion.py` and `mfpt_bound_explicit.py` (the same MFPT subject),
+`stationary_stats.py` and `censoring_test.py` (`\eqref{eq:moments}`), and
+`verification/mechanism/{fee_specification,fee_specification_net,frobenius_counterexample}.py`
+(fee and tensor-norm subjects whose own findings are closed). None of them is part
+of the acceptance, and each would re-derive a claim the sealed output already
+carries.
+
+**One label fix, not a change of decision.** §2.2's A6 row said "**on-chain**
+reputation dynamics". The on-chain half exists — M2's `collateralFor` /
+`requiredStakeFor`, in WAD, tested against the sealed floor — so what is missing is
+the off-chain crate, and the row now says so.
+
+#### 5.7.1 M6 as delivered
+
+Delivered: `src/reputation/` (crate `avip_reputation`, edition 2024, **no
+dependencies**, `publish = false`), with modules `pcg64` (the sealed stream —
+`np.random.default_rng(42)`, i.e. PCG64 — resumed bit for bit, `advance` included),
+`numpy` (`uniform` bit-identical, `poisson` exact at both sealed rates, `normal`
+and `exponential` **SUBSTITUTED** — deviation 1), `wad` (M2's reader in WAD-18 with
+a 256-bit intermediate: `collateralFor(Θ_R) = 266_666_666_666_666_666`,
+`requiredStakeFor(Θ_R) = 733_333_333_333_333_334`, monotone and saturating, with
+the domain `MAX_NORM` stated as a constant), `keccak` (digest parity with `cast
+keccak`, including the rate boundary), `commitment` (M1's convention exactly: leaf
+`keccak256(payload)` with `payload = abi.encodePacked(address, uint256)`, pairs
+`keccak256(min‖max)` sorted, `merkle_root`, `Epoch::{root, digest, inclusion_proof,
+changed_entries, freshness_ok}`, freshness `γ·N = 50` and the genesis case), `cir`
+(the positivity run) and `cr` (the IDE solver).
+
+Bin `m6-report` (`--smoke` shrinks the positivity run: a development mode, never
+pinned) writes `scripts/m6_output.txt` — **12,078 B**, reproduced byte-identically
+by `scripts/m6_report.sh` (md5 `18e0a845ef87775e903a90f85737dbce`). Bin `m6-probe`
+is what decides the mode printed in that file's header, so the artefact cannot be
+read as an exact reproduction when it is not one.
+
+**The drift guard, in both directions** (§5.6's rule, applied here).
+`fixtures/sealed_reference.txt` copies the sealed lines verbatim, one block per
+file: `verification/stochastics/results/{cr_ide_solver_output,sim_positivity_output}.txt`
+and `verification/mechanism/results/financial_floor_sensitivity_output.txt`.
+`scripts/m6_report.sh` checks (a) that every one of those lines is still present,
+byte for byte, in the file its `# ---` header names under `verification/` — so an
+edit under the sealed tree fails the script instead of silently invalidating the
+copy — and (b) that every four-decimal number in them appears in
+`scripts/m6_output.txt`. The pinned file is replaced only after both directions
+pass, so a drifting run leaves it untouched (fail-closed).
+
+**The reproduced numbers.** Section 3 of `scripts/m6_output.txt` prints the additive
+rate as **40.2510%** against the sealed **40.5800%** (`|Δ| = 0.3290 pp`, inside
+`3·SE = 0.4658 pp` at `n = 100,000`) and the multiplicative one as **0.000000%**
+with `min R = 0.000000`; section 2 holds the IDE solver's 14-point grid and its
+summary for both regimes (`r_0 = 0.325039 / 0.611879`, `π(1.0) = +0.489946 /
++0.450946`, `min π = −0.398195 / −1.594912`, monotone on `[r_0, ∞)`,
+`π(r)/r → 0.799992`).
+
+**Four deviations, all deliberate.**
+1. **`normal` and `exponential` are SUBSTITUTED, not reproduced.** NumPy 2.2.6
+   draws both from a 257-entry ziggurat table, not from the next uniform by inverse
+   CDF or Box–Muller, and that table is neither in this repository nor reachable
+   offline. `numpy.rs` declares the substitution, `bin/m6-probe` is what *decides*
+   it, and `scripts/m6_output.txt` prints the resulting mode (`statistical`) beside
+   the numbers, so the file cannot be read as an exact reproduction; the test
+   asserts the substitution rather than hiding it.
+2. **F-001's multiplicative branch reproduces the `np.clip` that precedes the
+   jump.** The `0.000000%` is by construction (`main.tex` L171), not an empirical
+   finding: the port clips `R + drift + diff` at zero *before* applying the factor,
+   exactly as the sealed script does, and the test asserts the resulting `min R ≥ 0`
+   instead of re-measuring a tautology.
+3. **D-7 stays open (option b).** No `mapping.rs` and no heuristic `T → W`
+   derivation exists anywhere in the crate: the epoch's entries are M6's *input*,
+   and the commitment is a map from a frozen tensor to a root, not a claim about
+   how validators collaborated.
+4. **The epoch commitment is a pure function, not a state machine.** The ingestion
+   formula `f_c` and the epoch lifecycle belong to the data layer (M7, §10); M6
+   provides `commitment::merkle_root` and `Epoch::{root, digest, freshness_ok}` as
+   stateless computations over a frozen tensor, and enforces `γ·N = 50` through
+   `changed_entries` / `freshness_ok` on epochs it does not own.
+
+**Validated locally.** `cargo test --offline` → **53 passed, 0 failed**;
+`cargo clippy --offline --all-targets -- -D warnings` → clean; `cargo fmt --check`
+→ 0 diffs; `cargo build --offline` → OK (no registry, no dependencies);
+`scripts/m6_report.sh` → PASS in **25.7 s** (paths = 100,000, steps = 5,000; stderr,
+load-dependent) with the pinned file byte-identical across runs;
+`bash verification/audit-gate.sh` → **PASS=11, FAIL=0, SKIP=0**;
+`git status --porcelain verification/` → 0 lines, so the sealed tree is untouched.
+
 ### 5.8 M7a as delivered (offline deployment scripts)
 
 Status: **done for the script half of A8**. `integrations/avalanche/scripts/`
@@ -1512,7 +1676,7 @@ stable — the same reason the protection phase is last.
 | **P1 (done)** | This plan + Foundry skeleton + provisional interfaces | none |
 | **P2 (done)** | B-gaps: README, `CITATION.cff`, benchmark README, badges aligned with reality (B1–B5) | none |
 | **P3 (done — M1, M2, M3)** | M1 ✅ → M2 ✅ → M3 ✅ (on-chain core, §5.4) | none |
-| P4 | M4 ✅ (M4a/M4b/M4c) → M5 ✅ → M6 (off-chain) | none |
+| **P4 (done — M4, M5, M6)** | M4 ✅ (M4a/M4b/M4c) → M5 ✅ → M6 ✅ (off-chain, §5.5–§5.7) | none |
 | **P5 (in progress — M7a)** | M7 (data layer, deploy scripts, AWM) + M8 (treasury/custody) | none |
 | P6 | C-gaps: paper apparatus (C1–C4), one batch | **re-anchor** |
 | P7 | Protection + arXiv | **re-anchor** if `main.tex` changes |
@@ -1532,6 +1696,13 @@ through `deploy(Plan)` (no environment) and is verified out of process by
 `scripts/deploy_dryrun.sh`, whose six-case transcript is committed. What remains of
 A8 is the Fuji deployment itself — a funded key and a live endpoint, which no
 milestone here automates — plus the phase-4 P-Chain registration.
+
+**P4 is delivered**: M4 (off-chain ZK prover, **V3**, 94,438 constraints, 3.9 s
+proving, §5.5), M5 (RMT detector, exact PCG64 reproduction, `q99 = 9.0542` right and
+`9.1371` left, §5.6) and M6 (reputation dynamics, 53 tests, F-001 reproduced, the IDE
+solver, §5.7) — all three crates build offline, pass `cargo clippy --all-targets
+-- -D warnings` and `cargo fmt --check`, and publish a byte-stable report artefact
+reproduced by one command each; the sealed tree is untouched (`PASS=11, FAIL=0`).
 
 M4a, M4b and M4c are delivered
 (§5.5.8, §5.5.9, §5.5.10): the crate under

@@ -1,0 +1,24 @@
+# WAD vectors for `src/wad.rs` — the Solidity expressions of
+# `AVIPValidatorManager.collateralFor` / `requiredStakeFor`, evaluated in
+# Python's arbitrary-precision integers (the independent implementation).
+#
+# Regenerate with:
+#   python3 - <<'EOF'
+#   ONE=10**18; CR_INF=8*10**17; THETA=10**18; S_MIN=2*10**17
+#   col=lambda r: (CR_INF*r)//(ONE+r); req=lambda r: max(S_MIN, THETA-col(r))
+#   for r in (0, 1, 5*10**17, 10**18, 2*10**18, 4*10**18, 10**21, 10**30): print(r, col(r), req(r))
+#   EOF
+#
+# The first two are also pinned by the frozen contract's own Foundry tests:
+#   collateralFor(5e17) = 266666666666666666
+#   requiredStakeFor(5e17) = 733333333333333334
+
+norm_wad collateral_wad required_stake_wad
+0 0 1000000000000000000
+1 0 1000000000000000000
+500000000000000000 266666666666666666 733333333333333334
+1000000000000000000 400000000000000000 600000000000000000
+2000000000000000000 533333333333333333 466666666666666667
+4000000000000000000 640000000000000000 360000000000000000
+1000000000000000000000 799200799200799200 200799200799200800
+1000000000000000000000000000000 799999999999200000 200000000000800000

@@ -1,0 +1,37 @@
+[package]
+name = "avip_reputation"
+version = "0.1.0"
+edition = "2024"
+description = "AVIP off-chain reputation dynamics — M6 (plan 5.7)"
+publish = false
+
+# No dependencies, on purpose: like `src/rmt` (M5) and unlike `src/zk` (whose
+# first build needs the ark-*/bulletproofs registry cache, plan 5.5.6), this
+# crate builds with `cargo build --offline` from a clean checkout with no
+# registry at all. Two things it re-implements instead of depending on:
+#
+#   - the sealed scripts' random stream (`numpy.random.default_rng(42)`, PCG64)
+#     and numpy's Poisson product test, so `poisson` is resumed *exactly*; and
+#
+#   - Keccak-256, because the epoch commitment has to hash exactly the way
+#     `AVIPRegistry` does — a library would be a second implementation with its
+#     own padding decision, and the whole point of `commitment.rs` is that the
+#     root it produces is verifiable by the deployed contract unchanged.
+#
+# `numpy.rs` states which draws are exact and which are documented substitutes
+# (numpy's `normal` and `exponential` are ziggurat over a 257-entry table that is
+# not in this repository and not reachable offline); `bin/m6-probe` is what
+# decides that and `scripts/m6_output.txt` records the verdict.
+
+[dependencies]
+
+# The one documented command of plan §5.7: reproduces the sealed numbers and
+# pins the table to `scripts/m6_output.txt`.
+[[bin]]
+name = "m6-report"
+path = "src/main.rs"
+
+# The reproducibility probe: which of the sealed script's draws can be resumed.
+[[bin]]
+name = "m6-probe"
+path = "src/bin/probe.rs"
