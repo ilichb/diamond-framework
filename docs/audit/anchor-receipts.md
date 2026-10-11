@@ -236,3 +236,48 @@ el historial, comprobado en el commit padre de la promoción:
 Un mismo compromiso, dos formas del recibo: el pendiente (lo que viajó por
 correo, §R-1.3) y el completado (lo que vive en el repo). Ninguna de las dos
 altera el ancla ni el sello: lo sellado fue el root, y el root no cambió.
+
+## R-2 — Recibo OpenTimestamps del root de P6a
+
+Fecha: 2026-10-11, re-anclaje `2026-10-11T21:48:40Z`; el `.ots` sellado a las `21:49Z` (UTC; local `17:49 -04`). HEAD cuyo
+árbol se selló: `094c41b`; el `.ots` vive en su propio commit, `ccc7e55`. HEAD anclado
+*dentro* del root (el que sella G10): `aaaf460`.
+
+Este sello **sustituye** al de §R-1, y por la razón que el propio §Alcance declara:
+`docs/paper/main.tex` cambió (P6a), y todo cambio en cualquiera de los diez ficheros
+que el root compromete invalida el sello anterior. El recibo de D1 no se destruye —se
+apartó del árbol sólo para poder sellar— y su valor no sale de ese archivo temporal
+sino de un comando.
+
+| campo | valor |
+|---|---|
+| Artefacto sellado | `verification/anchor_root.sha256` (10 pares) |
+| SHA-256 del artefacto | `217d6d51384b051e82d74b6d82e09bb111fd779deff280c0383851ba941cf6d5` |
+| Recibo | `verification/anchor_root.sha256.ots` (**735 bytes**, **pendiente**) |
+| SHA-256 del recibo | `c0ca6425c5af24bd945c2acd433b30e826d47d4f39f50e658ae4a6542fa5ab71` |
+| Cliente | `ots` v0.7.2 |
+| Envío a calendarios | 4 *(4 líneas `Submitting to remote calendar`)* |
+| Atestaciones | **4 `PendingAttestation`** (alice, finney, bob, catallaxy) y **ninguna** `BitcoinBlockHeaderAttestation` todavía; derivado de `ots info`, no de la salida del cliente |
+| Verificación | `ots info` → `File sha256 hash: 217d6d51…`: el compromiso del recibo es el del artefacto. `ots verify` → exit 1 con las cuatro líneas `Pending confirmation in Bitcoin blockchain` y **sin** `File does not match`: el recibo resuelve su objetivo y sólo le falta la confirmación en un bloque |
+| Sustituye a | `6b28be97603ce2b2a2f1879ef5393aaf26c1bf3a0d3338222e9c9551b903141c` (2949 B; con Bitcoin en los bloques `970536`/`970537`), el recibo de D1 sobre `83001ca2…` |
+| Recuperación del anterior | `git show aaaf460:verification/anchor_root.sha256.ots \| sha256sum` → `6b28be97…`: sigue en el historial y no depende de ningún archivo fuera del repo |
+
+Promoción, para cuando toque: el recibo de §R-1 llegó a prueba Bitcoin porque se
+volvió a ejecutar `ots upgrade` cuando un calendario ya había agregado el compromiso
+en un bloque (§R-1.5–§R-1.6). El de aquí está recién enviado; `ots upgrade
+verification/anchor_root.sha256.ots` y el `.ots` se reemplaza otra vez. Promover no
+exige re-anclar: el recibo vive fuera del root, que es lo que evita la circularidad.
+
+### R-2.1 Por qué este recibo no invalida las referencias selladas
+
+El root compromete `docs/paper/main.tex` **y** los tres ficheros de `docs/audit/` que
+lo citan por número de línea (`claim-registry.csv`, `numerical-verification.md`,
+`content-audit-pending.md`). Por eso P6a se hizo **1:1** —doce líneas reemplazadas,
+1410 → 1410— y por eso este sello no deja obsoleta ninguna de esas tres citas: las que
+ya eran inexactas en `aaaf460` siguen siéndolo (P6b las lleva), y ninguna pasó a serlo
+por P6a.
+
+`verification/output_manifest.sha256` no cambió (35 pares idénticos byte a byte), así
+que los 35 outputs no se regeneraron: este root sella un árbol en el que lo único que
+se movió es el paper y los dos manifiestos que lo sellan.
+
