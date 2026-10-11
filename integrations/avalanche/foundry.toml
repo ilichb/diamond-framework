@@ -42,4 +42,14 @@ tab_width = 4
 # purpose: the gas optimisation is a tracked item (implementation plan §7), not
 # something to apply before there is a gas budget to hit.
 exclude_lints = ["asm-keccak256"]
+# The two Teleporter interface files transcribe an external ABI
+# (`ava-labs/icm-contracts`) and keep *its* spelling, `sourceBlockchainID` and
+# friends included, because the point of those files is to be diffable against
+# upstream. forge-lint's `mixed-case-variable` note wants `sourceBlockchainId`;
+# renaming would make every future comparison a manual one, so the note is
+# switched off for exactly those two paths — and for them only.
+ignore = [
+    "contracts/interfaces/ITeleporterMessenger.sol",
+    "contracts/interfaces/ITeleporterReceiver.sol",
+]
 
