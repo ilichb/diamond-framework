@@ -912,12 +912,12 @@ For Avalanche L1 source chains, the commitment root is propagated via Avalanche 
 The tensor $T$ is frozen per epoch. Two consecutive epochs cannot differ in more than $\gamma \cdot N$ entries, where $N = CDH$ and $\gamma$ is a freshness parameter. The freshness constraint bounds the propagation of undetected fraud across epochs.
 
 \subsection{The Fraud Proof Mechanism}
-Any party can submit a fraud proof consisting of two state inclusion proofs against the same source-chain root that yield contradictory values for a single entry $T[c,d,h]$. If the proof is valid, the entry is marked fraudulent and the honest reporter receives a bounty $B$. The validator whose entry was fraudulent is slashed.
+Any party can challenge a published entry by re-deriving it: the reporter publishes the consensus events behind $T[c,d,h]$, and the adjudicator re-executes the same public, genesis-frozen ingestion formula $f_c$ and compares its result with the published leaf. The challenge succeeds when the two disagree, and only then: the entry is adjudicated fraudulent and the honest challenger is owed the bounty $B$ of the equilibrium below. A pair of contradictory openings is not a usable proof against the tensor's own commitment, because one leaf under one Merkle root has one value --- no set of inclusion proofs can exhibit a contradiction --- so the adjudicator checks the one thing that can fail, the value. Both the bounty $B$ and the slashing penalty $S_{\mathrm{slash}}$ are model parameters of this section: the delivered data layer adjudicates and reports, and does not move funds.
 
-We model the audit equilibrium as follows. Let $N_{\mathrm{ATT}}$ be the number of attestations per epoch, $p_{\mathrm{fraud}}$ the fraction that are fraudulent, and $c_{\mathrm{audit}}$ the cost of auditing one attestation. Each verifier decides whether to audit based on the expected revenue~\cite{roughgarden2021}:
+We model the audit equilibrium as follows. Let $N_{\mathrm{ATT}}$ be the number of attestations per epoch, $p_{\mathrm{fraud}}$ the fraction that are fraudulent, and $c_{\mathrm{audit}}$ the cost of auditing one attestation. The bounty is a single common pool and not a reward per auditor: it is divided among the auditors who are active, so the income of an individual auditor falls as participation grows. Each verifier decides whether to audit based on the expected revenue~\cite{roughgarden2021}:
 
 \begin{equation}
-\mathbb{E}[\text{revenue}] = \frac{p_{\mathrm{fraud}} \cdot N_{\mathrm{ATT}} \cdot B}{n_{\mathrm{auditors}}} - c_{\mathrm{audit}}
+\mathbb{E}[\text{revenue}] = \frac{p_{\mathrm{fraud}} \cdot N_{\mathrm{ATT}} \cdot B}{n_{\mathrm{auditors}}} - N_{\mathrm{ATT}} \cdot c_{\mathrm{audit}}
 \label{eq:revenue}
 \end{equation}
 
@@ -935,10 +935,10 @@ B^* = \frac{c_{\mathrm{audit}}}{p_{\mathrm{fraud}}}
 \label{eq:bstar}
 \end{equation}
 
-For $B < B^*$ no auditor enters; for $B \geq B^*$ at least one auditor is active. The threshold $B^*$ is the fee at which a single auditor is indifferent between auditing and not.
+For $B < B^*$ no auditor enters; for $B \geq B^*$ at least one auditor is active. The threshold $B^*$ is the fee at which a single auditor is indifferent between auditing and not. Detection in this model is a step and not a probability: an auditor reviews every attestation of the epoch, so coverage is $1$ whenever $n_{\mathrm{auditors}} \geq 1$ and $0$ otherwise.
 
 \subsection{Numerical Verification}
-We verify~\eqref{eq:equilibrium} and~\eqref{eq:bstar} by Monte Carlo \fref{verification/data-layer/simulate_data_layer_v3.py}. The reference parameters are $N_{\mathrm{ATT}} = 500$, $c_{\mathrm{audit}} = 0.10$, $p_{\mathrm{fraud}} = 0.10$, $V_{\mathrm{fraud}} = 1.0$, $S_{\mathrm{slash}} = 10.0$, $N_{\mathrm{VERIFIERS}} = 20$. The threshold is $B^* = 0.10/0.10 = 1.0$.
+We evaluate~\eqref{eq:equilibrium} and~\eqref{eq:bstar} by Monte Carlo \fref{verification/data-layer/simulate_data_layer_v3.py}, with one caveat about what the exercise can show: the script computes $n^*(B)$ from~\eqref{eq:equilibrium} and feeds it into the epoch loop as a premise, so the simulation measures the audits and the integrity that the assumed $n^*$ implies, and does not test whether $n^*$ auditors would in fact enter. The reference parameters are $N_{\mathrm{ATT}} = 500$, $c_{\mathrm{audit}} = 0.10$, $p_{\mathrm{fraud}} = 0.10$, $V_{\mathrm{fraud}} = 1.0$, $S_{\mathrm{slash}} = 10.0$, $N_{\mathrm{VERIFIERS}} = 20$. The threshold is $B^* = 0.10/0.10 = 1.0$.
 
 \begin{center}
 \resizebox{\textwidth}{!}{%
@@ -961,9 +961,9 @@ The table reports the interior equilibrium points, where $B$ is either below the
 At the interior equilibrium points the analytical verifier profit is zero: the per-auditor revenue $D \cdot B / n^*$ equals the per-auditor cost $N_{\mathrm{ATT}} \cdot c_{\mathrm{audit}} = 50$ exactly when $n^* = B/B^*$. The observed $+0.20$ is the Monte Carlo deviation from zero, equal to $(D_{\text{obs}} - D_{\text{theory}}) \cdot B / n^*$. With $D_{\text{obs}} \approx 50.2$ and $D_{\text{theory}} = 50.0$, the deviation is $0.2 \cdot B^* = 0.20$. Between interior points the verifier profit is strictly positive; the value depends on $B$ and is tabulated in the script output.
 
 \subsection{Slashing and Integrity}
-The attacker profit is negative for all $B \geq B^*$ because the slashing parameter $S_{\mathrm{slash}} = 10.0$ exceeds the fraud gain $V_{\mathrm{fraud}} = 1.0$ by an order of magnitude. The design of the slashing parameter is outside the scope of this section; the relevant observation is that once the audit threshold is crossed, the fraud is deterred.
+The attacker profit is negative for all $B \geq B^*$ because the slashing parameter $S_{\mathrm{slash}} = 10.0$ exceeds the fraud gain $V_{\mathrm{fraud}} = 1.0$ by an order of magnitude. That parameter is a modelled quantity and not an executed one: the delivered manager slashes a caller-supplied amount bounded by the validator's own escrowed stake, so the loss collateralized on-chain is the stake that was posted --- at least $S_f^*(T)$, which over the admissible range runs from $\Theta - C_R^{\infty} = 0.2$ to $\Theta = 1.0$ --- and $S_{\mathrm{slash}}$ appears in no transferred amount. The design of the slashing parameter is outside the scope of this section; the relevant observation is that once the audit threshold is crossed, the fraud is deterred in this model.
 
-The reputation of a slashed validator is reduced according to the process of Section~\ref{sec:reputation}. The combination of financial slashing and reputation destruction makes fraud strictly unprofitable for any $B$ above the threshold.
+The reputation of a slashed validator is reduced according to the process of Section~\ref{sec:reputation}. The combination of escrowed loss and reputation destruction makes fraud unprofitable in this model for any $B$ above the threshold; whether the executable loss on its own deters an attacker of that size is the question Section~\ref{sec:limitations} leaves open.
 
 \subsection{Freshness as Second Line of Defense}
 The freshness parameter $\gamma$ bounds the propagation of undetected fraud across epochs. If a fraudulent entry is present in epoch $t$, it can propagate to epoch $t+1$ only within the $\gamma$ fraction allowed. Over $k$ epochs, the maximum fraction of fraudulent entries in the tensor is bounded by
@@ -973,7 +973,7 @@ The freshness parameter $\gamma$ bounds the propagation of undetected fraud acro
 \label{eq:freshness}
 \end{equation}
 
-in the worst case, where the adversary can insert fresh fraud each epoch. The growth is linear, not exponential. For $\gamma = 0.10$ and $k = 10$ epochs, the maximum fraudulent fraction is 1.0; for $\gamma = 0.05$ the maximum is 0.5 after 10 epochs. The freshness constraint prevents a single undetected fraud from contaminating the entire tensor.
+in the worst case, where the adversary can insert fresh fraud each epoch. The growth is linear, not exponential, and the bound constrains only while $\gamma \cdot k < 1$: the example pair $\gamma = 0.10$ with $k = 10$ epochs gives $\gamma \cdot k = 1.0$, where the maximum fraudulent fraction is 1.0 --- the whole tensor --- so there the bound permits everything and constrains nothing. Below that threshold the constraint bites: $\gamma = 0.05$ gives a maximum of 0.5 after 10 epochs, and $\gamma = 0.02$ gives 0.2. While $\gamma \cdot k < 1$ the freshness constraint prevents a single undetected fraud from contaminating the entire tensor.
 
 \subsection{Summary of the Section}
 \begin{center}
@@ -983,9 +983,9 @@ in the worst case, where the adversary can insert fresh fraud each epoch. The gr
 Claim & Status & Script \\
 \midrule
 $B^* = c_{\mathrm{audit}} / p_{\mathrm{fraud}}$ & Analytical & \spath{simulate_data_layer_v3.py} \\
-$n^*(B) = \lfloor B/B^* \rfloor$ equilibrium & Verified & \spath{simulate_data_layer_v3.py} \\
-Attacker profit $-502$ with $S_{\mathrm{slash}} = 10$ & Verified & \spath{simulate_data_layer_v3.py} \\
-Integrity $= 1.0$ when $n^* \geq 1$ & Verified & \spath{simulate_data_layer_v3.py} \\
+$n^*(B) = \lfloor B/B^* \rfloor$ equilibrium & Analytical & \spath{simulate_data_layer_v3.py} \\
+Attacker profit $-502$ with $S_{\mathrm{slash}} = 10$ & Analytical & \spath{simulate_data_layer_v3.py} \\
+Integrity $= 1.0$ when $n^* \geq 1$ & Design & \spath{simulate_data_layer_v3.py} \\
 Freshness bounds propagation linearly & Analytical & --- \\
 \bottomrule
 \end{tabular}}
@@ -1229,7 +1229,7 @@ The protocol assumes a rational, profit-maximizing adversary. Every security arg
 
 \textbf{The cost of Sybil reputation is a market cost.} A validator accumulates reputation by producing consensus events on the source chains, and the cost of these events is set by the market for validation on those chains. A Sybil adversary that controls validators on a source chain pays the marginal cost of those validators, not the market cost. The protocol does not model this case; it assumes the adversary does not control the source chains.
 
-\textbf{The data layer bounty $B^*$ of Section~\ref{sec:datalayer} assumes auditors respond to profit.} If no verifier is willing to audit at any bounty, the fraud is not detected. The equilibrium $n^*(B) = \lfloor B/B^* \rfloor$ has a solution only if $B$ is at least $B^*$. Below that threshold, the mechanism provides no detection regardless of the value of the reputation at stake.
+\textbf{The data layer bounty $B^*$ of Section~\ref{sec:datalayer} assumes auditors respond to profit.} If no verifier is willing to audit at any bounty, the fraud is not detected. The equilibrium $n^*(B) = \lfloor B/B^* \rfloor$ has a solution only if $B$ is at least $B^*$. Below that threshold, the mechanism provides no detection regardless of the value of the reputation at stake. It also assumes that a verifier audits on its own account: the bounty is a common pool divided among the auditors who are active, so the income per auditor falls as participation grows, and a verifier that expects the others to audit has an incentive to free-ride on their work instead --- a dilution of the individual reward that the model does not represent.
 
 These assumptions are standard in the cryptoeconomic literature but they are not universal. The protocol's guarantees do not extend to adversaries that violate them.
 
