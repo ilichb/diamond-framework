@@ -1,6 +1,6 @@
 # `integrations/avalanche/test/` — Foundry tests
 
-Status: **107 tests over four contracts (plus two libraries), all green with
+Status: **123 tests over six suites (plus two libraries), all green with
 `forge test --offline`**:
 
 | File | Tests | Scope |
@@ -10,6 +10,7 @@ Status: **107 tests over four contracts (plus two libraries), all green with
 | `Bn254.t.sol` | 16 | M3 library: field/group parameters, proof decoding (length, canonicality, trailing bytes) and the `0x06`/`0x07`/`0x08` wrappers |
 | `Groth16Verifier.t.sol` | 18 | M3 verifier: key installation and digest, accept/reject verdicts, off-curve revert, gas, and the `AVIPRegistry`/`AVIPValidatorManager` integration |
 | `M4bRealKey.t.sol` | 7 | M4b: the real key over the V3 circuit and the real fixture proof, accepted by `Groth16Verifier.verify` and by `AVIPRegistry.verifyThreshold` with no contract change, with every statement component bound |
+| `DeployScripts.t.sol` | 16 | M7a: `_roleOr` resolution (absent/empty/malformed), and the two deploy scripts driven through `deploy(Plan)` — wiring, the frozen registry/policy constants, the mainnet refusal, and the deployed pair interoperating |
 | `fixtures/Groth16Fixtures.sol` | — | **generated** by `../scripts/generate_groth16_fixtures.py`; do not edit by hand |
 | `fixtures/M4bGroth16Fixtures.sol` | — | **generated** by `../../../../src/zk/scripts/m4b_fixture.sh` (the Rust crate that owns the circuit); do not edit by hand |
 | `mocks/MockThresholdVerifier.sol` | — | the `IZKThresholdVerifier` double used by the M1/M2 suites |
@@ -41,8 +42,16 @@ block or comment:
   `test/AVIPValidatorManager.t.sol`, `test/Groth16Verifier.t.sol`; libraries are
   tested through `test/Bn254.t.sol` plus the harness in the same file (a
   library's `internal` functions are inlined, so they need a wrapper contract
-  to be observed from outside). Shared doubles in `test/mocks/`, generated
-  fixtures in `test/fixtures/`.
+  to be observed from outside). The M7a deploy scripts are Solidity too, so they
+  get their own file, `test/DeployScripts.t.sol`, with the same
+  `DeployCommonHarness` trick for `_roleOr`. Shared doubles in `test/mocks/`,
+  generated fixtures in `test/fixtures/`.
+- Deploy scripts are driven through `deploy(Plan)`, never through the
+  environment: `vm.setEnv` is process-wide and outlives the test that made it, so
+  a suite cannot prove which environment a script saw. The environment → plan
+  mapping is asserted out of process by `../scripts/deploy_dryrun.sh`, one fresh
+  CLI process per case, and the tests that must call `setEnv` each own a unique
+  variable name.
 - `forge-std` is reused from the benchmarks project via the remapping in
   `../foundry.toml`; do not vendor a second copy.
 - Numeric assertions must trace to a paper claim or to a `verification/`
@@ -53,5 +62,12 @@ block or comment:
 
 ```shell
 cd integrations/avalanche
-forge test -vv
+forge test --offline            # 123 tests
+forge test --offline -vv --match-path 'test/DeployScripts*'
 ```
+
+Note the glob: on forge 1.5.1 `--match-path test/DeployScripts.t.sol` matches
+nothing and reports no error — use `--match-contract DeployScriptsTest` or the
+`test/DeployScripts*` form above. The dry-run transcript of the same scripts is
+`../scripts/deploy_dryrun_output.txt`, reproduced by `bash
+../scripts/deploy_dryrun.sh`.

@@ -88,7 +88,7 @@ diamond-framework/
 │   └── avalanche/        # chain integration (Foundry, solc 0.8.33)
 │       ├── benchmarks/   # gas benchmarks (separate Foundry project)
 │       ├── contracts/    # on-chain code (registry implemented; rest pending)
-│       └── scripts/      # deployment scripts (not written yet)
+│       └── scripts/      # deployment scripts (dry runs only; nothing deployed)
 ├── src/                  # off-chain layers: design notes only, not implemented
 │   ├── reputation/       # reputation dynamics
 │   ├── rmt/              # spectral collusion detection
@@ -185,6 +185,7 @@ has **not** been audited.
 | `mu` sweep over bootstrap dynamics | Bootstrap | **Done** (μ/g ∈ [1, 2]; F-005) |
 | Payment rule specification | Mechanism design | **Done** (posted price F0*, IR verified) |
 | Gas benchmarks | Avalanche integration | **Done** (Foundry, integrations/avalanche/benchmarks/) |
+| Deployment scripts | Avalanche integration | **Done** (M7a: `DeployRegistry`/`DeployValidatorManager`, dry run + tests; Fuji deployment pending) |
 | Teleporter latency | Avalanche integration | Pending (requires testnet) |
 | Paper sections | Paper | **Done** — Sections 2–11 written and verified |
 | External security review | Whole protocol | Not started |

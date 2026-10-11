@@ -79,8 +79,10 @@ Local gate status at the time of writing: `PASS=11 FAIL=0 SKIP=0`;
 
 Status: **A1, A2 and A3 are closed** by M1, M2 and M3 (§5.1, §5.3, §5.4);
 **A4 is closed by M4** except the paper-literal recursive construction (§5.5.7
-stays open) and **A5 by M5** (§5.6). A6–A11 are open. The `Evidence` column records
-what the gap looked like when this plan was written, not its current status.
+stays open) and **A5 by M5** (§5.6). A6–A11 are open, except that **M7a (§5.8)**
+delivered A8's scripts, so what is missing there is the deployment itself, not the
+code. The `Evidence` column records what the gap looked like when this plan was
+written, not its current status.
 
 ### 2.3 Documental inconsistencies (closed in P2; zero anchor risk)
 
@@ -174,7 +176,7 @@ claim they trace to; **no invented constants**.
 | M4 | Off-chain prover | A4, A11 | `src/zk/` (Rust) — **M4a, M4b and M4c done** (§5.5.8–§5.5.10) | Bulletproofs aggregated range proof over the 500-entry tensor (`512 × 64` padded, measured 1248 B against the paper's 0.72 KB, §5.5.8); the in-circuit commitment is **V3** — `D-M4-0` closed in M4c (§5.5.10); the derived key and proof are accepted by the frozen contracts (§5.5.9); reports local proving time (**3.9 s** against §5.5.4's 120 s gate); the *paper-literal* recursive SNARK stays open (§5.5.7) |
 | M5 | RMT detector | A5 | `src/rmt/` — **done** (§5.6) | Reproduces `q99 = 9.0542` (right tail) and `−λ_min > 9.1371` (left tail) from `verification/rmt/`, without editing it |
 | M6 | Reputation dynamics | A6 | `src/reputation/` | `C_R(r)` closed form + epoch commitment; positivity under multiplicative jumps (paper §2) |
-| M7 | Data layer, deploy, AWM | A7, A8, A9 | `src/` + `scripts/` + contracts | Fraud-proof equilibrium `n*(B)=⌊B/B*⌋`, `S_slash=10` (Data Layer); `Deploy*.s.sol` to Fuji; 3 AWM message types |
+| M7 | Data layer, deploy, AWM | A7, A8, A9 | `src/` + `scripts/` + contracts — **M7a done** (§5.8) | Fraud-proof equilibrium `n*(B)=⌊B/B*⌋`, `S_slash=10` (Data Layer); the phase-1 `Deploy*.s.sol` exist and are verified offline, a Fuji deployment is still open; 3 AWM message types |
 | M8 | Treasury / custody | A2 (deferred half) | contracts + scripts | Token custody and fund movement: escrow of `financialStake`, slashing that retains or burns, collection of `F_0*`; in M2 every one of those is declared, never moved (§5.2.3) |
 
 Ordering rationale: M1 → M2 → M3 are on-chain and unblock each other; M4 and M5
@@ -1299,6 +1301,90 @@ The full protocol takes **≈145 s** on this machine (144.8 s and 140.0 s in two
 runs; stderr, load-dependent) for 7,502 graphs, and one detection — what an epoch
 monitor would run — takes **0.060 s** (`benches/m5.rs`, minimum of five).
 
+### 5.8 M7a as delivered (offline deployment scripts)
+
+Status: **done for the script half of A8**. `integrations/avalanche/scripts/`
+holds `DeployCommon.sol`, `DeployRegistry.s.sol` and
+`DeployValidatorManager.s.sol`, plus the dry-run harness `deploy_dryrun.sh` with
+its pinned transcript `deploy_dryrun_output.txt`, and
+`integrations/avalanche/test/DeployScripts.t.sol` is the 16-test suite. **A8
+stays open: nothing is deployed.** No script here has ever touched an RPC
+endpoint, and the addresses in the transcript are the ones a fresh EVM hands out
+— they are not Fuji addresses. §5's M7 row is the acceptance; what follows is
+what M7a delivered against it.
+
+**The split, and why it is the deliverable.** `DeployCommon` fixes the two rules
+no individual script can forget: the chain guard (`MainnetRefused(chainId)` on
+C-Chain mainnet `43114`; Fuji `43113` and local `31337` pass) and the role
+plumbing (`DEPLOYER`, `SEQUENCER`, `VERIFIER`, `REGISTRY`, `SLASH_AUTHORITY` read
+from the environment, never from the deployer). Each script is then
+`run() = _refuseMainnet(); deploy(plan())`, where `deploy(Plan)` — the only
+function that creates state — carries the guard, the plan validation, the
+broadcast, the read-back assertions and the transcript. That is what makes the
+scripts testable with no environment at all: `DeployScripts.t.sol` drives
+`deploy(Plan)` directly, and the environment → `Plan` mapping is asserted out of
+process by `deploy_dryrun.sh`, one fresh CLI process per case.
+
+The reason is measured, not stylistic: **`vm.setEnv` is process-wide, its writes
+outlive the test that made them, and the precedence of a later write over an
+earlier one is not something a test can rely on** (observed twice while building
+this milestone). A suite where one test pins `SEQUENCER` and another pins a
+different value cannot be read as "each test saw its own environment", so this one
+does not pretend to: the only `setEnv` calls left write names that exactly one
+test owns.
+
+**Acceptance criteria.** Each traces to a frozen artefact or to a property the
+paper states; no new constant enters.
+
+1. **The scripts deploy the frozen contracts, unmodified.**
+   `DeployRegistry` constructs `AVIPRegistry(sequencer, verifier)` and
+   `DeployValidatorManager` constructs
+   `AVIPValidatorManager(registry, slashAuthority)`. No file under
+   `integrations/avalanche/contracts/` was edited by M7a.
+2. **Nothing can be deployed by accident.** `run()` refuses C-Chain mainnet
+   *before it reads a single role*; a plan with a zero `sequencer`/`registry`
+   reverts `MissingRole`; and no script broadcasts — the network step is a human
+   decision that M7 owns, not a default.
+3. **A malformed role is a hard error.** `_roleOr` parses with `vm.parseAddress`
+   and not with `envOr`, so `SEQUENCER=0xnot-an-address` reverts instead of
+   quietly wiring the default — the failure mode that would deploy a protocol
+   whose sequencer is a public `anvil` account.
+4. **The scripts assert their own wiring** by reading it back from the instances
+   they just created: `sequencer`, `verifier`, `TENSOR_SIZE = 500`,
+   `MAX_DELTA_ENTRIES = 50`, and the manager's `Theta = 1.0`, `C_R^inf = 0.8`,
+   `S_min = 0.2`, `Theta_r = 0.5`, `F_0* = 0.05`, plus
+   `collateralFor(Theta_r) = 266_666_666_666_666_666` and
+   `requiredStakeFor(Theta_r) = 733_333_333_333_333_334` — the pair M2's own
+   suite pins.
+5. **The environment → plan mapping is asserted where it can be observed.** The
+   dry run's six cases (defaults; `MissingRole("REGISTRY")`; environment wins; the
+   chained registry; a malformed value; the mainnet refusal) each run in their own
+   process, and the harness checks every line it must produce, including that a
+   malformed `SEQUENCER` leaves no `role.sequencer` line behind. Two runs of
+   `deploy_dryrun.sh` produce a byte-identical transcript.
+
+**Deliberately not done**, each with its reason rather than as an omission:
+
+- **No threshold verifier is deployed.** The only key in the repository is M4b's
+  *development* key over a ceremony-less circuit, so installing it on a shared
+  testnet would present a development key as a deployment. `VERIFIER` defaults to
+  `address(0)`, which `AVIPRegistry` accepts and then refuses to certify with
+  (`VerifierNotSet`).
+- **No Fuji deployment** (`avalanche-integration.md` §6 phase 1 needs a funded key
+  and a live endpoint), and therefore **no gas or latency number**: the transcript
+  excludes both on purpose so it stays stable across machines.
+- **No Subnet L1 registration.** `RegisterSubnetL1.s.sol` (phase 4, ACP-77) is
+  listed as *intended* in `scripts/README.md`; the P-Chain work is M7's.
+
+**Validated locally.** `forge test --offline` → **123 passed, 0 failed, 0
+skipped** (6 suites, of which `test/DeployScripts.t.sol` is 16); `forge fmt
+--check` → 0 diffs; `forge build --offline` → OK; `forge lint` → 4 notes, no
+warning (all four are the `setEnv` calls the suite must make to observe role
+resolution); `bash scripts/deploy_dryrun.sh` → **6 cases ok**, exit 0, with
+`deploy_dryrun_output.txt` byte-identical across runs;
+`bash verification/audit-gate.sh` → **PASS=11, FAIL=0, SKIP=0**;
+`git status --porcelain verification/` → 0 lines, so the sealed tree is untouched.
+
 ## 6. Interfaces and parameter provenance
 
 The contract boundary is fixed by three **interfaces** (types only, no logic —
@@ -1427,12 +1513,26 @@ stable — the same reason the protection phase is last.
 | **P2 (done)** | B-gaps: README, `CITATION.cff`, benchmark README, badges aligned with reality (B1–B5) | none |
 | **P3 (done — M1, M2, M3)** | M1 ✅ → M2 ✅ → M3 ✅ (on-chain core, §5.4) | none |
 | P4 | M4 ✅ (M4a/M4b/M4c) → M5 ✅ → M6 (off-chain) | none |
-| P5 | M7 (data layer, deploy scripts, AWM) + M8 (treasury/custody) | none |
+| **P5 (in progress — M7a)** | M7 (data layer, deploy scripts, AWM) + M8 (treasury/custody) | none |
 | P6 | C-gaps: paper apparatus (C1–C4), one batch | **re-anchor** |
 | P7 | Protection + arXiv | **re-anchor** if `main.tex` changes |
 
-**Next step: M6 (off-chain reputation dynamics, `src/reputation/`)** — with the
-*paper-literal* recursive construction of §5.5.7 still owed by M4's amendment.
+**Next step: M7 — the data layer** (gaps A7, A8, A9, planned in §5): the ingestion
+formula `f_c`, the fraud proof with its audit equilibrium `n*(B) = ⌊B/B*⌋` and
+`S_slash = 10`, the Teleporter/AWM transport of the commitment roots (3 message
+types) and the deployment scripts (`Deploy*.s.sol` to Fuji). M7 closes the loop
+between the off-chain crates (M4–M6) and the on-chain contracts (M1–M3), and
+resolves the Pedersen ↔ Merkle bridge (option (c), §5.4 item 4); M8
+(treasury/custody) follows it in P5.
+
+**M7a is delivered** (§5.8): the phase-1 pair
+`DeployRegistry.s.sol`/`DeployValidatorManager.s.sol` exists over the shared
+`DeployCommon` floor, refuses C-Chain mainnet by construction, is driven in tests
+through `deploy(Plan)` (no environment) and is verified out of process by
+`scripts/deploy_dryrun.sh`, whose six-case transcript is committed. What remains of
+A8 is the Fuji deployment itself — a funded key and a live endpoint, which no
+milestone here automates — plus the phase-4 P-Chain registration.
+
 M4a, M4b and M4c are delivered
 (§5.5.8, §5.5.9, §5.5.10): the crate under
 `src/zk/` measures the inner layer, derives the real key, and decides `D-M4-0` on

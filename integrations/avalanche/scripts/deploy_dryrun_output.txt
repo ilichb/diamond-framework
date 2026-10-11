@@ -1,0 +1,84 @@
+M7a dry run: DeployRegistry.s.sol and DeployValidatorManager.s.sol
+==================================================================
+
+Produced by scripts/deploy_dryrun.sh, which runs the real CLI — offline, no RPC,
+no keys, nothing broadcast — once per case. Every case gets its own process
+because the environment is process-wide (`vm.setEnv` outlives the test that wrote
+it; see the note in test/DeployScripts.t.sol). This is therefore where the
+environment → Plan mapping is asserted, and every case also checks the values it
+must produce. `--offline` and a fresh EVM are why the addresses repeat from run to
+run: a dry run deploys to nothing.
+
+Gas and timings are deliberately absent — the transcript keeps only the `[m7a]`
+lines the scripts log — so it is byte-stable and carries no cost claim.
+
+A. DeployRegistry, no environment
+  expects: the defaults the contract documents: anvil 0 deploys, anvil 1 sequences, no verifier
+  $ forge script scripts/DeployRegistry.s.sol:DeployRegistry --offline
+  [m7a] script=DeployRegistry
+  [m7a] chain=31337
+  [m7a] chain.name=anvil-or-dry-run
+  [m7a] sender=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  [m7a] AVIPRegistry=0x5FbDB2315678afecb367f032d93F642f64180aa3
+  [m7a] role.sequencer=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+  [m7a] role.verifier=0x0000000000000000000000000000000000000000
+  [m7a] check.TENSOR_SIZE=500
+  [m7a] check.MAX_DELTA_ENTRIES=50
+  [m7a] status=ok
+
+B. DeployValidatorManager, no environment
+  expects: MissingRole("REGISTRY"): the one role with no default is refused, not guessed
+  $ forge script scripts/DeployValidatorManager.s.sol:DeployValidatorManager --offline
+  <the script stopped before it logged anything>
+  Error: script failed: MissingRole("REGISTRY")
+
+C. DeployRegistry, roles pinned
+  expects: the environment wins over the defaults: anvil 2 sequences, anvil 1 verifies
+  $ DEPLOYER=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 SEQUENCER=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC VERIFIER=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 forge script scripts/DeployRegistry.s.sol:DeployRegistry --offline
+  [m7a] script=DeployRegistry
+  [m7a] chain=31337
+  [m7a] chain.name=anvil-or-dry-run
+  [m7a] sender=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  [m7a] AVIPRegistry=0x5FbDB2315678afecb367f032d93F642f64180aa3
+  [m7a] role.sequencer=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+  [m7a] role.verifier=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+  [m7a] check.TENSOR_SIZE=500
+  [m7a] check.MAX_DELTA_ENTRIES=50
+  [m7a] status=ok
+
+D. DeployValidatorManager, chained on C's registry
+  expects: the address C created is wired in, and anvil 1 may slash
+  $ DEPLOYER=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 SLASH_AUTHORITY=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 REGISTRY=0x5FbDB2315678afecb367f032d93F642f64180aa3 forge script scripts/DeployValidatorManager.s.sol:DeployValidatorManager --offline
+  [m7a] script=DeployValidatorManager
+  [m7a] chain=31337
+  [m7a] chain.name=anvil-or-dry-run
+  [m7a] sender=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  [m7a] AVIPValidatorManager=0x5FbDB2315678afecb367f032d93F642f64180aa3
+  [m7a] role.registry=0x5FbDB2315678afecb367f032d93F642f64180aa3
+  [m7a] role.slashAuthority=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+  [m7a] check.THETA=1000000000000000000
+  [m7a] check.CR_INF=800000000000000000
+  [m7a] check.S_MIN=200000000000000000
+  [m7a] check.THETA_R=500000000000000000
+  [m7a] check.F0_STAR=50000000000000000
+  [m7a] check.collateralFor(THETA_R)=266666666666666666
+  [m7a] check.requiredStakeFor(THETA_R)=733333333333333334
+  [m7a] status=ok
+
+E. DeployRegistry, malformed SEQUENCER
+  expects: a revert: a typo must never be replaced by the default
+  $ SEQUENCER=0xnot-an-address forge script scripts/DeployRegistry.s.sol:DeployRegistry --offline
+  <the script stopped before it logged anything>
+  Error: script failed: vm.parseAddress: failed parsing "0xnot-an-address" as type `address`: parser error:
+
+F. DeployRegistry, C-Chain mainnet
+  expects: MainnetRefused(43114): the guard fires before a single role is read
+  $ forge script scripts/DeployRegistry.s.sol:DeployRegistry --offline --chain 43114
+  <the script stopped before it logged anything>
+  Error: script failed: MainnetRefused(43114 [4.311e4])
+
+WHAT THIS IS NOT
+  A deployment. Nothing here touches an RPC endpoint, and the addresses are the
+  ones a fresh EVM hands out: they are not, and must not be presented as, Fuji
+  addresses. Phase 1 of docs/architecture/avalanche-integration.md §6 is the Fuji
+  deployment, and it is deliberately not automated by this milestone.
