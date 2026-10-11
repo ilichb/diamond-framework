@@ -304,7 +304,8 @@ contract Groth16VerifierTest is Test {
         vm.prank(sequencer);
         registry.postCommitment(0, keccak256("tensor"), N);
 
-        AVIPValidatorManager manager = new AVIPValidatorManager(address(registry), slashAuthority);
+        AVIPValidatorManager manager =
+            new AVIPValidatorManager(address(registry), slashAuthority, address(0));
 
         vm.prank(validator);
         manager.admit(validator, SF_AT_THETA_R, THETA_R, proof());
@@ -320,7 +321,8 @@ contract Groth16VerifierTest is Test {
         vm.prank(sequencer);
         registry.postCommitment(0, keccak256("tensor"), N);
 
-        AVIPValidatorManager manager = new AVIPValidatorManager(address(registry), slashAuthority);
+        AVIPValidatorManager manager =
+            new AVIPValidatorManager(address(registry), slashAuthority, address(0));
 
         // This is the claim M3 adds to M2: the validator cannot *declare* a norm
         // it cannot prove. `admit` reads `latestEpoch()` and hands the caller's

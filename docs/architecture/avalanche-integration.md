@@ -8,10 +8,10 @@ knowledge proof (Section 4) and the evaluation (Section 9). The
 integration is specified but not yet deployed to a live network. The
 benchmarks reported here are local.
 
-**Status of the code.** The repository contains the gas benchmarks
-(`integrations/avalanche/benchmarks/`) and the three implemented pieces of the
-protocol, each with its unit tests: `AVIPRegistry.sol` (milestone M1),
-`AVIPValidatorManager.sol` (milestone M2) and the on-chain Groth16 verifier
+**Status of the code when this note was written.** The repository contains the
+gas benchmarks (`integrations/avalanche/benchmarks/`) and the three implemented
+pieces of the protocol, each with its unit tests: `AVIPRegistry.sol` (milestone
+M1), `AVIPValidatorManager.sol` (milestone M2) and the on-chain Groth16 verifier
 `verifiers/Bn254.sol` + `verifiers/Groth16Verifier.sol` (milestone M3) — the
 verifier runs the pairing check through the `0x06`/`0x07`/`0x08` precompiles,
 but against a **placeholder** verifying key: the circuit and its trusted setup do
@@ -19,6 +19,22 @@ not exist yet (see §5.4 of [`implementation-plan.md`](implementation-plan.md)).
 The deployment scripts, the off-chain prover and the data layer are specified in
 this document but not yet implemented. Nothing described here has been deployed
 to a live network, and none of it has been audited.
+
+> **Status since this note was written** (`implementation-plan.md` §5.4–§5.11).
+> Every piece the paragraph above calls unimplemented now exists, offline and
+> tested: the deployment scripts (`DeployRegistry.s.sol` and
+> `DeployValidatorManager.s.sol`, M7a, §5.8 — driven through a committed
+> six-case dry run, **not yet run against Fuji**), the off-chain prover (M4,
+> §5.5 — **not recursive**: the paper-literal recursion is still open, §5.5.7),
+> the RMT detector (M5, §5.6), the data layer's fraud proof and its
+> `eq:ingestion` interface (M7b, §5.9), the Pedersen/Poseidon ↔ keccak bridge
+> that ties the statement's `root` to the registry's Merkle root (M7c, §5.10)
+> and the transport of §4 (M7d, §5.11). The verifying key of M3 is no longer a
+> placeholder either: M4b installed a real key over the V3 circuit and the
+> unmodified `Groth16Verifier` accepts it (§5.4). The two closing sentences
+> still hold — **nothing here is deployed to a live network and nothing has
+> been audited** — and §6's four phases remain undone: a Fuji deployment needs
+> a funded key and a live endpoint, which no milestone automates.
 
 ## 1. Target Architecture
 
@@ -119,6 +135,17 @@ Three message types are defined:
   layer of Section 7, a message propagates the slashing event to all
   subnets where the slashed validator is registered.
 
+> **Implemented since this note was written** (milestone M7d,
+> `implementation-plan.md` §5.11): the wire format of these three messages and one
+> contract per type live in `contracts/AVIPMessageCodec.sol`,
+> `AVIPCommitmentRelay.sol`, `AVIPCollusionAlertChannel.sol` and
+> `AVIPSlashingChannel.sol`, with the origin allowlist and the replay rule in
+> `AVIPMessageEndpoint.sol`, and the transcript is
+> `scripts/m7d_output.txt`. Read §5.11 for what that does and does not claim:
+> nothing is deployed, no BLS signature or source-chain quorum is exercised, the
+> transport carries no funds, and the "voting weight" this section names is a rule
+> for a validator set that does not exist on-chain here.
+
 ## 5. Data Layer
 
 The data layer operates per Section 7. Entries of the reputation
@@ -134,9 +161,16 @@ across epochs. For the reference implementation γ = 0.10.
 
 The integration proceeds in four phases:
 
-1. **Registry and validator manager.** Deploy `AVIPRegistry.sol` and
-   `AVIPValidatorManager.sol` to a testnet C-Chain. Verify the
-   admission and slashing rules with synthetic reputation data.
+1. **Registry, validator manager and stake vault.** Deploy `AVIPRegistry.sol`,
+   `AVIPValidatorManager.sol` and the custody the manager binds —
+   `AVIPStakeVault.sol`, milestone M8 (§5.12) — to a testnet C-Chain, in that
+   order: the vault is deployed first because it cannot know the manager's address,
+   and the manager's constructor fills that hole and verifies it. Verify the
+   admission and slashing rules with synthetic reputation data, and the fund
+   movements (escrow, slash, `F_0*`) against a test deployment of an `IFundSink`.
+   The scripts are `DeployRegistry.s.sol`, `DeployValidatorManager.s.sol` (with
+   `CUSTODY`) and `DeployStakeVault.s.sol`; none of them is automated against a
+   live network.
 
 2. **Off-chain prover.** Implement the Pedersen commitment and the
    Bulletproofs proof generation in Rust. Integrate the recursive

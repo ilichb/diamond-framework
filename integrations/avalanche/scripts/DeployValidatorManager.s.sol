@@ -2,12 +2,14 @@
 pragma solidity ^0.8.24;
 
 import {AVIPValidatorManager} from "../contracts/AVIPValidatorManager.sol";
+import {IAVIPCustody} from "../contracts/interfaces/IAVIPCustody.sol";
 import {DeployCommon} from "./DeployCommon.sol";
 
 /// @title DeployValidatorManager
 /// @notice Deploys `AVIPValidatorManager` (milestone M2, §5.2) wired to an
-///         already-deployed `AVIPRegistry` and to the address that carries the
-///         data layer's slashing decision.
+///         already-deployed `AVIPRegistry`, to the address that carries the
+///         data layer's slashing decision, and optionally to a custody contract
+///         (M8, §5.12).
 ///
 /// @dev Milestone M7a of `docs/architecture/implementation-plan.md` §5.8; phase 1
 ///      of `docs/architecture/avalanche-integration.md` §6, and the second half
@@ -22,6 +24,12 @@ import {DeployCommon} from "./DeployCommon.sol";
 ///          (`avalanche-integration.md` §4); in M7 it is the sequencer's
 ///          monitor, and in M8 the Treasury Module takes over custody. M2 holds
 ///          no funds, so this role decides *who may decide*, not who may seize;
+///        - `CUSTODY` is read from the environment and defaults to `address(0)`,
+///          which is the M2 mode: stake declared, not backed (§5.2.3). M8 passes
+///          the **already deployed** `AVIPStakeVault`, whose `bindManager` hole
+///          this constructor fills and then verifies — so a custody that is
+///          already bound, or is not a custody at all, fails the deployment
+///          instead of producing a manager that no vault obeys (§5.12);
 ///        - the paper's five policy constants are read back from the deployed
 ///          instance (`Theta`, `C_R^inf`, `S_min`, `Theta_r`, `F_0*`) together
 ///          with the two closed forms at the worst admissible type
@@ -43,6 +51,7 @@ contract DeployValidatorManager is DeployCommon {
         address deployer;
         address registry;
         address slashAuthority;
+        address custody;
     }
 
     /// @notice What the script actually did: the plan plus the address the
@@ -52,6 +61,7 @@ contract DeployValidatorManager is DeployCommon {
         address manager;
         address registry;
         address slashAuthority;
+        address custody;
     }
 
     /// @notice `Theta_r = 0.5` (ZK section, `[CONJECTURE]`), the worst
@@ -88,14 +98,16 @@ contract DeployValidatorManager is DeployCommon {
         if (p.registry == address(0)) revert MissingRole("REGISTRY");
 
         vm.startBroadcast(p.deployer);
-        AVIPValidatorManager manager = new AVIPValidatorManager(p.registry, p.slashAuthority);
+        AVIPValidatorManager manager =
+            new AVIPValidatorManager(p.registry, p.slashAuthority, p.custody);
         vm.stopBroadcast();
 
         d = Deployment({
             deployer: p.deployer,
             manager: address(manager),
             registry: p.registry,
-            slashAuthority: p.slashAuthority
+            slashAuthority: p.slashAuthority,
+            custody: p.custody
         });
 
         _checkWiring(manager, d);
@@ -108,14 +120,26 @@ contract DeployValidatorManager is DeployCommon {
         p.deployer = _deployer();
         p.registry = _requiredRole("REGISTRY");
         p.slashAuthority = _slashAuthority();
+        p.custody = _custody();
     }
 
     /// @dev Reads the policy back from the instance just deployed: the wiring,
-    ///      the five constants the paper fixes, and the two closed forms at
-    ///      `r = Theta_r` (paper, Payment Rule).
+    ///      the handshake with the custody (when there is one), the five
+    ///      constants the paper fixes, and the two closed forms at `r = Theta_r`
+    ///      (paper, Payment Rule).
     function _checkWiring(AVIPValidatorManager manager, Deployment memory d) internal view {
         _assertAddressEq("registry", d.registry, address(manager.registry()));
         _assertAddressEq("slashAuthority", d.slashAuthority, manager.slashAuthority());
+        _assertAddressEq("custody", d.custody, address(manager.custody()));
+        if (d.custody != address(0)) {
+            // The other half of the handshake: the manager's constructor bound
+            // the custody to itself and verified it, so reading it back from the
+            // custody's side is what proves both ends agree. This is the check
+            // that would have caught a custody already bound to another manager
+            // (which reverts the constructor instead) and a custody that merely
+            // recorded something else.
+            _assertAddressEq("custody.manager", d.manager, IAVIPCustody(d.custody).manager());
+        }
 
         _assertEq("ONE", 1e18, manager.ONE());
         _assertEq("THETA", 1e18, manager.THETA());
@@ -133,6 +157,7 @@ contract DeployValidatorManager is DeployCommon {
         _logAddress("AVIPValidatorManager", d.manager);
         _logAddress("role.registry", d.registry);
         _logAddress("role.slashAuthority", d.slashAuthority);
+        _logAddress("role.custody", d.custody);
         _logUint("check.THETA", 1e18);
         _logUint("check.CR_INF", 8e17);
         _logUint("check.S_MIN", 2e17);

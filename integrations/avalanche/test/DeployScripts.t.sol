@@ -3,11 +3,15 @@ pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 import {AVIPRegistry} from "../contracts/AVIPRegistry.sol";
+import {AVIPStakeVault} from "../contracts/AVIPStakeVault.sol";
 import {AVIPValidatorManager} from "../contracts/AVIPValidatorManager.sol";
 import {IAVIPRegistry} from "../contracts/interfaces/IAVIPRegistry.sol";
 import {DeployCommon} from "../scripts/DeployCommon.sol";
 import {DeployRegistry} from "../scripts/DeployRegistry.s.sol";
+import {DeployStakeVault} from "../scripts/DeployStakeVault.s.sol";
 import {DeployValidatorManager} from "../scripts/DeployValidatorManager.s.sol";
+import {MockERC20} from "./mocks/MockERC20.sol";
+import {MockFundSink} from "./mocks/MockFundSink.sol";
 import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
 
 /// @dev Exposes the one piece of `DeployCommon` that is otherwise only reachable
@@ -37,6 +41,11 @@ contract DeployCommonHarness is DeployCommon {
 ///    `admit`s itself against the manager, with the statement bound to the root
 ///    the registry holds. With no verifier installed the registry refuses to
 ///    certify (`VerifierNotSet`) instead of returning a verdict.
+/// 4. **The M8 vault script** (`scripts/DeployStakeVault.s.sol`, §5.12) deploys the
+///    custody half of the handshake, refuses the three inputs it cannot invent
+///    (`TOKEN`, `SINK`, `WAD_PER_UNIT`) and leaves the vault **unbound**; the
+///    manager script then completes the handshake by deploying the manager that
+///    binds it, and refuses a vault that somebody else bound first.
 ///
 /// WHAT IS NOT TESTED, AND WHY
 /// ---------------------------
@@ -81,6 +90,7 @@ contract DeployScriptsTest is Test {
     uint256 internal constant PROOF_A0 = 42; // arbitrary; the double only checks it is forwarded
 
     DeployRegistry internal registryScript;
+    DeployStakeVault internal vaultScript;
     DeployValidatorManager internal managerScript;
     DeployCommonHarness internal harness;
 
@@ -88,6 +98,7 @@ contract DeployScriptsTest is Test {
         // Instruments only. No `setEnv` here: this suite cannot clear what an
         // earlier test wrote (see the note above), so it does not pretend to.
         registryScript = new DeployRegistry();
+        vaultScript = new DeployStakeVault();
         managerScript = new DeployValidatorManager();
         harness = new DeployCommonHarness();
     }
@@ -259,6 +270,87 @@ contract DeployScriptsTest is Test {
         managerScript.run();
     }
 
+    // ------------------------------------------------------- DeployStakeVault
+
+    function test_vaultScript_deploysThePlanAndLeavesItUnbound() public {
+        (address token, address sink) = _fixtureTokenAndSink();
+
+        DeployStakeVault.Deployment memory d = vaultScript.deploy(_vaultPlan(token, sink, 1e12));
+
+        assertEq(d.deployer, ANVIL_0, "deployer, from the plan");
+        assertEq(d.token, token, "token, from the plan");
+        assertEq(d.sink, sink, "sink, from the plan");
+        assertEq(d.wadPerUnit, 1e12, "scale, from the plan");
+        assertGt(d.vault.code.length, 0, "vault deployed");
+
+        AVIPStakeVault vault = AVIPStakeVault(d.vault);
+        assertEq(address(vault.TOKEN()), token, "token wired");
+        assertEq(address(vault.SINK()), sink, "sink wired");
+        assertEq(vault.WAD_PER_UNIT(), 1e12, "scale wired");
+        assertEq(vault.manager(), address(0), "unbound: the manager does not exist yet");
+        assertEq(vault.totalEscrowedUnits(), 0, "nothing escrowed");
+        assertEq(vault.feeInUnits(), 0, "and no fee policy to read");
+    }
+
+    function test_vaultScript_refusesAPlanItCannotInventTheRestOf() public {
+        (address token, address sink) = _fixtureTokenAndSink();
+
+        vm.expectRevert(abi.encodeWithSelector(DeployCommon.MissingRole.selector, "TOKEN"));
+        vaultScript.deploy(_vaultPlan(address(0), sink, 1e12));
+
+        vm.expectRevert(abi.encodeWithSelector(DeployCommon.MissingRole.selector, "SINK"));
+        vaultScript.deploy(_vaultPlan(token, address(0), 1e12));
+
+        // The scale is the third input the script must be told: `decimals()` is
+        // never read from the token, so a wrong (or absent) `WAD_PER_UNIT` would
+        // mis-price every comparison against `stakeOf` (§5.12).
+        vm.expectRevert(abi.encodeWithSelector(DeployCommon.MissingRole.selector, "WAD_PER_UNIT"));
+        vaultScript.deploy(_vaultPlan(token, sink, 0));
+    }
+
+    function test_vaultScript_refusesCChainMainnet() public {
+        vm.chainId(43_114);
+        vm.expectRevert(abi.encodeWithSelector(DeployCommon.MainnetRefused.selector, 43_114));
+        vaultScript.run();
+    }
+
+    // ------------------------------------------------ the M8 handshake, chained
+
+    function test_theVaultAndManagerScriptsCompleteTheHandshake() public {
+        // The order of §5.12, exactly as a deployment would run it: the vault first
+        // (it cannot know the manager's address), then the manager, handed the vault
+        // as `CUSTODY`, which binds it from its own constructor and verifies it.
+        (address token, address sink) = _fixtureTokenAndSink();
+        DeployStakeVault.Deployment memory v = vaultScript.deploy(_vaultPlan(token, sink, 1e12));
+        AVIPStakeVault vault = AVIPStakeVault(v.vault);
+
+        DeployValidatorManager.Deployment memory m =
+            managerScript.deploy(_managerPlanWith(_fixtureRegistry(), v.vault));
+
+        assertEq(vault.manager(), m.manager, "the vault obeys the manager the script deployed");
+        assertEq(address(AVIPValidatorManager(m.manager).custody()), v.vault, "and back");
+        assertEq(m.custody, v.vault, "the deployment reports the same address");
+    }
+
+    function test_managerScript_refusesACustodyBoundBySomebodyElse() public {
+        (address token, address sink) = _fixtureTokenAndSink();
+        DeployStakeVault.Deployment memory v = vaultScript.deploy(_vaultPlan(token, sink, 1e12));
+
+        // A stranger fills the vault's hole first. The manager script then cannot
+        // deploy against it at all — which is the failure the handshake is designed
+        // to produce, instead of a manager wired to a vault it does not control.
+        vm.prank(ANVIL_1);
+        AVIPStakeVault(v.vault).bindManager();
+
+        // Read the registry *before* `expectRevert`: it is an external call and
+        // would otherwise consume the expectation (the pitfall the M2 suite notes).
+        address registry = _fixtureRegistry();
+        vm.expectRevert(
+            abi.encodeWithSelector(AVIPStakeVault.ManagerAlreadyBound.selector, ANVIL_1)
+        );
+        managerScript.deploy(_managerPlanWith(registry, v.vault));
+    }
+
     // ------------------------------------------------------- the deployed pair
 
     function test_theDeployedPair_interoperatesWithoutContractChange() public {
@@ -320,15 +412,45 @@ contract DeployScriptsTest is Test {
         return DeployRegistry.Plan({deployer: ANVIL_0, sequencer: sequencer, verifier: verifier});
     }
 
+    /// @dev A token and a sink for the vault script's plan: it needs two addresses
+    ///      that exist and do nothing else.
+    function _fixtureTokenAndSink() internal returns (address token, address sink) {
+        token = address(new MockERC20("Mock USD", 6));
+        sink = address(new MockFundSink());
+    }
+
+    /// @dev The plan the vault script would build from `DEPLOYER`, `TOKEN`, `SINK`
+    ///      and `WAD_PER_UNIT` (§5.12).
+    function _vaultPlan(address token, address sink, uint256 wadPerUnit)
+        internal
+        pure
+        returns (DeployStakeVault.Plan memory)
+    {
+        return DeployStakeVault.Plan({
+            deployer: ANVIL_0, token: token, sink: sink, wadPerUnit: wadPerUnit
+        });
+    }
+
     /// @dev The plan the manager script would build from `DEPLOYER`,
-    ///      `SLASH_AUTHORITY` and the required `REGISTRY`.
+    ///      `SLASH_AUTHORITY`, the required `REGISTRY` and the optional
+    ///      `CUSTODY` (§5.12). No custody by default: that is the M2 mode.
     function _managerPlan(address registry)
         internal
         pure
         returns (DeployValidatorManager.Plan memory)
     {
+        return _managerPlanWith(registry, address(0));
+    }
+
+    /// @dev The same plan with a custody contract supplied, which is the shape
+    ///      M8's phase uses after it deploys the vault.
+    function _managerPlanWith(address registry, address custody)
+        internal
+        pure
+        returns (DeployValidatorManager.Plan memory)
+    {
         return DeployValidatorManager.Plan({
-            deployer: ANVIL_0, registry: registry, slashAuthority: ANVIL_2
+            deployer: ANVIL_0, registry: registry, slashAuthority: ANVIL_2, custody: custody
         });
     }
 

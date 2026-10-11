@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# M7a dry run: `DeployRegistry.s.sol` and `DeployValidatorManager.s.sol` against
-# the environment, one fresh process per case.
+# M7a/M8 dry run: `DeployRegistry.s.sol`, `DeployValidatorManager.s.sol` and
+# `DeployStakeVault.s.sol` against the environment, one fresh process per case.
 #
 #   bash scripts/deploy_dryrun.sh
 #
@@ -22,6 +22,9 @@
 #   D  manager, chained on C's registry        the hand-off a Fuji deployment performs
 #   E  registry, SEQUENCER malformed           reverts; never the silent default
 #   F  registry, --chain 43114                 MainnetRefused
+#   G  vault, no environment                   MissingRole("TOKEN"), nothing deployed
+#   H  vault, TOKEN/SINK/WAD_PER_UNIT          the custody half, left unbound (§5.12)
+#   I  manager, CUSTODY that cannot bind       the handshake fails the deployment
 #
 # Nothing is broadcast: without `--rpc-url ... --broadcast`, `forge script`
 # simulates locally. No RPC endpoint, no keys, no funds, no network (`--offline`),
@@ -29,8 +32,9 @@
 # transcript is byte-stable across machines.
 #
 # On success it rewrites `scripts/deploy_dryrun_output.txt`. The transcript keeps
-# only the `[m7a]` lines the scripts log, so gas and timings never enter it; on
-# any failed expectation the script exits non-zero and writes nothing.
+# only the `[m7a]` and `[m8]` lines the scripts log, so gas and timings never
+# enter it; on any failed expectation the script exits non-zero and writes
+# nothing.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -47,6 +51,9 @@ FIRST_CREATE=0x5FbDB2315678afecb367f032d93F642f64180aa3
 
 REGISTRY_SCRIPT=scripts/DeployRegistry.s.sol:DeployRegistry
 MANAGER_SCRIPT=scripts/DeployValidatorManager.s.sol:DeployValidatorManager
+# M8 (§5.12): the custody half of the handshake, plus the manager that completes
+# it. The vault script logs `[m8]`, so `run_case` keeps both tags.
+VAULT_SCRIPT=scripts/DeployStakeVault.s.sol:DeployStakeVault
 
 FAILURES=0
 fail() {
@@ -71,11 +78,12 @@ run_case() {
     local out="$TMP_DIR/$tag.out"
     set +e
     env -u DEPLOYER -u SEQUENCER -u SLASH_AUTHORITY -u VERIFIER -u REGISTRY \
+        -u CUSTODY -u TOKEN -u SINK -u WAD_PER_UNIT \
         ${env_args[@]+"${env_args[@]}"} "$@" >"$out" 2>&1
     echo $? >"$TMP_DIR/$tag.status"
     set -e
 
-    grep -E '^  \[m7a\] ' "$out" >"$TMP_DIR/$tag.log" || true
+    grep -E '^  \[(m7a|m8)\] ' "$out" >"$TMP_DIR/$tag.log" || true
 }
 
 expect_ok() {
@@ -153,6 +161,41 @@ run_case F -- forge script "$REGISTRY_SCRIPT" --offline --chain 43114
 expect_failure F
 expect_error F 'Error: script failed: MainnetRefused(43114'
 
+# ---------------------------------------------------------------- case G
+# M8's vault script with no environment: `TOKEN` is the first input it cannot
+# invent, and the refusal names it. A vault pointed at no token escrows nothing.
+run_case G -- forge script "$VAULT_SCRIPT" --offline
+expect_failure G
+expect_error G 'Error: script failed: MissingRole("TOKEN")'
+grep -q '\[m8\] AVIPStakeVault=' "$TMP_DIR/G.log" &&
+    fail "G: nothing must be deployed before the inputs are resolved"
+
+# ---------------------------------------------------------------- case H
+# The vault script with its three inputs: the custody half of the handshake, and
+# the one state it must be in when the manager script is handed its address.
+ENV_H=(DEPLOYER=$ANVIL_0 TOKEN=$ANVIL_1 SINK=$ANVIL_2 WAD_PER_UNIT=1000000000000)
+run_case H ${ENV_H[@]+"${ENV_H[@]}"} -- forge script "$VAULT_SCRIPT" --offline
+expect_ok H
+expect_line H "  [m8] script=DeployStakeVault"
+expect_line H "  [m8] role.token=$ANVIL_1"
+expect_line H "  [m8] role.sink=$ANVIL_2"
+expect_line H "  [m8] check.wadPerUnit=1000000000000"
+expect_line H "  [m8] check.manager=unbound"
+expect_line H "  [m8] status=ok"
+
+# ---------------------------------------------------------------- case I
+# The manager script handed a `CUSTODY` that cannot answer the handshake. In a
+# fresh process the vault case H created does not exist, so any address here is
+# either empty or has no `bindManager`: the manager's constructor calls it, gets
+# nothing, and the deployment fails instead of producing a manager with no
+# custody (§5.12).
+ENV_I=(DEPLOYER=$ANVIL_0 REGISTRY=$FIRST_CREATE CUSTODY=$ANVIL_2)
+run_case I ${ENV_I[@]+"${ENV_I[@]}"} -- forge script "$MANAGER_SCRIPT" --offline
+expect_failure I
+expect_error I "Error: script failed: call to non-contract address $ANVIL_2"
+grep -q 'role.custody=' "$TMP_DIR/I.log" &&
+    fail "I: a custody that cannot answer the bind must stop the deployment"
+
 # ------------------------------------------------------------- transcript
 
 if [ "$FAILURES" -ne 0 ]; then
@@ -182,8 +225,9 @@ section() { # section <tag> <title> <expects> <command>
 
 {
     cat <<'HEADER'
-M7a dry run: DeployRegistry.s.sol and DeployValidatorManager.s.sol
-==================================================================
+M7a/M8 dry run: DeployRegistry.s.sol, DeployValidatorManager.s.sol and
+DeployStakeVault.s.sol
+========================================================================
 
 Produced by scripts/deploy_dryrun.sh, which runs the real CLI — offline, no RPC,
 no keys, nothing broadcast — once per case. Every case gets its own process
@@ -193,8 +237,12 @@ environment → Plan mapping is asserted, and every case also checks the values 
 must produce. `--offline` and a fresh EVM are why the addresses repeat from run to
 run: a dry run deploys to nothing.
 
+Cases G to I are M8's (§5.12): the vault script deploys the custody half of the
+handshake and leaves it unbound, and the manager script can only complete the
+handshake against a custody that answers it.
+
 Gas and timings are deliberately absent — the transcript keeps only the `[m7a]`
-lines the scripts log — so it is byte-stable and carries no cost claim.
+and `[m8]` lines the scripts log — so it is byte-stable and carries no cost claim.
 HEADER
 
     section A "DeployRegistry, no environment" \
@@ -215,6 +263,15 @@ HEADER
     section F "DeployRegistry, C-Chain mainnet" \
         "MainnetRefused(43114): the guard fires before a single role is read" \
         "forge script $REGISTRY_SCRIPT --offline --chain 43114"
+    section G "DeployStakeVault, no environment" \
+        "MissingRole(\"TOKEN\"): the inputs a vault cannot invent are refused, not guessed" \
+        "forge script $VAULT_SCRIPT --offline"
+    section H "DeployStakeVault, token/sink/scale pinned" \
+        "the custody half of §5.12, wired and left unbound for the manager to bind" \
+        "${ENV_H[*]} forge script $VAULT_SCRIPT --offline"
+    section I "DeployValidatorManager, a custody that cannot bind" \
+        "the handshake is not a formality: a CUSTODY with no code fails the deployment" \
+        "${ENV_I[*]} forge script $MANAGER_SCRIPT --offline"
 
     cat <<'FOOTER'
 
@@ -226,5 +283,5 @@ WHAT THIS IS NOT
 FOOTER
 } >"$OUT"
 
-echo "deploy_dryrun: 6 cases ok; wrote $OUT"
+echo "deploy_dryrun: 9 cases ok; wrote $OUT"
 

@@ -96,7 +96,7 @@ contract AVIPValidatorManagerTest is Test {
         vm.prank(sequencer);
         registry.postCommitment(0, epoch0Root, N);
 
-        manager = new AVIPValidatorManager(address(registry), slashAuthority);
+        manager = new AVIPValidatorManager(address(registry), slashAuthority, address(0));
     }
 
     // ----------------------------------------------------------------- helpers
@@ -287,7 +287,8 @@ contract AVIPValidatorManagerTest is Test {
 
     function test_admit_revertsWithoutACommitment() public {
         AVIPRegistry empty = new AVIPRegistry(sequencer, address(0));
-        AVIPValidatorManager fresh = new AVIPValidatorManager(address(empty), slashAuthority);
+        AVIPValidatorManager fresh =
+            new AVIPValidatorManager(address(empty), slashAuthority, address(0));
         _setVerifierAtEpoch0(true, THETA_R);
 
         // On a registry with no commitment, `latestEpoch()` is
@@ -533,12 +534,12 @@ contract AVIPValidatorManagerTest is Test {
 
     function test_constructor_rejectsAZeroRegistry() public {
         vm.expectRevert(IAVIPValidatorManager.ZeroRegistry.selector);
-        new AVIPValidatorManager(address(0), slashAuthority);
+        new AVIPValidatorManager(address(0), slashAuthority, address(0));
     }
 
     function test_constructor_rejectsAZeroSlashAuthority() public {
         vm.expectRevert(IAVIPValidatorManager.ZeroSlashAuthority.selector);
-        new AVIPValidatorManager(address(registry), address(0));
+        new AVIPValidatorManager(address(registry), address(0), address(0));
     }
 
     function test_constructor_wiresTheRegistry() public view {

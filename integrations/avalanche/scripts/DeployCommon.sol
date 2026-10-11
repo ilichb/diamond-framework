@@ -99,6 +99,21 @@ abstract contract DeployCommon is Script {
         if (value == address(0)) revert MissingRole(name);
     }
 
+    /// @dev Reads a decimal input the script cannot invent either — a token scale,
+    ///      for instance. Absent, empty or malformed all revert: the same reason
+    ///      `_requiredRole` exists, and the same error, because it is the same
+    ///      class of input (something the script must be told and must not guess).
+    function _requiredUint(string memory name) internal view returns (uint256 value) {
+        string memory raw;
+        try vm.envString(name) returns (string memory found) {
+            raw = found;
+        } catch {
+            revert MissingRole(name);
+        }
+        if (bytes(raw).length == 0) revert MissingRole(name);
+        value = vm.parseUint(raw);
+    }
+
     function _deployer() internal view returns (address) {
         return _roleOr("DEPLOYER", ANVIL_0);
     }
@@ -115,6 +130,15 @@ abstract contract DeployCommon is Script {
     ///      and the registry treats "no verifier set" as "certify nothing".
     function _verifier() internal view returns (address) {
         return _roleOr("VERIFIER", address(0));
+    }
+
+    /// @dev `address(0)` by default and deliberately: with no custody the manager
+    ///      declares `financialStake` without backing it, which is the original M2
+    ///      behaviour and what phase 1 deploys (§5.2.3). M8's phase supplies the
+    ///      vault it deployed first, whose `bindManager` hole the manager's
+    ///      constructor then fills and verifies (§5.12).
+    function _custody() internal view returns (address) {
+        return _roleOr("CUSTODY", address(0));
     }
 
     /// @dev The name of the chain the script is talking to, for the transcript.
@@ -137,8 +161,10 @@ abstract contract DeployCommon is Script {
     }
 
     /// @dev One machine-readable line per fact, so `deploy_dryrun.sh` can pin the
-    ///      transcript without pinning gas or timestamps.
-    function _log(string memory key, string memory value) internal pure {
+    ///      transcript without pinning gas or timestamps. `virtual` so a milestone
+    ///      that logs through this harness can tag its own lines (M8's vault script
+    ///      prints `[m8]`), while the shared helpers keep working unchanged.
+    function _log(string memory key, string memory value) internal pure virtual {
         console2.log(string.concat("[m7a] ", key, "=", value));
     }
 

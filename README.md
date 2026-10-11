@@ -46,9 +46,11 @@ The core insight is an opportunity-cost argument:
 - **Not a finished protocol.** Sections 2 through 11 are written and verified; the open items are external audit, real-data calibration, and testnet benchmarks.
 - **Not audited.** No external security review has been performed and nothing here is deployed to mainnet.
 - **Not formally verified.** All proofs are mathematical arguments, not machine-checked proofs.
-- **Not a production implementation.** `src/` holds the layout of the off-chain components
-  (`reputation/`, `rmt/`, `zk/`) and their design notes; the implementations themselves are
-  not written yet. What exists, what is missing and in what order it is being built is in
+- **Not a production implementation.** The off-chain components under `src/` (`reputation/`,
+  `rmt/`, `zk/`, `datalayer/`) are built and tested against their own design notes, but they
+  are research code: nothing is deployed, nothing has been audited, and the paper-literal
+  recursive SNARK is not implemented. What exists, what is missing and in what order it is
+  being built is in
   [`docs/architecture/implementation-plan.md`](docs/architecture/implementation-plan.md).
 
 ---
@@ -87,9 +89,10 @@ diamond-framework/
 ├── integrations/
 │   └── avalanche/        # chain integration (Foundry, solc 0.8.33)
 │       ├── benchmarks/   # gas benchmarks (separate Foundry project)
-│       ├── contracts/    # on-chain code (registry implemented; rest pending)
+│       ├── contracts/    # on-chain code (registry, manager, verifiers, M7d transport)
 │       └── scripts/      # deployment scripts (dry runs only; nothing deployed)
-├── src/                  # off-chain layers: design notes only, not implemented
+├── src/                  # off-chain layers (Rust, built and tested offline)
+│   ├── datalayer/        # audit equilibrium + ingestion formula (M7b)
 │   ├── reputation/       # reputation dynamics
 │   ├── rmt/              # spectral collusion detection
 │   └── zk/               # threshold proof circuits
@@ -186,6 +189,8 @@ has **not** been audited.
 | Payment rule specification | Mechanism design | **Done** (posted price F0*, IR verified) |
 | Gas benchmarks | Avalanche integration | **Done** (Foundry, integrations/avalanche/benchmarks/) |
 | Deployment scripts | Avalanche integration | **Done** (M7a: `DeployRegistry`/`DeployValidatorManager`, dry run + tests; Fuji deployment pending) |
+| Data layer: audit equilibrium + `f_c` | Off-chain (Rust) | **Done** (M7b: the sealed table reproduced row by row on numpy's own stream, `eq:ingestion` as an interface plus the three-valued fraud proof; `src/datalayer/scripts/m7b_report.sh`. M7c: the Pedersen/Poseidon ↔ keccak Merkle bridge over M1's own fold, `src/zk/src/bridge.rs`, `src/zk/scripts/m7c_report.sh`) |
+| Teleporter / AWM transport | Avalanche integration | **Done** (M7d: the three message types of `avalanche-integration.md` §4 as a wire format plus one contract per type — per-kind origin allowlists, at-most-once delivery, the commitment recorded once per epoch, the alert flag that cannot be erased, and a slashing notification whose `reason` is derived from the envelope; `integrations/avalanche/scripts/m7d_report.sh`. Offline against a Teleporter double: **no deployment**) |
 | Teleporter latency | Avalanche integration | Pending (requires testnet) |
 | Paper sections | Paper | **Done** — Sections 2–11 written and verified |
 | External security review | Whole protocol | Not started |

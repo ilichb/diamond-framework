@@ -26,11 +26,14 @@ The repository did **not** contain the protocol when this plan was written.
 and `integrations/avalanche/scripts/` were placeholder directories holding only
 a `.gitkeep`, and `avalanche-integration.md` §*Status of the code* said exactly
 that: `AVIPRegistry.sol`, `AVIPValidatorManager.sol` and the off-chain prover
-were *"specified in this document but not yet implemented"*. Three
-implementations now exist — `AVIPRegistry.sol` (milestone M1, §5.1),
-`AVIPValidatorManager.sol` (M2, §5.3) and the verifier pair
-`contracts/verifiers/{Bn254,Groth16Verifier}.sol` (M3, §5.4) — and the other
-gaps keep the status they had.
+were *"specified in this document but not yet implemented"*. Those directories
+are placeholders no longer: M1–M7 have filled them (§5.1–§5.11) —
+`AVIPRegistry.sol` (M1, §5.1), `AVIPValidatorManager.sol` (M2, §5.3), the
+verifier pair `contracts/verifiers/{Bn254,Groth16Verifier}.sol` (M3, §5.4),
+the off-chain crates (M4–M6, §5.5–§5.7), M7a's deploy scripts (§5.8), the M7b
+data layer (§5.9), the M7c bridge (§5.10) and M7d's transport contracts
+(§5.11). §2.2 is therefore the gap-by-gap record of what closed what, and what
+is still missing is the deployment itself (Fuji, §12), not code.
 
 This plan closes that gap. It does not reopen what is already verified: the
 paper's claims, their scripts and their anchor are inputs, not work items.
@@ -79,10 +82,13 @@ Local gate status at the time of writing: `PASS=11 FAIL=0 SKIP=0`;
 
 Status: **A1, A2, A3 and A6 are closed** by M1, M2, M3 and M6 (§5.1, §5.3, §5.4,
 §5.7); **A4 is closed by M4** except the paper-literal recursive construction
-(§5.5.7 stays open) and **A5 by M5** (§5.6). A7–A11 are open; M7a (§5.8)
-delivered A8's scripts, so what is missing there is the deployment itself, not the
-code. The `Evidence` column records what the gap looked like when this plan was
-written, not its current status.
+(§5.5.7 stays open) and **A5 by M5** (§5.6). **A7 and A9 are closed by M7b, M7c and
+M7d**: M7b (§5.9) is the ingestion/fraud-proof half of the data layer, M7c (§5.10)
+ties the prover's root to the registry's root, and M7d (§5.11) is the transport —
+the three Teleporter/AWM message types of §4, with their wire format, their origin
+allowlists and their replay rule. M7a (§5.8) delivered A8's scripts, so what is
+missing there is the deployment itself, not the code. The `Evidence` column records
+what the gap looked like when this plan was written, not its current status.
 
 ### 2.3 Documental inconsistencies (closed in P2; zero anchor risk)
 
@@ -176,8 +182,8 @@ claim they trace to; **no invented constants**.
 | M4 | Off-chain prover | A4, A11 | `src/zk/` (Rust) — **M4a, M4b and M4c done** (§5.5.8–§5.5.10) | Bulletproofs aggregated range proof over the 500-entry tensor (`512 × 64` padded, measured 1248 B against the paper's 0.72 KB, §5.5.8); the in-circuit commitment is **V3** — `D-M4-0` closed in M4c (§5.5.10); the derived key and proof are accepted by the frozen contracts (§5.5.9); reports local proving time (**3.9 s** against §5.5.4's 120 s gate); the *paper-literal* recursive SNARK stays open (§5.5.7) |
 | M5 | RMT detector | A5 | `src/rmt/` — **done** (§5.6) | Reproduces `q99 = 9.0542` (right tail) and `−λ_min > 9.1371` (left tail) from `verification/rmt/`, without editing it |
 | M6 | Reputation dynamics | A6 | `src/reputation/` — **done** (§5.7.1) | `C_R(r)` closed form, WAD parity with M2's deployed reader (`collateralFor(Θ_R)`/`requiredStakeFor(Θ_R)` pinned) + the epoch commitment in M1's convention; positivity under multiplicative jumps (paper §2) — F-001 reproduced: additive **40.2510%** against the sealed **40.5800%** (0.3290 pp, inside `3·SE`), multiplicative **0.000000%** by construction; the IDE solver reproduces `cr_ide_solver_output.txt` (14-point grid, two regimes, `r_0`, monotone, `π(r)/r → 0.799992`) |
-| M7 | Data layer, deploy, AWM | A7, A8, A9 | `src/` + `scripts/` + contracts — **M7a done** (§5.8) | Fraud-proof equilibrium `n*(B)=⌊B/B*⌋`, `S_slash=10` (Data Layer); the phase-1 `Deploy*.s.sol` exist and are verified offline, a Fuji deployment is still open; 3 AWM message types |
-| M8 | Treasury / custody | A2 (deferred half) | contracts + scripts | Token custody and fund movement: escrow of `financialStake`, slashing that retains or burns, collection of `F_0*`; in M2 every one of those is declared, never moved (§5.2.3) |
+| M7 | Data layer, deploy, AWM | A7, A8, A9 | `src/datalayer/` + `src/zk/src/bridge.rs` + `contracts/AVIP*` + `scripts/` — **M7a, M7b, M7c and M7d done** (§5.8, §5.9, §5.10, §5.11) | Fraud-proof equilibrium `n*(B)=⌊B/B*⌋`, `S_slash=10` (Data Layer): the sealed table reproduced row by row on numpy's own stream (`scripts/m7b_output.txt`), with `eq:ingestion` delivered as an interface plus the three-valued fraud proof (§5.9); the Pedersen/Poseidon ↔ keccak bridge ties the statement's `root` to the registry's Merkle root **over M1's own fold**, off-chain and recomputable (`src/zk/src/bridge.rs`, `src/zk/scripts/m7c_output.txt`, §5.10); the three Teleporter/AWM message types of §4 exist as a wire format plus one contract per type, with per-kind origin allowlists, at-most-once delivery, the commitment recorded once per epoch, the alert flag that cannot be erased and the slashing notification whose `reason` is derived from the envelope (`contracts/AVIP*`, `scripts/m7d_output.txt`, `test/M7dTransport.t.sol`, §5.11) — all of it offline against a Teleporter double; the phase-1 `Deploy*.s.sol` exist and are verified offline, and a Fuji deployment is still open |
+| M8 | Treasury / custody | A2 (deferred half) | `contracts/AVIPStakeVault.sol` + `contracts/AVIPBurnSink.sol` + the amended `contracts/AVIPValidatorManager.sol` + `scripts/DeployStakeVault.s.sol` — **done** (§5.12) | Token custody and fund movement: escrow of `financialStake` behind `IAVIPCustody`, a slash that moves it to an `IFundSink`, and collection of `F_0*` that never touches the vault's balance; the destination of the funds is a deployment fact (`D-M8-0`, reference sink = burn), because the paper names no recipient and no burn/retain decision (§5.12); `custody == address(0)` is the original M2 exactly |
 
 Ordering rationale: M1 → M2 → M3 are on-chain and unblock each other; M4 and M5
 are the heavy off-chain work; M6 and M7 close the loop. A10 (tests) is not a
@@ -726,7 +732,7 @@ stderr; the split, and the two-run check that confirmed it, are in §5.5.8.
 
 Status after §5.5.5: **off the critical path.** The mismatch exists only in V1,
 which §5.5.5 drops, so this measurement no longer gates the build. It is kept
-because it is the quantified evidence a P6 amendment needs, and because it is
+because it is the quantified evidence a P6b amendment needs, and because it is
 the method M4a would run if V1 ever returned. It does not start from the
 literature; it starts from the crate sources, inspected for this plan:
 
@@ -855,7 +861,7 @@ not "V2 with extra steps":
   unsuitable for deployment, and because its cost is not the cost the paper
   quotes. V2 and V3 show no such gap: their circuit computes `Σ T_i²` from the
   very witnesses it commits to.
-- The normative result travels to the P6 batch through §9, anchored on the M4a
+- The normative result travels to the P6b batch through §9, anchored on the M4a
   note: **Option B as stated specifies no relation that implies the norm, and
   the general-purpose primitive it names cannot express one through a deployable
   API.**
@@ -863,7 +869,7 @@ not "V2 with extra steps":
 Consequence for the ordering: §5.5.5 no longer needs an experiment. Because V1
 goes, **risk 1 is dissolved rather than measured** — the curve mismatch exists
 only in V1 — and §5.5.4 becomes the record of what the dropped variant *would*
-have cost, i.e. evidence for the P6 amendment instead of a gate on the build.
+have cost, i.e. evidence for the P6b amendment instead of a gate on the build.
 M4a's live measurement is the native one: the constraint count of commitment,
 norm and range inside a single circuit (§5.5.3), which is the number the paper
 lacks.
@@ -936,7 +942,7 @@ may hold only quantities the pinned command reproduces.
   `e33ce98` exists to keep that boundary.
 - Multi-party ceremony, external audit, mainnet: §11.
 - Any change to `main.tex`: if M4a's verdict contradicts the paper's
-  `[CONJECTURE]` about Option A′, it enters the P6 batch through §9's re-anchor
+  `[CONJECTURE]` about Option A′, it enters the P6b batch through §9's re-anchor
   procedure, anchored on the M4a script.
 - A production-grade circuit: M4 proves the pipeline and its cost, not a
   deployment.
@@ -1321,8 +1327,8 @@ it:
 | `C_R(r) = 0.8 r/(1+r)` at `r = ‖T‖_F`, and `S_f* = max{S_min, Θ − C_R(r)}` | **M6** (off-chain, `f64`) **and M2** (on-chain, WAD) | §2.5 and `\ref{sec:payment}`; M2 already ships the deployed reader, so M6's obligation is **parity with it**, not a second decision |
 | the operator `C_R` satisfies: `L[C_R]`, `π = −L[C_R]` | **M6** | `\eqref{eq:fokker}`, `\eqref{eq:integro}`, `\eqref{eq:running-reward}`; the sealed evaluation is `verification/stochastics/cr_ide_solver.py` (C-24, closed `9d96b76`) |
 | per-epoch reputation state → commitment payload and root | **M6** maps it; **M1** verifies it; **M7** transports it | `\ref{sec:datalayer}`; `AVIPRegistry.verifyInclusion` fixes the convention, so the map is not free |
-| `T[c,d,h] = f_c(events)` (ingestion) and the fraud proof | **M7** — *not* M6 | `\eqref{eq:ingestion}`; guessing `f_c` here would be the same class of error as inventing `W` (D-7) |
-| escrow of `financialStake`, slashing that retains or burns | **M8** | §5.2.3 |
+| `T[c,d,h] = f_c(events)` (ingestion) and the fraud proof | **M7** — *not* M6; delivered by M7b (§5.9) as an interface plus the three-valued proof, with the function itself left to the protocol | `\eqref{eq:ingestion}`; guessing `f_c` here would be the same class of error as inventing `W` (D-7) |
+| escrow of `financialStake`, slashing that retains or burns | **M8** — delivered (§5.12) | §5.2.3; the paper fixes neither the burn/retain decision nor a recipient, so M8 supplies the movement and records the destination as `D-M8-0` |
 | the `T → W` map | **nobody**: §10 **D-7** stays open, option (b) | §5.6 also binds `W` as an input; a heuristic projection would be a claim-bearing invention, which is what (b) rejected |
 
 **Acceptance criteria.** Each one is either a number the repository already sealed
@@ -1549,16 +1555,677 @@ resolution); `bash scripts/deploy_dryrun.sh` → **6 cases ok**, exit 0, with
 `bash verification/audit-gate.sh` → **PASS=11, FAIL=0, SKIP=0**;
 `git status --porcelain verification/` → 0 lines, so the sealed tree is untouched.
 
+### 5.9 M7b as delivered (the audit equilibrium and the ingestion formula)
+
+Status: **done for the data-layer half of A7**. `src/datalayer/` holds the crate:
+`pcg64.rs` (M5's generator) and `commitment.rs` (M6's epoch → root) carried over
+**unchanged, tests included**; `binomial.rs`, `fixture.rs`, `ingestion.rs`,
+`report.rs`; the binaries `bin/m7b-report` and `bin/m7b-probe`; and
+`scripts/m7b_report.sh` with the pinned `scripts/m7b_output.txt`. **As written,
+A7 stayed open**: M7c was the Pedersen ↔ Merkle bridge — until it existed the norm
+proof and the published root were not tied together in code — and nothing is
+deployed (A8, §5.8). That half is **closed by M7c (§5.10)**, which reuses this
+crate's fold instead of reimplementing it; the transport stays open (A9).
+
+**The table is recomputed, not copied.** `verification/data-layer/simulate_data_layer_v3.py`
+is sealed and was not edited; `scripts/m7b_output.txt` carries its 29 non-empty
+lines byte for byte, and all 11 numeric rows of the grid are produced here, from
+numpy's own `default_rng(42)` restarted per row, 500 epochs each: `n*(0.25) = 0`,
+`n*(B*) = 1`, `n*(1.5) = 1`, `n*(25) = 20`. The floor is a floor, not a rounding
+(`n*(1.5) = 1` is that sentence as a number), and the cap shows up twice:
+`n*(20) = n*(25) = 20`, and the verifier's profit rising again at `B = 25` while
+the cost stays pinned.
+
+**The finding: two fraud means, one model.** Rows below `B*` print `Fraude/ép`
+49.914, rows at or above it print 50.2, which reads like two models. It is one
+PCG64 stream read at two offsets: with `coverage = 0.0` the detection draw
+`binomial(n_frauds, 0.0)` returns 0 *before consuming a double*, so the fraud draw
+is the first draw of every epoch; with `coverage = 1.0` the same call consumes one
+double (`p = 1` lands in inversion), so it is every second. `binomial.rs` is the
+transcription of `Generator.binomial` that makes that statement checkable — 3306
+draws over 10 groups covering BTPE, inversion and both mirrored `p > 0.5` branches,
+against `fixtures/numpy_binomial_seed42.txt` — and the consumption is *measured*
+against `advance(k)` rather than assumed: 0 doubles for `binomial(n, 0.0)`, 1 for
+`binomial(n, 1.0)`, 2 for `binomial(100, 0.5)`, 4 for two cached draws.
+`bin/m7b-probe` exits non-zero on any divergence, because a mismatch here would
+make the pinned table wrong rather than merely different.
+
+**`eq:ingestion` is an interface; no formula is invented.** The paper fixes `f_c`'s
+properties — public, not changeable by the validator, fixed before deployment,
+identical for every validator on chain `c`, values in `[0, 1]` — and M7 does not
+invent the function, the same line §5.7 draws for the `T → W` map. What the crate
+carries is `Ingestion { chain, parameters_digest, score }` with `Score` a WAD
+integer in `[0, 1e18]` *by construction* (never a float), `GenesisFormula` as the
+one declared instance (chain 43113, weights `(att, gov, liq) = 3/5/2`, scale 1000),
+and a genesis digest `0x2fcd03b859e0519cc0c443aa99b879e0f15bb0312047cec8d7541de55acbba0a`
+that pins it: `score(no events) = 0`, `score((40, 7, 3)) = 138673557278208440 WAD =
+0.138674`. The instance is declared, **not** the paper's `f_c`.
+
+**The fraud proof decides three ways and slashes on one.** `Verdict::Consistent`
+when the published value is `f_c(events)` at the epoch's own leaf;
+`Verdict::Fraud { published_wad, formula_wad }` when it is not (the table prints
+the re-hashed `+1` root `0x80328681…` and both values); `Verdict::Unproven` when
+the claim cannot be checked — and an honest witness against a lying root is
+`Unproven`, never a slash. What the paper describes as two contradictory inclusion
+proofs against one root is *unsatisfiable* against the tensor's own Merkle root,
+because a leaf has one value, and that unsatisfiability **is** the binding property:
+a second opening of one position to a different value does not verify. The
+misconduct that can exist is the value above, which is why `f_c` has to be public,
+deterministic and frozen before deployment for the adjudicator to tell the two
+apart.
+
+**Acceptance criteria**, each traced to a sealed artefact or to a statement the
+paper makes; no new constant enters.
+
+1. **The sealed table is reproduced, and checked in both directions.** All 29
+   non-empty lines of the sealed output occur byte for byte in
+   `scripts/m7b_output.txt` — asserted inside the crate by `report::tests`, and out
+   of process by `scripts/m7b_report.sh`, which checks every line against the file
+   its `# ---` header names under `verification/` (so an edit there fails the script
+   instead of silently invalidating the copy) *and* that every four-decimal number
+   of the sealed file survives somewhere in the reproduction. The pinned file is
+   replaced only after both directions pass, so a drifting run leaves the committed
+   file untouched (fail-closed). Both halves were exercised negatively: with one
+   sealed value perturbed, the crate's own check and the script both fail.
+2. **The transcription is verified, not asserted.** The 3306 draws above, plus the
+   degenerate cases, which consume exactly what numpy consumes rather than what one
+   would guess; a divergence is a non-zero exit, not a tolerance.
+3. **`n*(B)` is the paper's map.** `⌊B/B*⌋` with `B* = c_audit / p_fraud = 0.1/0.10
+   = 1.0000`, floored at 0 and capped at `N_VERIFIERS = 20`; the grid, not a
+   comment, is the evidence, and the three parameter values are asserted against the
+   sealed script's own constants. The cancellation that yields `B* = c_audit / p_fraud`
+   requires the **per-auditor** cost `N_ATT * c_audit` of
+   `simulate_data_layer_v3.py:58`; the paper's printed `eq:revenue` omits that factor, which
+   is one of the two `main.tex` amendments §5.12 queued for the P6 batch and applied in P6a ((094c41b)).
+4. **`eq:ingestion` is an interface with one declared instance and a genesis
+   digest**, and `adjudicate` returns the three verdicts of the paper's proof, with
+   `Fraud` the only one that carries a slash.
+5. **The report states its own mode and its own gaps.** Section 4 lists what is
+   sealed, what is carried over from M5/M6 and what is deliberately not done, so the
+   file cannot be read as evidence about a deployed registry.
+
+**Deliberately not done**, each with its reason rather than as an omission: no `f_c`
+formula is asserted (which `f_c` is in force is fixed at genesis); the `T → W`
+collaboration map stays **D-7** open (§10), so nothing here derives a graph from the
+tensor; no transport (no Teleporter message, no source-chain quorum); no
+Pedersen ↔ Merkle bridge (**M7c**); no funds (escrow and burn are **M8**); no
+security, liveness or economic claim about a deployed registry.
+
+**Validated locally.** `cargo test --offline` → **39 passed, 0 failed**;
+`cargo clippy --offline --all-targets -- -D warnings` → clean; `cargo fmt --check`
+→ 0 diffs; `cargo build --offline` → OK (no registry, no dependencies);
+`scripts/m7b_report.sh` → PASS, with `scripts/m7b_output.txt` byte-identical across
+runs (`md5 20c8a209ccf4501c93955f58fd162462`); `bin/m7b-probe` → **10/10 groups**,
+exit 0; `bash verification/audit-gate.sh` → **PASS=11, FAIL=0, SKIP=0**;
+`git status --porcelain verification/` → 0 lines, so the sealed tree is untouched.
+
+**The data-layer paper findings, all five applied in P6a** (commit `094c41b`,
+re-anchor `2026-10-11T21:48:40Z`; the findings are kept below exactly as recorded,
+because they are the evidence each amendment answers). §5.12 queues the
+`main.tex` repairs that M8's contracts force. The three below are the sibling findings
+from the same section, each raised against `main.tex` and each answered by an artefact
+that already exists in this repository — recorded here, not repaired, for the reason
+§5.12 states (`main.tex` is sealed; §3, §9, §10). None of them is a code change: M7b
+and the sealed script are the side that is right.
+
+**1. §7.3's fraud proof is described in a shape the tensor cannot have.**
+`main.tex:915` says *"Any party can submit a fraud proof consisting of two state
+inclusion proofs against the same source-chain root that yield contradictory values
+for a single entry `T[c,d,h]`"*. Against the tensor's own Merkle root that pair is
+**unsatisfiable by construction** — a leaf has one value, so a second opening of one
+position to a different value simply does not verify — and M7b states that as the
+binding property rather than pretending to catch a contradiction that cannot exist
+(`src/datalayer/src/ingestion.rs:235-243`). What the delivered adjudicator does is the
+check that *can* fail: re-execute the public, genesis-frozen `f_c` and compare it to
+the published leaf, `Verdict::Consistent` / `Fraud { published_wad, formula_wad }` /
+`Unproven`, with `Fraud` the only verdict that carries a slash
+(`ingestion.rs:216-233`; §5.9's acceptance criterion 4). The same paragraph attaches
+two things the delivered stack does not do: the **bounty** "the honest reporter
+receives" is not implemented anywhere (`src/datalayer/src/lib.rs:18-19`, "nothing here
+moves funds"), and the **slash** is the `S_slash = 10` that §5.12 just showed is not
+executed on-chain. **Amendment:** rewrite the sentence to the adjudication that exists
+(the reporter publishes the events and the adjudicator re-derives `f_c`, exactly as
+`adjudicate` does), and restate the bounty and the slash as *model* parameters at the
+status the rest of §7 already uses for a modelled, non-executable quantity — or defer
+them explicitly to §10. This builds on C-48, which already corrected `fraud-proof` →
+`fraud proof` in this same subsection (`content-audit-pending.md:1638`).
+
+**2. The equilibrium is assumed and printed, the coverage is a step and not a
+probability, and the free-rider case is missing from §10.2.** §7.3 derives
+`n*(B) = ⌊B/B*⌋` as though it were the market outcome of individual entry decisions,
+and §7.4 books it `Verified`. The sealed script computes it *first* and feeds it into
+the epoch loop — `n_auditors = equilibrium_auditors(B)` at
+`simulate_data_layer_v3.py:38`, before the 500 epochs that follow — so the Monte Carlo
+never tests whether `n*` verifiers in fact enter; it re-evaluates a closed form. The
+script's own header is explicit: *"Asume: cada auditor revisa TODAS las attestations y
+compite por el bounty. Cobertura de detección = 100% si `n >= 1`"* (`:8-9`), and the
+code is `coverage = 1.0 if n_auditors >= 1 else 0.0` (`:39`). Two conventions follow
+that the paper never states:
+
+- **The bounty is a common pool.** `total_revenue = n_detections * B` is divided by
+  `n_auditors` (`:57-59`), so the reward per auditor *falls* with participation. The
+  archived first version flagged this as *"múltiples verificadores compiten por el
+  mismo bounty, y el beneficio individual se diluye. Este es el problema de la carrera
+  (race), análogo al de los MEV bots"*
+  (`verification/data-layer/results/archive/simulate_data_layer_output.txt:67-69`), and
+  the note did not survive into the paper. Unstated, the grid's `+0.20` reads as a
+  measured residual instead of what it is: the arithmetic of a split-the-pot
+  convention, `(D_obs − D_theory) · B / n*` (`main.tex:961`).
+- **Detection is 0 or 1.** With `N_VERIFIERS = 20` there is no detection probability
+  and no partial detection: one auditor sees every fraud. §7.4's prose hedges
+  ("reaches 100\% *in this model*", `main.tex:959`) but §7.7's table does not.
+
+§10.2 already carries the neighbouring limitation — *"assumes auditors respond to
+profit… Below that threshold, the mechanism provides no detection regardless of the
+value of the reputation at stake"* (`main.tex:1232`), status `Design` in the
+Limitations table (`:1305`) — but it covers only `B < B*`, not the free-rider and
+dilution case, which is the one the archived note named. **Amendment:** state both
+conventions in §7.3 (the pool divided by the auditors; coverage as a step), and extend
+the §10.2 bounty limitation with one sentence on free-riding and dilution, at the same
+`Design` status the row already carries.
+
+**3. §7.7's `Verified` label covers what the script assumes.** The paper's own
+vocabulary is explicit that the column records the *nature* of a claim, not a
+pass/fail (`README.md:203-211`), and §7.7 spends it on three rows
+(`main.tex:985-989`): `B* = c_audit / p_fraud` is `Analytical` — correctly, it is
+derived; `n^*(B) = ⌊B/B*⌋` is `Verified` although the script *assumes* it (finding 2
+above); and `Integrity = 1.0 when n^* ≥ 1` is `Verified` although it is forced by the
+coverage convention — with `integrity = (N_ATTESTATIONS - frauds + detections) /
+N_ATTESTATIONS` (`:70`) and `coverage ∈ {0,1}` (`:39`), `detections == frauds` is
+deterministic, so the row is a tautology of the model. The fourth row is §5.12's; the
+fifth, `Freshness bounds propagation linearly`, is correctly `Analytical` with no
+script — but at the paper's own example the bound defeats itself: `γ = 0.10, k = 10`
+in `main.tex:976` gives `fraud fraction ≤ 1.0`, the whole tensor, so the printed
+instance is vacuous rather than reassuring. **Amendment:** reclassify the two rows to
+the paper's own `Analytical` / `Design`, keep `Verified` for quantities the script
+*measures*, and print a `γ · k < 1` instance for the freshness bound. Precedent: C-41
+repaired a summary-table label in §2.6 for exactly this kind of drift
+(`content-audit-pending.md:1480`); `bloque-b-report.md:40-41` shows the row-level
+rewrite. The reclassification must keep guard G8 green — no `Estimate`/`Verified` mix
+on one line (`verification/audit-gate.sh`).
+
+**Applied in P6a** (commit `094c41b`, re-anchor `2026-10-11T21:48:40Z`, root
+`217d6d51…`): the five edits below, plus the `:941` correction from finding 2
+(`We verify` → `We evaluate`, because the script feeds `n*(B)` into the epoch loop
+rather than testing it). Twelve lines replaced 1:1 — 1410 before and after — so the
+line-number references the three sealed `docs/audit/` files carry stay valid by
+construction. None required a contract change and none introduced a new constant:
+every number they cite was already in the sealed script or in a delivered crate. The
+batch took **its own** re-anchor instead of §10's original single P6 batch, because §9's "one
+batch" rationale names the C-phase and the receipts are additive: the superseded D1
+receipt stays in history, and `git show aaaf460:verification/anchor_root.sha256.ots`
+is where it lives. C1–C4 remain as P6b (§10).
+
+### 5.10 M7c as delivered (the Pedersen ↔ Merkle bridge, option (c))
+
+Status: **A7's bridge half is closed.** A7 has three pieces — the ingestion
+formula, the fraud proof and the transport; §5.9 delivered the first two and left
+the statement's root and the registry's root tied together by nothing but prose.
+The transport (3 AWM message types) is A9's and stays open.
+
+**The gap, stated exactly.** The statement carries `root`; `AVIPRegistry` verifies
+inclusion against `keccak256` leaves in M1's convention. Both are commitments to
+the *same* 500-entry tensor, and before M7c a verifier that accepted the proof had
+no way to check that the root it certified and the root the registry stores
+describe that tensor: two independent numbers. §5.4 item 4 named four options and
+§5.5.7 selected **(c)** — an off-chain commitment plus a *recomputable link* —
+because (a) would re-prove the registry's tree inside the circuit and (b)/(d) would
+change the deployed interface, which M3 froze.
+
+**What M7c delivers.** `src/zk/src/bridge.rs` (`TENSOR_SIZE`, `position_key`,
+`tensor_state`, `root_bytes`, `uint256_decimal`, `link_digest`, `statement_root`,
+`Bridge`/`Claim`, `Mismatch`/`Verdict`, `Bridge::claim`, `open`, `verify`); the
+driver `src/zk/src/m7c.rs` (`bin/m7c-report`); the integration test
+`src/zk/tests/m7c_bridge.rs`; and `src/zk/scripts/m7c_report.sh` with the pinned
+`src/zk/scripts/m7c_output.txt`, whose 11 internal checks all `hold`. The crate
+gained exactly one path dependency, `avip_datalayer = { path = "../datalayer" }`
+(no registry entry, so `--offline` is unaffected) and one `[[bin]]`. Nothing under
+`integrations/avalanche/` or `verification/` was edited, and the only touch outside
+`src/zk` is documentation: a scope note in `src/datalayer/src/lib.rs` recording that
+the bridge belongs to M7c and not to M7b, and the data-layer row of the repo README
+— no behaviour, no constant and no pinned table of M7b moves (its `m7b_report.sh`
+re-runs to the same md5). The tie is off-chain, and the bridge had to live with the
+prover because it needs the prover's own commitments.
+
+**The link.** `keccak256(abi.encodePacked(bytes32 merkleRoot, uint256
+statementRoot, uint256 epoch))`: three fixed-width words, so the encoding is
+unambiguous — the property `abi.encodePacked` does not have in general and does
+have for these types. Over the committed §5.5.6 fixture: `merkleRoot =
+0x187d08e633fb4f3895633e6d3be1075f9603923adb6d70c09f27b458c3917537`,
+`statementRoot =
+14881564148789680950073164612164838307833922018127128489011700125541095929892`
+(`0x20e6aab4b9b3e21de8ba1d7f765f20508bce20314533dc5cca56f93ae81f7824`),
+`epoch = 0`, `link = 0xc4d35b0ac87daa8fe8647a6d2372e6dabe3e1c505e444455c20f9c8ff9073ba7`.
+
+**Neither root is restated, and that is the design.** The tree is built by folding
+`avip_datalayer::commitment`'s own `Epoch` through its `merkle_root`, so
+`verifyEntry`'s convention cannot drift from the registry's; the statement root
+comes from `native::poseidon_commitment`, the same function that fills
+`groth16::circuit_for`'s public input, and `bridge::tests` recounts it against
+V3's `variant_root`; the leaf key `i` is the position of `T[i]` in the 20-byte
+`validator` slot. The unit tests then check the fold against a *second*
+implementation written from the contract's rule (ordered pair, odd node promoted)
+rather than against the crate it borrows, and `root_bytes`/`uint256_decimal` are
+what make the statement root comparable to `STATEMENT_ROOT` as Solidity prints it.
+
+**What it does not do**, printed as §4 of the table so it cannot be missed: keccak
+is **not** proved inside the circuit (the proof certifies the norm; the tie is
+off-chain and recomputable by any peer — that is what option (c) means); a verifier
+holding only the two roots learns nothing, because the link needs the tensor, and
+side-by-side roots would be an `ic.length` change §5.5.7 does not decide; for V2′
+the statement's `uint256` is the commitment's **x-coordinate**, so a full point
+needs a second word — the §5.5.10 residual is a measured row, not a footnote; and
+the `T → W` identity is not claimed (§10 **D-7** stays open).
+
+**Acceptance criteria**, each traced to an artefact or to a computation; no new
+constant enters.
+
+1. **Both roots are recomputed from the two existing implementations, not from a
+   third one.** The tree folds `avip_datalayer::commitment::Epoch` through that
+   crate's `merkle_root`, and the statement root is `native::poseidon_commitment`
+   — the function `groth16::circuit_for` itself calls. `the_fold_is_the_contracts_fold`
+   then checks the result against a second implementation written from the
+   contract's rule (ordered pair, odd node promoted, 500 → 250 → 125 → … so the
+   promoted-node branch is on the path), and
+   `the_leaf_is_abi_encode_packed_of_key_and_value` checks every leaf against
+   `sha3::Keccak256` over the 52-byte `abi.encodePacked` payload directly.
+2. **The tie is checked against the emitted artifact, in both directions.**
+   `scripts/m7c_report.sh` requires the fresh table to carry `STATEMENT_ROOT`,
+   `STATEMENT_EPOCH`, `STATEMENT_NORM` and `TENSOR_DIGEST` as read out of
+   `integrations/avalanche/test/fixtures/M4bGroth16Fixtures.sol`, and requires the
+   *pinned* link to be the link the current revision computes; the pinned file is
+   replaced only after both pass, so a drifting run leaves it untouched
+   (fail-closed), and the guard was exercised negatively during development — it
+   caught the digest row printing without its `0x`. `cargo test` closes the same
+   seam from the other side: `tests/m7c_bridge.rs` recomputes **every** number in
+   the committed table, so library and artefact cannot drift apart silently.
+3. **The four rejections are measured, not asserted.** Section 3 of the table
+   recomputes each one from the tensor: a moved entry (`T[0] ^ 1`), a positional
+   swap (which moves both roots, so the binding is positional and not a set), an
+   epoch that is not the tree's (the same roots, `epoch 1`), and a link built over
+   another tensor — the last three all `Unbound`, each with the check that failed.
+4. **The report states its own mode and its own gaps.** Section 4 is what option
+   (c) does *not* buy: no in-circuit keccak, nothing a verifier can do with the two
+   roots alone, V2′'s x-coordinate residual as a measured row rather than a
+   footnote, and `T → W` unclaimed, so the file cannot be read as evidence about a
+   deployed registry.
+5. **The link is a tie, not a proof, and that is what §5.5.7 asked for.** Three
+   fixed-width words make the packing unambiguous; the epoch is inside the digest,
+   so it cannot be moved beside it; both roots are recomputable by any peer from
+   the tensor, which is the property a proof would not add here — the proof already
+   certifies the norm.
+
+**Deliberately not done**, each with its reason rather than as an omission: keccak
+is not proved in-circuit (that is what (c) chose over (a)); no AWM transport exists
+(A9); the `T → W` collaboration map stays **D-7** open (§10); V2′'s root remains a
+single `uint256`, so the point is not fully bound (§5.5.10); nothing is deployed
+(A8); and no security, liveness or economic claim is made about a registry that
+publishes such a link.
+
+**Validated locally.** `cargo test --offline --release` → **42 passed, 0 failed, 1
+ignored** (9 of them `bridge.rs`'s, 4 in `tests/m7c_bridge.rs`, the ignored one
+M4a's 32,768-bit proof); `cargo clippy --offline --all-targets -- -D warnings` →
+clean; `cargo fmt --check` → 0 diffs; `cargo build --offline` → OK;
+`scripts/m7c_report.sh` twice → `scripts/m7c_output.txt` byte identical
+(`md5 633ee8703c4a192b89bc0641db60ea03`), with 11/11 internal checks holding and
+the emitted fixture checked in both directions; `git status --porcelain
+verification/` → 0 lines, so the sealed tree is untouched.
+
+### 5.11 M7d as delivered (the Teleporter/AWM transport, gap A9)
+
+Status: **A9 is closed in code, offline.** `integrations/avalanche/contracts/` gains
+the wire format and the three message contracts of
+`docs/architecture/avalanche-integration.md` §4;
+`integrations/avalanche/test/M7dTransport.t.sol` is the 48-test suite over them; and
+`scripts/M7dReport.s.sol`, `scripts/m7d_report.sh` and the pinned
+`scripts/m7d_output.txt` (63 rows, 13 of them refusals) are the transcript,
+reproduced by that one command. **A8 stays open: nothing is deployed** — a Fuji
+deployment needs a funded key, a live endpoint and the address of a real
+`TeleporterMessenger`, none of which an offline milestone can supply.
+
+**The gap, stated exactly.** §4 names three messages — commitment propagation, a
+collusion alert, a slashing notification — and says the transport is "Teleporter over
+Avalanche Warp Messaging, signed by BLS signatures at the consensus level". Before
+M7d that was all prose: no message had a shape, no receiver had an allowlist, nothing
+deduplicated a delivery, and no line of this repository had ever been compiled against
+Teleporter. §5.9 and §5.10 delivered A7's other two pieces and both said so in their
+"deliberately not done" lists; this is that line, closed.
+
+**The ABI is declared, not vendored.** `contracts/interfaces/ITeleporterReceiver.sol`
+transcribes the receiver interface and `ITeleporterMessenger.sol` declares the subset
+M7d calls (`sendCrossChainMessage` plus `TeleporterMessageInput`/`TeleporterFeeInfo`),
+both read from `ava-labs/icm-contracts` on `main` while implementing the milestone.
+This repository has never carried a git dependency and does not start now, so the price
+is stated rather than hidden: **nothing here compiles against the real messenger**, and
+the milestone is validated instead against
+`test/mocks/MockTeleporterMessenger.sol` — a double that is a routing table
+(`endpoint → chain`, so a sender cannot claim to be on another chain) with synchronous
+delivery, whose header says exactly what it is not (no BLS, no quorum, no relayer, no
+fee, no gas, no retry queue, therefore no latency and no claim about the protocol).
+Two facts of that ABI decided the design and are quoted where they bite:
+`receiveTeleporterMessage(sourceChain, originSender, payload)` hands the receiver **no
+nonce and no message id**, and `sendCrossChainMessage` is not `payable` (fees travel as
+an ERC-20 `feeTokenAddress`), so the transport carries no funds — consistent with M2's
+"no custody" (§5.2.3).
+
+**What M7d delivers, and why each piece is shaped the way it is.**
+
+1. **`AVIPMessageCodec.sol` — the wire format.** Every message is
+   `abi.encode(kind, nonce, payload)`: because AWM hands a receiver nothing it can
+   deduplicate with, **the nonce has to be inside the message**, and the envelope is
+   checked to be the *canonical* encoding of what it decodes to (one `keccak256`
+   against a re-encode), so two encodings of one message cannot exist. Three payloads
+   carry what a peer can act on *and recompute*: M1's root with the declared delta, the
+   statement root and M7c's link; the alert's two tail decisions with the calibration
+   they were decided against; and M7b's `published`/`formula` pair with the digest of
+   the `f_c` instance in force. Values that are `f64` (`λ_max`, `−λ_min`) are not
+   transported at all — the alert carries the *decision* plus the graph's `keccak256`,
+   which is the rule M7c's table follows for the four-decimal numbers it pins. `encode`
+   refuses to build a message that announces nothing (empty root, quiet alert, zero
+   validator, a "fraud" whose two values agree, an unmapped kind) and every decoder
+   re-checks the same predicates: the sender's copy is a courtesy, the receiver's is
+   the boundary.
+2. **`AVIPMessageEndpoint.sol` — one boundary for all three types.** The caller must be
+   the messenger; the `(sourceChain → originSender)` allowlist is keyed *per kind* and
+   fixed by the constructor (no setter, the spirit of M2's `slashAuthority`, §5.2.4);
+   one contract answers for exactly one kind, enforced at construction *and* at
+   delivery; and a `(source, sender, nonce)` that was delivered once is refused forever.
+   An **empty allowlist is allowed and means "accepts nothing"** — which is how a
+   send-only chain is wired, rather than a dead contract. Arrival *order* is
+   deliberately not enforced: relayers promise no order, so requiring monotone nonces
+   would refuse valid messages; a type that needs ordering enforces it over its own
+   quantity instead.
+3. **One contract per §4 message, deployed once per chain.** `AVIPCommitmentRelay`
+   reads the root **out of the registry** (an uncommitted epoch cannot be announced) and
+   records `(root, statementRoot, link, delta)` once per `(source, epoch)`, re-deriving
+   the link from the payload's own words on arrival; `AVIPCollusionAlertChannel` records
+   the flag once per `(source, epoch)`, so the flag set only grows and an alert cannot
+   be retracted; `AVIPSlashingChannel` derives
+   `reason = keccak256(sourceChain ‖ nonce)` and calls `AVIPValidatorManager.slash`, so
+   the provenance id M8 will audit is a function of the envelope and not of anything the
+   sender chose. The fields a side does not use (a receiver's registry, a sender's
+   manager) are left zero at construction, so the bytecode that announces and the
+   bytecode that records are the same bytecode — and the two deployments of a channel
+   are one contract type, which is what makes the report's round trip a round trip.
+
+**Acceptance criteria**, each traced to an artefact or to a computation; no new
+constant enters.
+
+1. **The wire is three messages, and their shape is checked against the crate that
+   publishes it.** `AVIPMessageCodec.linkDigest` is
+   `keccak256(abi.encode(merkleRoot, statementRoot, epoch))` — 96 bytes, the epoch as a
+   word, which is what `src/zk/src/bridge.rs` writes by hand — and
+   `test_linkDigestReproducesM7csCommittedLink` requires it to equal **M7c's committed
+   link**; a 72-byte `abi.encodePacked` variant is measured and shown to be a different
+   digest, so the encoding in force cannot drift by "optimisation". The fixture
+   (`test/fixtures/M7cBridgeFixtures.sol`) is *declared* rather than generated, and
+   `m7d_report.sh` checks it against `src/zk/scripts/m7c_output.txt` in both directions.
+2. **The boundary is the messenger plus the allowlist, and each refusal is measured.**
+   `NotTeleporter`, `UnknownOrigin`, `UnauthorizedOrigin`, `UnexpectedMessageKind` and
+   `MessageAlreadyDelivered` each have their own test *and* their own row in the
+   transcript (13 refusal rows in total), and the deployment itself fails closed: no
+   messenger, no chain id, an allowlist entry of another kind, or a relay with a registry
+   but no sequencer all revert at construction, while an empty allowlist is accepted and
+   then refuses every delivery.
+3. **Each type's effect is the one §4 names.** A commitment reaches the subscriber with
+   M7c's link intact and is recorded once per epoch — and recorded *out of order* rather
+   than discarded, so a fresher message cannot erase an older one and an older one cannot
+   overwrite a fresher one; an alert arrives with both decisions and its calibration and
+   cannot be rewritten; a slashing notification reaches the manager, **ejects** the
+   validator (stake `1.0 → 0.1` against `S_f* = 257997028195075875`, so `isAdmitted` goes
+   false), and the `reason` the manager's own `ValidatorSlashed` event carries is the one
+   the destination recorded — checked in the suite and again in the transcript.
+4. **The numbers are the other milestones'.** M5's sealed `q99 = 9.0542`/`9.1371`
+   (scaled to the 4 decimals the alert carries), M7b's `f_c` genesis digest and
+   adjudicated `Verdict::Fraud` pair (`138673557278208441`/`138673557278208440`), and
+   M7c's root, statement root and link must each appear in the upstream transcript, in
+   the declared fixture and in the fresh run; and the link the *contract* recomputes must
+   be the link M7c published. The guard was exercised **negatively**: with M7c's link
+   perturbed in `src/zk/scripts/m7c_output.txt` the script printed three `FAIL` lines,
+   exited 1 and left the pinned transcript byte-identical.
+5. **The report states its own mode and its own gaps.** It runs offline, prints 63 rows
+   with no gas, no timing and no network address, is byte-identical across runs
+   (`md5 2bf8d16bfa20c1d47fa65690e240f0bd`), and its addresses are `anvil` account 0's
+   CREATEs — so a reader cannot mistake the file for evidence about a chain.
+
+**Deliberately not done**, each with its reason rather than as an omission: **no
+deployment and no real Teleporter address** (A8's remaining half — a funded key and a
+live endpoint, which no milestone here automates); no BLS signature, source-chain
+quorum, relayer, fee or gas metering is exercised or claimed, since those are the
+protocol's and the double is documented as not being them; **no latency**, so A11's
+Teleporter benchmark stays deferred (§2.2); **no in-circuit keccak** (M7c's option (c)
+chose recomputation over a circuit, §5.4 item 4); **no on-chain voting weight behind an
+alert** — §4 says the alert "reduces the effective voting weight", but M2's manager
+carries no weights (§5.2 defers them to M6), the message carries no node set, and which
+validators a flagged graph names is decided off-chain, so what the transport delivers is
+the flag and the impossibility of erasing it, not a discount; **no truth check** — a
+compromised sequencer, alerter or notifier can announce a committed-but-lying root or ask
+for a slash that no proof supports (`NotAFraudProof` catches only the self-refuting
+case), because soundness lives in M7b's fraud proof and in the data layer; the `T → W`
+collaboration map stays **D-7** open (§10); and no security, liveness or economic claim
+is made about a chain that runs this.
+
+**Validated locally.** `forge test --offline` → **171 passed, 0 failed, 0 skipped** over
+7 suites (of which `test/M7dTransport.t.sol` is 48); `forge fmt --check` → 0 diffs;
+`forge build --offline` → OK; `forge lint` → **4 notes, no warning** (the four are the
+`setEnv` calls `test/DeployScripts.t.sol` must make; the two Teleporter interface files
+are excluded from `mixed-case-variable` by path, with the reason in `foundry.toml`, so
+that their parameter names stay diffable against upstream); `bash
+scripts/m7d_report.sh` → **13 refusals and `status=ok`**, with
+`scripts/m7d_output.txt` byte-identical across runs
+(`md5 2bf8d16bfa20c1d47fa65690e240f0bd`) and the upstream guards passing in both
+directions, plus the negative run described above; `bash verification/audit-gate.sh` →
+**PASS=11, FAIL=0, SKIP=0**; `git status --porcelain verification/` → 0 lines, so the
+sealed tree is untouched.
+
+## 5.12 M8 as delivered (treasury / custody, gap A2's second half)
+
+Status: **A2's fund half is closed in code, offline.** `integrations/avalanche/contracts/`
+gains `AVIPStakeVault.sol` (the custody behind `IAVIPCustody`) and `AVIPBurnSink.sol`
+(the reference `IFundSink`); `AVIPValidatorManager.sol` is **amended** with a third
+constructor argument (`custody`), an admission check against it and a `debit` on slash.
+`integrations/avalanche/test/M8StakeVault.t.sol` is the 61-test suite over them;
+`scripts/M8Report.s.sol`, `scripts/m8_report.sh` and the pinned `scripts/m8_output.txt`
+are the transcript, reproduced by that one command, and `scripts/DeployStakeVault.s.sol`
+is the deploy half of the wiring. **A8 stays open: nothing is deployed.**
+
+**The gap, stated exactly.** §5.2.3 closes with M2's own limit — it "does not implement
+token custody or transfer (ERC-20 or native); that is delegated to the M8 Treasury
+Module" — and the paper leaves two things unnamed: whether slashed stake is destroyed or
+retained (`S_slash = 10` is a *reputation* penalty, not a token transfer) and who, if
+anyone, receives `F_0*`. Before M8 every one of those was declared and never moved: a
+validator could be admitted with a `financialStake` that existed only as a number, and a
+slash was an arithmetic change with no consequence.
+
+**The model, and the one decision it makes (`D-M8-0`).** M8 supplies the movement and
+refuses to invent the recipient. The vault transfers to a constructor-fixed `IFundSink`,
+and *what the sink does* is a deployment fact:
+
+| Component | What it fixes | What it deliberately does not decide |
+|-----------|---------------|--------------------------------------|
+| `AVIPStakeVault` | the token, the sink, the token scale (`WAD_PER_UNIT`) | where the funds go |
+| `IFundSink` | that a slash and the fee are *notified* with an amount and a derived reason | whether the sink burns, keeps or forwards them |
+| `AVIPBurnSink` (reference) | that the reference choice destroys them through the token's own `burn` | that burning is the protocol's choice |
+
+Burning is the reference because it needs no actor the paper does not model: no treasury,
+no beneficiary, no governance key. A deployment that keeps the funds implements the same
+interface and changes nothing in the vault. The trade-off M8 records rather than resolves
+is destroy-versus-retain: retention creates a spendable pot, which is a custody problem and
+a governance question the paper never asks; destruction is irreversible but needs nobody.
+The choice is one constructor argument, visible at the deployment boundary rather than
+buried in a transfer target.
+
+**Units, and the two rounding boundaries.** Escrow is accounted in the token's own base
+units and *reported* in WAD (`escrowed`), so every comparison against `stakeOf` is
+unit-clean; `WAD_PER_UNIT = 10 ** (18 - decimals)` is a deployment fact, because reading
+`decimals()` would put a non-standard call on the custody path. Two boundaries follow, and
+both are stated rather than hidden:
+
+- `debit` **floors** (`floor(amount / unit)`): a slash smaller than one base unit moves
+  nothing and still lowers `stakeOf`, which leaves the vault holding *more* than the
+  record — the direction that keeps `escrowed >= stakeOf` true;
+- the lock in `withdrawable` **ceils**: at most one base unit beyond the exact `stakeOf`
+  stays locked, and it is released the moment the manager stops admitting the validator.
+  A validator declaring `S_f*(Theta_r) = 733333333333333334` WAD against a 6-decimal token
+  must escrow `733334` base units (`ceil`), because the paper's number is not
+  representable in that token; the round-up is on the validator's side and always lands
+  **above** the paper's requirement.
+
+**The handshake, and why one side has to be mutable.** The vault authorises `debit` by its
+manager; the manager reads and debits its vault. Neither address can be a constructor fact
+of the other, so one contract has to have a hole. M8 puts the hole in the **vault**, and
+`bindManager()` is filled exactly once by the **manager's own constructor**, which then
+verifies `manager() == address(this)` and reverts otherwise. Consequences, all asserted:
+
+| Situation | Behaviour |
+|-----------|-----------|
+| vault deployed, no manager yet | a plain escrow: everything withdrawable, `feeInUnits() == 0`, `payFee` reverts `ManagerNotBound`, `debit` reverts `NotManager` for everyone |
+| manager deployed with `custody == address(0)` | original M2 exactly: the stake is declared, never checked against a balance, and `slash` moves nothing |
+| manager deployed with the vault | the constructor binds it, verifies it, and both ends read back correctly |
+| vault already bound by somebody else | the manager's deployment **reverts** (`ManagerAlreadyBound` bubbled) instead of existing with no custody |
+| custody accepts the bind and reports nobody | the deployment **reverts** (`CustodyNotBound`) — the check that makes the handshake load-bearing |
+
+The one race M8 accepts is a *deployment* race, not a funds race: a griefer can fill a
+fresh vault's hole before the real manager's transaction lands, which makes the manager's
+deployment fail loudly. It cannot move a token anywhere — the token and the sink are
+constructor facts of the vault — and it cannot profit: the only destinations are the sink
+and the depositors. The remedy is redeploying the vault, and the deployment order of
+`avalanche-integration.md` §6 (vault, then manager, then any deposit) leaves the window
+empty in practice.
+
+**Admission, slashing and the fee, as delivered.**
+
+| Path | M2 (before) | M8 (with custody) |
+|------|-------------|-------------------|
+| `admit` | checks `financialStake >= S_f*(T)` only | also requires `financialStake <= escrowed(validator)`, else `FinancialStakeNotBacked` |
+| `slash` | reduces `stakeOf`, may eject | does the same and then calls `custody.debit(validator, amount, reason)` **in the same transaction**, after every write on its side |
+| atomicity | not applicable | a failing token or a refusing sink reverts the whole slash: record and escrow move together or not at all |
+| `payFee` | did not exist | the vault charges its **own caller** `F_0* / WAD_PER_UNIT`, pulls it straight from the payer's balance to the sink, and never lets it touch the vault's balance |
+| `withdraw` | did not exist | returns only the caller's own escrow, capped by `withdrawable` |
+
+There is no per-epoch fee ledger in the vault: charging once per epoch is the *caller's*
+policy, and M8 claims nothing about it. Nothing here is a fee market — `F_0*` remains the
+uniform posted price of §5.2.3, read from the manager so the policy has one source of truth.
+
+**What M8 does not do.** No interest, rewards or staking yield; no second token; no
+**native coin** — the whole path is ERC-20, `IFundSink.receiveFunds` is not `payable` and
+the vault has no `receive`/`fallback`, so a native deployment needs a new interface rather
+than a new constructor argument; no owner, pause, upgrade path or setter (the
+constructor-fixed facts and the one-shot bind are the whole mutable surface); no exit queue
+or cooldown (leaving the set stays the manager's
+business); no governance of the sink; no sweep of tokens sent here by another route (they
+are held and attributable to nobody); no fee-on-transfer or rebasing support (refused with
+`InexactTransfer`, because the conservation identity is exact); no supply claim for the
+burn (the *token* decides what `burn` means and `AVIPBurnSink` reports `BurnFailed` for a
+token that cannot burn); and no economic claim about `S_slash = 10`, which stays the
+paper's reputation penalty and is **not** executed on-chain.
+
+**The `S_slash = 10` reconciliation, and the `main.tex` amendments it queues.** M8 makes no
+economic claim, but the paper does, and the two now disagree. The disagreement is recorded
+here rather than repaired, because `main.tex` is in the sealed set (§3) and cannot be
+touched outside the P6 batch (§9, §10). The paper's "Slashing and Integrity" subsection
+(§7.5) concludes that the fraud is deterred — *"The attacker profit is negative for all
+`B >= B*` because the slashing parameter `S_slash = 10.0` exceeds the fraud gain
+`V_fraud = 1.0` by an order of magnitude"* (`main.tex:963-964`) — the grid books `-502.00`
+(`main.tex:950-954`), and the section summary classes the row `Verified`: *"Attacker profit
+`-502` with `S_slash = 10` | Verified"* (`main.tex:987`).
+
+**What that number is.** Under the sealed script's `coverage = 1.0` convention a detected
+fraud earns nothing, so the per-epoch total is
+`-S_slash * mean(n_frauds) = -10.0 * 50.2 = -502`, whose closed form is `-500`; the `-502`
+is the seed-42 realisation, and C-07 closed the 52-unit gap as 50 (convention) + 2 (Monte
+Carlo). It is reproducible *bookkeeping* under the script's arithmetic, and it is **not** an
+executable loss.
+
+**Why it is not executable, in the delivered contracts' units.** A slash moves tokens only
+through `AVIPStakeVault.debit`, and what it can move is the escrow the validator actually
+posted: the manager's `amount <= _stakes[validator]` (`AVIPValidatorManager.sol:232-233`) and
+then the vault's `units <= _escrowedUnits[validator]` (`AVIPStakeVault.sol:346-347`). The
+minimum a validator must post to be admitted is
+`S_f*(r) = max{S_min, Theta - C_R(r)} <= Theta = 1.0`, and `C_R <= C_R^inf = 0.8` is an
+opportunity cost that no function confiscates. Against a fraud gain of
+`V_fraud * N_ATT * p_fraud = 1.0 * 500 * 0.10 = 50` per epoch, the paper's own parameters
+bound the deterrent:
+
+| Quantity | Value | Source |
+|----------|-------|--------|
+| Fraud gain per epoch | `50` | `V_fraud = 1.0`, `N_ATT = 500`, `p_fraud = 0.10` (`main.tex:941`; `simulate_data_layer_v3.py:17-24`), with `n_frauds ~ Binomial(100, 0.5)`, mean `50.2` |
+| Minimum stake a profit-maximising attacker posts, per validator | `<= Theta = 1.0` | `eq:allocation` (`main.tex:783`); `THETA = 1e18` (`AVIPValidatorManager.sol:57`) |
+| Adversarial validators at `beta = 0.2` over 100 | `20` | `n_adv = int(100 * BETA_ADVERSARIAL)` (`simulate_data_layer_v3.py:46`) |
+| Maximum confiscable per epoch (whole adversarial set, minimum stake, every token) | `<= 20` | `20 * 1.0`; `debit` cannot exceed escrow |
+| Attacker's net for the epoch, with everything confiscated | `>= +30` | `50 - 20` |
+| Loss the table books | `-502` | `main.tex:950`, where the penalty is a parameter and not a transfer |
+
+So with `S_slash` *not* executed, the deterrence sentence does not follow from the
+parameters: even confiscating the whole adversarial set at the minimum admissible stake
+leaves the fraud profitable for the epoch, and no arrangement of the delivered contracts
+reaches `-502`, because the only moveable quantity is escrow and the table's multiplier is
+`10x` it. What is left unquantified is the destroyed income stream of §2 — the framework's
+own opportunity-cost argument — and M8 moves no number for it, because the paper prices none.
+This is a **paper** finding, not an M8 defect: M8 is the side that already says
+`S_slash = 10` is *"not executed on-chain"* (above), and both statements cannot stand
+together.
+
+**The two amendments, applied in P6a** (commit `094c41b`; amendment 1 verbatim,
+amendment 2 as the *model* statement branch — the executable-loss bound in §7.5 and the
+`Verified` → `Analytical` row in §7.7). Recorded here, exactly as §5.2.3
+records its `F_0*` provenance note, and promotable to `docs/audit/claim-registry.csv` in the
+next batched re-anchor (§9): the two `main.tex` edits below are the whole of the repair, and
+nothing in `integrations/**` moves for them. §5.9 queues three more from the same section.
+
+1. **`eq:revenue` is missing a factor** (`main.tex:920`, §7.3). As printed,
+   `E[revenue] = p_fraud * N_ATT * B / n_auditors - c_audit`. The per-auditor cost is
+   `N_ATT * c_audit`, as the prose two lines below already states — *"the per-auditor cost
+   `N_ATT * c_audit = 50`"* (`main.tex:961`) — and as the sealed script computes it
+   (`total_cost = n_auditors * N_ATTESTATIONS * C_AUDIT`, `simulate_data_layer_v3.py:58`).
+   With the printed form, `E = 0` gives `n* = N_ATT * B / B*`, not the
+   `n*(B) = floor(B/B*)` the same page derives (`main.tex:927`); the missing factor is the
+   one that makes `B* = c_audit / p_fraud` cancel. **Amendment: the trailing term becomes
+   `- N_{ATT} * c_{audit}`.**
+2. **§7.5 and the §7.7 row are restated** (`main.tex:963-966`, `:987`). **Amendment:**
+   bound the deterrence claim by the executable loss — escrow, `<= Theta = 1.0` per
+   validator, `C_R` not confiscated — instead of by `S_slash`; or, if the claim is kept as a
+   *model* statement, demote the row from `Verified` to the status the rest of that table
+   already uses for a modelled, non-executable quantity. Either version must keep guard G8
+   green — no `Estimate`/`Verified` mix on one line of `main.tex` (`verification/audit-gate.sh`).
+
+**Validated locally.** `forge test --offline` → **237 passed, 0 failed, 0 skipped**
+over 9 suites (of which `test/M8StakeVault.t.sol` is 61, and the amended M2 suite's
+34 and M7d's 48 run **unchanged**, which is the compatibility evidence for
+`custody == address(0)`); `forge fmt --check` → 0 diffs; `forge build --offline` → OK;
+`forge lint` → **4 notes, no warning** (the same four `setEnv` calls as before);
+`bash scripts/m8_report.sh` → **6 refusals and `status=ok`** (41 rows), with
+`scripts/m8_output.txt` byte-identical across runs
+(`md5 147064b25244913b7398330f8730baf4`), the fee derived from M7a's `F_0*` and the
+deployed scale, the stake trajectory and the slashing reason checked against M7d's
+transcript, and the certified norm against M4b's;
+`bash scripts/deploy_dryrun.sh` → **9 cases**, the three new ones being M8's (the vault
+script with no inputs, the vault script with them, and the manager script handed a custody
+that cannot bind); `bash verification/audit-gate.sh` → unchanged (**PASS=11, FAIL=0,
+SKIP=0**); `git status --porcelain verification/` → 0 lines.
+
 ## 6. Interfaces and parameter provenance
 
-The contract boundary is fixed by three **interfaces** (types only, no logic —
-M1 and M2 now implement two of them):
+The contract boundary is fixed by **interfaces** (types only, no logic —
+M1 and M2 now implement two of them, and M8 adds the custody pair):
 
 | File | Key surface |
 |------|-------------|
 | `contracts/interfaces/IAVIPRegistry.sol` | `postCommitment(epoch, root, changedEntries)`, `commitmentOf(epoch)`, `changedEntriesOf(epoch)`, `tensorSize()`, `maxDeltaEntries()`, `latestEpoch()`, `verifyEntry(root, leaf, proof)`, `verifyThreshold(epoch, certifiedNorm, proof)` (view) |
-| `contracts/interfaces/IAVIPValidatorManager.sol` | `stakeOf`, `collateralOf`, `requiredStake`, `isAdmitted`, `admit(validator, financialStake, certifiedNorm, proof)`, `slash(validator, amount, reason)`; events `ValidatorAdmitted(validator, stake, collateral)`, `AdmissionEvaluated(validator, epoch, certifiedNorm, collateral, requiredStake)`, `ValidatorEjected(validator, stake, requiredStake)` |
+| `contracts/interfaces/IAVIPValidatorManager.sol` | `stakeOf`, `collateralOf`, `requiredStake`, `isAdmitted`, `custody()`, `F0_STAR()`, `admit(validator, financialStake, certifiedNorm, proof)`, `slash(validator, amount, reason)`; events `ValidatorAdmitted(validator, stake, collateral)`, `AdmissionEvaluated(validator, epoch, certifiedNorm, collateral, requiredStake)`, `ValidatorEjected(validator, stake, requiredStake)`, `ValidatorSlashed(validator, amount, reason)`; errors `FinancialStakeNotBacked(financialStake, escrowed)` and `CustodyNotBound(custody)` (§5.12) |
+| `contracts/interfaces/IAVIPCustody.sol` | `escrowed(validator)` (WAD), `manager()`, `bindManager()` (one-shot, called by the manager's constructor), `debit(validator, amount, reason)` (manager-only) — the whole boundary between the manager's record and the funds (§5.12) |
+| `contracts/interfaces/IFundSink.sol` | `receiveFunds(amount, reason)`: the vault transfers first and then *tells* the sink, so the sink needs no allowance and cannot half-accept (§5.12, `D-M8-0`) |
+| `contracts/interfaces/IERC20Minimal.sol`, `IERC20BurnableMinimal.sol` | the three ERC-20 functions the custody uses (`balanceOf`, `transfer`, `transferFrom`) and the one the reference sink adds (`burn`); deliberately not OpenZeppelin's, since the repository vendors nothing but `forge-std` (§5.12) |
 | `contracts/interfaces/IZKThresholdVerifier.sol` | `verify(a, b, c, publicInputs)` (Groth16 shape over BN254) |
+| `contracts/interfaces/ITeleporterMessenger.sol` | `sendCrossChainMessage(TeleporterMessageInput)` (the subset M7d calls, verbatim from `icm-contracts`), with `TeleporterMessageInput { destinationBlockchainID, destinationAddress, feeInfo, requiredGasLimit, allowedRelayerAddresses, message }` and `TeleporterFeeInfo { feeTokenAddress, amount }` |
+| `contracts/interfaces/ITeleporterReceiver.sol` | `receiveTeleporterMessage(sourceBlockchainID, originSenderAddress, message)` — no nonce, no message id, which is why the AVIP envelope carries one (§5.11) |
+
+`src/datalayer/src/ingestion.rs` adds a fourth, the only one off-chain and the only
+one with no Solidity counterpart: `Ingestion { chain, parameters_digest, score }`,
+with `Score` a WAD integer in `[0, 1e18]` (§5.9). It is provisional in the same
+sense as the three above, and for one more reason: `f_c` itself is the protocol's
+to choose, so the trait fixes the shape of the interface and not the function —
+`GenesisFormula` is one declared instance, not the deployed one.
 
 They are provisional: a signature change is not a breaking change while nothing
 is deployed. M1 changed exactly one signature — `postCommitment` now carries the
@@ -1566,7 +2233,12 @@ declared epoch delta, because the freshness rule of the Data Layer needs it —
 and added the readers that rule implies. M2 changes `verifyThreshold` (§5.2):
 it becomes `view`, drops the `validator` argument, builds the statement
 `[root, epoch, certifiedNorm]` internally, and moves threshold enforcement to
-the manager. Every parameter they mention has a provenance:
+the manager. M7d adds the two Teleporter files and they are provisional in a
+stronger sense than the rest: they are transcribed from an external project that
+this repository does not vendor, so **nothing here compiles against the real
+messenger** and the transport is validated offline against a double whose limits
+are written at the top of `integrations/avalanche/test/mocks/MockTeleporterMessenger.sol`
+(§5.11). Every parameter they mention has a provenance:
 
 | Parameter | Value | Provenance |
 |-----------|-------|------------|
@@ -1677,25 +2349,49 @@ stable — the same reason the protection phase is last.
 | **P2 (done)** | B-gaps: README, `CITATION.cff`, benchmark README, badges aligned with reality (B1–B5) | none |
 | **P3 (done — M1, M2, M3)** | M1 ✅ → M2 ✅ → M3 ✅ (on-chain core, §5.4) | none |
 | **P4 (done — M4, M5, M6)** | M4 ✅ (M4a/M4b/M4c) → M5 ✅ → M6 ✅ (off-chain, §5.5–§5.7) | none |
-| **P5 (in progress — M7a)** | M7 (data layer, deploy scripts, AWM) + M8 (treasury/custody) | none |
-| P6 | C-gaps: paper apparatus (C1–C4), one batch | **re-anchor** |
+| **P5 (done — M7, M8)** | M7 (data layer, deploy scripts, AWM) ✅ + M8 (treasury/custody) ✅ (§5.8–§5.12) | none |
+| **P6a (done — `094c41b`)** | The five data-layer amendments of §5.9/§5.12: §7.3's fraud-proof mechanism with the bounty/slash status, §7.3's unstated pool/coverage conventions plus the §10.2 free-rider sentence, the freshness instance with §7.7's `Verified` labels, `eq:revenue`'s missing `N_ATT` factor, and the §7.5/§7.7 non-executable deterrence — twelve lines 1:1, plus §7.4's `We verify` → `We evaluate` (`main.tex:941`) | **re-anchored** `2026-10-11T21:48:40Z`, root `217d6d51…` (G10/G11 green) |
+| P6b | C-gaps: paper apparatus (C1–C4), **its own batch and its own re-anchor**. Carries the `content-audit-pending.md` line-reference drift P6a did *not* introduce: `F-019`'s `:1297` did not contain its subject on `aaaf460` either, while `C-48`'s `:1215` is correct | **re-anchor** |
 | P7 | Protection + arXiv | **re-anchor** if `main.tex` changes |
 
-**Next step: M7 — the data layer** (gaps A7, A8, A9, planned in §5): the ingestion
-formula `f_c`, the fraud proof with its audit equilibrium `n*(B) = ⌊B/B*⌋` and
-`S_slash = 10`, the Teleporter/AWM transport of the commitment roots (3 message
-types) and the deployment scripts (`Deploy*.s.sol` to Fuji). M7 closes the loop
-between the off-chain crates (M4–M6) and the on-chain contracts (M1–M3), and
-resolves the Pedersen ↔ Merkle bridge (option (c), §5.4 item 4); M8
-(treasury/custody) follows it in P5.
+**Next step: P6b, the C-gaps batch** (§2.4), and — whenever a funded key and an endpoint
+are available — the Fuji deployment the M7a and M8 scripts are waiting for.
+**M7 is delivered**:
+M7b (§5.9) is the ingestion formula `f_c` as an interface, the fraud proof and its
+audit equilibrium `n*(B) = ⌊B/B*⌋` with `S_slash = 10`; M7c (§5.10) resolves the
+Pedersen ↔ Merkle bridge (option (c), §5.4 item 4) by tying the statement's `root`
+to the registry's Merkle root with a link any peer recomputes; and M7d (§5.11)
+delivers the transport — the three Teleporter/AWM message types of
+`avalanche-integration.md` §4, as a wire format plus one contract per type, with
+per-kind origin allowlists, at-most-once delivery and a slashing `reason` derived
+from the envelope. M7 closed the loop between the off-chain crates (M4–M6) and the
+on-chain contracts (M1–M3); M8 (treasury/custody) follows it in P5 and **is
+delivered** (§5.12): the stake M2 declares is now escrowed, the slash this
+transport triggers moves real tokens into a sink, and `F_0*` is collected — while
+the *destination* of those funds stays a deployment fact, because the paper names
+none (`D-M8-0`). §5.12 amends M2's `AVIPValidatorManager` with a `custody`
+constructor argument; with `custody == address(0)` its behaviour is M2's,
+unchanged, which the M2 suite running untouched is the evidence for.
 
 **M7a is delivered** (§5.8): the phase-1 pair
 `DeployRegistry.s.sol`/`DeployValidatorManager.s.sol` exists over the shared
 `DeployCommon` floor, refuses C-Chain mainnet by construction, is driven in tests
 through `deploy(Plan)` (no environment) and is verified out of process by
-`scripts/deploy_dryrun.sh`, whose six-case transcript is committed. What remains of
+`scripts/deploy_dryrun.sh`, whose **nine-case** transcript is committed (six from
+M7a, plus M8's three, §5.12). What remains of
 A8 is the Fuji deployment itself — a funded key and a live endpoint, which no
 milestone here automates — plus the phase-4 P-Chain registration.
+
+**M7b, M7c and M7d are delivered too** (§5.9, §5.10, §5.11): the data layer's audit
+equilibrium, the ingestion formula as an interface plus the three-valued fraud
+proof, the Pedersen/Poseidon ↔ keccak bridge that ties the statement's `root` to the
+registry's Merkle root over M1's own fold, and the Teleporter/AWM transport of §4's
+three message types — each with a byte-stable report reproduced by one command and,
+for the two that carry numbers from another milestone, a fail-closed drift guard
+that reads the upstream transcript in both directions. What stays open in M7 is the
+Fuji deployment: M7d adds no deployment script for the transport on purpose, because
+a channel's origins and destinations are a per-network fact and the address of a
+real `TeleporterMessenger` is exactly what no offline milestone has.
 
 **P4 is delivered**: M4 (off-chain ZK prover, **V3**, 94,438 constraints, 3.9 s
 proving, §5.5), M5 (RMT detector, exact PCG64 reproduction, `q99 = 9.0542` right and

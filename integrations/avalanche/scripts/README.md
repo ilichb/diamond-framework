@@ -1,12 +1,17 @@
 # `integrations/avalanche/scripts/` — Deployment scripts and generators
 
-Status: **two deployment scripts (dry runs only) and two generators**.
-`DeployRegistry.s.sol` and `DeployValidatorManager.s.sol` exist as of M7a
-(`docs/architecture/implementation-plan.md` §5.8) and build the frozen M1/M2
-contracts. **Nothing is deployed anywhere**: not to mainnet, not to a testnet,
-and no line in this directory claims otherwise — the deployment itself belongs to
-M7/P5 (§12). See `docs/architecture/avalanche-integration.md` §6 (Deployment
-Phases) and §3 (statement that nothing here has been audited).
+Status: **three deployment scripts (dry runs only), two reports and two
+generators**. `DeployRegistry.s.sol` and `DeployValidatorManager.s.sol` exist as of
+M7a (`docs/architecture/implementation-plan.md` §5.8) and build the frozen M1/M2
+contracts; `M7dReport.s.sol` plus `m7d_report.sh` exist as of M7d (§5.11) and drive
+the three Teleporter/AWM message types of `avalanche-integration.md` §4 end to end;
+`DeployStakeVault.s.sol`, `M8Report.s.sol` and `m8_report.sh` exist as of M8 (§5.12)
+and deploy the custody half of the handshake and audit the whole fund lifecycle.
+**Nothing is deployed anywhere**: not to mainnet, not to a testnet, and no line in
+this directory claims otherwise — the deployment itself belongs to M7/P5 (§12), and
+no script here has ever seen a real `TeleporterMessenger`. See
+`docs/architecture/avalanche-integration.md` §6 (Deployment Phases) and §3
+(statement that nothing here has been audited).
 
 ## `generate_groth16_fixtures.py` (milestone M3)
 
@@ -64,6 +69,9 @@ Roles come from the environment, never from the deployer:
 | `VERIFIER` | `address(0)` | the M3 threshold verifier; M7a deploys none, so the registry certifies nothing (`VerifierNotSet`) |
 | `REGISTRY` | **none** | the manager's registry; absent reverts `MissingRole("REGISTRY")` |
 | `SLASH_AUTHORITY` | anvil 2 | the manager's only slasher |
+| `CUSTODY` | `address(0)` | M8's vault (§5.12): `0` is the M2 mode (stake declared, not backed); a non-zero one must answer the handshake or the manager's deployment reverts |
+| `TOKEN`, `SINK` | **none** (vault script) | the ERC-20 the vault escrows and the `IFundSink` that receives a slash and the fee; either absent reverts `MissingRole` |
+| `WAD_PER_UNIT` | **none** (vault script) | `10 ** (18 - decimals)`, read as a decimal; absent reverts `MissingRole("WAD_PER_UNIT")`, because `decimals()` is never read from the token |
 
 An **absent or empty** variable falls back to a public anvil address (nothing to
 steal, byte-reproducible dry runs); a **malformed** one is a hard error rather
@@ -97,20 +105,128 @@ read), and each case asserts what its transcript must contain:
 | D | `REGISTRY` = the address case C printed | the manager chains onto it |
 | E | `SEQUENCER=0xnot-an-address` | a revert, not the default |
 | F | `--chain 43114` | `MainnetRefused(43114)` |
+| G | none, vault script | `MissingRole("TOKEN")`, and nothing is deployed before the inputs resolve |
+| H | vault script: `TOKEN`, `SINK`, `WAD_PER_UNIT` | the custody half of §5.12, wired and left unbound (`check.manager=unbound`) |
+| I | manager script: `CUSTODY` = an address with no code | the handshake refuses: the deployment fails instead of producing a manager with no custody |
 
 It writes `deploy_dryrun_output.txt` (committed) and, if any expectation fails,
-exits non-zero **without rewriting it**. The transcript keeps only the `[m7a]`
-lines the scripts log — no gas, no timings — so it is byte-stable: two runs diff
-clean. It is not a deployment, and the addresses in it are the ones a fresh EVM
-hands out, not Fuji addresses.
+exits non-zero **without rewriting it**. The transcript keeps only the `[m7a]` and
+`[m8]` lines the scripts log — no gas, no timings — so it is byte-stable: two runs
+diff clean. It is not a deployment, and the addresses in it are the ones a fresh
+EVM hands out, not Fuji addresses.
+
+## `M7dReport.s.sol` and `m7d_report.sh` (milestone M7d)
+
+The one documented command of the AWM transport, and the only script here that has
+no Fuji counterpart at all:
+
+```shell
+bash scripts/m7d_report.sh
+```
+
+It runs the report offline and pins its `[m7d]` transcript to
+`scripts/m7d_output.txt` (committed, 63 rows). The report wires the three message
+types of `avalanche-integration.md` §4 across two chain ids — a commitment relay,
+a collusion-alert channel and a slashing channel, each deployed once per chain —
+and then exercises each one end to end, printing one machine-readable line per
+fact **including one per refusal** (13 of them: an uncommitted epoch, a link that
+does not tie its own words, an unlisted origin, a second delivery of one message,
+a rewritten epoch, a quiet alert, a rewritten flag, a notification the manager
+refuses, and so on).
+
+Three things about it are deliberate:
+
+1. **Nothing is live and nothing is broadcast.** `forge script` without
+   `--broadcast` simulates locally, the messenger is
+   `../test/mocks/MockTeleporterMessenger.sol` (there is no Teleporter on a local
+   EVM), and `--offline` keeps the run hermetic. The addresses in the transcript
+   are `anvil` account 0's own CREATEs, reproducible run to run and **not** Fuji
+   addresses.
+2. **The transcript is byte-stable**: no gas, no timings, no block numbers, 63
+   rows, `md5 2bf8d16bfa20c1d47fa65690e240f0bd`.
+3. **The numbers answer to the milestones they come from, in both directions.**
+   `m7d_report.sh` reads each upstream value out of its committed transcript,
+   requires it in the declared fixture *and* in the fresh run, and checks that the
+   link the contract computes is the link M7c published — M5's sealed `q99` pair
+   (scaled to the 4 decimals the alert carries), M7b's `f_c` digest and adjudicated
+   `Verdict::Fraud` pair, and M7c's two roots plus `bridge::link_digest`. A
+   failure exits non-zero and **leaves the pinned file untouched**; the guard was
+   exercised negatively during development (M7c's published link perturbed in
+   `src/zk/scripts/m7c_output.txt` → three `FAIL` lines, exit 1, transcript
+   unchanged).
+
+It is **not** a deployment script: it does not read a role from the environment
+(the roles are `anvil` accounts 0-3, because the environment → plan mapping is
+M7a's business, asserted by `deploy_dryrun.sh`), and it refuses C-Chain mainnet
+through the same `DeployCommon` guard as the M7a pair. What it shares with them is
+the transcript discipline: `[m7a]` and `[m7d]` prefixes are separate on purpose, so
+neither harness can absorb the other's lines.
+
+## `DeployStakeVault.s.sol` (milestone M8)
+
+The custody half of §5.12, and the third phase-1-shaped script: it deploys
+`AVIPStakeVault` wired to the token it escrows, the `IFundSink` that receives a
+slash and the fee, and the scale `WAD_PER_UNIT = 10 ** (18 - decimals)`.
+
+| Variable | Absent | Why it is required |
+|----------|--------|--------------------|
+| `TOKEN` | `MissingRole("TOKEN")` | a vault pointed at nobody escrows nothing |
+| `SINK` | `MissingRole("SINK")` | the vault refuses `address(0)` too: the destination is a deployment fact (`D-M8-0`), not a default |
+| `WAD_PER_UNIT` | `MissingRole("WAD_PER_UNIT")` | `decimals()` is never read from the token, so the scale must be told — a wrong one mis-prices every comparison against `stakeOf` |
+
+It logs `[m8]` rather than the shared `[m7a]` (the harness's `_log` is `virtual`
+for exactly this), and it asserts the one state the next script depends on:
+`check.manager=unbound`, because the vault cannot know the manager's address and
+the manager's constructor is what fills that hole. The manager script completes the
+handshake by taking this vault as `CUSTODY`, calling `bindManager()` and then
+verifying `manager() == address(this)` — see the dry-run cases H and I below, which
+are the positive and negative halves of that.
+
+## `M8Report.s.sol` and `m8_report.sh` (milestone M8)
+
+The one documented command of the custody milestone, and the transcript the numbers
+are audited through:
+
+```shell
+bash scripts/m8_report.sh
+```
+
+It builds the whole layer (six-decimal token, burn sink, vault, registry with the
+M4b development key, manager), and then walks a validator through the lifecycle —
+escrow, admission bound to that escrow, the `F_0*` fee, and a slash that leaves
+custody for the sink — printing one `[m8]` line per fact and **one per refusal**
+(six of them: a second `bindManager`, a manager deployed against an already-bound
+custody, an unbacked admission, `debit` from a stranger, the fee from a
+non-admitted payer, and a fee-on-transfer token). Every line is reproducible, and
+the script's own `require`s plus the `status=ok` row are what fail the run when the
+custody stops behaving. The pinned transcript is 41 rows
+(`md5 147064b25244913b7398330f8730baf4`), byte-identical across runs. The stake
+trajectory it replays is **M7d's own**
+(`admit.stake`, `slash.stakeAfter`) and the reason it hands the sink is **the
+provenance id M7d derived**, so the wire milestone and the funds milestone are
+checked against the same numbers. The destination is not hidden: the report wires
+the reference sink and says so.
+
+**Nothing here is a deployment and no key is used**: the token and sink are the test
+doubles, the proof is real (M4b's key and fixture, through the frozen verifier), and
+the addresses are this script's own CREATEs — reproducible run to run and not Fuji
+addresses.
 
 ## Layout (deployment, M7)
 
 | Script | Purpose | Phase | State |
 |--------|---------|-------|-------|
 | `DeployRegistry.s.sol` | Deploy `AVIPRegistry` to a testnet C-Chain | 1 | **dry-run only** (M7a) |
-| `DeployValidatorManager.s.sol` | Deploy `AVIPValidatorManager` | 1 | **dry-run only** (M7a) |
+| `DeployValidatorManager.s.sol` | Deploy `AVIPValidatorManager`, with `CUSTODY` optional | 1 | **dry-run only** (M7a, amended by M8) |
+| `DeployStakeVault.s.sol` | Deploy `AVIPStakeVault`, the custody the manager binds | 1 | **dry-run only** (M8) |
+| `M7dReport.s.sol` | Drive the three §4 message types end to end; pinned by `m7d_report.sh` | 1 + transport | **offline only** (M7d) |
+| `M8Report.s.sol` | Audit the fund lifecycle end to end; pinned by `m8_report.sh` | 1 + custody | **offline only** (M8) |
 | `RegisterSubnetL1.s.sol` | ACP-77 Subnet L1 registration on the P-Chain | 4 | intended |
+
+It is worth saying why M7d adds **no** deployment script for the transport: the
+origins and destinations of a channel are a per-network fact (chain ids and the
+address of a real `TeleporterMessenger`), which belongs with the Fuji deployment
+that A8 still owes, not with a dry run whose every address is a fresh-EVM artefact.
 
 These are the four phases of `avalanche-integration.md` §6:
 registry + validator manager, off-chain prover, RMT detector, Subnet L1.
@@ -133,7 +249,10 @@ cd integrations/avalanche
 forge script scripts/DeployRegistry.s.sol:DeployRegistry   # defaults, no environment needed
 REGISTRY=0x... forge script \
     scripts/DeployValidatorManager.s.sol:DeployValidatorManager
-bash scripts/deploy_dryrun.sh                             # the six cases above
+TOKEN=0x... SINK=0x... WAD_PER_UNIT=1000000000000 forge script \
+    scripts/DeployStakeVault.s.sol:DeployStakeVault        # M8: custody first
+bash scripts/deploy_dryrun.sh                             # the nine cases above
+bash scripts/m8_report.sh                                 # M8's audit, offline
 ```
 
 Against Fuji (M7 — deliberately **not** automated by this milestone, and never
