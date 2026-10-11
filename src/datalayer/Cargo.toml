@@ -1,0 +1,40 @@
+[package]
+name = "avip_datalayer"
+version = "0.1.0"
+edition = "2024"
+description = "AVIP off-chain data layer — M7b (plan §5.9)"
+publish = false
+
+# No dependencies, on purpose: like `src/rmt` (M5) and `src/reputation` (M6), this
+# crate builds with `cargo build --offline` from a clean checkout with no registry
+# at all. Two things it re-implements instead of depending on:
+#
+#   - numpy's PCG64 stream and `Generator.binomial`, because the sealed script
+#     `verification/data-layer/simulate_data_layer_v3.py` is the reference and its
+#     two printed fraud means (49.9 and 50.2) are the *same* stream displaced by
+#     `binomial(n, 1.0)` consuming one double where `binomial(n, 0.0)` consumes
+#     none — a numpy implementation detail no crate can be trusted to share; and
+#
+#   - Keccak-256, because the tensor commitment has to hash exactly the way
+#     `AVIPRegistry` does (that module is M6's, carried over verbatim).
+#
+# `src/binomial.rs` transcribes `numpy/random/src/distributions/distributions.c`
+# v2.2.6 lines 619-820; `bin/m7b-probe` decides whether the transcription holds,
+# and `scripts/m7b_output.txt` records the verdict.
+
+[dependencies]
+
+# The one documented command of plan §5.9: reproduces the sealed audit
+# equilibrium, pins the table to `scripts/m7b_output.txt`, and reports the
+# transcription verdict. Both binaries share `src/fixture.rs`, so what
+# `scripts/m7b_report.sh` prints and what `m7b-probe` prints are checked against
+# the same pinned draws.
+[[bin]]
+name = "m7b-report"
+path = "src/main.rs"
+
+# The reproducibility probe: does the transcribed binomial match numpy's draws,
+# and does it consume the same number of doubles?
+[[bin]]
+name = "m7b-probe"
+path = "src/bin/probe.rs"

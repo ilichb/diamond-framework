@@ -1,0 +1,151 @@
+==============================================================================
+M7b - DATA LAYER: THE AUDIT EQUILIBRIUM AND THE INGESTION FORMULA
+==============================================================================
+
+Stream: numpy.random.default_rng(42), resumed bit for bit by pcg64.rs;
+        restarted per row, exactly as the sealed script does.
+Mode:   exact - every draw is numpy's own, and 3306 of them are compared
+        against numpy's output in section 2. The tables are pinned:
+        regenerate them rather than editing them.
+
+1. THE SEALED AUDIT EQUILIBRIUM, REPRODUCED ROW BY ROW
+------------------------------------------------------------------------------
+   Source: verification/data-layer/simulate_data_layer_v3.py, sealed, never
+   edited by M7b. Model: p_fraud = beta*p_fake = 0.2*0.5 = 0.10;
+   B* = c_audit / p_fraud; n*(B) = B < B* ? 0 : min(floor(B/B*), N_VERIFIERS).
+   Below is the sealed file, line for line: its prose comes from
+   fixtures/sealed_reference.txt and every numeric row is computed here, from
+   the transcribed binomial on a default_rng(42) restarted per row.
+------------------------------------------------------------------------------
+
+==============================================================================
+CAPA DE DATOS v3 — EQUILIBRIO INTERIOR n* = B / B*
+==============================================================================
+
+Parámetros: N_ATTESTATIONS=500, C_AUDIT=0.1
+p_fraud=0.10, B* = C_AUDIT / p_fraud = 1.0000
+N_VERIFIERS cap = 20
+
+     B    n*   Cob  Fraude/ép   Detec/ép   Tasa det  Profit att  Profit ver  Integridad
+------------------------------------------------------------------------------
+  0.25     0  0.00       49.9        0.0      0.000       49.91        0.00      0.9002
+  0.50     0  0.00       49.9        0.0      0.000       49.91        0.00      0.9002
+  0.75     0  0.00       49.9        0.0      0.000       49.91        0.00      0.9002
+  1.00     1  1.00       50.2       50.2      1.000     -502.00        0.20      1.0000
+  1.50     1  1.00       50.2       50.2      1.000     -502.00       25.30      1.0000
+  2.00     2  1.00       50.2       50.2      1.000     -502.00        0.20      1.0000
+  3.00     3  1.00       50.2       50.2      1.000     -502.00        0.20      1.0000
+  5.00     5  1.00       50.2       50.2      1.000     -502.00        0.20      1.0000
+ 10.00    10  1.00       50.2       50.2      1.000     -502.00        0.20      1.0000
+ 20.00    20  1.00       50.2       50.2      1.000     -502.00        0.20      1.0000
+ 25.00    20  1.00       50.2       50.2      1.000     -502.00       12.75      1.0000
+
+==============================================================================
+NOTAS
+==============================================================================
+
+1. El equilibrio n* = B / B* es interior para B ∈ (B*, 20·B*].
+2. Para B < B*: sin auditores, sin detección.
+3. Para B ≥ B*: al menos un auditor. Cobertura = 100%.
+4. El profit del verificador es cercano a cero en equilibrio.
+   Valores positivos residuales son artefactos de redondeo en n*.
+5. La integridad es 1.0 siempre que n ≥ 1.
+
+==============================================================================
+------------------------------------------------------------------------------
+   every line of the sealed file, byte for byte ....... PASS (29 lines)
+   11 rows x 500 epochs; the stream restarts per row, as the script does
+   p_fraud = 0.10, B* = 1.0000, N_ATTESTATIONS = 500, N_VERIFIERS = 20
+   n*(0.25) = 0, n*(B*) = 1, n*(1.5) = 1, n*(25) = 20 ....... PASS
+   floor, not round: the script says so, and n*(1.5) = 1 above is that
+   sentence as a number. The cap shows up twice: n*(20) = n*(25) = 20, and
+   the verifier's profit rises again at B = 25 while the cost stays pinned.
+   verdict = PASS
+
+2. THE BINOMIAL TRANSCRIPTION (numpy 2.2.6 random_binomial)
+------------------------------------------------------------------------------
+   fixture: fixtures/numpy_binomial_seed42.txt, numpy's own draws, ten groups
+   covering BTPE, inversion and both mirrored p > 0.5 branches.
+   groups matched .................... 10/10
+   draws compared .................... 3306
+   stream consumption, measured against advance(k), not assumed:
+     binomial(50, 0.0)    -> 0 double(s)
+     binomial(50, 1.0)    -> 1 double(s)
+     binomial(100, 0.5)   -> 2 double(s)
+     two cached draws     -> 4 double(s)
+   Why two rows of section 1 print different fraud means for one model:
+   with coverage = 0.0 the detection draw binomial(n_frauds, 0.0) returns 0
+   before consuming a double, so the fraud draw is the first draw of every
+   epoch; with coverage = 1.0 the same call consumes one (p = 1 lands in
+   inversion), so the fraud draw is every second. One PCG64 stream from seed
+   42, displaced by that single double: 49.914 and 50.2 are the same model
+   read at two offsets, not two models. n*p = 50 > 30, so both draws go
+   through BTPE.
+   declared deviation: Step30/Step40 cast a double that can be far outside
+   int64 range - undefined in C, saturating in Rust. Both reject and redraw,
+   so the draws agree; bin/m7b-probe prints the same sentence.
+   verdict = PASS
+
+3. THE INGESTION FORMULA f_c (eq:ingestion) AND THE FRAUD PROOF
+------------------------------------------------------------------------------
+   The paper fixes f_c's properties, not its formula: public, not changeable
+   by the validator, fixed before deployment, identical for every validator on
+   chain c, values in [0,1]. M7 does not invent the formula - the same line
+   §5.7 draws for the T -> W map. What the crate carries is the interface:
+   Ingestion { chain, parameters_digest, score -> Score }, with Score a WAD
+   integer in [0, 1e18] by construction, never a float.
+   one declared instance, and NOT the paper's f_c:
+     chain c ......................... 43113
+     weights (att, gov, liq) ......... 3 / 5 / 2
+     scale ........................... 1000
+     genesis digest .................. 0x2fcd03b859e0519cc0c443aa99b879e0f15bb0312047cec8d7541de55acbba0a
+     score(no events) ................ 0 WAD
+     score((40, 7, 3)) .......... 138673557278208440 WAD = 0.138674
+   the fraud proof, on an epoch committed at f_c's own value:
+     the committed value is f_c(events) .............. Consistent
+     re-hashed at value + 1 (root 0x80328681..) ...... Fraud: published 138673557278208441, f_c 138673557278208440
+     the honest witness against the lying root ....... Unproven (never a slash)
+     one value, one leaf: a second opening of the ... same position does not verify
+   The paper phrases the proof as two inclusion proofs against one root with
+   contradictory values. Against the tensor's own Merkle root that pair is
+   unsatisfiable - a leaf has one value - and that unsatisfiability *is* the
+   binding property. The misconduct that can exist is the value above: a
+   published value that is not f_c(events), which is why f_c has to be public,
+   deterministic and frozen before deployment for the adjudicator to tell the
+   two apart.
+   verdict = PASS
+
+4. PROVENANCE, MODE, AND WHAT THIS TABLE IS NOT
+------------------------------------------------------------------------------
+   sealed inputs, read and never edited by M7b:
+     verification/data-layer/simulate_data_layer_v3.py
+     verification/data-layer/results/simulate_data_layer_v3_output.txt
+   written for this milestone:
+     binomial.rs   - numpy's binomial, transcribed and checked in section 2
+   resumed unchanged from earlier milestones:
+     pcg64.rs      - M5's generator, its own fixture, no re-derivation
+     commitment.rs - M6's epoch -> root, carried over unchanged so the digest
+                     the registry verifies has one implementation
+   mode ......... exact; no draw here is approximated, and none is sampled
+                  twice
+   deliberately not done here:
+     - no f_c formula is asserted: section 3's instance is declared, and
+       which f_c is in force is fixed at genesis;
+     - the T -> W collaboration map is open (plan §10 D-7), so nothing here
+       derives a graph from the tensor;
+     - no transport: the root is not sent anywhere, no Teleporter message is
+       built, and no source-chain quorum is read;
+     - no Pedersen <-> Merkle bridge: that is M7c, and until it exists the
+       norm proof and the published root are not tied together in code;
+     - no funds: B and S_slash are model parameters, and the escrow and the
+       burn are M8's;
+     - no security, liveness or economic claim about a deployed registry:
+       this file reproduces a model, it is not evidence about a chain.
+   the checks that keep this honest, outside the crate:
+     scripts/m7b_report.sh - the table against the sealed file in both
+       directions, plus every 4-decimal number of the sealed file surviving
+       somewhere in the reproduction
+
+==============================================================================
+OVERALL: PASS
+==============================================================================
