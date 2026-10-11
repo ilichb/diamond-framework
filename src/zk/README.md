@@ -1,7 +1,8 @@
-# avip_zk_prover — M4a, M4b and M4c measurements
+# avip_zk_prover — M4a, M4b, M4c and the M7c bridge
 
-Off-chain side of M4 (plan §5.5). Nothing here is a production circuit: M4 proves
-the pipeline and its cost, not a deployment (§5.5.6).
+Off-chain side of M4 (plan §5.5) plus M7c's bridge between the prover's root and
+the registry's (§5.10). Nothing here is a production circuit: M4 proves the
+pipeline and its cost, not a deployment (§5.5.6).
 
 ## Run
 
@@ -9,6 +10,7 @@ the pipeline and its cost, not a deployment (§5.5.6).
 src/zk/scripts/m4a_report.sh                             # every M4a measurement -> scripts/m4a_output.txt
 src/zk/scripts/m4b_report.sh                             # both variants of §5.5.2 end to end -> scripts/m4b_output.txt
 src/zk/scripts/m4b_fixture.sh                            # emit the Solidity fixture the contracts verify
+src/zk/scripts/m7c_report.sh                             # M7c: the statement's root tied to the registry's -> scripts/m7c_output.txt
 cargo test                                              # fast tests; the heavy proof is #[ignore]d
 cargo test --release -- --ignored                       # the 32,768-bit aggregated range proof
 cargo run --release --bin m4a-report -- --write-digest  # refresh fixtures/tensor_digest.txt
@@ -137,10 +139,58 @@ and `cargo fmt --check` clean; both scripts re-run → their committed outputs
 (`scripts/m4a_output.txt`, `scripts/m4b_output.txt`) byte identical;
 `bash verification/audit-gate.sh` → *PASS=11, FAIL=0*.
 
+## M7c — the Pedersen/Poseidon ↔ keccak Merkle bridge (plan §5.4 item 4 (c), §5.10)
+
+M4's statement carries `root = Poseidon(T)`; `AVIPRegistry` verifies inclusion
+against `keccak256` leaves. Nothing tied the two readings of the same tensor
+together, which is gap **A7**. Option (c) — the one §5.5.7 selects — is a
+*recomputable link*, not a proof:
+
+```text
+link = keccak256(abi.encodePacked(bytes32 merkleRoot, uint256 statementRoot, uint256 epoch))
+```
+
+Three fixed-width words, so the packed encoding is unambiguous — the property
+`abi.encodePacked` does *not* have in general and does have for these types.
+`src/bridge.rs` builds the tree by folding `avip_datalayer::commitment`'s own
+`Epoch` through its `merkle_root`, so `verifyEntry`'s convention cannot drift from
+the registry's; it takes the statement root from `native::poseidon_commitment`,
+the same function that fills `groth16::circuit_for`'s public input; and it takes
+the leaf key `i` from the position of `T[i]` in the 20-byte `validator` slot. No
+part of the registry's fold or of the commitment is restated. `Bridge::open`
+produces the tensor's claim; `verify(entries, claim)` recomputes everything from
+the tensor alone and returns `Bound` or, first failure first,
+`Unbound(StatementRoot)` / `Unbound(Link)`.
+
+What it does **not** do, and why that is the point: keccak is not proved inside
+the circuit — the proof certifies the norm, the tie is off-chain and recomputable
+by any peer; a verifier holding only the two roots learns nothing, because the
+link needs the tensor (side-by-side roots would be an `ic.length` change §5.5.7
+does not decide); and for V2′ the statement's `uint256` is the commitment's
+**x-coordinate**, so a full point would need a second word — §5.5.10's residual is
+a measured row of the table, not a footnote. The `T → W` identity stays unclaimed
+(§10 D-7).
+
+`scripts/m7c_report.sh` is the one command and `scripts/m7c_output.txt` the pinned
+table: byte-stable across runs, and guarded in both directions against
+`integrations/avalanche/test/fixtures/M4bGroth16Fixtures.sol` — every statement
+value the contract test installs must appear in the fresh table, and the pinned
+link must be the link this revision computes. Failure leaves the pinned file
+untouched. `cargo test` closes the other direction: every number in the committed
+table is recomputed in `tests/m7c_bridge.rs`, so library and artefact cannot drift
+apart silently.
+
+Validated: `cargo test` → *42 passed, 0 failed, 1 ignored* (9 of them `bridge.rs`'s
+own and 4 in `tests/m7c_bridge.rs`); `cargo clippy --all-targets -- -D warnings`
+and `cargo fmt --check` clean; `scripts/m7c_report.sh` twice → `m7c_output.txt`
+byte identical, and its `11/11` internal checks hold.
+
 ## Remaining for M4
 
-The paper-literal recursive construction (§5.5.7), the Pedersen ↔ Merkle bridge
-(M7) and the ceremony (§11). V2′ is measured, and `D-M4-0` is closed as **V3**. M4b
-did not need V2′ — V3 is the circuit whose key it derived — and the pipeline stayed
-circuit-agnostic, so the variant switch (`groth16::Variant`, `variant_circuit_for`)
-is what M4c added around it rather than a second pipeline.
+The paper-literal recursive construction (§5.5.7) and the ceremony (§11). V2′ is
+measured, and `D-M4-0` is closed as **V3**. M4b did not need V2′ — V3 is the
+circuit whose key it derived — and the pipeline stayed circuit-agnostic, so the
+variant switch (`groth16::Variant`, `variant_circuit_for`) is what M4c added around
+it rather than a second pipeline. The *Pedersen ↔ Merkle bridge* that M4 left open
+is delivered by M7c (§5.10), in this crate because it needs the prover's own
+commitments.

@@ -1,0 +1,37 @@
+M7c — the Pedersen/Poseidon ↔ keccak Merkle bridge (plan §5.4 item 4 (c), §5.5.7; delivered in §5.10)
+
+[1] the committed tensor, in both readings
+  entries (C·D·H)                             : 500
+  tensor digest (keccak256, 8-byte LE words)  : 0xc2309377a00b109a6c44d83a5cc759108977ffe207fba6f83215a9cdf77d9aa9
+  Merkle root (AVIPRegistry convention)       : 0x187d08e633fb4f3895633e6d3be1075f9603923adb6d70c09f27b458c3917537
+  statement root (V3, Poseidon, uint256)      : 14881564148789680950073164612164838307833922018127128489011700125541095929892
+  statement root (hex)                        : 0x20e6aab4b9b3e21de8ba1d7f765f20508bce20314533dc5cca56f93ae81f7824
+  epoch                                       : 0
+  certifiedNorm (WAD)                         : 12793810215743475835
+  link digest                                 : 0xc4d35b0ac87daa8fe8647a6d2372e6dabe3e1c505e444455c20f9c8ff9073ba7
+
+[2] the link is recomputed from the tensor, not asserted
+  leaf key of entry 0 / 499                   : 0x0000000000000000000000000000000000000000000000000000000000000000 / 0x00000000000000000000000000000000000000000000000000000000000001f3
+  statement root == Poseidon(tensor)          : yes — native::poseidon_commitment with the instantiated parameters
+  statement root == variant_root(V3)          : yes — the value groth16::circuit_for fills as public input 0
+  V3 and V2′ disagree (different commitments) : yes — V2′ Pedersen x = 0x201d919e090cd35d5952c149b5a0c105dcd06e345c5f687c0afccc1d291897b7
+  verifyEntry over entry 0                    : yes — M1's own contract step, 9 siblings
+  verifyEntry over entry 499                  : yes — M1's own contract step, 7 siblings
+  epoch digest (M1's commitment side)         : 0x937f13eec03e6666222f6d0ad1ddc4747223c960599001f097941125d913aae5
+
+[3] what the link rejects (every row recomputed from the tensor)
+  the honest claim                            : Bound
+  T[0] ^ 1, both roots move                   : merkle 0x187d08e633fb4f3895633e6d3be1075f9603923adb6d70c09f27b458c3917537 → 0xd14e22f6415c60e48ba924e69bd93c0151816828b41018b9634c4f826b64611f
+  that claim, over the changed tensor         : Unbound(statement root is not this tensor's digest)
+  entries 0 and 1 swapped (positional)        : Unbound(statement root is not this tensor's digest)
+  epoch 0 → 1, same roots and link            : Unbound(link does not tie these roots at this epoch)
+  a link built over another tensor            : Unbound(link does not tie these roots at this epoch)
+
+[4] what the bridge does not do (option (c), §5.5.7)
+  keccak inside the circuit                   : no — the tie is off-chain and recomputable; the proof certifies the norm
+  a verifier with only the two roots          : nothing — the link needs the tensor; side-by-side roots are an ic.length change §5.5.7 does not decide
+  V2′: x binds the whole point                : no — a full point needs a second word (§5.5.10); the link takes whatever uint256 the statement carries
+  position → validator (T → W)                : not claimed — §10 keeps D-7 open
+
+[5] verdict
+  bridge checks                               : 11/11 hold

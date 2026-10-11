@@ -38,6 +38,15 @@ ark-groth16 = { version = "=0.6.0", default-features = false, features = ["std"]
 # multiscalar multiplication that makes a fixed-base Pedersen commitment cheap).
 ark-ed-on-bn254 = { version = "=0.6.0", default-features = false, features = ["r1cs", "std"] }
 
+# M7c (plan 5.4 item 4 option (c)): the keccak256 Merkle convention of M1/M6,
+# reused instead of re-implemented. `bridge.rs` has to fold *the* tree that
+# `AVIPRegistry.verifyEntry` verifies, and `src/datalayer` is the crate where
+# that tree (and its keccak) is pinned against `cast keccak`. Depending on it is
+# what keeps one implementation of the convention in the repository instead of
+# two that can drift. That crate has **no dependencies**, so this adds a path
+# and not a registry entry: `cargo build --offline` is unaffected.
+avip_datalayer = { path = "../datalayer" }
+
 # Off-chain aggregated range proof (plan 5.5.3): the width is k = 60 bits per
 # entry, N·k = 30,000 bits, and the paper's 0.72 KB is the estimate M4a measures.
 bulletproofs = { version = "=5.0.0", default-features = false, features = ["std"] }
@@ -64,6 +73,14 @@ path = "src/main.rs"
 [[bin]]
 name = "m4b-report"
 path = "src/m4b.rs"
+
+# M7c driver (plan 5.5.7, option (c)): the bridge from the root the statement
+# carries to the keccak256 Merkle root the registry stores. Run through
+# `scripts/m7c_report.sh`, which pins `scripts/m7c_output.txt` and checks the
+# bridge against the emitted Solidity fixture.
+[[bin]]
+name = "m7c-report"
+path = "src/m7c.rs"
 
 # The Solidity fixture emitter: writes the real key and the real proof into
 # `integrations/avalanche/test/fixtures/M4bGroth16Fixtures.sol`. Run through
