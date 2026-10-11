@@ -369,7 +369,58 @@ No guard executes this recipe. What G11 verifies is that the anchor *re-derives*
 from the current tree, which is exactly what fails if the order above breaks.
 
 
-## 6. First message for the new session
+## 6. The delivery arc, and one convention change
+
+Two records the earlier sections do not carry. Both were added after
+the audit/paper workstream closed.
+
+**The M1–M8 delivery workstream.** The AVIP implementation milestones
+M1 through M8 are registered in
+`docs/architecture/implementation-plan.md` §5 ("Module map and
+milestones"), one subsection per milestone, each titled "as delivered"
+and each carrying the evidence that closed it; the architecture record
+is `docs/architecture/avalanche-integration.md`. This handoff covers
+the audit and paper chain only — nothing in sections 2 to 5 is about
+them — so a session that reads only this file will not see them at all.
+One chain is shared: the OpenTimestamps receipts over
+`anchor_root.sha256` live in `docs/audit/anchor-receipts.md` (R-1.1 …
+R-1.6 over the D1 root, R-2 over the root re-derived for P6a), outside
+the root on purpose — a receipt that sealed the root would be circular
+— and the proof itself is `verification/anchor_root.sha256.ots`.
+
+**The convention change this file did not register.** The statements
+that `docs/audit/session-report.md` is untracked *by convention*
+(`eje-i-claims-report.md`, `eje-ii-consistency-report.md`,
+`eje-iv-reproduction-report.md`, `eje-vi-session-context.md`,
+`bloque-b-report.md`, `post-closure-audit.md`, and the report's own
+closing list) were true when written: the latest of them,
+`post-closure-audit.md`, audits `794ba7c` (2026-10-08). The file was
+promoted to tracked by `b924b36` (M3) and is tracked since. Those
+sentences are not corrected. Several of them are `git status` output
+quoted verbatim (`?? docs/audit/session-report.md`), and the rule that
+governs the dated acta applies — its own closing note in
+`post-closure-audit.md` §6: they are actas fechadas with the HEAD of
+their day, *con cifras caducas por diseño*. A dated actum is not
+corrected, it is dated. The promotion is recorded here instead, which
+is the third option `post-closure-audit.md` §6 weighed and did not
+take: it neither rewrites a pushed commit (`git rm --cached` plus a
+`.gitignore` entry) nor leaves a live claim false.
+
+    git log --oneline --diff-filter=A -- docs/audit/session-report.md
+    git log -1 --oneline -- docs/audit/session-report.md
+
+**A clean tree is not a published tree.** `git status --short` empty
+says the working tree matches `HEAD`; it says nothing about
+`origin/main`. On 2026-10-11 the two disagreed by 23 commits: the whole
+M1–M8 arc plus the P6a re-anchor existed on one disk under a clean
+tree, while the remote stood at `810ea37`. Volatile state stays out of
+this file; the check belongs to the closing routine, beside the tree
+check.
+
+    git rev-list --count origin/main..HEAD
+    git ls-remote --heads origin        # the server, not the local ref
+
+## 7. First message for the new session
 
 Volatile values. Re-derive before trusting any of them.
 
