@@ -114,6 +114,11 @@ reopens the content audit (`claim-registry.csv` and `numerical-verification.md`
 are themselves anchor-sealed). All C-phase edits are batched into a single
 re-anchoring. See §9.
 
+**Status.** C1–C4 were closed in P6b and the PDF-metadata item in P7a, each with
+its own re-anchor (§12). The two batches differ in cost: P6b moved 156 lines and
+had to re-derive every sealed citation, while P7a wrote into a line that already
+existed and moved **one** pair of the root's ten (§R-4.1).
+
 ---
 
 ## 3. The anchor boundary (read before writing any file)
@@ -2394,16 +2399,23 @@ stable — the same reason the protection phase is last.
 | D-1 | Language of `src/` | Rust (as the architecture's prover) vs Python | **Rust** — the architecture names a Rust prover and `cargo` is available; Python is already the language of `verification/`, which stays as-is |
 | D-2 | `AVIP` prefix | Expand it (`Andromeda Validator Incentive Protocol…`) vs keep the acronym | Still open. M1 landed with the architecture's names, so the decision no longer blocks M1; it now only affects how the prefix is documented |
 | D-3 | Foundry project layout | New project at `integrations/avalanche/` (current) vs moving the benchmarks inside it | **Keep current**: the benchmarks are cited by the paper and by C-20; moving them would invalidate their recorded paths |
-| D-4 | Code license vs paper license | MIT for code (already) and separate license for the paper | Decide in the protection phase |
+| D-4 | Code license vs paper license | MIT for code (already) and separate license for the paper | **Closed in P7a**: the repository is MIT (`LICENSE`, the MIT text untouched, with a scope note above it naming the one exception) and the paper is **CC BY 4.0** (`docs/paper/LICENSE`, the verbatim legal code). `CITATION.cff` names MIT at the root — the software's licence — and carries `preferred-citation` (`unpublished`, `in-preparation`) with `CC-BY-4.0` for the paper, because CFF 1.2.0 documents its licence *array* as **OR**, not AND: a list would have offered the manuscript under MIT |
 | D-5 | solc drift | Paper says 0.8.33, badge said 0.8.24, machine has 0.8.33 | **Closed in P2**: badge aligned to 0.8.33, both Foundry projects pin 0.8.33; the one 0.8.24 artefact is documented, not edited |
 | D-6 | M4 primitive (`D-M4-0`) | V1 paper-literal (Ristretto + Bulletproofs + recursion) vs V2 native Pedersen in-circuit vs V3 Poseidon in-circuit | **Closed in M4c (§5.5.10) as V3**: V1 leaves the implementation path (§5.5.5 — the `yoloproofs` gate), V2 as *written* is blocked at the type level, and its native repair **V2′** (Pedersen over Baby Jubjub) was built and measured against V3 through the same statement wrapper — 153,688 vs 94,438 constraints (+59,250, +62.7%, the commitment's 240-per-entry against Poseidon's ≈121), two curves against one, prove 6.3 s against 3.9–4.1 s (stderr, load-dependent; the pinned files carry only counts, sizes and digests). V3 is the variant M4b already installed, so no artefact changes |
 | D-7 | The tensor → collaboration-graph map (`T → W`) | (a) invent a projection from the reputation tensor's entries onto validator pairs; (b) leave `W` as an input of the detector, with no derivation from `T` in the repository; (c) calibrate on a real collaboration graph once one exists | **Open, and left open by M5 (§5.6)**: `eq:collab` defines `W` as interactions between validators and `eq:tensor` defines `T` as one validator's scores, and §collusion never relates them, so any projection would be an invented constant-free but claim-bearing choice. M5's `fixture.rs` therefore only *binds* the detector's synthetic input to M4's committed digest (a wiring, printed as such in the pinned table), and the detector's contract is `detect(&Graph, &Calibration)`. Closing this needs real interaction data, which §11 lists as unavailable |
 
 ## 11. Out of scope here
 
-- **Protection of the document**: license, PDF metadata, OpenTimestamps
-  renewal, Zenodo deposit. Deliberately last.
-- **arXiv submission.** Deliberately last.
+- **Protection of the document**: done in P7a for the licence (D-4), the PDF
+  metadata — `pdftitle`/`pdfauthor`/`pdfsubject`/`pdfkeywords`, which the PDF did
+  not have (`pdfinfo main.pdf | grep -i title` printed nothing) — and the re-seal
+  (receipt **R-4**). What remains is the **OpenTimestamps promotion of R-4**,
+  which needs a few hours for a calendar to aggregate, and the **Zenodo deposit**,
+  which needs an account; `.zenodo.json` already carries the metadata.
+- **arXiv submission.** Deliberately last. The bundle is **one file**: no
+  `\includegraphics` and an inline `thebibliography`, so `main.tex` is the whole
+  submission and the packages it loads are all in TeX Live's
+  base/recommended/extra collections.
 - **External security audit.** Not started; required before any mainnet claim.
 - **Teleporter latency benchmark** (A11, half): needs a live subnet.
 - **Real reputation data calibration** (README "Not a goal"): no data source.
@@ -2419,9 +2431,13 @@ stable — the same reason the protection phase is last.
 | **P5 (done — M7, M8)** | M7 (data layer, deploy scripts, AWM) ✅ + M8 (treasury/custody) ✅ (§5.8–§5.12) | none |
 | **P6a (done — `094c41b`)** | The five data-layer amendments of §5.9/§5.12: §7.3's fraud-proof mechanism with the bounty/slash status, §7.3's unstated pool/coverage conventions plus the §10.2 free-rider sentence, the freshness instance with §7.7's `Verified` labels, `eq:revenue`'s missing `N_ATT` factor, and the §7.5/§7.7 non-executable deterrence — twelve lines 1:1, plus §7.4's `We verify` → `We evaluate` (`main.tex:1002`) | **re-anchored** `2026-10-11T21:48:40Z`, root `217d6d51…` (G10/G11 green) |
 | **P6b (done)** | C-gaps: paper apparatus (C1–C4) — `center` → `table[H]` with `\caption`, **1410 → 1566 lines** — plus the two amendments queued above, both applied (§5.12): §10.4's `-502` bounded by §7.5 (`main.tex:1266`) and `\|T\|_F` where the norm is meant (`main.tex:842`, `:882`). It carried the citation drift P6a did not introduce — `F-019`'s `:1215` (the sentence it cites lives at `:1183` on `aaaf460`, `:1268` now) and `C-14`'s `§8.7` pointer; the numbers this row used to quote (`:1297`, `C-48`) were mis-derived. Rather than correcting them, all cited tokens were **re-derived** before the root was regenerated: 316 tokens, 313 remapped, 23 files, 396 citations checked, **0 section changes** (`anchor-receipts.md` §R-3.1) | **re-anchored** `2026-10-12T00:54:19Z`, root `79ac6783…`, receipt **R-3** (G1..G11 PASS=11 FAIL=0 SKIP=0) |
-| P7 | Protection + arXiv | **re-anchor** if `main.tex` changes |
+| **P7a (done)** | Protection (D-4 licences: MIT for the repository, **CC BY 4.0** for the paper), the PDF metadata the PDF did not have, `.zenodo.json`, a frozen 37-page snapshot | **re-anchored** `2026-10-12T03:28:48Z`, root `5d6002ba…`, receipt **R-4** (pending); of the ten pairs **one** moved — the paper's |
+| P7b | The Zenodo deposit and the arXiv submission — both need an account, not code | **re-anchor** only if `main.tex` changes |
 
-**Next step: P7, the protection and arXiv pass** (§2.4), and — whenever a funded key and an endpoint
+**Next step: P7b** — the Zenodo deposit (`.zenodo.json` is written, so the upload
+is metadata and not a retyping) and the arXiv submission (`main.tex` alone), plus
+the promotion of receipt **R-4** (`ots upgrade`) once a calendar has aggregated —
+and, whenever a funded key and an endpoint
 are available — the Fuji deployment the M7a and M8 scripts are waiting for.
 **M7 is delivered**:
 M7b (§5.9) is the ingestion formula `f_c` as an interface, the fraud proof and its

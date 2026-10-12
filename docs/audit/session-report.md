@@ -476,3 +476,48 @@ parte del árbol de la auditoría.
 > §0 de este informe data de la sesión 3; los valores vivos se re-derivan con los
 > comandos de arriba, no se copian.
 
+---
+
+## 16. Sesión 8 — lote P7a: protección del documento y re-anclaje (2026-10-12)
+
+**Estado: P7a cerrado. P7b (depósito en Zenodo y envío a arXiv) queda fuera, y no
+es código.** Decisión **D-4** cerrada: el repositorio es MIT (`LICENSE`, el texto
+MIT intacto con una nota de alcance encima que nombra la única excepción) y el
+documento es **CC BY 4.0** (`docs/paper/LICENSE`, el legalcode **verbatim**,
+descargado y no parafraseado: URL, bytes y sha256 junto al fichero, en
+`docs/paper/README.md`). `CITATION.cff` no usa la lista de licencias porque el
+schema de CFF 1.2.0 documenta el array como **OR, no AND** —una lista habría
+ofrecido el manuscrito bajo MIT—: nombra MIT en la raíz y lleva
+`preferred-citation` (`unpublished`, `in-preparation`, `CC-BY-4.0`), validado
+contra el schema oficial con `jsonschema` en un venv desechable. `.zenodo.json`
+deja el depósito a un clic.
+
+El PDF **no tenía metadatos**: `pdfinfo` imprimía `Title:` vacío, porque hyperref
+no deriva `pdftitle`/`pdfauthor` de `\title`/`\author` salvo con `pdfusetitle`.
+Se añadieron las cuatro claves **en la línea 19 ya existente** (`\hypersetup{…}`),
+así que `main.tex` sigue con **1566 líneas** y el re-anclaje costó **un par de
+diez** —el del paper—: ninguno de los 120 tokens `main.tex:NNNN` de los tres
+inputs sellados necesitó remap, y la cita sellada más baja es `main.tex:35`, lejos
+de la línea tocada. Snapshot nuevo congelado:
+`releases/diamond-framework-2026-10-11.pdf` (37 páginas, 545018 B, `13e85c75…`),
+que pasa a ser el artefacto de registro.
+
+    bash verification/audit-gate.sh                        # PASS=11 FAIL=0 SKIP=0
+    bash verification/fase0_anchor.sh --check              # exit 0; 10 pares idénticos
+    sha256sum verification/anchor_root.sha256              # 5d6002ba…
+    sha256sum verification/anchor_root.sha256.ots          # f6209374… (910 B, pendiente)
+    ots info verification/anchor_root.sha256.ots           # compromete 5d6002ba…; 4 Pending, 0 Bitcoin
+    git diff --stat -- verification/anchor_root.sha256     # 1 línea, y ninguna de las 9 otras
+    md5sum docs/paper/main.tex docs/audit/content-audit-pending.md
+
+**Reglas que este lote deja escritas** (handoff §4, «Consolidated during session
+8»): una edición en el sitio cuesta una línea y una que mueve líneas cuesta el
+mapa entero; una licencia se descarga, no se parafrasea; CFF no sabe declarar
+licencias distintas por artefacto —su lista es OR—; y el PDF solo lleva metadatos
+si se piden.
+
+**Pendiente, y no es código:** el depósito en Zenodo (`.zenodo.json` listo), el
+envío a arXiv (bundle de un solo fichero, `main.tex`), la promoción del recibo
+R-4 con `ots upgrade` cuando un calendario agregue, la copia out-of-band del
+`.ots` (§R-1.3), y el despliegue en Fuji que esperan los scripts de M7a/M8.
+

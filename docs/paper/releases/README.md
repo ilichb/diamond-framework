@@ -6,6 +6,8 @@ its bytes, once published, never change.
 
 ## Files
 
+- `diamond-framework-2026-10-11.pdf` — 37 pages, 545018 bytes.
+  `sha256 13e85c757e2b6efbb717325e2a4e75062f5ad484e426b1c160e24ae7bfa5b56a`
 - `diamond-framework-2026-10-08.pdf` — 34 pages, 530095 bytes.
   `sha256 4a442fe42d2183d5f486bbd359804f24228f71e0b267e38cc98548d994b32be7`
 - `diamond-framework-2026-10-03.pdf` — 31 pages, 624450 bytes.
@@ -27,13 +29,40 @@ derivable, not memorized:
 - These are the only PDFs git tracks: `.gitignore` carries `*.pdf` with
   the single negation `!docs/paper/releases/*.pdf`.
 
-## Provenance of the current snapshot
+## Provenance of the 2026-10-11 snapshot (the current one)
+
+`diamond-framework-2026-10-11.pdf` is frozen from the `main.tex` of the P7a
+batch: the revision the anchor root `5d6002ba…` seals, whose receipt is R-4
+(`../audit/anchor-receipts.md`). Three `pdflatex` passes over that source produce
+it: 37 pages, 545018 bytes, 0 errors, 0 overfull or underfull boxes.
+
+    git rev-parse --short HEAD                             # the commit that added this file
+    sha256sum docs/paper/main.tex                          # fb5cae97…8bde8, entry #1 of the root
+    head -1 verification/anchor_root.sha256                # the same hash
+    sha256sum releases/diamond-framework-2026-10-11.pdf    # 13e85c75…a56a
+    git hash-object releases/diamond-framework-2026-10-11.pdf
+
+Its embedded metadata, read from the file rather than remembered:
+
+    Title:        Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation
+    Author:       Ilich Blanco
+    Subject:      Reputation-weighted validator selection, cryptoeconomics, zero-knowledge proofs
+    Keywords:     proof-of-stake, validator selection, reputation, zero-knowledge proofs, cryptoeconomics, Avalanche, OpenTimestamps
+    Producer:     pdfTeX-1.40.22
+    CreationDate: Sun Oct 11 23:28:33 2026 -04   (ModDate matches)
+
+The filename date is the local day (UTC-04) the file was frozen into this
+repository; the UTC anchor seal written in the same session reads
+`2026-10-12T03:28:48Z`. This snapshot supersedes
+`diamond-framework-2026-10-08.pdf`, and it is the file a deposit uploads.
+
+## Provenance of the 2026-10-08 snapshot
 
 `diamond-framework-2026-10-08.pdf` is frozen from the `main.tex` of
 `ab485c1`, the commit that recorded the out-of-band e-mail copy (R-1.3)
-and the observed Bitcoin aggregation (R-1.5). That revision is the one
-the paper is audited at, and its sha256 is the first entry of the anchor
-root:
+and the observed Bitcoin aggregation (R-1.5). That revision was the one
+the paper was audited at when this file was frozen, and its sha256 was
+then the first entry of the anchor root:
 
     git rev-parse --short HEAD                     # ab485c1 when this file was frozen
     sha256sum docs/paper/main.tex                  # 32c2dff4…a0753
@@ -168,6 +197,28 @@ the public artifact through a new dated snapshot, never by re-export.
 the scalable T1/TS1 Type 1 Computer Modern (EC/TC) faces that
 `\usepackage[T1]{fontenc}` expects (CTAN `/fonts/ps-type1/cm-super`;
 shipped in TeX Live as `cm-super`).
+
+## Deposit
+
+Two destinations are pending, and neither needs a code change (plan §11, P7b).
+The licence both carry is the one the paper already has: **CC BY 4.0**
+(`../LICENSE`, the same legal code the paper's `main.tex` sits next to).
+
+**Zenodo.** The metadata is written, in `.zenodo.json` at the repository root
+(title, creators, `cc-by-4.0`, keywords, description), so the deposit is the
+frozen PDF plus that file: Zenodo derives the publication date from the deposit
+and mints the DOI. The DOI goes into `CITATION.cff` (`identifiers`) and into
+`.zenodo.json` (`related_identifiers`) once it exists — until then neither file
+asserts one.
+
+**arXiv.** The bundle is `main.tex` alone: it loads no `\includegraphics` and its
+bibliography is an inline `thebibliography`, so there is no `.bbl` and no figure
+directory to send, and every package it loads comes from TeX Live's
+base/recommended/extra collections.
+
+Caveat of provenance: `docs/paper/LICENSE` and `.zenodo.json` are as old as P7a
+and are not in the sealed ten, so a later edit to either one moves no anchor —
+but it does move what a deposit claims.
 
 ## Verifying
 

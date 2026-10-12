@@ -42,14 +42,26 @@ The page count follows the content, so it is read from the build:
 
     cd docs/paper && pdflatex -interaction=nonstopmode -halt-on-error main.tex && pdfinfo main.pdf | grep Pages
 
-At `ab485c1` that prints `Pages: 34`. Release snapshots are archived under
-`releases/`; the latest is `releases/diamond-framework-2026-10-08.pdf`
-(34 pages, 530095 bytes, SHA-256 `4a442fe4…be7`), frozen from the source
-of `ab485c1`. The 2026-10-03 snapshot stays as published and is no longer
+The current source is 37 pages (`Pages: 37`, three `pdflatex` passes, 0 errors).
+Release snapshots are archived under
+`releases/`; the latest is `releases/diamond-framework-2026-10-11.pdf`
+(37 pages, 545018 bytes, SHA-256 `13e85c75…a56a`), frozen from the P7a source —
+the very source whose `main.tex` the anchor root seals. The earlier snapshots stay
+as published and are no longer
 the artifact of record. Snapshots are frozen documents: they are not
 re-exported when the source advances, so a rebuild of the current source
 is not byte-comparable to them — see `releases/README.md`. Only PDFs
 under `releases/` are tracked by git.
+
+Since P7a the PDF **carries its own metadata** — `pdftitle`, `pdfauthor`,
+`pdfsubject`, `pdfkeywords` — so a reference manager that imports the file gets a
+title and an author instead of empty fields:
+
+    cd docs/paper && pdfinfo main.pdf | grep -E '^(Title|Author|Subject|Keywords):'
+
+The submission bundle for arXiv is **one file**: the source has no
+`\includegraphics` and carries an inline `thebibliography`, so there is no figure
+directory and no `.bbl` to send alongside `main.tex`.
 
 ## License
 

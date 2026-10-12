@@ -255,6 +255,28 @@ Consolidated during session 7 (the P6b batch):
   signature of an honest batch.
 
 
+Consolidated during session 8 (the P7a batch):
+
+- An in-place edit to a sealed file costs one line; an edit that changes the
+  *count* of lines costs the whole citation map. The PDF metadata went into the
+  line `\hypersetup{…}` already occupied, so `main.tex` stayed at 1566 lines, the
+  root moved by one pair of its ten, and none of the 120 `main.tex:NNNN` tokens in
+  the three sealed inputs needed a remap (`anchor-receipts.md` §R-4.1). Ask which
+  of the two an edit is *before* touching a sealed file.
+- A licence is **fetched, not paraphrased**. `docs/paper/LICENSE` is
+  `curl https://creativecommons.org/licenses/by/4.0/legalcode.txt` byte for byte;
+  a summary in one's own words is a different instrument, not the licence. Its
+  provenance (URL, bytes, sha256) lives beside the file, in `docs/paper/README.md`.
+- CFF cannot declare different licences for different artefacts in one repository:
+  the 1.2.0 schema documents its `license` **array as OR**, so a list would have
+  offered the manuscript under MIT. The repository's licence goes at the root, the
+  paper's in `preferred-citation`, and the result is validated against the official
+  schema (`jsonschema`, in a throwaway venv) rather than by eye.
+- hyperref does not lift `pdftitle`/`pdfauthor` from `\title`/`\author` unless
+  `pdfusetitle` is given: that is why the PDF's metadata was empty until P7a.
+  `pdfinfo main.pdf | grep -E '^(Title|Author):'` is the check, and it is cheap
+  enough to belong to any future paper batch.
+
 ## 5. Verification inventory
 
 - 36 non-archived `.py` files under `verification/` (43 total, 7 under
