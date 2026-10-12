@@ -377,3 +377,63 @@ Nota de disciplina: el commit de P6b debe preservar los diez ficheros que el roo
 compromete tal como quedaron aquí. Cualquier retoque posterior exige re-anclar;
 `bash verification/fase0_anchor.sh --check` (G11) lo dice en un comando.
 
+## R-4 — Recibo OpenTimestamps del root de P7
+
+Fecha: 2026-10-12, re-anclaje `2026-10-12T03:28:48Z`; el `.ots` sellado a las
+`03:29Z` (UTC; local `23:28`/`23:29` del día 11 `-04`). HEAD al re-anclar:
+`bfe329d` (sobre ese árbol se aplicó el lote P7a, todavía sin commitear); HEAD
+anclado *dentro* del root (el que sella G10): `bfe329d`. El lote se commiteó como
+`6440ac5`, padre del commit que añade este recibo.
+
+Este sello **sustituye** al de §R-3, por la razón que el propio §Alcance declara:
+P7a tocó `docs/paper/main.tex` (los metadatos del PDF). El recibo de P6b no se
+destruye —se apartó del árbol sólo para poder sellar— y su valor sale de un
+comando, no de ese archivo temporal.
+
+| campo | valor |
+|---|---|
+| Artefacto sellado | `verification/anchor_root.sha256` (10 pares) |
+| SHA-256 del artefacto | `5d6002ba02234120106fa272586f657d0d07649d58ca0f5368fadaf30890f22e` |
+| Recibo | `verification/anchor_root.sha256.ots` (**910 bytes**, **pendiente**) |
+| SHA-256 del recibo | `f6209374b6e33d601c1eb138005fd8c0788312629ce1684c3feec702c14a16fa` |
+| Cliente | `ots` v0.7.2 |
+| Envío a calendarios | 4 *(4 líneas `Submitting to remote calendar`)* |
+| Atestaciones | **4 `PendingAttestation`** (catallaxy, bob, finney, alice) y **ninguna** `BitcoinBlockHeaderAttestation` todavía; derivado de `ots info`, no de la salida del cliente |
+| Verificación | `ots info` → `File sha256 hash: 5d6002ba…`: el compromiso del recibo es el del artefacto. `ots verify` → exit 1 con las cuatro líneas `Pending confirmation in Bitcoin blockchain` y **sin** `File does not match`: el recibo resuelve su objetivo y sólo le falta la confirmación en un bloque |
+| Sustituye a | `46755224943988d0d4353c5e82f11960920220a9df696bb679141f655904d8c5` (2774 B; con Bitcoin en los bloques `971017`/`971018`), el recibo de P6b sobre `79ac6783…` |
+| Recuperación del anterior | `git show 874188c:verification/anchor_root.sha256.ots \| sha256sum` → `46755224…`; en la misma sesión se copió a `/tmp/root_79ac6783_r3.ots` |
+
+Promoción, para cuando toque: `ots upgrade verification/anchor_root.sha256.ots` y
+el `.ots` se reemplaza otra vez. Promover no exige re-anclar: el recibo vive
+fuera del root, que es lo que evita la circularidad.
+
+### R-4.1 Por qué este recibo no invalidó ninguna referencia sellada
+
+§R-3.1 tuvo que re-derivar 316 tokens porque P6b llevó el paper de 1410 a 1566
+líneas. P7a hizo lo contrario: los metadatos del PDF entraron **en la línea 19 ya
+existente** (`\hypersetup{…}`), así que `main.tex` sigue con **1566 líneas** y el
+root se movió en **un solo par** —el del paper— de sus diez. Medido:
+
+    wc -l docs/paper/main.tex                                # 1566 antes y después
+    git diff --stat -- verification/anchor_root.sha256       # 1 línea (el par del paper)
+    git diff --stat -- verification/audit_manifest.sha256    # 3 líneas (sello, HEAD, main.tex)
+    git diff --exit-code -- verification/output_manifest.sha256   # sin cambio: 35 pares idénticos
+
+Consecuencia: las citas `main.tex:NNNN` de los tres inputs sellados siguen siendo
+válidas por construcción, sin remap — **120** de esa forma sola
+(`grep -oh 'main\.tex:[0-9]\+' docs/audit/claim-registry.csv
+docs/audit/numerical-verification.md docs/audit/content-audit-pending.md | wc -l`)
+más las formas continuadas `:NNN`, que son posicionales. Y como lo único que
+cambió es el contenido de la línea 19, ninguna cita puede apuntar a una línea
+distinta: la más baja de las selladas es la **35**, que da el mismo comando con
+`| grep -oE '[0-9]+$' | sort -n | head -1`. La regla que esto deja está en §4 del
+`handoff.md`: una edición en el sitio cuesta una línea; una que cambia el recuento
+de líneas cuesta el mapa entero.
+
+    sha256sum verification/anchor_root.sha256             # 5d6002ba… (artefacto sellado)
+    sha256sum verification/anchor_root.sha256.ots         # f6209374… (910 B, pendiente)
+    strings verification/anchor_root.sha256.ots | grep -oE 'https://[a-z0-9._/-]+' | sort -u   # 4 calendarios (2ª vía)
+    ots info verification/anchor_root.sha256.ots          # 4 PendingAttestation, 0 Bitcoin
+    ots verify verification/anchor_root.sha256.ots        # exit 1 sin nodo; sin «File does not match»
+    ots upgrade verification/anchor_root.sha256.ots       # tras la confirmación en Bitcoin
+
