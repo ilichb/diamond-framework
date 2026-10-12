@@ -1,3 +1,9 @@
+The MIT license below covers this repository — its software, its scripts and
+its documentation. The paper is the one exception, and it is licensed
+separately: the manuscript `docs/paper/main.tex` and the frozen PDF snapshots
+under `docs/paper/releases/` are licensed CC BY 4.0, whose legal code is
+`docs/paper/LICENSE`.
+
 MIT License
 
 Copyright (c) 2026 Ilich Blanco, Andromeda Computer

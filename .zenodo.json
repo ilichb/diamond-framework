@@ -1,0 +1,26 @@
+{
+  "title": "Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation",
+  "upload_type": "publication",
+  "publication_type": "article",
+  "access_right": "open",
+  "license": "cc-by-4.0",
+  "version": "0.1.0",
+  "language": "eng",
+  "creators": [
+    {
+      "name": "Blanco, Ilich",
+      "affiliation": "Andromeda Computer"
+    }
+  ],
+  "description": "<p>Proof-of-stake secures admission and deterrence with a single instrument, financial capital, and that is the source of its structural tension: high collateral requirements deter honest but capital-constrained validators, low requirements expose the network to Sybil attacks. The Diamond Framework replaces a fraction of the financial stake with verifiable, non-transferable reputation, so the admission barrier falls without lowering the Cost of Attack.</p><p>The deposit is the frozen PDF snapshot of the manuscript. Every quantitative claim in it is paired with a script that reproduces it, and the claim registry that binds claim to script is sealed by a ten-file anchor root which is timestamped externally with OpenTimestamps and therefore witnessed in Bitcoin. The protocol itself targets the Avalanche network; Bitcoin enters only as that external witness, because a receipt sealed inside the root it witnesses would be circular.</p>",
+  "keywords": [
+    "proof-of-stake",
+    "validator selection",
+    "reputation",
+    "non-transferable reputation",
+    "zero-knowledge proofs",
+    "cryptoeconomics",
+    "Avalanche",
+    "OpenTimestamps"
+  ]
+}

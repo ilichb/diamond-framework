@@ -11,10 +11,22 @@ abstract: >-
   Research in progress. Version 0.1.0 is the working-tree state: there is no
   public release, no tag and no DOI yet, so no release date is declared here and
   no repository URL is asserted. The canonical citation is the paper source at
-  docs/paper/main.tex.
+  docs/paper/main.tex, a separate artefact under a separate licence: the
+  manuscript and the frozen PDF snapshots in docs/paper/releases/ are CC BY 4.0
+  (legal code: docs/paper/LICENSE), while the `license` field above names the
+  licence of the repository's software and documentation.
 keywords:
   - blockchain
   - proof-of-stake
   - reputation
   - zero-knowledge-proofs
   - cryptoeconomics
+preferred-citation:
+  type: unpublished
+  status: in-preparation
+  title: "Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation"
+  authors:
+    - family-names: "Blanco"
+      given-names: "Ilich"
+      affiliation: "Andromeda Computer"
+  license: CC-BY-4.0

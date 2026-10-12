@@ -51,6 +51,22 @@ re-exported when the source advances, so a rebuild of the current source
 is not byte-comparable to them — see `releases/README.md`. Only PDFs
 under `releases/` are tracked by git.
 
+## License
+
+The paper is **CC BY 4.0**: the manuscript `main.tex` and the frozen PDF
+snapshots under `releases/`. The legal code is [`LICENSE`](LICENSE) in this
+directory. The code in the repository is MIT
+([`LICENSE`](../../LICENSE)) — a separate licence, because the two artefacts are
+reused differently.
+
+The file next to this one is the **verbatim** legal code, fetched rather than
+paraphrased: a licence is not a document to summarise in one's own words.
+
+    curl -s https://creativecommons.org/licenses/by/4.0/legalcode.txt -o LICENSE
+    sha256sum LICENSE    # 9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411
+    wc -c LICENSE        # 18657
+    wc -l LICENSE        # 396
+
 ## Troubleshooting
 
 If compilation stops with

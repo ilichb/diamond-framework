@@ -5,7 +5,8 @@
 **Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation**
 
 [![Status: research in progress](https://img.shields.io/badge/status-research%20in%20progress-yellow)](#status)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Code license: MIT](https://img.shields.io/badge/code%20license-MIT-blue)](LICENSE)
+[![Paper license: CC BY 4.0](https://img.shields.io/badge/paper%20license-CC%20BY%204.0-lightgrey)](docs/paper/LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](verification)
 [![Solidity 0.8.33](https://img.shields.io/badge/solidity-0.8.33-blue)](integrations/avalanche)
 [![Paper: in revision](https://img.shields.io/badge/paper-in%20revision-orange)](docs/paper)
@@ -248,7 +249,13 @@ tests plus an explicit statement of what is tested and what is not.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Two licenses, because the code and the paper are reused differently:
+
+- **The repository** — its software, its scripts, its verification suite and its
+  documentation — is **MIT**, see [`LICENSE`](LICENSE).
+- **The paper** — the manuscript [`docs/paper/main.tex`](docs/paper/main.tex) and
+  the frozen PDF snapshots under [`docs/paper/releases/`](docs/paper/releases) —
+  is **CC BY 4.0**, see [`docs/paper/LICENSE`](docs/paper/LICENSE).
 
 ---
 
