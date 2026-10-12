@@ -309,6 +309,7 @@ lleva)". P6b no se limitó a llevarlas: las **re-derivó** (§R-3.1), y el sello
 | Verificación | `ots info` → `File sha256 hash: 79ac6783…`: el compromiso del recibo es el del artefacto. `ots verify` → exit 1 con `Could not connect to Bitcoin node: Cookie file unusable ([Errno 2] No such file or directory: '/home/ilich/.bitcoin/.cookie')`, es decir, este entorno no tiene nodo Bitcoin: la prueba está **en el recibo** y se comprueba con un nodo. Los dos bloques existen en la cadena: `curl -s https://blockstream.info/api/block-height/971017` → `00000000000000000000f418a6953e467b4ae6e63ab99060c1ffc735dc1763b3` y `…/971018` → `0000000000000000000144f8b6d6f77d0ea60cac10fe025b4130773b6b4abf70` |
 | Sustituye a | `c0ca6425c5af24bd945c2acd433b30e826d47d4f39f50e658ae4a6542fa5ab71` (735 B; pendiente), el recibo de P6a sobre `217d6d51…` |
 | Recuperación del anterior | `git show HEAD:verification/anchor_root.sha256.ots \| sha256sum` → `c0ca6425…`: sigue en el historial y no depende de ningún archivo fuera del repo |
+| Commits del lote | `3955d91` (el aparato C1–C4, las citas re-derivadas y el root), `874188c` (este recibo), `14dcee0` (§R-3 y §R-3.1) |
 
 Promoción — y aquí llegó: `ots upgrade verification/anchor_root.sha256.ots` →
 `Got 1 attestation(s) from https://bob.btc.calendar.opentimestamps.org`,
