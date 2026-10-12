@@ -143,6 +143,24 @@ python data-layer/simulate_data_layer_v3.py
 
 Outputs are written to `verification/*/results/`.
 
+### Chain of custody
+
+The suite is closed over its own documents, so a claim can be re-derived rather than trusted.
+[`verification/audit-gate.sh`](verification/audit-gate.sh) runs the eleven checks (G1–G11) that
+hold the tree together;
+[`verification/fase0_anchor.sh`](verification/fase0_anchor.sh) derives the root of
+[`verification/anchor_root.sha256`](verification/anchor_root.sha256), which commits the ten
+files of the chain — this paper among them — so that no document of the chain can be edited
+without invalidating the root.
+
+That root is then timestamped **outside** the repository with OpenTimestamps, so the state of
+the audit is witnessed by something the project does not control. The receipts, the blocks they
+are aggregated into, and the command that derives each value live in
+[`docs/audit/anchor-receipts.md`](docs/audit/anchor-receipts.md), deliberately *outside* the
+root: a receipt sealed inside it would be circular. Bitcoin appears only as that external
+witness — it plays no part in the protocol, which targets Avalanche. A change to any of the ten
+files invalidates the seal and requires re-anchoring.
+
 ---
 
 ## Falsification log
@@ -208,7 +226,9 @@ second column, headed `Status` everywhere except in the Limitations table, which
 Conclusion's table also uses that column for repository-level items: `Open`,
 `Not performed`, `21 entries`. The third column names the backing script, source path
 or section — `---` when there is none. Claims that resist measurement are marked
-`[CONJECTURE]` in the prose.
+`[CONJECTURE]` in the prose. The paper closes with an appendix, *Reproduction Protocol*: it
+states the chain of custody end to end and pins the outputs of the suite in the order of the
+closed list of the manifest.
 
 ---
 
