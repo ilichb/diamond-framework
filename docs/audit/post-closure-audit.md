@@ -31,7 +31,7 @@ que el propio gate ejecuta); se listan las que podían divergir.
 
 | Afirmación | Documento | Comprobación | Veredicto |
 |---|---|---|---|
-| "lists the 35 scripts" | `main.tex:1115` | `grep -c '    python3 ' verification/README.md` = 35 | OK |
+| "lists the 35 scripts" | `main.tex:1194` | `grep -c '    python3 ' verification/README.md` = 35 | OK |
 | 35 scripts, 36 `.py` no archivados | gate G1 = 36 | `find verification -maxdepth 2 -name '*.py'` = 36 (35 + `eip_cost_check.py`) | OK |
 | 35/35 `EXIT 0` | G2 = 35 | `awk 'NR>1{print $2}' verification/baseline_verified/manifest.txt` | OK |
 | 0 líneas `DRIFT` | G3 = 0 | `grep -c DRIFT verification/fase1_determinism_evidence.txt` | OK |
@@ -49,7 +49,7 @@ que el propio gate ejecuta); se listan las que podían divergir.
 | `F0* = π_val − ω̄·Θ`, saturado | README | `fee_specification.py:60-63`; salida `F0* = 0.0500`, saturación OK | OK |
 | TPR 97.2% vs 3.3% (ratio 29.2×) | README log; `numerical-verification.md:37-38` | `wilson_intervals_output.txt` (0.9720 y 0.0333; ratio 29.16×); `calibration_modularity_output.txt:18,27` | OK |
 | `181,142` gas = EIP-197 + 142 | README log (F-017) | `numerical-verification.md:246-258`; `eip_cost_check.py` (G7 exit 0) | OK |
-| "solo NumPy y SciPy" | `main.tex:1115` | imports de los 36 `.py` no archivados: `numpy`, `scipy` + stdlib (`sys`, `os`, `math`, `re`, `pathlib`, `multiprocessing`, `dataclasses`) + 4 imports entre scripts hermanos del mismo directorio | OK |
+| "solo NumPy y SciPy" | `main.tex:1194` | imports de los 36 `.py` no archivados: `numpy`, `scipy` + stdlib (`sys`, `os`, `math`, `re`, `pathlib`, `multiprocessing`, `dataclasses`) + 4 imports entre scripts hermanos del mismo directorio | OK |
 | 0 enlaces rotos | `README.md` | los 4 candidatos de un `grep` ingenuo son prosa (`L[C_R](r)`), no enlaces | OK |
 
 
@@ -64,7 +64,7 @@ colisionar con las `C-`, `F-` y `D-` ya usadas.
 
 `README.md` decía `18 entries` en la lista de etiquetas de la tabla de
 Conclusiones. La cifra ratificada es 21 (G5) y el paper ya escribe
-"twenty-one" (`main.tex:1138`). Es la errata de la resolución D1 vista desde
+"twenty-one" (`main.tex:1220`). Es la errata de la resolución D1 vista desde
 el otro lado: D1 corrigió el gate, A-1 corrige el segundo sitio donde
 sobrevivía el 18.
 
@@ -307,7 +307,7 @@ la propuesta va en un solo commit, a ratificar:
 1. refrescar en §9.2 las filas con deriva grande y sustituir "All others
    `< 5 s` each" por la remisión a `verification/baseline_verified/manifest.txt`
    (que es el artefacto que las mide);
-2. ajustar `main.tex:1115` ("expected runtimes") si (1) cambia el enunciado;
+2. ajustar `main.tex:1194` ("expected runtimes") si (1) cambia el enunciado;
 3. regenerar Fase 0 sobre `baseline_verified/` (que no ha cambiado) para que
    el hash de `main.tex` vuelva a casar, y commitear.
 
@@ -414,7 +414,7 @@ Cadena de custodia del ancla, re-verificada al final de la pasada:
   derivación en vivo, gana la derivación". No se reescribe historia; el
   estado actual es responsabilidad del handoff, que es el documento que sí
   se ha actualizado (A-7).
-- `docs/paper/main.tex:1115` ("The README lists the 35 scripts"): **no es
+- `docs/paper/main.tex:1194` ("The README lists the 35 scripts"): **no es
   deriva**. El bloque `## Running` de `verification/README.md` lista 35
   scripts, que es justo lo que consume `run_all.sh` y lo que cuenta G2
   (`EXIT 0 = 35/35`); el `.py` 36 es `eip_cost_check.py`, que no es un script

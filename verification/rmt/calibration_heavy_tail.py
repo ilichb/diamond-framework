@@ -3,7 +3,7 @@
 calibration_heavy_tail.py - Finding C-10: robustness of the collusion
 test on heavy-tailed graphs.
 
-The paper claims (main.tex:74 and :566) that the collusion detection
+The paper claims (main.tex:67 and :598) that the collusion detection
 mechanism is robust to heavy-tailed interaction graphs. Section 5
 calibrates q99 of lambda_max(B) only on Erdos-Renyi graphs
 (calibration_modularity.py, q99 = 9.0542). The single existing

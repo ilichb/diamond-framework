@@ -5,9 +5,9 @@ exige la regla de asignacion (Sec. 6.3). Finding C-01 de la auditoria de conteni
 
 Modelo:
   - El circuito de umbral prueba unicamente la desigualdad ||T||_F >= Theta_r
-    (main.tex:426, eq:threshold). Su salida es un BIT.
+    (main.tex:445, eq:threshold). Su salida es un BIT.
   - La regla de asignacion S_f*(T) = max{VaR_tech, Theta - C_R(T)}
-    (main.tex:754, eq:allocation) exige C_R(T) como funcion CONTINUA de ||T||.
+    (main.tex:805, eq:allocation) exige C_R(T) como funcion CONTINUA de ||T||.
   - Nada en el paper conecta el bit con el valor. El script cuantifica el error
     de esa desconexion en dos regimenes:
       (i)  k = 1 (solo el bit): todo el intervalo aceptado colapsa a un valor.
@@ -16,13 +16,13 @@ Modelo:
 
 Procedencia de las cifras (ninguna es propia; todas salen del paper o del script
 hermano fee_specification.py):
-  - N = C*D*H = 500 entradas del tensor               (main.tex:316)
-  - ||T|| en [0, 3]                                   (main.tex:798, T ~ U[0,3])
-  - Theta_r = 0.5, unico umbral numerico del paper    (main.tex:444-445)
+  - N = C*D*H = 500 entradas del tensor               (main.tex:325)
+  - ||T|| en [0, 3]                                   (main.tex:849, T ~ U[0,3])
+  - Theta_r = 0.5, unico umbral numerico del paper    (main.tex:463-464)
   - Theta = 1.0, VaR_tech = 0.2, C_R(x) = 0.8x/(1+x)  (fee_specification.py:37-43)
-  - gas Groth16 en cadena ~206k                       (main.tex:475)
-  - gas recursion ~250k                               (main.tex:506)
-  - Bulletproofs N=500: ~6.5M gas, 0.72 KB            (main.tex:498)
+  - gas Groth16 en cadena ~206k                       (main.tex:500)
+  - gas recursion ~250k                               (main.tex:534)
+  - Bulletproofs N=500: ~6.5M gas, 0.72 KB            (main.tex:526)
 
 Reproducibilidad: calculo determinista (aritmetica cerrada, sin Monte Carlo); no
 declara semilla ni tamano de muestra. El barrido de k es exhaustivo sobre K_GRID.
@@ -37,15 +37,15 @@ import math
 C, D, H = 20, 5, 5
 N = C * D * H
 
-T_MAX = 3.0        # cota superior de ||T|| (main.tex:798: T ~ U[0,3])
-THETA_R = 0.5      # umbral del circuito (main.tex:444-445)
+T_MAX = 3.0        # cota superior de ||T|| (main.tex:849: T ~ U[0,3])
+THETA_R = 0.5      # umbral del circuito (main.tex:463-464)
 THETA = 1.0        # stake base del mecanismo (fee_specification.py:37)
 VAR_TECH = 0.2     # piso tecnico de stake (fee_specification.py:38)
 
-GAS_GROTH16_VERIFY = 206_000        # main.tex:475 ("~206k", constante)
-GAS_RECURSIVE = 250_000             # main.tex:506 ("~250k gas")
-GAS_BULLETPROOFS_N500 = 6_500_000   # main.tex:498 (verificacion O(N) off-chain)
-KB_BULLETPROOFS_N500 = 0.72         # main.tex:498 (tamano de prueba)
+GAS_GROTH16_VERIFY = 206_000        # main.tex:500 ("~206k", constante)
+GAS_RECURSIVE = 250_000             # main.tex:534 ("~250k gas")
+GAS_BULLETPROOFS_N500 = 6_500_000   # main.tex:526 (verificacion O(N) off-chain)
+KB_BULLETPROOFS_N500 = 0.72         # main.tex:526 (tamano de prueba)
 
 K_GRID = [1, 2, 4, 8, 16, 32, 64]
 
@@ -64,7 +64,7 @@ def c_r_inverse(v):
 
 
 def s_f_star(norm_T):
-    """Stake financiero requerido (main.tex:754)."""
+    """Stake financiero requerido (main.tex:805)."""
     return max(VAR_TECH, THETA - c_r(norm_T))
 
 
@@ -94,12 +94,12 @@ def main():
     print("1. PARAMETROS Y CHEQUEOS DE COHERENCIA CON EL PAPER")
     print("-" * 78)
     pairing_k4 = 45_000 + 34_000 * 4 + 142
-    print(f"   N = C*D*H = {C}*{D}*{H} = {N}  (main.tex:316)")
+    print(f"   N = C*D*H = {C}*{D}*{H} = {N}  (main.tex:325)")
     print(f"   Intervalo aceptado por el bit: ||T|| in [{THETA_R}, {T_MAX}]")
     print(f"   Gas pairing Groth16 (k=4) = 45,000 + 34,000*4 + 142 = {pairing_k4:,}"
-          f"  (main.tex:467: 181,142)")
+          f"  (main.tex:489: 181,142)")
     print(f"   C_R({T_MAX}) = {c_r(T_MAX):.4f}"
-          f"   (main.tex:798 afirma C_R(T) in [0, 0.6])")
+          f"   (main.tex:849 afirma C_R(T) in [0, 0.6])")
     print(f"   C_R({THETA_R}) = {c_r(THETA_R):.6f}")
     print(f"   Inversa: c_r_inverse({c_r(T_MAX):.4f}) = {c_r_inverse(c_r(T_MAX)):.6f}"
           f"  (debe ser {T_MAX})")

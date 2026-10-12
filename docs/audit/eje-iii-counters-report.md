@@ -39,21 +39,21 @@ memoria.
 
 | # | Dónde | Prosa | Derivado | Estado |
 |---|---|---|---|---|
-| 1 | `main.tex:49` | "four contributions" | 4 (§1.3) | OK |
-| 2 | `main.tex:49` | "twenty-one claims" | 21 (F-log) | OK |
-| 3 | `main.tex:79` | "addresses all five" | 5 (§1.2) | OK |
-| 4 | `main.tex:82` | "four contributions" | 4 (§1.3) | OK |
-| 5 | `main.tex:88` | "twenty-one quantitative claims" | 21 | OK |
-| 6 | `main.tex:123` | "~67 minutes ... 15 min ... 24 min" | 67 | OK |
-| 7 | `main.tex:1115` | "the 35 scripts" | 35 | OK |
-| 8 | `main.tex:1117` | "21 entries (F-001 through F-021)" | 21 | OK |
-| 9 | `main.tex:1127-1142` | §9.2 table + "All others < 5 s each" | 15 filas ≥5 s | **C-37** |
-| 10 | `main.tex:1147` | "~67 minutes ... 15 min ... 24 min" | 67 | OK |
-| 11 | `main.tex:1200` | "21 entries documented" | 21 | OK |
-| 12 | `main.tex:1319` | "built from five components" | 5 (§12) | OK |
-| 13 | `main.tex:1327` | "the five simulated configurations" | 5 | OK |
-| 14 | `main.tex:1330` | "with 21 entries" | 21 | OK |
-| 15 | `main.tex:1376` | "Falsification log & 21 entries" | 21 | OK |
+| 1 | `main.tex:42` | "four contributions" | 4 (§1.3) | OK |
+| 2 | `main.tex:42` | "twenty-one claims" | 21 (F-log) | OK |
+| 3 | `main.tex:72` | "addresses all five" | 5 (§1.2) | OK |
+| 4 | `main.tex:75` | "four contributions" | 4 (§1.3) | OK |
+| 5 | `main.tex:81` | "twenty-one quantitative claims" | 21 | OK |
+| 6 | `main.tex:116` | "~67 minutes ... 15 min ... 24 min" | 67 | OK |
+| 7 | `main.tex:1194` | "the 35 scripts" | 35 | OK |
+| 8 | `main.tex:1196` | "21 entries (F-001 through F-021)" | 21 | OK |
+| 9 | `main.tex:1209-1224` | §9.2 table + "All others < 5 s each" | 15 filas ≥5 s | **C-37** |
+| 10 | `main.tex:1229` | "~67 minutes ... 15 min ... 24 min" | 67 | OK |
+| 11 | `main.tex:1289` | "21 entries documented" | 21 | OK |
+| 12 | `main.tex:1412` | "built from five components" | 5 (§12) | OK |
+| 13 | `main.tex:1420` | "the five simulated configurations" | 5 | OK |
+| 14 | `main.tex:1423` | "with 21 entries" | 21 | OK |
+| 15 | `main.tex:1473` | "Falsification log & 21 entries" | 21 | OK |
 
 ## Tabla de cruce (auditoría)
 

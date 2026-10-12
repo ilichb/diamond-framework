@@ -4,7 +4,7 @@ attacker_profit_analytical.py - Attacker profit: closed form vs Monte Carlo.
 
 Context: finding C-07 ("-502 not reproducible from declared parameters"). The
 paper cites an attacker profit of -502 with S_slash = 10 as verified (table
-rows docs/paper/main.tex:914-918, summary row :951, stability paragraph
+rows docs/paper/main.tex:975-979, summary row :1015, stability paragraph
 :1131), all pointing at verification/data-layer/simulate_data_layer_v3.py.
 This script separates the two quantities that the citation merges: the
 closed-form expectation of the per-epoch attacker profit, and the Monte Carlo
@@ -77,7 +77,7 @@ assert (N_ATTESTATIONS * PCT_HONEST) % N_PCT == 0
 assert N_ATT_ADV * 1.0 == N_ATTESTATIONS * PCT_ADV / N_PCT
 assert N_ATT_ADV == N_ATTESTATIONS - N_ATTESTATIONS * PCT_HONEST / N_PCT
 
-# Attacker profit cited by the paper (main.tex:914-918, :951, :1131).
+# Attacker profit cited by the paper (main.tex:975-979, :1015, :1213).
 PAPER_CITED_ATTACKER_PROFIT = -502.00
 
 # Label column width of the printed "name = value" lines.

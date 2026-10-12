@@ -94,7 +94,7 @@ fi
 # Definicion: grep -c '^### F-' docs/audit/numerical-verification.md -> 21.
 # (Corregido de 19 a 21 por el Auditor en el cierre del Bloque B — D1: el
 # artefacto derivado da 21 y el propio paper escribe "twenty-one" en
-# main.tex L48/L87. La cifra 19 provenia del session-report de la sesion 3.)
+# main.tex L41/L80. La cifra 19 provenia del session-report de la sesion 3.)
 G5="$(count '^### F-' docs/audit/numerical-verification.md)"
 [ "${G5:-0}" -eq 21 ] \
     && emit G5 PASS "F- entries = ${G5} (ratificado: 21)" \

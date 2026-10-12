@@ -100,7 +100,7 @@ Todas son ediciones de una línea en `main.tex`; ninguna requiere re-ejecutar sc
 ### C-28 — `\fref` mal dirigido en §5.1 (moderate)
 Fuente verificada: `verification/rmt/asym_weights.py` produce 7.4478 / 10.1343 /
 27.214 (`results/asym_weights_output.txt` l.10-17). El párrafo (l.606) no cita script.
-Diff (`main.tex:606`), añadir el `\fref` al cerrar la frase cuantitativa:
+Diff (`main.tex:641`), añadir el `\fref` al cerrar la frase cuantitativa:
 
 ```
 - ...the ratio is $10.1343$. Under either denominator the density signal is
@@ -134,7 +134,7 @@ Recomendación: (b) — reemplaza una cifra no soportada por la derivada y acota
 ### C-31 — medición Poseidon sin `\fref` en §4.5 (minor)
 `GasBenchmarks.sol` contiene `benchPoseidon2()` (l.92) y su salida
 `integrations/avalanche/benchmark_output_v2.txt` l.64 registra `poseidon2 gas: 104963`.
-Diff (`main.tex:536`):
+Diff (`main.tex:564`):
 
 ```
 - The Poseidon-2 measurement of 104{,}963 gas is an upper bound from an

@@ -40,10 +40,10 @@ otros). Los `.tex` revisados están limpios de esas ediciones.
 ### C-38 — Las "four contributions" cambian de cuarta a cuarta
 
 **Severidad:** Minor
-**Pasaje A:** Abstract (`main.tex` L49) y §1.3 (`main.tex` L82–90): *"The paper
+**Pasaje A:** Abstract (`main.tex` L42) y §1.3 (`main.tex` L75–83): *"The paper
 makes four contributions: … and a set of design decisions with explicit
 boundaries, stating where the protocol cannot deliver a guarantee."*
-**Pasaje B:** §11.3 (`main.tex` L1337–1343): *"The paper contributes: … 4. Local
+**Pasaje B:** §11.3 (`main.tex` L1430–1436): *"The paper contributes: … 4. Local
 benchmarks of the EVM precompile costs for the cryptographic primitives used in
 the protocol."*
 **Tensión:** Las tres listas afirman "four contributions" y coinciden en las tres
@@ -60,33 +60,33 @@ verification suite"). Decidir cuál de las dos cuartas es la canónica.
 ### C-39 — §5.6 atribuye la potencia de detección a la subsección equivocada
 
 **Severidad:** Minor
-**Pasaje A:** §5.6 "The Detection Boundary" (`main.tex` L716): *"The detection
+**Pasaje A:** §5.6 "The Detection Boundary" (`main.tex` L763): *"The detection
 power measured in Section~\ref{subsec:null-distribution} is uniform across the
 simulated range. All five configurations have true positive rates above 0.97."*
-**Pasaje B:** §5.5 "Detection Power" (`main.tex` L687–688) es donde realmente se
+**Pasaje B:** §5.5 "Detection Power" (`main.tex` L731–732) es donde realmente se
 mide: *"We measure the power of the right-tail test … The measurement uses
 N_H1 = 500 replicates per configuration"* (tabla de las cinco configuraciones).
-§5.4 "Null Distribution and Calibration" (`main.tex` L652–653, label
+§5.4 "Null Distribution and Calibration" (`main.tex` L690–691, label
 `subsec:null-distribution`) **no mide potencia**; calibra los cuantiles nulos.
 **Tensión:** La cita LaTeX `\ref{subsec:null-distribution}` resuelve a **5.4**
 (así aparece impreso en el PDF, L893), pero "las cinco configuraciones con TPR"
 viven en **§5.5**. El puntero apunta una subsección atrás.
 **Resolución propuesta:** Cambiar `\ref{subsec:null-distribution}` por un label
-en §5.5 (`subsec:detection-power`) en `main.tex` L716.
+en §5.5 (`subsec:detection-power`) en `main.tex` L763.
 
 ### C-40 — "five components" (§11.1) contra una tabla de siete componentes (§11.6)
 
 **Severidad:** Minor
-**Pasaje A:** §11.1 (`main.tex` L1321): *"The protocol is built from five
+**Pasaje A:** §11.1 (`main.tex` L1414): *"The protocol is built from five
 components, each verified numerically in this paper:"* — enumera cinco, con el
 quinto *"Payment, data layer, and bootstrap (Sections 6–8)"* agrupando tres
 secciones.
-**Pasaje B:** §11.6 (`main.tex` L1368–1376): tabla con cabecera **"Component /
+**Pasaje B:** §11.6 (`main.tex` L1465–1473): tabla con cabecera **"Component /
 Status / Evidence"** y **siete** filas de componente (Reputation dynamics,
 Tensor compression, ZK threshold proof, Collusion detection, Payment rule,
 **Data layer**, **Bootstrap**), separando en filas lo que §11.1 funde en una.
 **Tensión:** El mismo objeto ("componentes del protocolo") se cuenta como cinco
-en §11.1 y como siete en la tabla de §11.6. Además §1.3 (`main.tex` L84) lista
+en §11.1 y como siete en la tabla de §11.6. Además §1.3 (`main.tex` L77) lista
 *otro* conjunto de cinco partes del protocolo (*"the reputation dynamics, the
 collusion test, the payment rule, the data layer, and the bootstrap
 simulation"*), que omite Tensor y ZK que sí están en las cinco de §11.1. La
@@ -99,13 +99,13 @@ tres secciones; el recuento 5 vs 7 sigue siendo citable.)
 ### C-41 — La tabla de §2.6 usa etiquetas de régimen ("D4", "S2.2") que no se definen
 
 **Severidad:** Minor
-**Pasaje A:** §2.6 tabla resumen (`main.tex` L304): *"D4 tail is geometric; S2.2
+**Pasaje A:** §2.6 tabla resumen (`main.tex` L313): *"D4 tail is geometric; S2.2
 has no censoring & Verified & censoring_test.py"*.
-**Pasaje B:** §2.3 (`main.tex` L207, L229, L262, L264): el cuerpo se refiere a
+**Pasaje B:** §2.3 (`main.tex` L206, L231, L267, L269): el cuerpo se refiere a
 los dos regímenes siempre como *"first regime"* / *"second regime"* (p. ej. *"In
 the first regime the process has no censoring within T_max = 300"*).
 **Tensión:** Las cadenas "D4" y "S2.2" no aparecen en ningún otro punto del
-documento (grep sobre `main.tex`: única aparición en L304). El lector no puede
+documento (grep sobre `main.tex`: única aparición en L313). El lector no puede
 mapear "D4"/"S2.2" a *first/second regime* ni a los pares de parámetros
 (α=0.5, σ0=0.8)/(α=2.0, σ0=0.5): es una etiqueta huérfana en la tabla.
 **Resolución propuesta:** Sustituir "D4"/"S2.2" por las etiquetas del cuerpo
@@ -116,14 +116,14 @@ configuración usa el script (probable origen).
 ### C-42 — §11.4 atribuye a §10 dos problemas que en realidad son de §9.5
 
 **Severidad:** Minor
-**Pasaje A:** §11.4 Open Problems (`main.tex` L1347): *"The limitations section
+**Pasaje A:** §11.4 Open Problems (`main.tex` L1440): *"The limitations section
 (Section~\ref{sec:limitations}) identifies several open problems that are not
 resolved in this paper:"* seguido de seis ítems, entre ellos *"Recursive proving
 time"* y *"Teleporter latency"*.
-**Pasaje B:** §9.5 "Deferred Benchmarks" (`main.tex` L1186–1190): *"Recursive
-SNARK proving time. … Teleporter latency. …"*. §9.1 (`main.tex` L1112) los
+**Pasaje B:** §9.5 "Deferred Benchmarks" (`main.tex` L1271–1275): *"Recursive
+SNARK proving time. … Teleporter latency. …"*. §9.1 (`main.tex` L1191) los
 declara *"deferred to future work"*. Grep de "proving time|Teleporter|latency"
-restringido a §10 (`main.tex` L1216–1316) → **cero** coincidencias.
+restringido a §10 (`main.tex` L1305–1409) → **cero** coincidencias.
 **Tensión:** §11.4 encuadra su lista como los problemas que *"identifica la
 sección de limitaciones (Sección 10)"*, pero dos de los seis ítems
 (*Recursive proving time*, *Teleporter latency*) viven en §9.5 (Deferred
@@ -139,12 +139,12 @@ lista completa a §10 (p. ej. "the open problems of the paper, spanning §9.5 an
 
 | # | § | Pasaje | Razón del descarte |
 |---|---|---|---|
-| 1 | §1.2 | "The Diamond Framework addresses all five." (`main.tex` L180 ext.) | "five" = los cinco problemas enumerados justo arriba en §1.2. Coherente; el "five" de §11.1 (componentes) es otro conjunto, en otro contexto. Sin tensión. |
+| 1 | §1.2 | "The Diamond Framework addresses all five." (`main.tex` L176 ext.) | "five" = los cinco problemas enumerados justo arriba en §1.2. Coherente; el "five" de §11.1 (componentes) es otro conjunto, en otro contexto. Sin tensión. |
 | 2 | §2.3 | "reach R0 within the horizon falls from 1.0 to 0.82" | "horizon" es la ventana del script citado (`mfpt_jump_diffusion.py`); el 39.7% del test de censura es de otro experimento (λ=0, T_max=300), no de esta cifra. Término de simulación estándar; no hay segundo pasaje en tensión. |
 | 3 | §8.2 vs §8.3 | `C̃_R(R)` (L1029) vs `C_R(R(t))` (L1051) | `C_R(x) = 0.8x/(1+x)` y `C̃_R(x) = 0.8x/(1+x)` son **la misma forma algebraica** (verificado numéricamente). Alimentar `C_R` con la `R` acotada da idéntico valor que `C̃_R`. La distinción es de dominio (r no acotado vs R∈[0,1)), no de fórmula: sin tensión numérica. |
 | 4 | §4.1 vs §6 | Θr = 0.5 (L558) vs Θ = 1.0 (L1017) | Símbolos distintos con dominios distintos: Θr es el umbral de **norma** Frobenius del ZK; Θ es el umbral de **colateral híbrido** (CoA ≥ Θ). No se refieren a la misma cantidad; admitir puede exigir ambos. Sin contradicción (notación potencialmente confundible). |
-| 5 | §8.2 | `R = r/(1+r)`, `R ∈ [0,1)` | El puente §2.5↔§8.2 **sí se declara** explícitamente en `main.tex` L1029. Cumple lo pedido por el checklist. |
-| 6 | §10.4 | "−λmin(B) > 9.1371" (L1508) | Coincide exactamente con el cuantil de cola izquierda de §5.4 (`main.tex` L817/L823). Verificado sin fricción. |
+| 5 | §8.2 | `R = r/(1+r)`, `R ∈ [0,1)` | El puente §2.5↔§8.2 **sí se declara** explícitamente en `main.tex` L1100. Cumple lo pedido por el checklist. |
+| 6 | §10.4 | "−λmin(B) > 9.1371" (L1508) | Coincide exactamente con el cuantil de cola izquierda de §5.4 (`main.tex` L868/L874). Verificado sin fricción. |
 | 7 | §9.2/§9.5 | runtimes y benchmarks diferidos | Los dos benchmarks diferidos aparecen en Abstract (L51), §9.1 (L1112), §9.5 (L1186–1190) y §9.6 (L1208–1209), coherentes entre sí. El checklist menciona "§9.4" pero en el paper los benchmarks diferidos están en §9.5 (§9.4 es "Stability"); no hay fricción en el paper. |
 
 ## Veredicto
@@ -201,7 +201,7 @@ checklist que resultaron limpios):
    L918–925 apuntan ambos a max{S_min, Θ−C_R^∞} (§6) y a slashing (§7). Sin
    costuras.
 6. **§8.2 (R = r/(1+r), R acotado) ↔ §2.1 (r no acotado)** — el cambio de dominio
-   se declara (`main.tex` L1029). Sin fricción.
+   se declara (`main.tex` L1100). Sin fricción.
 7. **§9.2 (runtimes) ↔ §9.5 (deferred) ↔ Abstract** — los dos benchmarks
    diferidos (recursive SNARK proving time, Teleporter latency) aparecen en
    Abstract L51, §9.1 L1112, §9.5 L1186–1190 y tabla §9.6 L1208–1209. Coherentes.

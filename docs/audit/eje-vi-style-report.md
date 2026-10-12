@@ -165,10 +165,10 @@ Inventario: `[CONJECTURE]` como **prefijo** (l.721, `\textbf{[CONJECTURE]}`), co
 **nunca** usado: 0 `\begin{conjecture}` en todo el repo).
 
 ### C-43 — `[CONJECTURE]` prefijo → sufijo
-- `main.tex:721`: mover `[CONJECTURE]` del inicio al final de la oración, en el
+- `main.tex:768`: mover `[CONJECTURE]` del inicio al final de la oración, en el
   estilo de l.441/l.507 (sin negrita, tras la cláusula).
 - `CONTRIBUTING.md:14-15`: cambiar la palabra `prefix` → `suffix`.
-- Commit: `fix(paper): C-43 [CONJECTURE] prefix→suffix (main.tex:721, CONTRIBUTING.md)`
+- Commit: `fix(paper): C-43 [CONJECTURE] prefix→suffix (main.tex:768, CONTRIBUTING.md)`
 
 ### C-44 — eliminar el entorno `conjecture` no usado
 - `main.tex:35`: borrar `\newtheorem{conjecture}[theorem]{Conjecture}`.
@@ -238,11 +238,11 @@ y se validan con `pdflatex` ×2 → `^!` = 0, `Undefined` = 0):
 | Commit | Finding | Cambio | Guarda |
 |---|---|---|---|
 | `dc62f1c` | C-45 | worksheet: bloques C-43/C-44 (+ C-45) | `grep -c '^### C-'` = 45 |
-| `065fc9a` | C-46 | `main.tex:684`: `true/false-positive` → sin guion (5 cadenas) | `grep -cE '[-](true\|false)positive'` = 0 |
-| `8c04346` | C-47 | `main.tex:122,1147`: `heavy-tail` → `heavy-tailed` (sin tocar `heavy_tail_*.py`) | `grep -cE 'heavy-tail([^e]\|$)'` = 0 |
-| `d04d5a4` | C-48 | `main.tex:908,994`: `fraud-proof` → `fraud proof` | `grep -c 'fraud-proof'` = 0 |
-| `e08c862` | C-49 | `main.tex:83,1337`: `collusion test` → `collusion detection` | `grep -c 'collusion test'` = 0 |
-| `6cc8130` | C-50 | `main.tex:1335`: `log of falsifications` → `falsification log` | `grep -c 'log of falsifications'` = 0 |
+| `065fc9a` | C-46 | `main.tex:728`: `true/false-positive` → sin guion (5 cadenas) | `grep -cE '[-](true\|false)positive'` = 0 |
+| `8c04346` | C-47 | `main.tex:115,1147`: `heavy-tail` → `heavy-tailed` (sin tocar `heavy_tail_*.py`) | `grep -cE 'heavy-tail([^e]\|$)'` = 0 |
+| `d04d5a4` | C-48 | `main.tex:969,994`: `fraud-proof` → `fraud proof` | `grep -c 'fraud-proof'` = 0 |
+| `e08c862` | C-49 | `main.tex:76,1337`: `collusion test` → `collusion detection` | `grep -c 'collusion test'` = 0 |
+| `6cc8130` | C-50 | `main.tex:1428`: `log of falsifications` → `falsification log` | `grep -c 'log of falsifications'` = 0 |
 
 ### Estado final de los 6 inventarios (re-derivado en el árbol final)
 

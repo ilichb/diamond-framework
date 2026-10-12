@@ -4,10 +4,10 @@ CUANTIZACION UMBRAL->STAKE — FINDING C-01 (bit del circuito vs valor)
 
 1. PARAMETROS Y CHEQUEOS DE COHERENCIA CON EL PAPER
 ------------------------------------------------------------------------------
-   N = C*D*H = 20*5*5 = 500  (main.tex:316)
+   N = C*D*H = 20*5*5 = 500  (main.tex:325)
    Intervalo aceptado por el bit: ||T|| in [0.5, 3.0]
-   Gas pairing Groth16 (k=4) = 45,000 + 34,000*4 + 142 = 181,142  (main.tex:467: 181,142)
-   C_R(3.0) = 0.6000   (main.tex:798 afirma C_R(T) in [0, 0.6])
+   Gas pairing Groth16 (k=4) = 45,000 + 34,000*4 + 142 = 181,142  (main.tex:489: 181,142)
+   C_R(3.0) = 0.6000   (main.tex:849 afirma C_R(T) in [0, 0.6])
    C_R(0.5) = 0.266667
    Inversa: c_r_inverse(0.6000) = 3.000000  (debe ser 3.0)
 

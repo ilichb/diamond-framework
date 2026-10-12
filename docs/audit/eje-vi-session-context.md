@@ -35,7 +35,7 @@ Historial reciente (más nuevo primero):
 
     35aa8be docs(audit): eje (vi) style report + handoff §2 (C-43, C-44)
     55d4d90 fix(paper): C-44 remove unused conjecture theorem environment
-    edc29b9 fix(paper): C-43 [CONJECTURE] prefix->suffix (main.tex:721, CONTRIBUTING.md)
+    edc29b9 fix(paper): C-43 [CONJECTURE] prefix->suffix (main.tex:768, CONTRIBUTING.md)
     57c73fe docs(audit): fix self-contradiction in eje-v report verdict   <- HEAD previo al Eje (vi)
     d3e429b docs(audit): add eje-v integrated read report (C-38..C-42)
 
@@ -155,7 +155,7 @@ Comandos de verificación:
 
 ### Sub-eje 3 — `[CONJECTURE]`: C-43 y C-44 (CERRADO, 2 commits)
 
-- **C-43** `edc29b9`: `main.tex:721` movido `\textbf{[CONJECTURE]}` prefijo →
+- **C-43** `edc29b9`: `main.tex:768` movido `\textbf{[CONJECTURE]}` prefijo →
   sufijo al final de la oración (estilo l.441/l.507, sin negrita);
   `CONTRIBUTING.md:14-15` palabra `prefix` → `suffix`.
 - **C-44** `55d4d90`: eliminada `\newtheorem{conjecture}[theorem]{Conjecture}`
@@ -252,7 +252,7 @@ Compilación del paper (validar que no rompe):
 
 ## 6. Registro de commits del Eje (vi)
 
-    edc29b9 fix(paper): C-43 [CONJECTURE] prefix->suffix (main.tex:721, CONTRIBUTING.md)
+    edc29b9 fix(paper): C-43 [CONJECTURE] prefix->suffix (main.tex:768, CONTRIBUTING.md)
     55d4d90 fix(paper): C-44 remove unused conjecture theorem environment
     35aa8be docs(audit): eje (vi) style report + handoff §2 (C-43, C-44)
     <hash>  docs(audit): eje (vi) session context handoff   <- este fichero

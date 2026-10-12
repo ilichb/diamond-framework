@@ -77,7 +77,7 @@ PAIRED TEST - B vs W on the same seed
     P(gap_B < gap_W)    = 0.000
     mean(gap_B - gap_W) = +0.0357   std = 0.0206
 
-  main.tex:602 claims gap_B > gap_W (+1.7569 vs +1.6996) on the same
+  main.tex:637 claims gap_B > gap_W (+1.7569 vs +1.6996) on the same
   seed. The inequality is structural: B = W - dd^T/(2m) with dd^T/(2m)
   positive semidefinite of rank 1, so lambda_1(W) >= lambda_max(B) >=
   lambda_2(W) for every graph (Weyl interlacing). The paired test is

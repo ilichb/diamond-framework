@@ -244,7 +244,7 @@ exactamente lo que se le pidió.
 **D1 — G5 fija 19 entradas F-, el artefacto tiene 21.** La spec dice
 `(CORRECCIÓN: El main.tex actual dice 19, no 21)`, pero la derivación dice lo
 contrario: `grep -c '^### F-' docs/audit/numerical-verification.md` → **21**, y
-el propio paper escribe **"twenty-one"** en `main.tex` L48 y L87. El log tiene
+el propio paper escribe **"twenty-one"** en `main.tex` L41 y L80. El log tiene
 F-020 y F-021, añadidas después de la nota:
 
     git log --oneline -3 -- docs/audit/numerical-verification.md

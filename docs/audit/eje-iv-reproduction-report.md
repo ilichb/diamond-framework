@@ -20,7 +20,7 @@ La pérdida viene de una edición posterior de `main.tex` (commit `cd6f8f4`):
     +Second-regime tail is geometric; first regime has no censoring & Verified & \spath{censoring_test.py} \\
 
 Eliminar la etiqueta `S2.2` (los rótulos de régimen "D4/S2.2" eran indefinidos,
-finding **C-41**) eliminó el token numérico `2.2` — antiguo `main.tex:304`.
+finding **C-41**) eliminó el token numérico `2.2` — antiguo `main.tex:313`.
 Derivación reproducible (mismo `TOKEN_RE` que el cross-check):
 
     git show 34f85f0:docs/paper/main.tex > /tmp/old.tex
@@ -658,7 +658,7 @@ incoherente con su propia convención: el valor correcto a 1 decimal es **8.6**.
 Ningún output contiene un número en `[8.45, 8.55)`, así que `8.5` no procede de
 una fuente alternativa: es truncamiento (o errata) de `8.5617`.
 
-**Propuesta (una línea, `main.tex:683`):** `$s[-2] = 8.5$` → `$s[-2] = 8.6$`.
+**Propuesta (una línea, `main.tex:727`):** `$s[-2] = 8.5$` → `$s[-2] = 8.6$`.
 
 Severidad: minor — la afirmación es cualitativa ("sits inside the bulk") y el
 error es de 0.1 en el último dígito; no cambia la conclusión. Requiere decisión

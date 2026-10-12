@@ -296,9 +296,9 @@ claim that fails its test is corrected or removed, not quietly reworded.
 ### F-019 — ER-calibrated collusion threshold on heavy-tailed nulls
 
 - **Claim as originally made:** the detection mechanism "must be robust
-  to heavy-tailed interaction graphs" (`main.tex:74`) and "the
+  to heavy-tailed interaction graphs" (`main.tex:67`) and "the
   calibration is performed on Erdős–Rényi and Chung–Lu graphs"
-  (`main.tex:698`, `:1215`), so the threshold `q99 = 9.0542` of
+  (`main.tex:745`, `:1304`), so the threshold `q99 = 9.0542` of
   Section 5.4 applies to them.
 - **Test:** `verification/rmt/calibration_heavy_tail.py`
 - **Verdict:** **Refuted.** Against four Chung–Lu power-law nulls at the
@@ -314,14 +314,14 @@ claim that fails its test is corrected or removed, not quietly reworded.
   unit power by construction, so the published power figure carries no
   evidence of robustness on heavy-tailed graphs. The same run reproduces
   the committed ER null (mean `8.7693` vs `8.7679`, std `0.1107` vs
-  `0.1115`, `main.tex:636`) and the published ER power (`0.960` vs
-  `0.972`, `main.tex:1129`), so the CL result is not an artifact of the
+  `0.1115`, `main.tex:674`) and the published ER power (`0.960` vs
+  `0.972`, `main.tex:1211`), so the CL result is not an artifact of the
   harness.
 - **Resolution:** Section 5.4 must state that the ER-calibrated `q99`
   does not transfer to heavy-tailed nulls, and that the test requires
   either per-null recalibration or a weight-dependent bulk edge
   (proposed, not yet applied). The attribution "and Chung–Lu" at
-  `main.tex:698` and `:1215` is not backed by any threshold-level CL
+  `main.tex:745` and `:1304` is not backed by any threshold-level CL
   measurement: the only CL graph in the suite before this script,
   `verification/rmt/sim_laplacian.py` (`beta = 2.3`), feeds the `L_sym`
   vs `A_sym` comparison, not the calibration of `q99`.

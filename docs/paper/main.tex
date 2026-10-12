@@ -4,13 +4,13 @@
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
 \usepackage{amssymb}
-\usepackage{amsthm}
 \usepackage{booktabs}
 \usepackage{geometry}
 \usepackage{xcolor}
 \usepackage{enumitem}
 \usepackage{array}
 \usepackage{graphicx}
+\usepackage{float}
 \usepackage{microtype}
 \usepackage{hyperref}
 \usepackage{xurl}
@@ -27,13 +27,6 @@
 \numberwithin{equation}{section}
 \numberwithin{table}{section}
 
-\newtheorem{theorem}{Theorem}[section]
-\newtheorem{lemma}[theorem]{Lemma}
-\newtheorem{proposition}[theorem]{Proposition}
-\newtheorem{corollary}[theorem]{Corollary}
-\newtheorem{definition}[theorem]{Definition}
-\newtheorem{remark}[theorem]{Remark}
-\newtheorem{assumption}[theorem]{Assumption}
 
 \title{\textbf{Diamond Framework:}\\[0.5em]Reputation-Weighted Validator Selection\\via Verifiable Non-Transferable Reputation}
 \author{Ilich Blanco\thanks{Andromeda Computer, \texttt{ilichblanco@andromedacomputer.net}}}
@@ -153,9 +146,12 @@ dR(t) = \alpha(\bar{R} - R(t))\,dt + \sigma_0\sqrt{R(t)}\,dW(t) + \int J(z)\tild
 
 with $J(z) < 0$. This specification is not well posed. Additive negative jumps can push $R$ below zero regardless of the Feller condition, because the Feller condition constrains the diffusion, not the jump component.
 
-We quantify this failure by Monte Carlo simulation. With parameters $\alpha = 0.5$, $\bar{R} = 1.0$, $\sigma_0 = 0.8$ (Feller satisfied: $2\alpha\bar{R} = 1.0 \geq \sigma_0^2 = 0.64$), jump intensity $\lambda = 0.8$, mean jump magnitude $0.15$, $R(0) = 0.3$, and $T = 5$, the additive-jump specification produces:
+We quantify this failure by Monte Carlo simulation. With parameters $\alpha = 0.5$, $\bar{R} = 1.0$, $\sigma_0 = 0.8$ (Feller satisfied: $2\alpha\bar{R} = 1.0 \geq \sigma_0^2 = 0.64$), jump intensity $\lambda = 0.8$, mean jump magnitude $0.15$, $R(0) = 0.3$, and $T = 5$, the additive-jump specification produces (Table~\ref{tab:positivity}):
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Fraction of simulated trajectories that leave the positive domain, additive versus multiplicative jump specifications.}
+\label{tab:positivity}
 \begin{tabular}{lr}
 \toprule
 Specification & Fraction with $R(t) < 0$ \\
@@ -164,7 +160,7 @@ Additive jumps & 40.58\% \\
 Multiplicative jumps & 0.0000\% \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 over 100{,}000 simulated paths with $dt = 0.001$ \fref{verification/stochastics/sim_positivity.py}.
 
@@ -189,9 +185,12 @@ We evaluate~\eqref{eq:mfpt} by numerical quadrature in the well-conditioned form
 
 which avoids the catastrophic cancellation that arises from computing $s(R_0) - s(y)$ directly when $\kappa > 1$ \fref{verification/stochastics/mfpt_bound_explicit.py}.
 
-For the two parameter regimes of interest:
+For the two parameter regimes of interest (Table~\ref{tab:mfpt}):
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Exact mean first-passage time against the bound with $C^*=1$ and the implicit $C^*$, for the two parameter regimes.}
+\label{tab:mfpt}
 \small
 \begin{tabular}{lrrr}
 \toprule
@@ -201,15 +200,18 @@ $\alpha = 0.5$, $\sigma_0 = 0.8$ & 11.2203 & 19.965 & 0.562 \\
 $\alpha = 2.0$, $\sigma_0 = 0.5$ & 443.7374 & $1.415 \times 10^{10}$ & $3.14 \times 10^{-8}$ \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 The values above are the mean first-passage time of the CIR diffusion without jumps, i.e., the $\lambda = 0$ limit of the process defined in Section~\ref{sec:reputation}. The full process with multiplicative downward jumps has a larger MFPT: at $\lambda = 0.8$, the measured value is $19.38$ in the first regime and $710.5$ in the second, and the fraction of paths that reach $R_0$ within the horizon falls from $1.0$ to $0.82$ in the second \fref{verification/stochastics/mfpt_jump_diffusion.py}. The whitewashing bound of this section is therefore a lower bound for the process as defined.
 
 The analytical bound of the original formulation, $C^* \cdot R_0^{1-\kappa} \exp(\beta R_0)$, requires specifying $C^*$. With $C^* = 1$ the bound exceeds the exact MFPT in both regimes: by a factor of 1.78 in the first, and by $3.19 \times 10^7$ (7.5 orders of magnitude) in the second. \textbf{$C^* = 1$ is not a valid lower bound for the CIR first-passage time.} The implicit $C^*$ values (0.562 and $3.14 \times 10^{-8}$) are the largest constants for which the bound holds.
 
-We verified the numerical values by two independent methods. The first is direct Euler simulation of the CIR \fref{verification/stochastics/dt_convergence.py}. The simulated MFPT converges monotonically to the exact value as $dt \to 0$:
+We verified the numerical values by two independent methods. The first is direct Euler simulation of the CIR \fref{verification/stochastics/dt_convergence.py}. The simulated MFPT converges monotonically to the exact value as $dt \to 0$ (Table~\ref{tab:dt-convergence}):
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Mean first-passage time against the integration step, by direct simulation of the CIR component.}
+\label{tab:dt-convergence}
 \small
 \begin{tabular}{lrr}
 \toprule
@@ -221,7 +223,7 @@ $dt$ & MFPT ($\alpha = 0.5$, $\sigma_0 = 0.8$) & MFPT ($\alpha = 2.0$, $\sigma_0
 0.0005 & 11.2453 (+0.2\%)  & --- \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 The Euler scheme with $\max(R, 0)$ truncation overestimates the MFPT because it delays arrival at the threshold. The bias is monotone in $dt$ and consistent across regimes.
 
@@ -244,9 +246,12 @@ with moments
 \label{eq:moments}
 \end{equation}
 
-We verify~\eqref{eq:gamma} and~\eqref{eq:moments} by simulating the process from $R(0) = \bar{R}$ over $T = 50$, discarding the first 50\% of samples as burn-in, and comparing empirical moments against the theoretical values \fref{verification/stochastics/stationary_stats.py}. The results:
+We verify~\eqref{eq:gamma} and~\eqref{eq:moments} by simulating the process from $R(0) = \bar{R}$ over $T = 50$, discarding the first 50\% of samples as burn-in, and comparing empirical moments against the theoretical values \fref{verification/stochastics/stationary_stats.py}. The results (Table~\ref{tab:stationary-moments}):
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Theoretical and empirical stationary moments of the multiplicative specification.}
+\label{tab:stationary-moments}
 \small
 \begin{tabular}{lrrcrr}
 \toprule
@@ -256,7 +261,7 @@ $\alpha = 0.5$, $\sigma_0 = 0.8$ & 1.000000 & 0.998296 (0.17\%) & 0.640000 & 0.6
 $\alpha = 2.0$, $\sigma_0 = 0.5$ & 1.000000 & 1.000062 (0.006\%) & 0.062500 & 0.063097 (0.96\%) \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 The relative differences are below 1\% in all four quantities. The $Z$-score of the whitewashing target $R_0 = 2.2$ is $1.50\sigma$ in the first regime and $4.80\sigma$ in the second, consistent with empirical estimates ($1.5050\sigma$ and $4.7770\sigma$).
 
@@ -289,7 +294,11 @@ The running reward implied by the closed form follows from \eqref{eq:integro}. W
 with $\mu(r) = \alpha(\bar{R} - r)$ and $\sigma^{2}(r) = \sigma_0^{2} r$. \fref{verification/stochastics/cr_ide_solver.py} evaluates \eqref{eq:running-reward} on a fixed grid: $\pi(r)$ is negative below an admission threshold $r_0 \approx 0.33$ (first regime) and $\approx 0.61$ (second regime), positive and increasing above it, and asymptotically $\pi(r) \sim 0.8\,r$. In the operational range the reward is positive: $\pi(r) > 0$ for every $r \geq 1.0$ in both regimes, so the closed form is consistent with \eqref{eq:integro} wherever the protocol operates.
 
 \subsection{Summary of the Section}
-\begin{center}
+Table~\ref{tab:sec2-summary} lists the claims of this section with their status and the script that backs each.
+\begin{table}[H]
+\centering
+\caption{Claims of Section~\ref{sec:reputation}, their status, and the script that backs each.}
+\label{tab:sec2-summary}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lll}
 \toprule
@@ -304,7 +313,7 @@ Second-regime tail is geometric; first regime has no censoring & Verified & \spa
 Stationary distribution is $\mathrm{Gamma}(k, \theta)$ & Verified & \spath{stationary_stats.py} \\
 \bottomrule
 \end{tabular}}
-\end{center}
+\end{table}
 
 The Section's quantitative content is limited to: positivity verification (40.58\% vs 0.0000\%); exact MFPT by numerical integration (11.2203 and 443.7374); implicit $C^*$ per regime (0.562 and $3.14 \times 10^{-8}$); convergent simulated MFPT with $dt$ (11.2453 at $dt = 5 \times 10^{-4}$); stationary moments (relative difference below 1\%).
 
@@ -350,9 +359,12 @@ The HOSVD is exact for tensors of rank at most $(R_1, R_2, R_3)$ and approximate
 \label{eq:error}
 \end{equation}
 
-for four tensor types at rank $(4,3,3)$:
+for four tensor types at rank $(4,3,3)$ (Table~\ref{tab:tensor-error}):
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Reconstruction error $\varepsilon(T)$ for four tensor types at rank $(4,3,3)$.}
+\label{tab:tensor-error}
 \small
 \begin{tabular}{lrrr}
 \toprule
@@ -364,7 +376,7 @@ Random (zero mean) & 6.407 & 5.493 & 85.74\% \\
 Blocky (community structure) & 6.775 & 3.559 & 52.53\% \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 Three observations follow.
 
@@ -377,9 +389,12 @@ Third, and most importantly: \textbf{HOSVD does not capture block structure.} A 
 The practical implication is that Tucker compression is efficient for tensors with low-rank structure and inefficient for tensors with community structure. Which regime the reputation tensor occupies is an empirical question that depends on the correlation of validator scores across chains, domains, and horizons. We do not resolve this question in this paper.
 
 \subsection{Error Versus Rank}
-For the low-rank noisy tensor, the reconstruction error decreases monotonically with rank:
+For the low-rank noisy tensor, the reconstruction error decreases monotonically with rank (Table~\ref{tab:tensor-rank}):
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Storage, compression ratio and reconstruction error against rank for the low-rank noisy tensor.}
+\label{tab:tensor-rank}
 \small
 \begin{tabular}{lrrr}
 \toprule
@@ -392,7 +407,7 @@ $(4,3,3)$ & 146 & $3.42\times$ & 2.19\% \\
 $(5,5,5)$ & 275 & $1.82\times$ & 1.52\% \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 The trade-off is between storage reduction and reconstruction fidelity. The choice of rank is a design parameter; the reference configuration $(4,3,3)$ is a specific operating point, not an optimum.
 
@@ -406,7 +421,11 @@ Consequently the storage savings of $3.42\times$ do not translate into a reducti
 This distinction corrects a claim in an earlier formulation of the protocol, in which the storage savings were presented as a reduction of the circuit cost. The two are independent: the storage reduction is real ($3.4247\times$) and the circuit cost reduction is zero. The falsification log records this correction as F-012.
 
 \subsection{Summary of the Section}
-\begin{center}
+Table~\ref{tab:sec3-summary} lists the claims of this section with their status and the script that backs each.
+\begin{table}[H]
+\centering
+\caption{Claims of Section~\ref{sec:tensor}, their status, and the script that backs each.}
+\label{tab:sec3-summary}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lll}
 \toprule
@@ -420,7 +439,7 @@ Error for blocky: 52.5\% (HOSVD fails) & Verified & \spath{tucker_analysis.py} \
 Tucker is not in the security path & Design & Sections~\ref{sec:zk}, \ref{sec:collusion} \\
 \bottomrule
 \end{tabular}}
-\end{center}
+\end{table}
 
 The quantitative content of this Section is limited to the storage ratio and the reconstruction errors. The Tucker decomposition is a representation choice, not a security mechanism.
 
@@ -446,9 +465,12 @@ The original specification of the protocol used a Tucker-compressed witness: the
 \subsection{Soundness Failure}
 The circuit accepts a proof of knowledge of some tensor $\hat{T}$ whose norm exceeds $\Theta_r$. It does not check that $\hat{T}$ equals any committed tensor. A prover with zero reputation can therefore choose $G$ and the factor matrices at will and produce a valid proof for any threshold.
 
-We demonstrate the exploit by constructing a tensor with true norm below the threshold and a fabricated tensor with norm above it \fref{verification/zk/soundness_zk_check.py}:
+We demonstrate the exploit by constructing a tensor with true norm below the threshold and a fabricated tensor with norm above it \fref{verification/zk/soundness_zk_check.py} (Table~\ref{tab:zk-soundness}):
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{The exploit: the true tensor below the threshold and the fabricated tensor above it.}
+\label{tab:zk-soundness}
 \begin{tabular}{lrrl}
 \toprule
 Tensor & $\|\cdot\|_F$ & Threshold & Accepted \\
@@ -457,14 +479,17 @@ True reputation & 0.223607 & 0.5 & No \\
 Fabricated (prover-chosen) & 1.000000 & 0.5 & Yes \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 The exploit is trivial. Groth16~\cite{groth2016} is sound with respect to the circuit; the circuit verifies a property of a value the prover controls completely. There is no commitment binding the prover to any specific tensor.
 
 \subsection{Repair Options}
-Four designs are considered, three of which are sound \fref{verification/zk/soundness_zk_check.py}. We add a fifth column with the on-chain gas cost of verification, measured locally with Foundry \fref{integrations/avalanche/benchmarks/src/GasBenchmarks.sol}. The primitive costs on the EVM are
+Four designs are considered, three of which are sound \fref{verification/zk/soundness_zk_check.py}. We add a fifth column with the on-chain gas cost of verification, measured locally with Foundry \fref{integrations/avalanche/benchmarks/src/GasBenchmarks.sol}. Table~\ref{tab:primitive-gas} reports the primitive costs on the EVM.
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Measured gas cost of the EVM primitives of the verification path.}
+\label{tab:primitive-gas}
 \begin{tabular}{lr}
 \toprule
 Primitive & Gas \\
@@ -474,11 +499,14 @@ Primitive & Gas \\
 \texttt{ecPairing} (0x08) & $45{,}000 + 34{,}000 k + 142$ \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
-with $k$ the number of pairings. Groth16 verification uses $k = 4$, giving 181{,}142 gas for the pairing step alone. These measurements match EIP-196 and EIP-197 exactly.
+with $k$ the number of pairings. Groth16 verification uses $k = 4$, giving 181{,}142 gas for the pairing step alone. These measurements match EIP-196 and EIP-197 exactly. Table~\ref{tab:design-gas} compares the designs considered.
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Verification cost per design: soundness, constraint count, proof size and on-chain gas.}
+\label{tab:design-gas}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lllrr}
 \toprule
@@ -490,7 +518,7 @@ Option A$'$: Poseidon commitment over full tensor & Yes & 240{,}261 & 0.20 KB & 
 Option B: Pedersen + Bulletproofs & Yes & 0 & 0.72 KB & $\sim$6.5M \\
 \bottomrule
 \end{tabular}}
-\end{center}
+\end{table}
 
 The column ``On-chain gas (direct)'' measures the cost of performing the verification work on-chain without a recursive SNARK. For the first row it is the cost of verifying the Groth16 proof of the small circuit ($\sim$206k, constant). For options A, A$'$, and B it is the cost of the on-chain work the SNARK would otherwise do: hashing the tensor (A, A$'$) or performing the Bulletproofs scalar multiplications (B). With recursion, all three options collapse to $\sim$206k on-chain; the column shows why recursion is not optional.
 
@@ -539,7 +567,11 @@ The recursive SNARK cost of $\sim$250k gas is an estimate. The Bulletproofs proo
 The exploit demonstration of Section~\ref{sec:zk} is not an estimate. The values 0.223607 and 1.000000 are computed by the script.
 
 \subsection{Summary of the Section}
-\begin{center}
+Table~\ref{tab:sec4-summary} lists the claims of this section with their status and the script that backs each.
+\begin{table}[H]
+\centering
+\caption{Claims of Section~\ref{sec:zk}, their status, and the script that backs each.}
+\label{tab:sec4-summary}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lll}
 \toprule
@@ -558,7 +590,7 @@ Ingesting $T$ is not cheaper than the proof & Verified & \spath{succinctness_com
 Recursion required for on-chain viability & Design & --- \\
 \bottomrule
 \end{tabular}}
-\end{center}
+\end{table}
 
 The Section demonstrates the unsoundness of the original design with a concrete exploit, and recommends a replacement. The exact cost of the replacement depends on implementation parameters not fixed in this paper; the arithmetic is correct given those parameters.
 
@@ -585,11 +617,14 @@ A_{\mathrm{sym}} = D^{-1/2} W D^{-1/2}
 \label{eq:asym}
 \end{equation}
 
-where $D = \mathrm{diag}(d_1, \ldots, d_n)$, $d_i = \sum_j W_{ij}$. This matrix has a bulk spectrum that recovers a Wigner-type distribution~\cite{wigner1958,bai2010} for heavy-tailed graphs, which the original formulation of the protocol used for detection.
+where $D = \mathrm{diag}(d_1, \ldots, d_n)$, $d_i = \sum_j W_{ij}$. This matrix has a bulk spectrum that recovers a Wigner-type distribution~\cite{wigner1958,bai2010} for heavy-tailed graphs, which the original formulation of the protocol used for detection. The spectrum of the normalized graph Laplacian for graphs of this form is analysed in~\cite{bauer2012}.
 
-Each edge is scaled by $1/\sqrt{d_i d_j}$, so the per-edge weight of an intra-clique edge is $1/27.2 \approx 0.037$ and of a background edge is $1/20.0 \approx 0.050$. A per-edge comparison alone would conclude that the clique's edges are weaker after normalization, cancelling the density signal. The relevant comparison is per-pair: intra-clique pairs are $10\times$ more probable than background pairs, so the expected weight is what determines the spectral signature. Quantitatively, for a clique of size $m = 20$ with intra-clique density $10\times$ the background:
+Each edge is scaled by $1/\sqrt{d_i d_j}$, so the per-edge weight of an intra-clique edge is $1/27.2 \approx 0.037$ and of a background edge is $1/20.0 \approx 0.050$. A per-edge comparison alone would conclude that the clique's edges are weaker after normalization, cancelling the density signal. The relevant comparison is per-pair: intra-clique pairs are $10\times$ more probable than background pairs, so the expected weight is what determines the spectral signature. Quantitatively, for a clique of size $m = 20$ with intra-clique density $10\times$ the background (Table~\ref{tab:per-pair}):
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Per-pair expected weight ratio, with and without the degree normalization.}
+\label{tab:per-pair}
 \begin{tabular}{lr}
 \toprule
 Quantity & Value \\
@@ -600,13 +635,16 @@ Normalized intra-clique edge & $1/27.2 \approx 0.037$ \\
 Normalized background edge & $1/20.0 \approx 0.050$ \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 The clique's per-edge weight is lower after normalization, but the per-pair weight is not. Under $W$, the expected per-pair weight of an intra-clique pair is $10.0000\times$ that of a background pair. Under $A_{\mathrm{sym}}$, with the null-model background degree cited above ($d_{\mathrm{bg}} = 20$), the ratio is $7.4478$; with the model-consistent background degree under $H_1$ ($d_{\mathrm{bg}} = 27.214$), the ratio is $10.1343$ \fref{verification/rmt/asym_weights.py}. Under either denominator the density signal is attenuated by the normalization, not cancelled. The attenuation under $A_{\mathrm{sym}}$ places the clique signal inside the finite-size bulk edge, while the $10\times$ ratio under $W$ keeps it above; the spectral table below confirms both outcomes.
 
-We verify this numerically \fref{verification/rmt/clique_spectra.py}. For a single clique of size $m = 20$ with intra-clique density $10\times$ the background, the three candidate matrices give the following leading non-trivial eigenvalue, for a single draw of the generator (seed 42):
+We verify this numerically \fref{verification/rmt/clique_spectra.py}. For a single clique of size $m = 20$ with intra-clique density $10\times$ the background, the three candidate matrices give the following leading non-trivial eigenvalue, for a single draw of the generator (seed 42) (Table~\ref{tab:clique-spectra}):
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Leading non-trivial eigenvalue of the three candidate matrices in $H_0$ and in $H_1$, with the bulk edge and the gap (single draw, seed 42).}
+\label{tab:clique-spectra}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{llrrrr}
 \toprule
@@ -617,7 +655,7 @@ $A_{\mathrm{sym}}$ & $s[-2]$ & 0.4254 & 0.4316 & 0.4472 & $-0.0156$ \\
 $B$ & $s[-1]$ & 8.6896 & 10.7011 & 8.9443 & $+1.7569$ \\
 \bottomrule
 \end{tabular}}
-\end{center}
+\end{table}
 
 The single-seed values above are one draw from the multi-seed distribution. Across 200 seeds \fref{verification/rmt/clique_spectra_seeds.py}, the $W$ gap has mean $+0.73$ with std $0.39$, the $A_{\mathrm{sym}}$ gap has mean $-0.02$ with std $0.01$, and the $B$ gap has mean $+0.77$ with std $0.41$. The single-seed values sit at the P99, P90 and P99 of their respective distributions. The paired claim $\mathrm{gap}_B > \mathrm{gap}_W$ is structural rather than informative: it follows from Weyl interlacing on $B = W - dd^{\top}/(2m)$. The empirical content is the mean difference $+0.0353$, small against the per-seed standard deviation.
 
@@ -650,9 +688,12 @@ The modularity matrix is the standard tool for community detection in the stocha
 
 \subsection{Null Distribution and Calibration}
 \label{subsec:null-distribution}
-We calibrate the null distribution of $\lambda_{\max}(B)$ and $\lambda_{\min}(B)$ by Monte Carlo on Erd\H{o}s--R\'enyi graphs with $n = 500$ and $\bar{d} = 20$ \fref{verification/rmt/calibration_modularity.py}. The calibration uses $N_{H_0} = 2000$ replicates with seed 42.
+We calibrate the null distribution of $\lambda_{\max}(B)$ and $\lambda_{\min}(B)$ by Monte Carlo on Erd\H{o}s--R\'enyi graphs with $n = 500$ and $\bar{d} = 20$ \fref{verification/rmt/calibration_modularity.py}. The largest eigenvalue of a Wigner-type matrix has a Tracy--Widom limiting distribution~\cite{tracy1994}; the null quantile is calibrated by Monte Carlo rather than taken from that limit. The calibration uses $N_{H_0} = 2000$ replicates with seed 42 (Table~\ref{tab:null-calibration}).
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Null calibration of $\lambda_{\max}(B)$ and $-\lambda_{\min}(B)$ on Erd\H{o}s--R\'enyi graphs, $N_{H_0} = 2000$ replicates.}
+\label{tab:null-calibration}
 \begin{tabular}{lrrr}
 \toprule
 Statistic & Mean & Std & $q_{99}$ \\
@@ -661,11 +702,14 @@ $\lambda_{\max}(B)$ (right tail, cliques) & 8.7679 & 0.1115 & 9.0542 \\
 $-\lambda_{\min}(B)$ (left tail, bipartite) & 8.8601 & 0.1101 & 9.1371 \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
-The empirical thresholds at significance level $\alpha$ are:
+The empirical thresholds at significance level $\alpha$ are (Table~\ref{tab:thresholds}):
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Empirical decision thresholds by significance level.}
+\label{tab:thresholds}
 \small
 \begin{tabular}{ll}
 \toprule
@@ -675,7 +719,7 @@ $\alpha$ & Reject $H_0$ if \\
 0.05 & $\lambda_{\max}(B) > 8.9663$ or $-\lambda_{\min}(B) > 9.0428$ \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 The dual-tail structure distinguishes clique-based collusion (right tail) from bipartite polarization (left tail). The right-tail threshold is calibrated at $q_{99} = 9.0542$, which is $2.57\sigma$ above the null mean. The left-tail threshold is calibrated at $9.1371$, which is $2.52\sigma$ above its null mean.
 
@@ -685,9 +729,12 @@ The calibration above is performed on Erd\H{o}s--R\'enyi graphs. The threshold d
 
 \subsection{Detection Power}
 \label{subsec:detection-power}
-We measure the power of the right-tail test against clique-based collusion by simulating graphs with $k$ planted cliques of size $m$ and intra-clique density $10\times$ the background \fref{verification/rmt/calibration_modularity.py}. The measurement uses $N_{H_1} = 500$ replicates per configuration with Wilson 95\% confidence intervals.
+We measure the power of the right-tail test against clique-based collusion by simulating graphs with $k$ planted cliques of size $m$ and intra-clique density $10\times$ the background \fref{verification/rmt/calibration_modularity.py}. The measurement uses $N_{H_1} = 500$ replicates per configuration with Wilson 95\% confidence intervals. Table~\ref{tab:power} reports the power per configuration.
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Detection power against planted cliques, by configuration.}
+\label{tab:power}
 \small
 \begin{tabular}{lrrr}
 \toprule
@@ -700,7 +747,7 @@ $k=1$, $m=40$ & 14.2441 & 1.000 & $[0.992, 1.000]$ \\
 $k=3$, $m=40$ & 16.2281 & 1.000 & $[0.992, 1.000]$ \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 Detection is uniform across the five configurations. The lowest true positive rate is 0.972, for a single clique of size 20 with intra-clique density $10\times$ the background. All other configurations are detected at 1.000.
 
@@ -731,7 +778,11 @@ The left tail ($-\lambda_{\min}$) is measured on disassortative block structures
 An adversarial validator who knows the test can attempt to avoid detection by keeping the clique size below the (unlocated) boundary, mixing clique members with honest interactions, or avoiding clique structures entirely. The test has power against the naive adversary (uniform cliques and bipartite structures of moderate size); its power against an adaptive adversary below the boundary is not characterized.
 
 \subsection{Summary of the Section}
-\begin{center}
+Table~\ref{tab:sec5-summary} lists the claims of this section with their status and the script that backs each.
+\begin{table}[H]
+\centering
+\caption{Claims of Section~\ref{sec:collusion}, their status, and the script that backs each.}
+\label{tab:sec5-summary}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lll}
 \toprule
@@ -748,7 +799,7 @@ Detection boundary below tested range & Conjecture & --- \\
 Left-tail power measured & Verified & \spath{bipartite_power.py} \\
 \bottomrule
 \end{tabular}}
-\end{center}
+\end{table}
 
 The Section's quantitative content is limited to the calibration of the null distribution, the power measurements for both tails, and the demonstration that $A_{\mathrm{sym}}$ fails where $B$ succeeds.
 
@@ -828,9 +879,12 @@ The fee is charged per epoch and is the same for all participating validators.
 \subsection{Individual Rationality}
 The posted price $F_0^*$ saturates IR at the worst-case type by construction. We verify numerically that IR holds for all types in the support and that the saturation is exact \fref{verification/mechanism/fee_specification.py}.
 
-The Monte Carlo draws $N_{\mathrm{VALIDATORS}} = 1000$ validators with $\omega \sim U[0.01, 0.10]$ and $T$ uniform on $[0, 3]$ (so $C_R(T) \in [0, 0.6]$). The measured utilities are:
+The Monte Carlo draws $N_{\mathrm{VALIDATORS}} = 1000$ validators with $\omega \sim U[0.01, 0.10]$ and $\|T\|_F$ uniform on $[0, 3]$ (so $C_R(\|T\|_F) \in [0, 0.6]$). The measured utilities are (Table~\ref{tab:utilities}):
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Measured utilities of the sampled validator population under the posted price.}
+\label{tab:utilities}
 \begin{tabular}{lr}
 \toprule
 Statistic & Value \\
@@ -841,14 +895,17 @@ $U_{\max}$ & 0.095891 \\
 Fraction with $U \geq 0$ & 1.0000 \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 The analytical saturation $U(\bar{\omega}, 0) = 0$ is exact, with residual below $10^{-9}$. The Monte Carlo $U_{\min}$ is strictly positive (0.009747) because the specific pair $(\omega = 0.10, T = 0)$ is not sampled exactly in a finite draw. The bound holds analytically for the worst-case type and empirically for the sampled population.
 
 \subsection{Sensitivity}
-If the fee exceeds $F_0^*$, IR is violated for the worst-case types. We verify this numerically:
+If the fee exceeds $F_0^*$, IR is violated for the worst-case types. We verify this numerically (Table~\ref{tab:fee-ir}):
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Individual rationality and revenue against the fee, relative to the optimal $F_0^*$.}
+\label{tab:fee-ir}
 \begin{tabular}{lrrr}
 \toprule
 $F_0$ & Fraction with $U < 0$ & Gross revenue & Net revenue \\
@@ -859,7 +916,7 @@ $F_0$ & Fraction with $U < 0$ & Gross revenue & Net revenue \\
 0.060 & 0.0020 & 60.00 & 59.88 \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 At $F_0 = 0.06$ (20\% above $F_0^*$), 0.2\% of the sampled validators violate IR. The gross revenue trade-off is linear: increasing the fee above $F_0^*$ gains revenue at the cost of excluding the worst-case types. Net of the excluded validators, the revenue at $F_0 = 0.06$ is $59.88$ rather than $60.00$.
 
@@ -869,7 +926,11 @@ Incentive Compatibility is tautological in this mechanism. There is no private t
 The falsification log records this as F-006. The original formulation of the protocol applied Myerson's optimal auction rule~\cite{myerson1981}, which requires a private one-dimensional type. The current mechanism does not have one. The payment rule is a saturated uniform posted price, not a Myerson auction.
 
 \subsection{Summary of the Section}
-\begin{center}
+Table~\ref{tab:sec6-summary} lists the claims of this section with their status and the script that backs each.
+\begin{table}[H]
+\centering
+\caption{Claims of Section~\ref{sec:payment}, their status, and the script that backs each.}
+\label{tab:sec6-summary}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lll}
 \toprule
@@ -885,7 +946,7 @@ $F_0 = 1.2 F_0^*$ violates IR for 0.2\% & Verified & \spath{fee_specification.py
 IC is tautological & Logical & --- \\
 \bottomrule
 \end{tabular}}
-\end{center}
+\end{table}
 
 The payment rule is a uniform posted price, not a Myerson auction. The absence of a private type with respect to the allocation rule makes the mechanism simpler than standard auction theory would suggest.
 
@@ -938,9 +999,12 @@ B^* = \frac{c_{\mathrm{audit}}}{p_{\mathrm{fraud}}}
 For $B < B^*$ no auditor enters; for $B \geq B^*$ at least one auditor is active. The threshold $B^*$ is the fee at which a single auditor is indifferent between auditing and not. Detection in this model is a step and not a probability: an auditor reviews every attestation of the epoch, so coverage is $1$ whenever $n_{\mathrm{auditors}} \geq 1$ and $0$ otherwise.
 
 \subsection{Numerical Verification}
-We evaluate~\eqref{eq:equilibrium} and~\eqref{eq:bstar} by Monte Carlo \fref{verification/data-layer/simulate_data_layer_v3.py}, with one caveat about what the exercise can show: the script computes $n^*(B)$ from~\eqref{eq:equilibrium} and feeds it into the epoch loop as a premise, so the simulation measures the audits and the integrity that the assumed $n^*$ implies, and does not test whether $n^*$ auditors would in fact enter. The reference parameters are $N_{\mathrm{ATT}} = 500$, $c_{\mathrm{audit}} = 0.10$, $p_{\mathrm{fraud}} = 0.10$, $V_{\mathrm{fraud}} = 1.0$, $S_{\mathrm{slash}} = 10.0$, $N_{\mathrm{VERIFIERS}} = 20$. The threshold is $B^* = 0.10/0.10 = 1.0$.
+We evaluate~\eqref{eq:equilibrium} and~\eqref{eq:bstar} by Monte Carlo \fref{verification/data-layer/simulate_data_layer_v3.py}, with one caveat about what the exercise can show: the script computes $n^*(B)$ from~\eqref{eq:equilibrium} and feeds it into the epoch loop as a premise, so the simulation measures the audits and the integrity that the assumed $n^*$ implies, and does not test whether $n^*$ auditors would in fact enter. The reference parameters are $N_{\mathrm{ATT}} = 500$, $c_{\mathrm{audit}} = 0.10$, $p_{\mathrm{fraud}} = 0.10$, $V_{\mathrm{fraud}} = 1.0$, $S_{\mathrm{slash}} = 10.0$, $N_{\mathrm{VERIFIERS}} = 20$. The threshold is $B^* = 0.10/0.10 = 1.0$. Table~\ref{tab:equilibrium} reports the equilibrium points.
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{The audit equilibrium by budget: auditors, detection, attacker and verifier profit, integrity.}
+\label{tab:equilibrium}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lrrrrr}
 \toprule
@@ -954,7 +1018,7 @@ $B$ & $n^*(B)$ & Detection & Attacker profit & Verifier profit & Integrity \\
 20.00 & 20 & 1.000 & $-502.00$ & $+0.20$ & 1.0000 \\
 \bottomrule
 \end{tabular}}
-\end{center}
+\end{table}
 
 The table reports the interior equilibrium points, where $B$ is either below the threshold or an exact integer multiple of $B^*$. The transition at $B = B^*$ is exact. For $B$ below the threshold no verifier audits; the attacker earns $V_{\mathrm{fraud}} \cdot N_{\mathrm{ATT}} \cdot p_{\mathrm{fraud}}$ per epoch without friction. For $B$ at or above the threshold the auditor coverage reaches 100\% in this model, and the attacker's expected profit is negative because the slashing dominates the fraud gain.
 
@@ -976,7 +1040,11 @@ The freshness parameter $\gamma$ bounds the propagation of undetected fraud acro
 in the worst case, where the adversary can insert fresh fraud each epoch. The growth is linear, not exponential, and the bound constrains only while $\gamma \cdot k < 1$: the example pair $\gamma = 0.10$ with $k = 10$ epochs gives $\gamma \cdot k = 1.0$, where the maximum fraudulent fraction is 1.0 --- the whole tensor --- so there the bound permits everything and constrains nothing. Below that threshold the constraint bites: $\gamma = 0.05$ gives a maximum of 0.5 after 10 epochs, and $\gamma = 0.02$ gives 0.2. While $\gamma \cdot k < 1$ the freshness constraint prevents a single undetected fraud from contaminating the entire tensor.
 
 \subsection{Summary of the Section}
-\begin{center}
+Table~\ref{tab:sec7-summary} lists the claims of this section with their status and the script that backs each.
+\begin{table}[H]
+\centering
+\caption{Claims of Section~\ref{sec:datalayer}, their status, and the script that backs each.}
+\label{tab:sec7-summary}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lll}
 \toprule
@@ -989,7 +1057,7 @@ Integrity $= 1.0$ when $n^* \geq 1$ & Design & \spath{simulate_data_layer_v3.py}
 Freshness bounds propagation linearly & Analytical & --- \\
 \bottomrule
 \end{tabular}}
-\end{center}
+\end{table}
 
 The Section describes the ingestion, transport, and fraud proof mechanism of the data layer, and verifies the audit equilibrium by Monte Carlo. The freshness parameter provides a second line of defense in case the fraud proof mechanism fails to detect a particular attack.
 
@@ -1002,9 +1070,12 @@ At the genesis block, no validator has reputation. The reputation tensor $T$ is 
 The bootstrap question is: does the transition concentrate reputation in the early validators, and if so, how much? A mechanism that concentrates reputation in a small set of genesis validators would recreate the centralization it was designed to avoid.
 
 \subsection{Reputation Models}
-The dynamics of reputation during the bootstrap determine the outcome. We compare three models in earlier work and select one for the paper. The models differ in how a validator's activity $a$ translates into reputation growth:
+The dynamics of reputation during the bootstrap determine the outcome. We compare three models in earlier work and select one for the paper. The models differ in how a validator's activity $a$ translates into reputation growth (Table~\ref{tab:bootstrap-models}):
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{The three bootstrap models: gain rule and stationary reputation.}
+\label{tab:bootstrap-models}
 \small
 \begin{tabular}{lll}
 \toprule
@@ -1015,7 +1086,7 @@ Decreasing & $k \cdot a \cdot (1-R)^2$ & $R \to 1$ for all $a$ \\
 net\_gain & $g \cdot a \cdot (1-R) - \delta R$ & $R^* = g a / (g a + \delta)$ \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 The saturating and decreasing models converge to $R \to 1$ for all validators regardless of activity. After a sufficiently long horizon, the reputation is identical for all validators and carries no information about contribution. This is the content of the earlier comparison \fref{verification/bootstrap/compare_reputation_models.py}.
 
@@ -1053,7 +1124,11 @@ We compare three policies:
 \end{itemize}
 
 \subsection{Results}
-\begin{center}
+Table~\ref{tab:policy} reports the resulting allocation policies.
+\begin{table}[H]
+\centering
+\caption{Allocation policy under each bootstrap model: Gini, top-ten concentration and reputation statistics.}
+\label{tab:policy}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lrrrrrr}
 \toprule
@@ -1064,7 +1139,7 @@ hybrid\_no\_decay & 200 & 0.1283 & 0.1367 & 0.7764 & 0.3936 & 0.5976 \\
 hybrid\_decay & 200 & 0.1563 & 0.1477 & 0.8393 & 0.2553 & 0.4348 \\
 \bottomrule
 \end{tabular}}
-\end{center}
+\end{table}
 
 The $S_f$ med column measures the median financial stake required at the end of the simulation. Under pure\_pos it is $\Theta = 1.0$. Under hybrid\_no\_decay it is 0.7764, a reduction of 22.4\%. Under hybrid\_decay it is 0.8393, a reduction of 16.1\%.
 
@@ -1085,7 +1160,11 @@ The protocol uses hybrid\_no\_decay. The financial stake reduction under this po
 The reduction is real but modest. It corresponds to a validator with median reputation needing to lock 77.6\% of the stake it would need under pure proof-of-stake. Validators with above-median reputation lock less; validators below median lock more.
 
 \subsection{Summary of the Section}
-\begin{center}
+Table~\ref{tab:sec8-summary} lists the claims of this section with their status and the script that backs each.
+\begin{table}[H]
+\centering
+\caption{Claims of Section~\ref{sec:bootstrap}, their status, and the script that backs each.}
+\label{tab:sec8-summary}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lll}
 \toprule
@@ -1099,7 +1178,7 @@ hybrid\_decay raises Gini & Verified & \spath{simulate_bootstrap_net_gain.py} \\
 Hybrid\_no\_decay is recommended & Design & --- \\
 \bottomrule
 \end{tabular}}
-\end{center}
+\end{table}
 
 The Section's quantitative content is limited to the bootstrap simulation under the net\_gain model and the comparison of three policies. The saturation of the alternative models is documented as F-016.
 
@@ -1116,9 +1195,12 @@ Every quantitative claim in Sections~\ref{sec:reputation} through~\ref{sec:boots
 
 The project documents its own falsifications in \spath{docs/audit/numerical-verification.md}. As of this writing the log contains 21 entries (F-001 through F-021), each one a claim that was made, tested, and corrected. The log exists because the numerical verification is the primary defense against errors of the kind that would otherwise propagate through the paper unchallenged.
 
-The scripts run in the following time ranges on a 2020-era desktop:
+The scripts run in the following time ranges on a 2020-era desktop (Table~\ref{tab:runtime}):
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Runtime of the verification scripts on a 2020-era desktop.}
+\label{tab:runtime}
 \small
 \begin{tabular}{lr}
 \toprule
@@ -1142,15 +1224,18 @@ Script & Time \\
 All others & $< 5$ s each \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 Total runtime for the full suite: approximately 67 minutes on a single core. The dominant costs are the heavy-tailed recalibrations (\spath{heavy_tail_n5000.py}, $\sim$15 min; \spath{heavy_tail_scaled_clique.py}, $\sim$24 min) and the RMT calibration (\spath{recalibrate_top.py}, $\sim$10 min).
 
 \subsection{On-Chain Gas Costs}
 \label{subsec:evalgas}
-The cryptographic design of Section~\ref{sec:zk} has an on-chain component. We measure the gas cost of the EVM precompiles that implement the BN254 pairings and scalar multiplications \fref{integrations/avalanche/benchmarks/src/GasBenchmarks.sol}. The measurements match EIP-196 and EIP-197 to the gas unit:
+The cryptographic design of Section~\ref{sec:zk} has an on-chain component. We measure the gas cost of the EVM precompiles that implement the BN254 pairings and scalar multiplications \fref{integrations/avalanche/benchmarks/src/GasBenchmarks.sol}. The measurements match EIP-196 and EIP-197 to the gas unit (Table~\ref{tab:gas-eip}):
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Measured gas against the EIP-196/EIP-197 formula.}
+\label{tab:gas-eip}
 \small
 \begin{tabular}{lrr}
 \toprule
@@ -1163,7 +1248,7 @@ Primitive & Measured gas & EIP formula \\
 \texttt{ecPairing} $k=4$ & 181{,}142 & $45{,}000 + 136{,}000 + $ overhead \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 The overhead is 142 gas in all five measurements, consistent with a single \texttt{staticcall} dispatch. Groth16 verification over BN254 uses $k = 4$ pairings and therefore costs 181{,}142 gas for the pairing step alone, plus approximately 25k gas for the surrounding verification logic. The total is approximately 206k gas, constant in the size of the circuit.
 
@@ -1178,7 +1263,7 @@ The conclusions of the paper depend on parameter choices that are fixed at desig
 
 \textbf{Collusion detection (Section~\ref{sec:collusion}).} The null quantile $q_{99} = 9.0542$ is calibrated with $N_{H_0} = 2000$ replicates. The standard error of the $q_{99}$ estimate is $\sqrt{p(1-p)/N} / f(q_{99})$, evaluated at the empirical $z$-score of $q_{99}$ (2.568), giving 0.017 in $\lambda_{\max}(B)$ units, or 0.186\% of its value. The 95\% confidence interval is approximately $[9.021, 9.087]$. The corresponding theoretical value, using the standard normal density at $z = 2.326$, is 0.103\%. The lowest true positive rate across the five simulated configurations is 0.972 (single clique of size 20), well above the $\alpha = 0.01$ threshold. The qualitative boundary does not depend on the calibration sample size.
 
-\textbf{Data layer (Section~\ref{sec:datalayer}).} The equilibrium $n^*(B) = \lfloor B/B^* \rfloor$ is exact given the parameters. The attacker profit is $-502$ with slashing $S_{\mathrm{slash}} = 10$ and $+49.91$ without detection. The discontinuity at $B = B^*$ is a property of the equilibrium, not of the Monte Carlo.
+\textbf{Data layer (Section~\ref{sec:datalayer}).} The equilibrium $n^*(B) = \lfloor B/B^* \rfloor$ is exact given the parameters. The attacker profit is $-502$ in the model with slashing $S_{\mathrm{slash}} = 10$ and $+49.91$ without detection. Both figures are model bookkeeping under the coverage convention of Section~\ref{sec:datalayer}, not executable losses: the loss collateralized on-chain is the escrowed stake of Section~\ref{sec:payment}, bounded by $\Theta = 1.0$ per validator. The discontinuity at $B = B^*$ is a property of the equilibrium, not of the Monte Carlo.
 
 \textbf{Bootstrap (Section~\ref{sec:bootstrap}).} The stationary reputation under net\_gain is $R^* = ga/(ga + \delta)$. The measured median $R = 0.3936$ matches the analytic $R^* = 0.4$ for unit activity. The choice $\delta/g = 1.5$ maximizes $R_{\mathrm{std}}$ in the sweep; nearby values give similar results.
 
@@ -1193,7 +1278,11 @@ Two benchmarks are not reported in this paper because they require a live networ
 Both benchmarks are declared as future work. The protocols for measuring them are defined in the repository.
 
 \subsection{Summary of the Section}
-\begin{center}
+Table~\ref{tab:sec9-summary} lists the claims of this section with their status and their source.
+\begin{table}[H]
+\centering
+\caption{Claims of Section~\ref{sec:evaluation}, their status, and their source.}
+\label{tab:sec9-summary}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lll}
 \toprule
@@ -1210,7 +1299,7 @@ Recursive proving time & Deferred & --- \\
 Teleporter latency & Deferred & --- \\
 \bottomrule
 \end{tabular}}
-\end{center}
+\end{table}
 
 The evaluation confirms the reproducibility of the numerical claims and the measured gas costs of the cryptographic primitives. The two deferred benchmarks are declared as future work with the protocols for measuring them.
 
@@ -1294,7 +1383,11 @@ For clarity, the protocol does not claim:
 Each of these is a direction for future work. The protocols for addressing them are defined in the repository.
 
 \subsection{Summary of the Section}
-\begin{center}
+Table~\ref{tab:sec10-summary} lists the limitations with the section that states each.
+\begin{table}[H]
+\centering
+\caption{Limitations, their category, and the section that states each.}
+\label{tab:sec10-summary}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lll}
 \toprule
@@ -1311,7 +1404,7 @@ RMT calibrated on synthetic graphs & Method & \ref{sec:collusion} \\
 Bootstrap assumes LogNormal activity & Method & \ref{sec:bootstrap} \\
 \bottomrule
 \end{tabular}}
-\end{center}
+\end{table}
 
 The methodological limitations (calibration on synthetic data, specific model choices) are separated from the design limitations (non-rational adversary, sub-boundary collusion) because the two require different responses. The methodological limits can be addressed by collecting more data and recalibrating. The design limits require different mechanisms or different claims.
 
@@ -1364,7 +1457,11 @@ The protocol is in revision. The current document reports the state of the desig
 The paper is intended to be readable as a record of what is verified and what is not. The distinction is maintained throughout, and every claim can be traced to a script, a benchmark, or a falsification log entry.
 
 \subsection{Summary of the Section}
-\begin{center}
+Table~\ref{tab:sec11-summary} lists the components with their status and the evidence.
+\begin{table}[H]
+\centering
+\caption{Components of the protocol, their status, and the evidence in this paper.}
+\label{tab:sec11-summary}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lll}
 \toprule
@@ -1384,9 +1481,68 @@ Real-data calibration & Open & --- \\
 Testnet benchmarks & Open & --- \\
 \bottomrule
 \end{tabular}}
-\end{center}
+\end{table}
 
 The protocol is ready for external audit of the cryptographic components and for testnet deployment of the recursive verification. The remaining open problems are stated in Section~\ref{sec:limitations} and listed in Section~\ref{sec:conclusion}.
+
+\appendix
+
+\section{Reproduction Protocol}
+\label{app:reproduction}
+
+Every quantitative claim in this paper is produced by a script under \spath{verification/}, and the suite is built so that a claim can be re-derived rather than trusted. The chain of custody is closed and it includes this document. \spath{verification/run_all.sh} runs every script and writes the closed list of the outputs it produced to \fref{verification/output_manifest.txt}; \spath{verification/fase0_anchor.sh} hashes exactly that list into \fref{verification/output_manifest.sha256} and seals it, together with this paper, into \fref{verification/audit_manifest.sha256}; and \fref{verification/anchor_root.sha256} commits the ten files of the chain --- this paper among them --- so that no document of the chain can be edited without invalidating the root. The suite is deterministic: the harness records a byte-for-byte comparison of the outputs of two independent runs in \fref{verification/fase1_determinism_evidence.txt}, and a re-run reproduces the manifest.
+
+Table~\ref{tab:pinned-outputs} lists the pinned outputs, in the order of the closed list.
+
+\begin{table}[H]
+\centering
+\caption{Pinned outputs of the verification suite, in the order of the closed list of the manifest. Paths are relative to the baseline directory.}
+\label{tab:pinned-outputs}
+\small
+\begin{tabular}{l}
+\toprule
+Output \\
+\midrule
+\spath{sim_positivity_output.txt} \\
+\spath{stationary_stats_output.txt} \\
+\spath{mfpt_bound_explicit_output.txt} \\
+\spath{dt_convergence_output.txt} \\
+\spath{censoring_test_output.txt} \\
+\spath{mfpt_jump_diffusion_output.txt} \\
+\spath{cr_ide_solver_output.txt} \\
+\spath{frobenius_counterexample_output.txt} \\
+\spath{fee_specification_output.txt} \\
+\spath{fee_specification_net_output.txt} \\
+\spath{financial_floor_sensitivity_output.txt} \\
+\spath{constraint_count_check_output.txt} \\
+\spath{soundness_zk_check_output.txt} \\
+\spath{threshold_quantization_output.txt} \\
+\spath{succinctness_comparison_output.txt} \\
+\spath{sim_laplacian_output.txt} \\
+\spath{calibration_modularity_output.txt} \\
+\spath{calibration_heavy_tail_output.txt} \\
+\spath{clique_spectra_output.txt} \\
+\spath{clique_spectra_seeds_output.txt} \\
+\spath{asym_weights_output.txt} \\
+\spath{wilson_intervals_output.txt} \\
+\spath{recalibrate_top_output.txt} \\
+\spath{max_statistic_output.txt} \\
+\spath{q99_standard_error_output.txt} \\
+\spath{bipartite_power_output.txt} \\
+\spath{heavy_tail_n5000_output.txt} \\
+\spath{heavy_tail_scaled_clique_output.txt} \\
+\spath{tucker_analysis_output.txt} \\
+\spath{simulate_data_layer_v3_output.txt} \\
+\spath{attacker_profit_analytical_output.txt} \\
+\spath{compare_reputation_models_output.txt} \\
+\spath{sweep_net_gain_output.txt} \\
+\spath{simulate_bootstrap_net_gain_output.txt} \\
+\spath{r_std_specification_output.txt} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The reproduction protocol is the same one that produced the numbers in this paper: run the suite, hash the outputs, compare against the committed manifest, and read the paper only through the claims that the manifest pins.
 
 \begin{thebibliography}{99}
 \bibitem{bai2010} Z.~Bai and J.~W.~Silverstein. \newblock {\em Spectral Analysis of Large Dimensional Random Matrices}. \newblock Springer Series in Statistics. Springer, 2nd edition, 2010.

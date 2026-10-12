@@ -2,7 +2,7 @@
 """
 clique_spectra_seeds.py - Distribution of the spectral gap over 200 seeds.
 
-Refines finding C-05. Section 5.2 of the paper (main.tex:593-595) reports the
+Refines finding C-05. Section 5.2 of the paper (main.tex:628-630) reports the
 leading non-trivial eigenvalue of W, A_sym and B for a single seed (seed 42).
 This script measures the distribution of the same gaps over N_SEEDS = 200
 independent seeds and reports the percentile at which the cited value falls.
@@ -12,7 +12,7 @@ Parameters (identical to the canonical script):
   clique: CLIQUE_K = 1, CLIQUE_M = 20, intra density DENSITY_FACTOR = 10x
   N_SEEDS = 200, SEED_LIST_RNG = 42
   individual seeds = default_rng(SEED_LIST_RNG).integers(0, 2**31, size=N_SEEDS)
-  Q99 = 9.0542: threshold cited at main.tex:602 (not L609; L608-609 is the
+  Q99 = 9.0542: threshold cited at main.tex:637 (not L644; L643-644 is the
   section heading). Q99 is in units of lambda (calibrated bulk-edge
   threshold), not in units of gap. The reported statistic is P(lambda > Q99).
 
@@ -29,7 +29,7 @@ Percentile method: empirical ECDF without interpolation,
   percentile(x) = 100 * mean(gaps <= x).
 
 Paired test: fraction of seeds with gap_B > gap_W (and =, <) plus the mean
-  and std of gap_B - gap_W, for the paired claim of main.tex:602.
+  and std of gap_B - gap_W, for the paired claim of main.tex:637.
 
 Output: verification/rmt/results/clique_spectra_seeds_output.txt
 """
@@ -50,7 +50,7 @@ CLIQUE_M = 20
 DENSITY_FACTOR = 10
 N_SEEDS = 200
 SEED_LIST_RNG = 42
-Q99 = 9.0542  # lambda units, cited at main.tex:602; P(lambda > Q99) is reported
+Q99 = 9.0542  # lambda units, cited at main.tex:637; P(lambda > Q99) is reported
 
 CITED = {
     "W": 1.6996,
@@ -222,7 +222,7 @@ def report():
     lines.append("  Robustness (seeds 11..{}):".format(N_SEEDS))
     lines.extend(paired_block(gap_B[tail], gap_W[tail]))
     lines.append("")
-    lines.append("  main.tex:602 claims gap_B > gap_W (+1.7569 vs +1.6996) on the same")
+    lines.append("  main.tex:637 claims gap_B > gap_W (+1.7569 vs +1.6996) on the same")
     lines.append("  seed. The inequality is structural: B = W - dd^T/(2m) with dd^T/(2m)")
     lines.append("  positive semidefinite of rank 1, so lambda_1(W) >= lambda_max(B) >=")
     lines.append("  lambda_2(W) for every graph (Weyl interlacing). The paired test is")
