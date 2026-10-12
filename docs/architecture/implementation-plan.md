@@ -2222,7 +2222,7 @@ nothing in `integrations/**` moves for them. §5.9 queues three more from the sa
    already uses for a modelled, non-executable quantity. Either version must keep guard G8
    green — no `Estimate`/`Verified` mix on one line of `main.tex` (`verification/audit-gate.sh`).
 
-**The one amendment still open, queued for P6b** (§12). P6a demoted §7.5 and the
+**Two amendments still open, queued for P6b** (§12). P6a demoted §7.5 and the
 §7.7 row (`main.tex:963-966`, `:987`), but the same number is stated flat in §10.4's
 "Stability of Conclusions": *"The attacker profit is `-502` with slashing
 `S_slash = 10` and `+49.91` without detection"* (`main.tex:1181`). The residue is the
@@ -2235,6 +2235,20 @@ executable loss. It travels with P6b and not with M8 because `main.tex` is seale
 the C1–C4 restructure it should keep the line count 1:1 (P6a's 1410 → 1410), since
 every `main.tex:NNNN` citation in the three sealed `docs/audit/` files would
 otherwise go stale.
+
+**Second: an overloaded symbol in the payment section.** `main.tex:831` states
+*"$\omega \sim U[0.01, 0.10]$ and $T$ uniform on $[0, 3]$ (so $C_R(T) \in [0, 0.6]$)"*,
+but `T` is the tensor of §5.1, defined entry-wise as $T \in [0,1]^{C \times D \times H}$
+(`main.tex:318`), and the quantity the Monte Carlo draws is its **norm**:
+`verification/mechanism/fee_specification.py:86` samples
+`norm_Ts = rng.uniform(0.0, 3.0, ...)`, and the $U_{\min}$/$U_{\text{mean}}$/$U_{\max}$
+it prints are the ones at `main.tex:838-840` (`0.009747`, `0.069152`, `0.095891`), so
+the support is on $\|T\|_F$ — which is admissible under `[0,1]` entries, whose norm can
+reach $\sqrt{500} \approx 22.36$. The values are right and nothing is mis-stated
+numerically; the *symbol* is doing two jobs in one paper. **Amendment:** write
+$\|T\|_F$ where the norm is meant (`:831`, and wherever `C_R(T)` appears), leaving the
+`[0,1]^{C \times D \times H}` definition untouched. Same batch, same reason: it is a
+paper edit, and `main.tex` is sealed.
 
 **Validated locally.** `forge test --offline` → **238 passed, 0 failed, 0 skipped**
 over 9 suites (of which `test/M8StakeVault.t.sol` is 62, and the amended M2 suite's
@@ -2398,7 +2412,7 @@ stable — the same reason the protection phase is last.
 | **P4 (done — M4, M5, M6)** | M4 ✅ (M4a/M4b/M4c) → M5 ✅ → M6 ✅ (off-chain, §5.5–§5.7) | none |
 | **P5 (done — M7, M8)** | M7 (data layer, deploy scripts, AWM) ✅ + M8 (treasury/custody) ✅ (§5.8–§5.12) | none |
 | **P6a (done — `094c41b`)** | The five data-layer amendments of §5.9/§5.12: §7.3's fraud-proof mechanism with the bounty/slash status, §7.3's unstated pool/coverage conventions plus the §10.2 free-rider sentence, the freshness instance with §7.7's `Verified` labels, `eq:revenue`'s missing `N_ATT` factor, and the §7.5/§7.7 non-executable deterrence — twelve lines 1:1, plus §7.4's `We verify` → `We evaluate` (`main.tex:941`) | **re-anchored** `2026-10-11T21:48:40Z`, root `217d6d51…` (G10/G11 green) |
-| P6b | C-gaps: paper apparatus (C1–C4), **its own batch and its own re-anchor**. Carries the `content-audit-pending.md` line-reference drift P6a did *not* introduce: `F-019`'s `:1297` did not contain its subject on `aaaf460` either, while `C-48`'s `:1215` is correct. Queued with it: the §10.4 `-502` residue §5.12 records (`main.tex:1181`) | **re-anchor** |
+| P6b | C-gaps: paper apparatus (C1–C4), **its own batch and its own re-anchor**. Carries the `content-audit-pending.md` line-reference drift P6a did *not* introduce: `F-019`'s `:1297` did not contain its subject on `aaaf460` either, while `C-48`'s `:1215` is correct. Queued with it: the §10.4 `-502` residue and the `\|T\|_F` symbol overload §5.12 records (`main.tex:1181`, `:831`) | **re-anchor** |
 | P7 | Protection + arXiv | **re-anchor** if `main.tex` changes |
 
 **Next step: P6b, the C-gaps batch** (§2.4), and — whenever a funded key and an endpoint
