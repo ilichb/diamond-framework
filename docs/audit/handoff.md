@@ -232,6 +232,29 @@ Consolidated during session 6:
 
 - A prose value with no originating command is not a value, it is a hypothesis. Guards must be re-derived with the exact command that will verify them, not with a similar command from a previous block or a value summarized in prose.
 
+Consolidated during session 7 (the P6b batch):
+
+- A restructure that moves lines invalidates not one citation but the whole map.
+  Every `main.tex:NNNN` reference in the three sealed inputs must be re-derived
+  against a line map *and* validated structurally (each citation must still fall in
+  the same LaTeX section it did before). A numeric remap without that check is a
+  hypothesis, not a value. P6b: 316 tokens, 313 re-derived, 23 files, 396 citations
+  checked, 0 section changes (`anchor-receipts.md` §R-3.1).
+- "1:1" is a property of one edit, never an inherited guarantee. P6a kept the paper
+  at 1410 lines and its receipt could say "no sealed citation is left stale". P6b
+  (C1–C4) took it to 1566 and had to re-derive instead. The lesson is not "do not
+  restructure"; it is that any restructure re-opens the citation map *and* the root.
+- `ots stamp` refuses to overwrite an existing `.ots` (`[Errno 17] File exists`) and
+  has already submitted the commitment to its four calendars by then. The
+  submission is not lost — the `.ots` is built on a second run after moving the old
+  one aside. The old receipt is never destroyed: `git show <commit>:<path>` brings
+  it back (§R-3).
+- A manifest that seals citations (the two `.py` whose stdout prints `main.tex:NNNN`)
+  is part of the audit tree: change a citation, regenerate the output, and the
+  manifest pair moves with it. 33 identical pairs and 2 changed ones is the
+  signature of an honest batch.
+
+
 ## 5. Verification inventory
 
 - 36 non-archived `.py` files under `verification/` (43 total, 7 under
@@ -384,7 +407,8 @@ the audit and paper chain only — nothing in sections 2 to 5 is about
 them — so a session that reads only this file will not see them at all.
 One chain is shared: the OpenTimestamps receipts over
 `anchor_root.sha256` live in `docs/audit/anchor-receipts.md` (R-1.1 …
-R-1.6 over the D1 root, R-2 over the root re-derived for P6a), outside
+R-1.6 over the D1 root, R-2 over the root re-derived for P6a, R-3 over
+the root re-derived for P6b), outside
 the root on purpose — a receipt that sealed the root would be circular
 — and the proof itself is `verification/anchor_root.sha256.ots`.
 

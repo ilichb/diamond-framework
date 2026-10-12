@@ -91,7 +91,7 @@ tenían `Next step` sin aplicar: C-05, C-12, C-14).
 (worksheet +7/−6, main.tex +8/−6).
 **md5:** `main.tex` b8e4ce39… → 67e1abb4… ; worksheet 9dfb6216… → 17a7d7c4….
 
-### A.1 — §6.2 «Verified Reputation» (C-12), `main.tex:752`
+### A.1 — §6.2 «Verified Reputation» (C-12), `main.tex:803`
 
 Problema (C-12): §6.2 afirma que «the proof binds the validator to a
 specific tensor», cierto solo bajo el *Option B repair* de §4.3-4.4
@@ -108,7 +108,7 @@ specific tensor», cierto solo bajo el *Option B repair* de §4.3-4.4
 Refs verificadas: `\label{sec:zk}` (→ §4) y `\label{subsec:recursive}`
 (→ §4.4) resuelven en `main.aux`.
 
-### A.2 — §8.2 «Reputation Models», fin de sección (C-14), tras `main.tex:1009`
+### A.2 — §8.2 «Reputation Models», fin de sección (C-14), tras `main.tex:1080`
 
 Problema (C-14): `R_{\mathrm{std}}` nunca se define. Párrafo nuevo tras
 el párrafo del sweep:
@@ -123,7 +123,7 @@ el párrafo del sweep:
 > Nota de etiqueta: la sección es **§8.2**, no §8.1 (el párrafo del sweep
 > es el último de §8.2, justo antes de `\subsection{Bootstrap Simulation}`).
 
-### A.3 — §8.7 (C-14), `main.tex:1080→1082`
+### A.3 — §8.7 (C-14), `main.tex:1155→1082`
 
 El párrafo yuxtaponía `0.0282` y `0.0424` como si fueran comparables.
 
@@ -134,7 +134,7 @@ El párrafo yuxtaponía `0.0282` y `0.0424` como si fueran comparables.
   the sweep optimum $\mu/g = 1.5$, averaged over five seeds; both fall
   below...`
 
-### A.4 — §10.5 (C-14), `main.tex:1226→1228`
+### A.4 — §10.5 (C-14), `main.tex:1315→1228`
 
 - **Antes:** `...is 0.0424 at the sweep optimum, below the 0.05 threshold...`
 - **Después:** `...is 0.0424 at the sweep optimum $\mu/g = 1.5$ (five
@@ -143,9 +143,9 @@ El párrafo yuxtaponía `0.0282` y `0.0424` como si fueran comparables.
 
 ### A.5 / A.6 — Worksheet
 
-- C-12 `Status:` → Cerrado. Forward reference added at main.tex:752 (§6.2 → §4.4).
+- C-12 `Status:` → Cerrado. Forward reference added at main.tex:803 (§6.2 → §4.4).
 - C-14 `Status:` → Cerrado. R_std defined at the end of §8.2; operating
-  point and seed count declared at main.tex:1080 and main.tex:1226.
+  point and seed count declared at main.tex:1155 and main.tex:1315.
 
 ---
 
@@ -162,13 +162,13 @@ Problema (C-05): §5.2 comparaba solo el **peso por arista** (intra-clique
 *cancelaba* por el aumento de grado. Ignoraba que los pares intra-clique
 son **10× más probables**; la comparación relevante es **por par**.
 
-### B.1 — §5.2, párrafo del mecanismo, `main.tex:572`
+### B.1 — §5.2, párrafo del mecanismo, `main.tex:604`
 Se elimina la frase inicial («The normalization is inappropriate for
 detecting cliques.») y se reescribe en términos per-edge vs per-pair:
 per-edge intra `1/27.2 ≈ 0.037`, fondo `1/20.0 ≈ 0.050`; «the expected
 weight is what determines the spectral signature».
 
-### B.2 — §5.2, párrafo tras la tabla de grados, `main.tex:587`
+### B.2 — §5.2, párrafo tras la tabla de grados, `main.tex:619`
 - **Antes:** «The clique's edges are weaker... The density signal is
   cancelled by the degree increase.»
 - **Después:** «The clique's per-edge weight is lower... but the per-pair
@@ -179,7 +179,7 @@ weight is what determines the spectral signature».
   denominator the density signal is attenuated by the normalization, not
   cancelled.»
 
-### B.3a — §5.2, prosa antes de la tabla espectral, `main.tex:589`
+### B.3a — §5.2, prosa antes de la tabla espectral, `main.tex:621`
 `...leading non-trivial eigenvalue` → `...eigenvalue, for a single draw of
 the generator (seed 42):`
 
@@ -444,3 +444,35 @@ hashes a esas tres filas. La columna `main.tex` (la que importa para
 `bd20d17`, `4facece`, `7ef2a2b`); el backlog C-01…C-18 queda 18/18 cerrado;
 solo resta un micro-fix cosmético (ítem A §9) y los dos gaps residuales
 declarados (handoff §3).
+
+---
+
+## 15. Sesión 7 — lote P6b: aparato del paper y re-anclaje (2026-10-12)
+
+**Estado: P6b cerrado.** El aparato del paper (C1–C4: `center` → `table[H]` con
+`\caption`) llevó `main.tex` de 1410 a 1566 líneas; las dos amendments que §10
+dejó en cola quedaron aplicadas (§10.4's `-502` acotado por §7.5 en
+`main.tex:1266`; `\|T\|_F` donde se quiere la norma en `main.tex:842` y `:882`).
+Como el paper cambió, las citas `main.tex:NNNN` de los tres inputs sellados se
+re-derivaron **antes** de regenerar el root (316 tokens, 313 remapeados, 23
+ficheros, 396 citas validadas, 0 cambios de sección; `anchor-receipts.md`
+§R-3.1), y el ancla se re-firmó con recibo propio, R-3.
+
+    bash verification/audit-gate.sh                       # PASS=11 FAIL=0 SKIP=0
+    bash verification/fase0_anchor.sh --check             # exit 0; 10 pares idénticos
+    sha256sum verification/anchor_root.sha256             # 79ac6783…
+    sha256sum verification/anchor_root.sha256.ots         # 1e5e5cb6… (805 B)
+    ots info verification/anchor_root.sha256.ots          # compromete 79ac6783…
+    wc -l docs/paper/main.tex                             # 1566 (1410 en d8d2e55)
+    grep -c '^### C-' docs/audit/content-audit-pending.md # 50 (worksheet congelado)
+    grep -c '^### F-' docs/audit/numerical-verification.md # 21
+
+**Reglas que este lote deja escritas** (handoff, "Consolidated during session 7"):
+un remap de citas mueve números y no adjudica significados; "1:1" es propiedad de
+una edición, no una garantía heredable; `ots stamp` no sobrescribe un `.ots` y ya
+ha enviado el compromiso a sus calendarios; y un manifiesto que sella citas es
+parte del árbol de la auditoría.
+
+> §0 de este informe data de la sesión 3; los valores vivos se re-derivan con los
+> comandos de arriba, no se copian.
+

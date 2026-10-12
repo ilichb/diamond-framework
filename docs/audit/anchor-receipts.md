@@ -281,3 +281,98 @@ por P6a.
 que los 35 outputs no se regeneraron: este root sella un árbol en el que lo único que
 se movió es el paper y los dos manifiestos que lo sellan.
 
+
+## R-3 — Recibo OpenTimestamps del root de P6b
+
+Fecha: 2026-10-12, re-anclaje `2026-10-12T00:54:19Z`; el `.ots` sellado a las
+`00:55:26Z` y **promovido a prueba Bitcoin** a las `02:46:10Z` (UTC; local
+`20:54`/`20:55` del día 11 y `22:46` del 11 `-04`). HEAD al re-anclar:
+`d8d2e55` (sobre ese árbol se aplicó el lote P6b, todavía sin commitear); HEAD
+anclado *dentro* del root (el que sella G10): `d8d2e55`.
+
+Este sello **sustituye** al de §R-2, y por la razón que el propio §Alcance
+declara: P6b tocó `docs/paper/main.tex` y, con él, los tres inputs sellados que
+lo citan por número de línea. §R-2.1 dejó escrito que las citas de esos tres
+ficheros "las que ya eran inexactas en `aaaf460` siguen siéndolo (P6b las
+lleva)". P6b no se limitó a llevarlas: las **re-derivó** (§R-3.1), y el sello de
+§R-2 quedó obsoleto en cuanto el root cambió de digest.
+
+| campo | valor |
+|---|---|
+| Artefacto sellado | `verification/anchor_root.sha256` (10 pares) |
+| SHA-256 del artefacto | `79ac6783523cf2c656795ac146107122cafc101d8fa4c27bcfebb5d91d0b4fdd` |
+| Recibo | `verification/anchor_root.sha256.ots` (**2774 bytes**, **promovido**: con atestación Bitcoin) |
+| SHA-256 del recibo | `46755224943988d0d4353c5e82f11960920220a9df696bb679141f655904d8c5`; el pendiente de 805 B era `1e5e5cb69748872a34060d668a6bde2d5ec5fe35be0f04588edc5dc376dbd2f8` |
+| Cliente | `ots` v0.7.2 |
+| Envío a calendarios | 4 *(4 líneas `Submitting to remote calendar`)* |
+| Atestaciones | **2 `BitcoinBlockHeaderAttestation` en los bloques `971017` y `971018`** (llegadas por `alice` y `bob`), más 4 `PendingAttestation` que quedan como ramas ya innecesarias; derivado de `ots info`, no de la salida del cliente |
+| Verificación | `ots info` → `File sha256 hash: 79ac6783…`: el compromiso del recibo es el del artefacto. `ots verify` → exit 1 con `Could not connect to Bitcoin node: Cookie file unusable ([Errno 2] No such file or directory: '/home/ilich/.bitcoin/.cookie')`, es decir, este entorno no tiene nodo Bitcoin: la prueba está **en el recibo** y se comprueba con un nodo. Los dos bloques existen en la cadena: `curl -s https://blockstream.info/api/block-height/971017` → `00000000000000000000f418a6953e467b4ae6e63ab99060c1ffc735dc1763b3` y `…/971018` → `0000000000000000000144f8b6d6f77d0ea60cac10fe025b4130773b6b4abf70` |
+| Sustituye a | `c0ca6425c5af24bd945c2acd433b30e826d47d4f39f50e658ae4a6542fa5ab71` (735 B; pendiente), el recibo de P6a sobre `217d6d51…` |
+| Recuperación del anterior | `git show HEAD:verification/anchor_root.sha256.ots \| sha256sum` → `c0ca6425…`: sigue en el historial y no depende de ningún archivo fuera del repo |
+
+Promoción — y aquí llegó: `ots upgrade verification/anchor_root.sha256.ots` →
+`Got 1 attestation(s) from https://bob.btc.calendar.opentimestamps.org`,
+`Got 1 attestation(s) from https://alice.btc.calendar.opentimestamps.org`,
+`Success! Timestamp complete` (bloques `971017` y `971018`). El recibo pasó de
+805 a **2774 bytes** y de pendiente a prueba Bitcoin en la misma sesión, sin
+re-sellar y **sin re-anclar**: el `--check` posterior devuelve exit 0 con
+`anchor_root.sha256` idéntico byte a byte (10 pares), que es la demostración de la
+regla — el recibo vive fuera del root, y eso es lo que evita la circularidad.
+
+Una trampa del cliente que este sello encontró: `ots stamp` **no sobrescribe** un
+`.ots` existente (`Failed to create timestamp 'verification/anchor_root.sha256.ots':
+[Errno 17] File exists`) y, aun así, **ya ha enviado** el compromiso a los cuatro
+calendarios. El envío no se pierde, pero el `.ots` hay que generarlo apartando el
+anterior (es lo que hacen §R-1 y §R-2). El primer intento de aquí fue exactamente
+eso: 4 envíos, `.ots` intacto (`c0ca6425…`); el `.ots` de 805 bytes salió del
+segundo, y `ots info` confirma que su compromiso es el root de P6b. Sobre ese
+mismo compromiso —y sin un tercer envío— `ots upgrade` construyó después el
+promovido de 2774 bytes.
+
+### R-3.1 Por qué este recibo sí invalida las referencias selladas — y qué se hizo
+
+§R-2.1 pudo escribir "este sello no deja obsoleta ninguna de esas tres citas"
+porque P6a se hizo **1:1** (1410 → 1410 líneas). P6b no: el aparato C1–C4 llevó el
+paper de **1410 a 1566 líneas** (`wc -l docs/paper/main.tex`; 1410 en `d8d2e55`),
+al convertir bloques `center` en `table[H]` con `\caption` y añadir texto. Toda
+cita `main.tex:NNNN` de los tres inputs sellados quedaba, por tanto, desplazada, y
+el root de §R-2 sellaba el desfase.
+
+La re-derivación se hizo con un mapa de líneas `difflib` HEAD → árbol de trabajo
+(`/tmp/p6b_pointers.py`, herramienta desechable, no versionada) sobre las formas de
+cita que el repo usa: `` `main.tex` LNNN ``, `main.tex:NNN`, `:NNN` y `LNNN` de
+continuación —con ancla al fichero nombrado más cercano, para no tocar las
+`L20`/`L40` de `threshold_quantization.py`— y la columna `line` de
+`claim-registry.csv`. Resultado derivado:
+
+- **316** tokens citados: **313** re-derivados, **1** histórico (marcado
+  `antigua`/`forma parte de una`), y **3** irresolubles por diseño: los
+  `main.tex:35` de `content-audit-pending.md` y `eje-vi-style-report.md`, ya
+  muertos antes de P6a (pre-C-44).
+- **23** ficheros reescritos, `claim-registry.csv` incluido (27 filas).
+- Validación estructural: **396** citas mapeadas, **0** cambios de sección LaTeX
+  (una cita desviada habría cambiado de sección) y el mapa estrictamente
+  monótono.
+- Los dos `.py` cuyo *stdout* imprime citas (`zk/threshold_quantization.py`,
+  `rmt/clique_spectra_seeds.py`) se regeneraron, y sus cuatro copias
+  (`baseline_verified/` más los `results/`) coinciden byte a byte:
+  `output_manifest.sha256` cambia en **2 pares** y los otros **33** son
+  idénticos.
+
+Una precisión de método: el remap **mueve números, no adjudica significados**. Donde
+una cita ya era imprecisa en `d8d2e55`, esta re-derivación la deja imprecisa en el
+mismo sentido. El caso quedó medido: la frase que `content-audit-pending.md` cita
+como "nearby values give similar results" vive en `main.tex:1183` de `d8d2e55` y en
+`:1268` del árbol actual; las citas que la invocan —`content-audit-pending.md` con
+`:1133` y `F-019` en `numerical-verification.md` con `:1215`— se remapearon a
+`:1215` y `:1304`, así que siguen sin apuntar a la frase, exactamente como en
+`aaaf460`. La validación estructural confirma que cada cita conserva su sección
+padre (`\subsection{Reproducibility}` para `:1133`→`:1215`, `Stability of
+Conclusions` para `:1183`→`:1268`, `Summary of the Section` para `:1215`→`:1304`).
+Decidir *qué* debe citar cada número es una edición de contenido, no una
+re-derivación, y no forma parte de este lote.
+
+Nota de disciplina: el commit de P6b debe preservar los diez ficheros que el root
+compromete tal como quedaron aquí. Cualquier retoque posterior exige re-anclar;
+`bash verification/fase0_anchor.sh --check` (G11) lo dice en un comando.
+

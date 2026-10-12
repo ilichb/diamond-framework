@@ -98,7 +98,7 @@ what the gap looked like when this plan was written, not its current status.
 | B2 | README badge required "Python 3.11+"; this machine runs 3.10.12 and the suite passes | `README.md:9` | badge lowered to 3.10+ |
 | B3 | `benchmarks/README.md` was `forge init` boilerplate; it did not document the benchmark | 64 generic lines | rewritten: what is measured, how to reproduce it offline, artefact provenance, what is **not** tested |
 | B4 | `CITATION.cff` published a GitHub `url` and a release date for a private, unreleased repo | `CITATION.cff` | `url` and `date-released` removed; an `abstract` states there is no release, tag or DOI |
-| B5 | The paper cites **solc 0.8.33**; the README badge and one benchmark artefact cite **0.8.24** | `main.tex:1172` vs `benchmarks/results/gas_ingest_output.txt:4` | badge aligned to 0.8.33, which is what both Foundry projects pin; the 0.8.24 artefact is left untouched as evidence and its provenance is documented in `benchmarks/README.md` |
+| B5 | The paper cites **solc 0.8.33**; the README badge and one benchmark artefact cite **0.8.24** | `main.tex:1257` vs `benchmarks/results/gas_ingest_output.txt:4` | badge aligned to 0.8.33, which is what both Foundry projects pin; the 0.8.24 artefact is left untouched as evidence and its provenance is documented in `benchmarks/README.md` |
 
 ### 2.4 Paper apparatus gaps (require a re-anchor — later phase)
 
@@ -526,14 +526,14 @@ Provenance of every constant used below — none of it invented:
 
 | Quantity | Value | Source |
 |---|---|---|
-| Tensor, `N` entries | `T ∈ [0,1]^(C×D×H)`, `C·D·H = 500` | `main.tex` `eq:tensor` (L318, L322–324) |
-| Object compared to `Θ_r` | the norm `‖T‖_F` | `main.tex` L324 |
-| `Θ_r` | `0.5` | `main.tex` L444–445; enforced on chain since M2 |
+| Tensor, `N` entries | `T ∈ [0,1]^(C×D×H)`, `C·D·H = 500` | `main.tex` `eq:tensor` (L327, L331–333) |
+| Object compared to `Θ_r` | the norm `‖T‖_F` | `main.tex` L333 |
+| `Θ_r` | `0.5` | `main.tex` L463–464; enforced on chain since M2 |
 | WAD convention | `1.0 = 1e18` | M3 fixture statement `[root, epoch, 5e17]` (§5.4) |
-| Simulated norm range | `‖T‖_F ∈ [0, 3]` | `main.tex` L831; `threshold_quantization.py` L20, L40 |
-| Bulletproofs at `N=500` | `≈6.5e6` gas off-chain, `0.72 KB` | `main.tex` L498, cited by `threshold_quantization.py` L25, L48 |
-| Paper's design table | A: 1,080,501 constr. / ~470M gas; A′: 240,261 / ~30M; B: 0 / ~6.5M; proof sizes 0.20 / 0.20 / 0.72 KB | `main.tex` L487–490 |
-| Recursive proof cost / proving time | `≈250k` gas; proving time **not measured**, estimated "tens of seconds" | `main.tex` L518, L520 |
+| Simulated norm range | `‖T‖_F ∈ [0, 3]` | `main.tex` L882; `threshold_quantization.py` L20, L40 |
+| Bulletproofs at `N=500` | `≈6.5e6` gas off-chain, `0.72 KB` | `main.tex` L526, cited by `threshold_quantization.py` L25, L48 |
+| Paper's design table | A: 1,080,501 constr. / ~470M gas; A′: 240,261 / ~30M; B: 0 / ~6.5M; proof sizes 0.20 / 0.20 / 0.72 KB | `main.tex` L515–518 |
+| Recursive proof cost / proving time | `≈250k` gas; proving time **not measured**, estimated "tens of seconds" | `main.tex` L546, L548 |
 | `bulletproofs 5.0.0` deployable surface | `RangeProof`, `LinearProof` (⟨a,b⟩ with **b public**), `range_proof_mpc`; the R1CS API (`yoloproofs`) is **UNSUITABLE FOR DEPLOYMENT** and **fails to build** (E0599 ×3, `r1cs/proof.rs` L180–182 vs `curve25519-dalek` 4.1.3) | `README.md` L43–50, L165–167; `src/lib.rs` L47–49; verified build (§5.5.5) |
 
 #### 5.5.1 The relation: equality, not the paper's bit
@@ -845,7 +845,7 @@ not "V2 with extra steps":
     outside semver compatibility (`README.md` L43–50, L165–167). Reproduced by
     `src/zk/scripts/check-yoloproofs-gate.sh`.
   - **The paper's numbers are not the numbers for its own statement.**
-    `main.tex` L490 lists `Option B` at `0` R1CS constraints and L510 estimates
+    `main.tex` L518 lists `Option B` at `0` R1CS constraints and L538 estimates
     `0.72 KB` from `2N` scalar multiplications; both describe the *bare* IPA. A
     500-entry norm consumes 500 squaring gates plus a linear constraint, and the
     recursive SNARK must then verify *that* verifier instead of the plain one.
@@ -983,7 +983,7 @@ Two readings of those numbers belong in the record. The norm alone costs
 `32,860` constraints at `N = 500` with `k = 60` folded in, which is where the
 paper's missing number lives; Poseidon over 500 entries adds `60,748`, i.e. the
 commitment is the dominant term, not the norm. And `93,608` sits below the
-paper's Option A′ (`240,261`, `main.tex` L488) by a factor of 2.6, so the plan
+paper's Option A′ (`240,261`, `main.tex` L516) by a factor of 2.6, so the plan
 does **not** have to treat the paper's `[CONJECTURE]` ("still too large for
 practical Groth16 proving on consumer hardware", L502) as settled: M4b's proving
 time is the measurement that decides it, and §9 requires the backing script
@@ -1449,7 +1449,7 @@ summary for both regimes (`r_0 = 0.325039 / 0.611879`, `π(1.0) = +0.489946 /
    the numbers, so the file cannot be read as an exact reproduction; the test
    asserts the substitution rather than hiding it.
 2. **F-001's multiplicative branch reproduces the `np.clip` that precedes the
-   jump.** The `0.000000%` is by construction (`main.tex` L171), not an empirical
+   jump.** The `0.000000%` is by construction (`main.tex` L167), not an empirical
    finding: the port clips `R + drift + diff` at zero *before* applying the factor,
    exactly as the sealed script does, and the test asserts the resulting `min R ≥ 0`
    instead of re-measuring a tautology.
@@ -1669,7 +1669,7 @@ that already exists in this repository — recorded here, not repaired, for the 
 and the sealed script are the side that is right.
 
 **1. §7.3's fraud proof is described in a shape the tensor cannot have.**
-`main.tex:915` says *"Any party can submit a fraud proof consisting of two state
+`main.tex:976` says *"Any party can submit a fraud proof consisting of two state
 inclusion proofs against the same source-chain root that yield contradictory values
 for a single entry `T[c,d,h]`"*. Against the tensor's own Merkle root that pair is
 **unsatisfiable by construction** — a leaf has one value, so a second opening of one
@@ -1710,14 +1710,14 @@ that the paper never states:
   (`verification/data-layer/results/archive/simulate_data_layer_output.txt:67-69`), and
   the note did not survive into the paper. Unstated, the grid's `+0.20` reads as a
   measured residual instead of what it is: the arithmetic of a split-the-pot
-  convention, `(D_obs − D_theory) · B / n*` (`main.tex:961`).
+  convention, `(D_obs − D_theory) · B / n*` (`main.tex:1025`).
 - **Detection is 0 or 1.** With `N_VERIFIERS = 20` there is no detection probability
   and no partial detection: one auditor sees every fraud. §7.4's prose hedges
-  ("reaches 100\% *in this model*", `main.tex:959`) but §7.7's table does not.
+  ("reaches 100\% *in this model*", `main.tex:1023`) but §7.7's table does not.
 
 §10.2 already carries the neighbouring limitation — *"assumes auditors respond to
 profit… Below that threshold, the mechanism provides no detection regardless of the
-value of the reputation at stake"* (`main.tex:1232`), status `Design` in the
+value of the reputation at stake"* (`main.tex:1321`), status `Design` in the
 Limitations table (`:1305`) — but it covers only `B < B*`, not the free-rider and
 dilution case, which is the one the archived note named. **Amendment:** state both
 conventions in §7.3 (the pool divided by the auditors; coverage as a step), and extend
@@ -1727,7 +1727,7 @@ the §10.2 bounty limitation with one sentence on free-riding and dilution, at t
 **3. §7.7's `Verified` label covers what the script assumes.** The paper's own
 vocabulary is explicit that the column records the *nature* of a claim, not a
 pass/fail (`README.md:203-211`), and §7.7 spends it on three rows
-(`main.tex:985-989`): `B* = c_audit / p_fraud` is `Analytical` — correctly, it is
+(`main.tex:1053-1057`): `B* = c_audit / p_fraud` is `Analytical` — correctly, it is
 derived; `n^*(B) = ⌊B/B*⌋` is `Verified` although the script *assumes* it (finding 2
 above); and `Integrity = 1.0 when n^* ≥ 1` is `Verified` although it is forced by the
 coverage convention — with `integrity = (N_ATTESTATIONS - frauds + detections) /
@@ -1735,7 +1735,7 @@ N_ATTESTATIONS` (`:70`) and `coverage ∈ {0,1}` (`:39`), `detections == frauds`
 deterministic, so the row is a tautology of the model. The fourth row is §5.12's; the
 fifth, `Freshness bounds propagation linearly`, is correctly `Analytical` with no
 script — but at the paper's own example the bound defeats itself: `γ = 0.10, k = 10`
-in `main.tex:976` gives `fraud fraction ≤ 1.0`, the whole tensor, so the printed
+in `main.tex:1040` gives `fraud fraction ≤ 1.0`, the whole tensor, so the printed
 instance is vacuous rather than reassuring. **Amendment:** reclassify the two rows to
 the paper's own `Analytical` / `Design`, keep `Verified` for quantities the script
 *measures*, and print a `γ · k < 1` instance for the freshness bound. Precedent: C-41
@@ -1754,7 +1754,8 @@ every number they cite was already in the sealed script or in a delivered crate.
 batch took **its own** re-anchor instead of §10's original single P6 batch, because §9's "one
 batch" rationale names the C-phase and the receipts are additive: the superseded D1
 receipt stays in history, and `git show aaaf460:verification/anchor_root.sha256.ots`
-is where it lives. C1–C4 remain as P6b (§10).
+is where it lives. C1–C4 were delivered in P6b (§12), which took its own re-anchor
+(`2026-10-12T00:54:19Z`, root `79ac6783…`, receipt R-3).
 
 ### 5.10 M7c as delivered (the Pedersen ↔ Merkle bridge, option (c))
 
@@ -2159,9 +2160,9 @@ here rather than repaired, because `main.tex` is in the sealed set (§3) and can
 touched outside the P6 batch (§9, §10). The paper's "Slashing and Integrity" subsection
 (§7.5) concludes that the fraud is deterred — *"The attacker profit is negative for all
 `B >= B*` because the slashing parameter `S_slash = 10.0` exceeds the fraud gain
-`V_fraud = 1.0` by an order of magnitude"* (`main.tex:963-964`) — the grid books `-502.00`
-(`main.tex:950-954`), and the section summary classes the row `Verified`: *"Attacker profit
-`-502` with `S_slash = 10` | Verified"* (`main.tex:987`).
+`V_fraud = 1.0` by an order of magnitude"* (`main.tex:1027-1028`) — the grid books `-502.00`
+(`main.tex:1014-1018`), and the section summary classes the row `Verified`: *"Attacker profit
+`-502` with `S_slash = 10` | Verified"* (`main.tex:1055`).
 
 **What that number is.** Under the sealed script's `coverage = 1.0` convention a detected
 fraud earns nothing, so the per-epoch total is
@@ -2182,12 +2183,12 @@ bound the deterrent:
 
 | Quantity | Value | Source |
 |----------|-------|--------|
-| Fraud gain per epoch | `50` | `V_fraud = 1.0`, `N_ATT = 500`, `p_fraud = 0.10` (`main.tex:941`; `simulate_data_layer_v3.py:17-24`), with `n_frauds ~ Binomial(100, 0.5)`, mean `50.2` |
-| Minimum stake a profit-maximising attacker posts, per validator | `<= Theta = 1.0` | `eq:allocation` (`main.tex:783`); `THETA = 1e18` (`AVIPValidatorManager.sol:57`) |
+| Fraud gain per epoch | `50` | `V_fraud = 1.0`, `N_ATT = 500`, `p_fraud = 0.10` (`main.tex:1002`; `simulate_data_layer_v3.py:17-24`), with `n_frauds ~ Binomial(100, 0.5)`, mean `50.2` |
+| Minimum stake a profit-maximising attacker posts, per validator | `<= Theta = 1.0` | `eq:allocation` (`main.tex:834`); `THETA = 1e18` (`AVIPValidatorManager.sol:57`) |
 | Adversarial validators at `beta = 0.2` over 100 | `20` | `n_adv = int(100 * BETA_ADVERSARIAL)` (`simulate_data_layer_v3.py:46`) |
 | Maximum confiscable per epoch (whole adversarial set, minimum stake, every token) | `<= 20` | `20 * 1.0`; `debit` cannot exceed escrow |
 | Attacker's net for the epoch, with everything confiscated | `>= +30` | `50 - 20` |
-| Loss the table books | `-502` | `main.tex:950`, where the penalty is a parameter and not a transfer |
+| Loss the table books | `-502` | `main.tex:1014`, where the penalty is a parameter and not a transfer |
 
 So with `S_slash` *not* executed, the deterrence sentence does not follow from the
 parameters: even confiscating the whole adversarial set at the minimum admissible stake
@@ -2206,49 +2207,54 @@ records its `F_0*` provenance note, and promotable to `docs/audit/claim-registry
 next batched re-anchor (§9): the two `main.tex` edits below are the whole of the repair, and
 nothing in `integrations/**` moves for them. §5.9 queues three more from the same section.
 
-1. **`eq:revenue` is missing a factor** (`main.tex:920`, §7.3). As printed,
+1. **`eq:revenue` is missing a factor** (`main.tex:981`, §7.3). As printed,
    `E[revenue] = p_fraud * N_ATT * B / n_auditors - c_audit`. The per-auditor cost is
    `N_ATT * c_audit`, as the prose two lines below already states — *"the per-auditor cost
-   `N_ATT * c_audit = 50`"* (`main.tex:961`) — and as the sealed script computes it
+   `N_ATT * c_audit = 50`"* (`main.tex:1025`) — and as the sealed script computes it
    (`total_cost = n_auditors * N_ATTESTATIONS * C_AUDIT`, `simulate_data_layer_v3.py:58`).
    With the printed form, `E = 0` gives `n* = N_ATT * B / B*`, not the
-   `n*(B) = floor(B/B*)` the same page derives (`main.tex:927`); the missing factor is the
+   `n*(B) = floor(B/B*)` the same page derives (`main.tex:988`); the missing factor is the
    one that makes `B* = c_audit / p_fraud` cancel. **Amendment: the trailing term becomes
    `- N_{ATT} * c_{audit}`.**
-2. **§7.5 and the §7.7 row are restated** (`main.tex:963-966`, `:987`). **Amendment:**
+2. **§7.5 and the §7.7 row are restated** (`main.tex:1027-1030`, `:1055`). **Amendment:**
    bound the deterrence claim by the executable loss — escrow, `<= Theta = 1.0` per
    validator, `C_R` not confiscated — instead of by `S_slash`; or, if the claim is kept as a
    *model* statement, demote the row from `Verified` to the status the rest of that table
    already uses for a modelled, non-executable quantity. Either version must keep guard G8
    green — no `Estimate`/`Verified` mix on one line of `main.tex` (`verification/audit-gate.sh`).
 
-**Two amendments still open, queued for P6b** (§12). P6a demoted §7.5 and the
-§7.7 row (`main.tex:963-966`, `:987`), but the same number is stated flat in §10.4's
+**Both amendments were queued for P6b; P6b applies them both** (§12). P6a demoted §7.5 and the
+§7.7 row (`main.tex:1027-1030`, `:1055`), but the same number is stated flat in §10.4's
 "Stability of Conclusions": *"The attacker profit is `-502` with slashing
-`S_slash = 10` and `+49.91` without detection"* (`main.tex:1181`). The residue is the
+`S_slash = 10` and `+49.91` without detection"* (`main.tex:1266`). The residue is the
 same defect in a second place: the figure is model bookkeeping under the sealed
 script's `coverage = 1.0` convention, it is not an executable loss (above), and the
 row it summarises in §7.7 no longer carries `Verified`. **Amendment:** restate
 `:1181` with the status §7.7 now uses, or keep the sentence and bound it by §7.5's
-executable loss. It travels with P6b and not with M8 because `main.tex` is sealed
-(§3) and P6b is already the batch that opens the paper — and if it runs *before*
-the C1–C4 restructure it should keep the line count 1:1 (P6a's 1410 → 1410), since
-every `main.tex:NNNN` citation in the three sealed `docs/audit/` files would
-otherwise go stale.
+executable loss. **Applied in P6b, second option:** the sentence stands and is
+bounded — *"the loss collateralized on-chain is the escrowed stake of
+Section~\ref{sec:payment}, bounded by $\Theta = 1.0$ per validator"* (`main.tex:1266`).
+It travelled with P6b and not with M8 because `main.tex` is sealed
+(§3) and P6b was already the batch that opens the paper — and because the C1–C4
+restructure did **not** keep the line count 1:1 (1410 → 1566), the citations in the
+three sealed `docs/audit/` files were re-derived in the same batch, before the root
+was regenerated (`anchor-receipts.md` §R-3.1), instead of going stale.
 
-**Second: an overloaded symbol in the payment section.** `main.tex:831` states
+**Second: an overloaded symbol in the payment section.** `main.tex:882` states
 *"$\omega \sim U[0.01, 0.10]$ and $T$ uniform on $[0, 3]$ (so $C_R(T) \in [0, 0.6]$)"*,
 but `T` is the tensor of §5.1, defined entry-wise as $T \in [0,1]^{C \times D \times H}$
-(`main.tex:318`), and the quantity the Monte Carlo draws is its **norm**:
+(`main.tex:327`), and the quantity the Monte Carlo draws is its **norm**:
 `verification/mechanism/fee_specification.py:86` samples
 `norm_Ts = rng.uniform(0.0, 3.0, ...)`, and the $U_{\min}$/$U_{\text{mean}}$/$U_{\max}$
-it prints are the ones at `main.tex:838-840` (`0.009747`, `0.069152`, `0.095891`), so
+it prints are the ones at `main.tex:892-894` (`0.009747`, `0.069152`, `0.095891`), so
 the support is on $\|T\|_F$ — which is admissible under `[0,1]` entries, whose norm can
 reach $\sqrt{500} \approx 22.36$. The values are right and nothing is mis-stated
 numerically; the *symbol* is doing two jobs in one paper. **Amendment:** write
 $\|T\|_F$ where the norm is meant (`:831`, and wherever `C_R(T)` appears), leaving the
-`[0,1]^{C \times D \times H}` definition untouched. Same batch, same reason: it is a
-paper edit, and `main.tex` is sealed.
+`[0,1]^{C \times D \times H}` definition untouched. **Applied in P6b:** `main.tex:842`
+now declares `C_R(T) \equiv C_R(\|T\|_F)` and `main.tex:882` draws `\|T\|_F`; the
+tensor definition at `main.tex:327` is unchanged, as required. Same batch, same
+reason: it was a paper edit, and `main.tex` is sealed.
 
 **Validated locally.** `forge test --offline` → **238 passed, 0 failed, 0 skipped**
 over 9 suites (of which `test/M8StakeVault.t.sol` is 62, and the amended M2 suite's
@@ -2411,11 +2417,11 @@ stable — the same reason the protection phase is last.
 | **P3 (done — M1, M2, M3)** | M1 ✅ → M2 ✅ → M3 ✅ (on-chain core, §5.4) | none |
 | **P4 (done — M4, M5, M6)** | M4 ✅ (M4a/M4b/M4c) → M5 ✅ → M6 ✅ (off-chain, §5.5–§5.7) | none |
 | **P5 (done — M7, M8)** | M7 (data layer, deploy scripts, AWM) ✅ + M8 (treasury/custody) ✅ (§5.8–§5.12) | none |
-| **P6a (done — `094c41b`)** | The five data-layer amendments of §5.9/§5.12: §7.3's fraud-proof mechanism with the bounty/slash status, §7.3's unstated pool/coverage conventions plus the §10.2 free-rider sentence, the freshness instance with §7.7's `Verified` labels, `eq:revenue`'s missing `N_ATT` factor, and the §7.5/§7.7 non-executable deterrence — twelve lines 1:1, plus §7.4's `We verify` → `We evaluate` (`main.tex:941`) | **re-anchored** `2026-10-11T21:48:40Z`, root `217d6d51…` (G10/G11 green) |
-| P6b | C-gaps: paper apparatus (C1–C4), **its own batch and its own re-anchor**. Carries the `content-audit-pending.md` line-reference drift P6a did *not* introduce: `F-019`'s `:1297` did not contain its subject on `aaaf460` either, while `C-48`'s `:1215` is correct. Queued with it: the §10.4 `-502` residue and the `\|T\|_F` symbol overload §5.12 records (`main.tex:1181`, `:831`) | **re-anchor** |
+| **P6a (done — `094c41b`)** | The five data-layer amendments of §5.9/§5.12: §7.3's fraud-proof mechanism with the bounty/slash status, §7.3's unstated pool/coverage conventions plus the §10.2 free-rider sentence, the freshness instance with §7.7's `Verified` labels, `eq:revenue`'s missing `N_ATT` factor, and the §7.5/§7.7 non-executable deterrence — twelve lines 1:1, plus §7.4's `We verify` → `We evaluate` (`main.tex:1002`) | **re-anchored** `2026-10-11T21:48:40Z`, root `217d6d51…` (G10/G11 green) |
+| **P6b (done)** | C-gaps: paper apparatus (C1–C4) — `center` → `table[H]` with `\caption`, **1410 → 1566 lines** — plus the two amendments queued above, both applied (§5.12): §10.4's `-502` bounded by §7.5 (`main.tex:1266`) and `\|T\|_F` where the norm is meant (`main.tex:842`, `:882`). It carried the citation drift P6a did not introduce — `F-019`'s `:1215` (the sentence it cites lives at `:1183` on `aaaf460`, `:1268` now) and `C-14`'s `§8.7` pointer; the numbers this row used to quote (`:1297`, `C-48`) were mis-derived. Rather than correcting them, all cited tokens were **re-derived** before the root was regenerated: 316 tokens, 313 remapped, 23 files, 396 citations checked, **0 section changes** (`anchor-receipts.md` §R-3.1) | **re-anchored** `2026-10-12T00:54:19Z`, root `79ac6783…`, receipt **R-3** (G1..G11 PASS=11 FAIL=0 SKIP=0) |
 | P7 | Protection + arXiv | **re-anchor** if `main.tex` changes |
 
-**Next step: P6b, the C-gaps batch** (§2.4), and — whenever a funded key and an endpoint
+**Next step: P7, the protection and arXiv pass** (§2.4), and — whenever a funded key and an endpoint
 are available — the Fuji deployment the M7a and M8 scripts are waiting for.
 **M7 is delivered**:
 M7b (§5.9) is the ingestion formula `f_c` as an interface, the fraud proof and its
