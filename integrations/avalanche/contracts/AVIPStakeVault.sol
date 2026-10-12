@@ -37,6 +37,33 @@ import {IFundSink} from "./interfaces/IFundSink.sol";
 ///      deposit and withdraw, nobody can be charged a fee and nobody can be
 ///      debited — which is also the state a vault left unbound stays in.
 ///
+///      **What an empty hole costs if an EOA fills it.** The bind is
+///      unauthenticated and demands no code from the caller, so the first caller
+///      can be a plain account. That account then owns `debit` — which checks
+///      `msg.sender != address(_manager)` and nothing else — so it can push any
+///      validator's escrow to the constructor-fixed sink; and because
+///      `withdrawable` staticcalls `isAdmitted` on it, whose empty return data
+///      cannot be decoded, whatever is left cannot be withdrawn by anyone,
+///      depositor included. The hole is therefore a funds hazard for the window
+///      between this vault's deployment and the manager's constructor, not merely
+///      a loud deployment failure (the EOA proof of `test/M8StakeVault.t.sol`).
+///
+///      **Why the hole cannot be closed in here.** A code-length check in
+///      `bindManager` (`msg.sender.code.length > 0`) would refuse the one caller
+///      the handshake is built for: `AVIPValidatorManager` binds from its own
+///      constructor, where the caller's `EXTCODESIZE` is still `0`. Making
+///      `_manager` an `immutable` constructor fact instead would need the
+///      manager's address before the manager exists — the cyclic wiring this
+///      one-shot bind exists to avoid. So the window is closed by deployment
+///      discipline, not by a guard: the vault and the manager that binds it must
+///      be broadcast in **one transaction** — one script doing both inside a
+///      single `startBroadcast`/`stopBroadcast` pair. `DeployStakeVault.s.sol` and
+///      `DeployValidatorManager.s.sol` are two scripts, and
+///      `scripts/deploy_dryrun.sh` chains them inside one run as two executions,
+///      which proves the wiring and not the atomicity: until a combined script
+///      exists, the window is as long as the gap an operator leaves between the
+///      two deployments.
+///
 ///      **Where the funds go is not decided here.** A slash and the fee are
 ///      pushed to a constructor-fixed `IFundSink`; the reference sink in this
 ///      repository burns them. The protocol says a slash happens and that `F_0`
@@ -223,8 +250,11 @@ contract AVIPStakeVault is IAVIPCustody {
     ///      makes that deployment fail instead of existing quietly. A vault left
     ///      unbound is a working escrow in which `withdrawable` is the whole
     ///      balance, `payFee` reverts `ManagerNotBound` and no address is the
-    ///      manager — i.e. nothing here is a trapdoor for a stranger, only a
-    ///      missing link.
+    ///      manager. The unbound state is a missing link and not a trapdoor; the
+    ///      *bind*, however, takes an EOA and has no access control, so the first
+    ///      caller owns `debit` and makes `withdrawable` unreadable — a funds
+    ///      hazard, not only a failed deployment (the EOA proof of
+    ///      `test/M8StakeVault.t.sol`).
     function bindManager() external {
         address bound = address(_manager);
         if (bound != address(0)) revert ManagerAlreadyBound(bound);

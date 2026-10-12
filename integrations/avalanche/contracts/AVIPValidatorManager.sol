@@ -118,6 +118,15 @@ contract AVIPValidatorManager is IAVIPValidatorManager {
             // hole, or the address is not a custody at all, the call reverts and
             // this deployment fails — a manager wired to somebody else's vault is
             // a failure this constructor must not allow to exist.
+            //
+            // This call is also why `bindManager` cannot demand code from its
+            // caller (`msg.sender.code.length > 0`): the binding happens inside
+            // this constructor, where `address(this)` still reports
+            // `EXTCODESIZE 0`, so such a guard would refuse the legitimate
+            // manager. What the vault can lose to an EOA that binds first is
+            // stated in `AVIPStakeVault.sol` and in plan §5.12; the close is
+            // operational — deploy the custody and this manager in one
+            // broadcast — not a guard.
             IAVIPCustody(custody_).bindManager();
             if (IAVIPCustody(custody_).manager() != address(this)) {
                 revert CustodyNotBound(custody_);

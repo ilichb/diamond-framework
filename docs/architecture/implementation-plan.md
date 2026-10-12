@@ -2024,7 +2024,7 @@ Status: **A2's fund half is closed in code, offline.** `integrations/avalanche/c
 gains `AVIPStakeVault.sol` (the custody behind `IAVIPCustody`) and `AVIPBurnSink.sol`
 (the reference `IFundSink`); `AVIPValidatorManager.sol` is **amended** with a third
 constructor argument (`custody`), an admission check against it and a `debit` on slash.
-`integrations/avalanche/test/M8StakeVault.t.sol` is the 61-test suite over them;
+`integrations/avalanche/test/M8StakeVault.t.sol` is the 62-test suite over them;
 `scripts/M8Report.s.sol`, `scripts/m8_report.sh` and the pinned `scripts/m8_output.txt`
 are the transcript, reproduced by that one command, and `scripts/DeployStakeVault.s.sol`
 is the deploy half of the wiring. **A8 stays open: nothing is deployed.**
@@ -2120,6 +2120,39 @@ burn (the *token* decides what `burn` means and `AVIPBurnSink` reports `BurnFail
 token that cannot burn); and no economic claim about `S_slash = 10`, which stays the
 paper's reputation penalty and is **not** executed on-chain.
 
+**One hazard it declares rather than repairs: the unbound window.** The handshake
+deploys the vault first and the manager second, and `bindManager` takes the first
+caller that arrives. An unbound vault is a plain escrow — deliberate, and tested —
+but the bind itself needs no code and no permission, so the first caller can be a
+plain account. An EOA that binds *becomes* the manager: it can push any validator's
+escrow to the constructor-fixed sink through `debit`, which checks only
+`msg.sender != address(_manager)`, and because `withdrawable` staticcalls
+`isAdmitted` on it, whose empty return data cannot be decoded, whatever is left can
+no longer be withdrawn by its depositor. The remainder is not displaced but
+*stranded*, and the vault's own header used to claim the opposite.
+
+`test/M8StakeVault.t.sol` →
+`test_aStrangerWhoTakesTheBindWithAnEoaDrainsAndTrapsAVictimsEscrow` executes it:
+400 000 of a 1 000 000-unit escrow leave for the sink with the thief's own reason,
+and the victim's `withdraw` of the remaining 600 000 reverts while `escrowedUnits`
+still books them.
+
+**Why the cheap guard does not exist.** A code-length check in `bindManager`
+(`msg.sender.code.length > 0`) would refuse the one caller the handshake exists
+for: `AVIPValidatorManager` binds from its own constructor
+(`AVIPValidatorManager.sol:130`), where the caller's `EXTCODESIZE` is still `0`.
+The `immutable` alternative needs the manager's address before the manager exists —
+exactly the cyclic wiring the one-shot bind was chosen over (§5.12; the
+CREATE-prediction precedent is M7d, §5.10) — so what closes the window is a
+deployment rule, not a contract change: **the vault and the manager that binds it
+must be broadcast in a single transaction**, one script performing both deployments
+inside one `startBroadcast`/`stopBroadcast` pair. `DeployStakeVault.s.sol` and
+`DeployValidatorManager.s.sol` are two separate scripts, and
+`scripts/deploy_dryrun.sh` chains them inside one run as two executions: that proves
+the wiring and *not* the atomicity, so it does not close the window. Until a
+combined script exists (a Fuji-runbook item, §12), the window is as long as the gap
+an operator leaves between the two deployments, and nothing on-chain bounds it.
+
 **The `S_slash = 10` reconciliation, and the `main.tex` amendments it queues.** M8 makes no
 economic claim, but the paper does, and the two now disagree. The disagreement is recorded
 here rather than repaired, because `main.tex` is in the sealed set (§3) and cannot be
@@ -2139,8 +2172,8 @@ executable loss.
 
 **Why it is not executable, in the delivered contracts' units.** A slash moves tokens only
 through `AVIPStakeVault.debit`, and what it can move is the escrow the validator actually
-posted: the manager's `amount <= _stakes[validator]` (`AVIPValidatorManager.sol:232-233`) and
-then the vault's `units <= _escrowedUnits[validator]` (`AVIPStakeVault.sol:346-347`). The
+posted: the manager's `amount <= _stakes[validator]` (`AVIPValidatorManager.sol:241-242`) and
+then the vault's `units <= _escrowedUnits[validator]` (`AVIPStakeVault.sol:376-377`). The
 minimum a validator must post to be admitted is
 `S_f*(r) = max{S_min, Theta - C_R(r)} <= Theta = 1.0`, and `C_R <= C_R^inf = 0.8` is an
 opportunity cost that no function confiscates. Against a fraud gain of
@@ -2189,8 +2222,22 @@ nothing in `integrations/**` moves for them. §5.9 queues three more from the sa
    already uses for a modelled, non-executable quantity. Either version must keep guard G8
    green — no `Estimate`/`Verified` mix on one line of `main.tex` (`verification/audit-gate.sh`).
 
-**Validated locally.** `forge test --offline` → **237 passed, 0 failed, 0 skipped**
-over 9 suites (of which `test/M8StakeVault.t.sol` is 61, and the amended M2 suite's
+**The one amendment still open, queued for P6b** (§12). P6a demoted §7.5 and the
+§7.7 row (`main.tex:963-966`, `:987`), but the same number is stated flat in §10.4's
+"Stability of Conclusions": *"The attacker profit is `-502` with slashing
+`S_slash = 10` and `+49.91` without detection"* (`main.tex:1181`). The residue is the
+same defect in a second place: the figure is model bookkeeping under the sealed
+script's `coverage = 1.0` convention, it is not an executable loss (above), and the
+row it summarises in §7.7 no longer carries `Verified`. **Amendment:** restate
+`:1181` with the status §7.7 now uses, or keep the sentence and bound it by §7.5's
+executable loss. It travels with P6b and not with M8 because `main.tex` is sealed
+(§3) and P6b is already the batch that opens the paper — and if it runs *before*
+the C1–C4 restructure it should keep the line count 1:1 (P6a's 1410 → 1410), since
+every `main.tex:NNNN` citation in the three sealed `docs/audit/` files would
+otherwise go stale.
+
+**Validated locally.** `forge test --offline` → **238 passed, 0 failed, 0 skipped**
+over 9 suites (of which `test/M8StakeVault.t.sol` is 62, and the amended M2 suite's
 34 and M7d's 48 run **unchanged**, which is the compatibility evidence for
 `custody == address(0)`); `forge fmt --check` → 0 diffs; `forge build --offline` → OK;
 `forge lint` → **4 notes, no warning** (the same four `setEnv` calls as before);
@@ -2351,7 +2398,7 @@ stable — the same reason the protection phase is last.
 | **P4 (done — M4, M5, M6)** | M4 ✅ (M4a/M4b/M4c) → M5 ✅ → M6 ✅ (off-chain, §5.5–§5.7) | none |
 | **P5 (done — M7, M8)** | M7 (data layer, deploy scripts, AWM) ✅ + M8 (treasury/custody) ✅ (§5.8–§5.12) | none |
 | **P6a (done — `094c41b`)** | The five data-layer amendments of §5.9/§5.12: §7.3's fraud-proof mechanism with the bounty/slash status, §7.3's unstated pool/coverage conventions plus the §10.2 free-rider sentence, the freshness instance with §7.7's `Verified` labels, `eq:revenue`'s missing `N_ATT` factor, and the §7.5/§7.7 non-executable deterrence — twelve lines 1:1, plus §7.4's `We verify` → `We evaluate` (`main.tex:941`) | **re-anchored** `2026-10-11T21:48:40Z`, root `217d6d51…` (G10/G11 green) |
-| P6b | C-gaps: paper apparatus (C1–C4), **its own batch and its own re-anchor**. Carries the `content-audit-pending.md` line-reference drift P6a did *not* introduce: `F-019`'s `:1297` did not contain its subject on `aaaf460` either, while `C-48`'s `:1215` is correct | **re-anchor** |
+| P6b | C-gaps: paper apparatus (C1–C4), **its own batch and its own re-anchor**. Carries the `content-audit-pending.md` line-reference drift P6a did *not* introduce: `F-019`'s `:1297` did not contain its subject on `aaaf460` either, while `C-48`'s `:1215` is correct. Queued with it: the §10.4 `-502` residue §5.12 records (`main.tex:1181`) | **re-anchor** |
 | P7 | Protection + arXiv | **re-anchor** if `main.tex` changes |
 
 **Next step: P6b, the C-gaps batch** (§2.4), and — whenever a funded key and an endpoint

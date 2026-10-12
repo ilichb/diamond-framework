@@ -1,6 +1,6 @@
 # `integrations/avalanche/test/` — Foundry tests
 
-Status: **237 tests over nine suites (plus two libraries), all green with
+Status: **238 tests over nine suites (plus two libraries), all green with
 `forge test --offline`**:
 
 | File | Tests | Scope |
@@ -11,7 +11,7 @@ Status: **237 tests over nine suites (plus two libraries), all green with
 | `Groth16Verifier.t.sol` | 18 | M3 verifier: key installation and digest, accept/reject verdicts, off-curve revert, gas, and the `AVIPRegistry`/`AVIPValidatorManager` integration |
 | `M4bRealKey.t.sol` | 7 | M4b: the real key over the V3 circuit and the real fixture proof, accepted by `Groth16Verifier.verify` and by `AVIPRegistry.verifyThreshold` with no contract change, with every statement component bound |
 | `M7dTransport.t.sol` | 48 | M7d: the wire format's fail-closed edges, `linkDigest` against M7c's committed link, the endpoint boundary (messenger, allowlist, nonce, kind), and the three §4 message types end to end — the commitment recorded once, the alert flag that cannot be erased, and the slashing notification reaching `AVIPValidatorManager.slash` with a reason derived from the envelope (plus 3 fuzz tests) |
-| `M8StakeVault.t.sol` | 61 | M8 (§5.12): the handshake (bind, one-shot, a vault taken by somebody else, a custody that reports nobody), the unbound vault as a plain escrow, escrow accounting and the two rounding boundaries, admission bound to escrow, a slash that moves funds and rolls back whole when the token or the sink refuses, `debit`/`payFee` authorisation, USDT-style/`false`/reverting tokens, four reentrancy attempts, the conservation identity (plus 2 fuzz tests), and `AVIPBurnSink` in its own contract (plus a stray transfer it must leave untouched) |
+| `M8StakeVault.t.sol` | 62 | M8 (§5.12): the handshake (bind, one-shot, a vault taken by somebody else — and by an EOA, which then drains a victim's escrow through `debit` and freezes the remainder), the unbound vault as a plain escrow, escrow accounting and the two rounding boundaries, admission bound to escrow, a slash that moves funds and rolls back whole when the token or the sink refuses, `debit`/`payFee` authorisation, USDT-style/`false`/reverting tokens, four reentrancy attempts, the conservation identity (plus 2 fuzz tests), and `AVIPBurnSink` in its own contract (plus a stray transfer it must leave untouched) |
 | `DeployScripts.t.sol` | 21 | M7a + M8: `_roleOr` resolution (absent/empty/malformed), the three deploy scripts driven through `deploy(Plan)` — wiring, the frozen registry/policy constants, the mainnet refusal, the deployed pair interoperating, and the M8 handshake chained across the vault and manager scripts |
 | `fixtures/Groth16Fixtures.sol` | — | **generated** by `../scripts/generate_groth16_fixtures.py`; do not edit by hand |
 | `fixtures/M4bGroth16Fixtures.sol` | — | **generated** by `../../../../src/zk/scripts/m4b_fixture.sh` (the Rust crate that owns the circuit); do not edit by hand |
@@ -105,7 +105,7 @@ block or comment:
 
 ```shell
 cd integrations/avalanche
-forge test --offline            # 237 tests
+forge test --offline            # 238 tests
 forge test --offline -vv --match-path 'test/DeployScripts*'
 forge test --offline --match-path 'test/M7dTransport*'
 forge test --offline --match-path 'test/M8StakeVault*'

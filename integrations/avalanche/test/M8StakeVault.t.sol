@@ -24,7 +24,10 @@ import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
 ///    accepts the bind and reports nobody, and an address that is not a custody
 ///    all fail the deployment instead of producing a manager with no custody.
 /// 2. `bindManager` is one-shot, and an unbound vault is a plain, harmless
-///    escrow: full withdrawals, no fee, no manager-only door.
+///    escrow: full withdrawals, no fee, no manager-only door. The bind itself is
+///    not harmless: it has no access control and needs no code, so an EOA can
+///    take it, drain a victim's escrow through `debit` and leave the rest
+///    unwithdrawable — asserted, not argued, in the EOA proof below.
 /// 3. Escrow accounting in the token's own base units, reported in WAD:
 ///    deposit credits exactly what arrived, withdraw returns only the caller's
 ///    own escrow, and the part standing behind `stakeOf` is locked — rounded so
@@ -284,11 +287,15 @@ contract M8StakeVaultTest is Test {
     }
 
     function test_aVaultBoundBySomebodyElseMakesTheManagersDeploymentFail() public {
-        // The one race the design accepts, and what it costs: anybody can fill the
-        // empty hole of a freshly deployed vault. It cannot move a token anywhere
-        // (the sink and the token are constructor facts) — what it does is make
-        // the *real* manager refuse to deploy, which is loud and leaves nothing
-        // wired to nothing.
+        // The one race the design accepts, and its mildest cost: anybody can fill
+        // the empty hole of a freshly deployed vault, and that alone makes the
+        // *real* manager refuse to deploy, which is loud and leaves nothing wired
+        // to nothing. The bind is not only a deployment blocker, though:
+        // `bindManager` has no access control and `debit` checks nothing but
+        // `msg.sender != address(_manager)`, so the address that fills the hole
+        // becomes the manager and inherits the manager-only doors — with no
+        // contract needed to do it. See
+        // `test_aStrangerWhoTakesTheBindWithAnEoaDrainsAndTrapsAVictimsEscrow`.
         AVIPStakeVault hijacked = new AVIPStakeVault(address(token), address(sink), WAD_PER_UNIT_6);
         vm.prank(stranger);
         hijacked.bindManager();
@@ -298,6 +305,79 @@ contract M8StakeVaultTest is Test {
             abi.encodeWithSelector(AVIPStakeVault.ManagerAlreadyBound.selector, stranger)
         );
         new AVIPValidatorManager(address(registry), slashAuthority, address(hijacked));
+    }
+
+    function test_aStrangerWhoTakesTheBindWithAnEoaDrainsAndTrapsAVictimsEscrow() public {
+        // The severity the header above does *not* claim. While the vault is
+        // unbound it is a plain escrow — that much the header says and this test
+        // asserts. But the bind needs neither a contract nor access control, so
+        // the "manager" can be an EOA, and then the whole manager surface is in
+        // the hands of whoever called first:
+        //
+        //   - `debit` checks only `msg.sender != address(_manager)`, so the EOA
+        //     moves a victim's escrow to the constructor-fixed sink;
+        //   - `withdrawable` staticcalls `isAdmitted` on that EOA, whose empty
+        //     return data cannot be decoded, so the *victim* can no longer take
+        //     its own escrow back.
+        //
+        // The funds are not merely displaced: the remainder is stranded, because
+        // no function of the vault moves escrow back except `withdraw`, and
+        // `withdraw` is gated by `withdrawable`.
+        //
+        // This is a *declared limit*, not a bug awaiting a repair: the cheap
+        // guard (`msg.sender.code.length > 0` in `bindManager`) is impossible
+        // here — the manager binds from its own constructor, where its
+        // `EXTCODESIZE` is still 0 — and the `immutable` alternative is the
+        // cyclic wiring the handshake exists to avoid. Plan §5.12 records the
+        // hazard, the reason the guard cannot exist and the deployment rule that
+        // closes it (vault and manager in one transaction).
+        AVIPStakeVault hijacked = new AVIPStakeVault(address(token), address(sink), WAD_PER_UNIT_6);
+
+        address victim = makeAddr("pocVictim");
+        uint256 victimUnits = 1_000_000;
+        token.mint(victim, victimUnits);
+        vm.prank(victim);
+        token.approve(address(hijacked), victimUnits);
+        vm.prank(victim);
+        assertEq(hijacked.deposit(victimUnits), victimUnits, "credited in the token's base units");
+        assertEq(hijacked.escrowedUnits(victim), victimUnits, "and it sits in the vault");
+
+        // Unbound, the vault is an escrow and behaves like one: everything free.
+        assertEq(hijacked.withdrawable(victim), victimUnits, "no manager: the whole escrow is free");
+
+        // The front-run, with no contract and no cooperation: `bindManager` is
+        // one-shot, unauthenticated and takes whatever address calls it.
+        assertEq(stranger.code.length, 0, "an EOA: no code to bind, none to deploy");
+        vm.prank(stranger);
+        hijacked.bindManager();
+        assertEq(hijacked.manager(), stranger, "an EOA is a perfectly good manager here");
+
+        // The thief takes part of the escrow and leaves the rest: a full sweep
+        // would be caught by conservation, and the interesting case is the one
+        // where something is left behind and still unreachable.
+        uint256 stolen = 400_000;
+        uint256 sinkBefore = token.balanceOf(address(sink));
+        vm.prank(stranger);
+        hijacked.debit(victim, stolen * WAD_PER_UNIT_6, REASON_COLLUSION);
+
+        assertEq(token.balanceOf(address(sink)) - sinkBefore, stolen, "the victim's escrow left");
+        assertEq(sink.lastReason(), REASON_COLLUSION, "with the thief's own reason");
+        assertEq(hijacked.escrowedUnits(victim), victimUnits - stolen, "the rest is still escrowed");
+        assertEq(hijacked.totalDebited(), stolen, "and the vault books it as a slash");
+
+        // What is left is trapped. `withdrawable` cannot read `isAdmitted` from an
+        // address with no code...
+        (bool ok, bytes memory data) = address(hijacked)
+            .staticcall(abi.encodeWithSelector(AVIPStakeVault.withdrawable.selector, victim));
+        assertFalse(ok, "withdrawable reverts against an EOA manager");
+        assertEq(data.length, 0, "and reverts with no data rather than with a refusal");
+
+        // ...so the victim's own withdrawal reverts, and the escrow stays exactly
+        // where it is: 600000 base units, reachable by nobody.
+        vm.prank(victim);
+        vm.expectRevert();
+        hijacked.withdraw(victimUnits - stolen);
+        assertEq(hijacked.escrowedUnits(victim), victimUnits - stolen, "still there, unreachable");
     }
 
     function test_aCustodyThatAcceptsTheBindAndReportsNobodyFailsTheDeployment() public {
