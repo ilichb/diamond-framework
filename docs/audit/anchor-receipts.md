@@ -380,10 +380,12 @@ compromete tal como quedaron aquí. Cualquier retoque posterior exige re-anclar;
 ## R-4 — Recibo OpenTimestamps del root de P7
 
 Fecha: 2026-10-12, re-anclaje `2026-10-12T03:28:48Z`; el `.ots` sellado a las
-`03:29Z` (UTC; local `23:28`/`23:29` del día 11 `-04`). HEAD al re-anclar:
+`03:29Z` y **promovido a prueba Bitcoin** a las `19:54Z` (UTC; local `23:28`/`23:29`
+del día 11 y `15:54` del día 12, `-04`). HEAD al re-anclar:
 `bfe329d` (sobre ese árbol se aplicó el lote P7a, todavía sin commitear); HEAD
 anclado *dentro* del root (el que sella G10): `bfe329d`. El lote se commiteó como
-`6440ac5`, padre del commit que añade este recibo.
+`6440ac5`, padre del commit que añade este recibo; la promoción vive en un commit
+posterior (§R-4.2).
 
 Este sello **sustituye** al de §R-3, por la razón que el propio §Alcance declara:
 P7a tocó `docs/paper/main.tex` (los metadatos del PDF). El recibo de P6b no se
@@ -394,18 +396,31 @@ comando, no de ese archivo temporal.
 |---|---|
 | Artefacto sellado | `verification/anchor_root.sha256` (10 pares) |
 | SHA-256 del artefacto | `5d6002ba02234120106fa272586f657d0d07649d58ca0f5368fadaf30890f22e` |
-| Recibo | `verification/anchor_root.sha256.ots` (**910 bytes**, **pendiente**) |
-| SHA-256 del recibo | `f6209374b6e33d601c1eb138005fd8c0788312629ce1684c3feec702c14a16fa` |
+| Recibo | `verification/anchor_root.sha256.ots` (**5058 bytes**, **promovido**: ya con atestación Bitcoin) |
+| SHA-256 del recibo | `38910c8d61292fb77b3390a9f38d12b946a1774c6b1c369f43fe5dc8cab04910`; el **pendiente**, el que se selló a las `03:29Z`, era `f6209374b6e33d601c1eb138005fd8c0788312629ce1684c3feec702c14a16fa` (910 B) y sigue recuperable (§R-4.2) |
 | Cliente | `ots` v0.7.2 |
 | Envío a calendarios | 4 *(4 líneas `Submitting to remote calendar`)* |
-| Atestaciones | **4 `PendingAttestation`** (catallaxy, bob, finney, alice) y **ninguna** `BitcoinBlockHeaderAttestation` todavía; derivado de `ots info`, no de la salida del cliente |
-| Verificación | `ots info` → `File sha256 hash: 5d6002ba…`: el compromiso del recibo es el del artefacto. `ots verify` → exit 1 con las cuatro líneas `Pending confirmation in Bitcoin blockchain` y **sin** `File does not match`: el recibo resuelve su objetivo y sólo le falta la confirmación en un bloque |
+| Atestaciones | **4 `BitcoinBlockHeaderAttestation`**, una por calendario, en los bloques `971035`, `971036`, `971047` y `971090`, más las 4 `PendingAttestation` que quedan como ramas ya innecesarias; derivado de `ots info`, no de la salida del cliente |
+| Verificación | `ots info` → `File sha256 hash: 5d6002ba…`: el compromiso del recibo es el del artefacto. `ots verify` → exit 1 con `Could not connect to Bitcoin node: Cookie file unusable ([Errno 2] No such file or directory: '/home/ilich/.bitcoin/.cookie')`, es decir, este entorno no tiene nodo Bitcoin: la prueba está **en el recibo** y se comprueba con un nodo. Los cuatro bloques existen en la cadena y sus raíces merkle coinciden con las del recibo: `curl -s https://blockstream.info/api/block-height/971090` → `00000000000000000001c16f3f5772150f617a42a50a4379b18edd634d131ed3`, y las otras tres en §R-4.2 |
+| Agregación en Bitcoin | **dentro del recibo desde 2026-10-12**, 16 h después del sello: los bloques `971035`–`971090`, el primero a las `03:46:29Z` (17 min después del sello) y el último a las `12:06:00Z` — ver §R-4.2 |
 | Sustituye a | `46755224943988d0d4353c5e82f11960920220a9df696bb679141f655904d8c5` (2774 B; con Bitcoin en los bloques `971017`/`971018`), el recibo de P6b sobre `79ac6783…` |
 | Recuperación del anterior | `git show 874188c:verification/anchor_root.sha256.ots \| sha256sum` → `46755224…`; en la misma sesión se copió a `/tmp/root_79ac6783_r3.ots` |
 
-Promoción, para cuando toque: `ots upgrade verification/anchor_root.sha256.ots` y
-el `.ots` se reemplaza otra vez. Promover no exige re-anclar: el recibo vive
-fuera del root, que es lo que evita la circularidad.
+Promoción — y aquí llegó, 16 h después del sello: `ots upgrade
+verification/anchor_root.sha256.ots` sobre el fichero del repo →
+
+    Got 1 attestation(s) from https://btc.calendar.catallaxy.com
+    Got 1 attestation(s) from https://bob.btc.calendar.opentimestamps.org
+    Got 1 attestation(s) from https://finney.calendar.eternitywall.com
+    Got 1 attestation(s) from https://alice.btc.calendar.opentimestamps.org
+    Success! Timestamp complete                                        -> exit 0
+
+Respondieron **los cuatro** calendarios, así que el recibo pasó de 910 a **5058
+bytes** y de pendiente a prueba Bitcoin, sin re-sellar y **sin re-anclar**: el
+`--check` posterior devuelve exit 0 con `anchor_root.sha256` idéntico byte a byte
+(10 pares), que es la demostración de la regla — el recibo vive fuera del root, y
+eso es lo que evita la circularidad. El transcript y el cruce contra un explorador
+están en §R-4.2.
 
 ### R-4.1 Por qué este recibo no invalidó ninguna referencia sellada
 
@@ -431,9 +446,76 @@ distinta: la más baja de las selladas es la **35**, que da el mismo comando con
 de líneas cuesta el mapa entero.
 
     sha256sum verification/anchor_root.sha256             # 5d6002ba… (artefacto sellado)
-    sha256sum verification/anchor_root.sha256.ots         # f6209374… (910 B, pendiente)
+    sha256sum verification/anchor_root.sha256.ots         # 38910c8d… (5058 B, promovido en §R-4.2; el pendiente era f6209374…, 910 B)
     strings verification/anchor_root.sha256.ots | grep -oE 'https://[a-z0-9._/-]+' | sort -u   # 4 calendarios (2ª vía)
-    ots info verification/anchor_root.sha256.ots          # 4 PendingAttestation, 0 Bitcoin
+    ots info verification/anchor_root.sha256.ots          # 4 BitcoinBlockHeaderAttestation + 4 PendingAttestation
     ots verify verification/anchor_root.sha256.ots        # exit 1 sin nodo; sin «File does not match»
-    ots upgrade verification/anchor_root.sha256.ots       # tras la confirmación en Bitcoin
+    ots upgrade verification/anchor_root.sha256.ots       # idempotente tras la promoción de §R-4.2
+
+### R-4.2 Promoción del estado completado (misma sesión, 2026-10-12)
+
+§R-1.6 promovió copiando a `/tmp`; §R-3 promovió sobre el fichero del repo, en la
+misma sesión. Aquí, lo segundo. Antes de sustituir nada se comprobó que el resultado
+fuera el esperado: §R-4.1 dejó el sello ejecutado a las `03:29Z`, y a las `03:37Z`
+—cuando corrió la guarda— `ots info` seguía **sin** ninguna atestación Bitcoin. No
+era un fallo: el primer bloque que agregó el compromiso no llegó hasta las
+`03:46:29Z`.
+
+Efecto de la promoción, medido y no recordado:
+
+    ls -l verification/anchor_root.sha256.ots       # 5058 B (el pendiente: 910)
+    sha256sum verification/anchor_root.sha256.ots   # 38910c8d61292fb77b3390a9f38d12b946a1774c6b1c369f43fe5dc8cab04910
+    ots info verification/anchor_root.sha256.ots | grep -c BitcoinBlockHeaderAttestation   # 4
+    ots info verification/anchor_root.sha256.ots | grep -c PendingAttestation              # 4 (ramas ya innecesarias)
+    strings verification/anchor_root.sha256.ots | grep -oE 'https://[a-z0-9._/-]+' | sort -u   # los 4 calendarios (2ª vía)
+    ots upgrade verification/anchor_root.sha256.ots  # idempotente: otra vez «Success! Timestamp complete», sha256 sin cambio
+    ots info verification/anchor_root.sha256.ots | head -1   # File sha256 hash: 5d6002ba… (el compromiso no cambió)
+
+Las cuatro atestaciones, cada una con la raíz merkle que imprime `ots info`
+(`… | grep -E 'BitcoinBlockHeaderAttestation|merkle root'`), y el cruce contra un
+explorador público — bloque por altura, raíz por hash de bloque:
+
+| calendario | bloque | merkle root (del recibo) | hora del bloque (explorador) |
+|---|---|---|---|
+| `alice` | `971035` | `ec1a44c248ff78885896762904ab57fb13e4f482c4a6504458f24d5198674cf9` | `2026-10-12T03:46:29Z` |
+| `bob` | `971036` | `e8b74a39dd7403576085d41c459e347c6e829a1c6c2c5b339400e732a8d852fc` | `2026-10-12T03:53:14Z` |
+| `finney` | `971047` | `33918556ce05fd459bbee9a5d80dc4e6affb6cdf24b6e4eb0d3be39305cf1d64` | `2026-10-12T05:02:23Z` |
+| `catallaxy` | `971090` | `6f0e51f1479f48f8af74ba2a0fe130a14c91470dd9aaca1386624b88687d713e` | `2026-10-12T12:06:00Z` |
+
+    for h in 971035 971036 971047 971090; do
+      bh=$(curl -s https://blockstream.info/api/block-height/$h)                       # 0000000000000000000…: los cuatro hashes existen
+      curl -s https://blockstream.info/api/block/$bh | python3 -c 'import sys,json;print(json.load(sys.stdin)["merkle_root"])'
+    done        # cuatro líneas, idénticas a la columna «merkle root (del recibo)»
+
+Las cuatro coinciden y las cuatro alturas existen en la cadena: eso **no** es
+verificación criptográfica completa —haría falta el encabezado del bloque, es decir
+un nodo— y el explorador es un tercero: se cita como medición, no como prueba. Lo
+que sí trae el recibo desde la promoción es la prueba: cuatro
+`BitcoinBlockHeaderAttestation` dentro del `.ots`, que es justo lo que §R-1.2
+distingue del simple recibo de envío.
+
+Trazabilidad del pendiente: el `.ots` sellado a las `03:29Z` (`f6209374…`, 910 B)
+no se pierde; sigue en el historial, comprobado en el commit que lo añadió, y
+también en la copia fuera del repo:
+
+    git show 37e69cf:verification/anchor_root.sha256.ots | sha256sum
+    #   f6209374b6e33d601c1eb138005fd8c0788312629ce1684c3feec702c14a16fa
+    sha256sum /tmp/r4_pending_f6209374.ots               # el mismo valor
+    sha256sum verification/anchor_root.sha256.ots.bak    # f6209374… otra vez: el cliente
+    #   movió el pendiente a FILE.bak en el propio `upgrade` (`otsclient/cmds.py`),
+    #   así que hay una tercera copia en disco; está ignorada por `.gitignore`
+    #   (*.ots.bak) porque su valor es el del historial
+
+Copia out-of-band: §R-1.3 mandó por correo el `.ots` **pendiente** del root de D1
+(945 B) —lo que se puede enviar en el momento del sellado—. Para R-4 **no hay envío
+registrado**: la copia del pendiente vivió en `/tmp/r4_pending_f6209374.ots` y en el
+historial de git (`37e69cf`), que no son testigos externos; el testigo externo de
+R-4 es su cadena de Bitcoin, no un correo. Lo que conviene copiar fuera del repo es
+ahora el `.ots` **promovido** (`38910c8d…`, 5058 B), y eso sigue **pendiente**.
+
+Nota de cronología: el compromiso es **anterior** al primer bloque que lo agregó
+(`03:46:29Z`) — el sello es de las `03:29Z`, y la hora de un bloque la declara el
+minero, acotada por la regla de *median-time-past*. Promover no exige re-anclar: lo
+sellado fue el root, que no cambió, y este fichero no está entre los diez —lo
+demuestra el `git diff --stat` de §R-4.1, que ve **una** sola línea, la del paper.
 

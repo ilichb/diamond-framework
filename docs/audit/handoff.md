@@ -430,7 +430,8 @@ them — so a session that reads only this file will not see them at all.
 One chain is shared: the OpenTimestamps receipts over
 `anchor_root.sha256` live in `docs/audit/anchor-receipts.md` (R-1.1 …
 R-1.6 over the D1 root, R-2 over the root re-derived for P6a, R-3 over
-the root re-derived for P6b), outside
+the root re-derived for P6b, R-4 over the root re-derived for P7a —
+promoted to Bitcoin in blocks `971035`–`971090`, §R-4.2), outside
 the root on purpose — a receipt that sealed the root would be circular
 — and the proof itself is `verification/anchor_root.sha256.ots`.
 

@@ -2409,9 +2409,10 @@ stable — the same reason the protection phase is last.
 - **Protection of the document**: done in P7a for the licence (D-4), the PDF
   metadata — `pdftitle`/`pdfauthor`/`pdfsubject`/`pdfkeywords`, which the PDF did
   not have (`pdfinfo main.pdf | grep -i title` printed nothing) — and the re-seal
-  (receipt **R-4**). What remains is the **OpenTimestamps promotion of R-4**,
-  which needs a few hours for a calendar to aggregate, and the **Zenodo deposit**,
-  which needs an account; `.zenodo.json` already carries the metadata.
+  (receipt **R-4**), whose promotion arrived 16 h later (`ots upgrade`, four
+  Bitcoin attestations in blocks `971035`–`971090`, §R-4.2). What remains is the
+  **Zenodo deposit**, which needs an account — `.zenodo.json` already carries the
+  metadata.
 - **arXiv submission.** Deliberately last. The bundle is **one file**: no
   `\includegraphics` and an inline `thebibliography`, so `main.tex` is the whole
   submission and the packages it loads are all in TeX Live's
@@ -2431,13 +2432,12 @@ stable — the same reason the protection phase is last.
 | **P5 (done — M7, M8)** | M7 (data layer, deploy scripts, AWM) ✅ + M8 (treasury/custody) ✅ (§5.8–§5.12) | none |
 | **P6a (done — `094c41b`)** | The five data-layer amendments of §5.9/§5.12: §7.3's fraud-proof mechanism with the bounty/slash status, §7.3's unstated pool/coverage conventions plus the §10.2 free-rider sentence, the freshness instance with §7.7's `Verified` labels, `eq:revenue`'s missing `N_ATT` factor, and the §7.5/§7.7 non-executable deterrence — twelve lines 1:1, plus §7.4's `We verify` → `We evaluate` (`main.tex:1002`) | **re-anchored** `2026-10-11T21:48:40Z`, root `217d6d51…` (G10/G11 green) |
 | **P6b (done)** | C-gaps: paper apparatus (C1–C4) — `center` → `table[H]` with `\caption`, **1410 → 1566 lines** — plus the two amendments queued above, both applied (§5.12): §10.4's `-502` bounded by §7.5 (`main.tex:1266`) and `\|T\|_F` where the norm is meant (`main.tex:842`, `:882`). It carried the citation drift P6a did not introduce — `F-019`'s `:1215` (the sentence it cites lives at `:1183` on `aaaf460`, `:1268` now) and `C-14`'s `§8.7` pointer; the numbers this row used to quote (`:1297`, `C-48`) were mis-derived. Rather than correcting them, all cited tokens were **re-derived** before the root was regenerated: 316 tokens, 313 remapped, 23 files, 396 citations checked, **0 section changes** (`anchor-receipts.md` §R-3.1) | **re-anchored** `2026-10-12T00:54:19Z`, root `79ac6783…`, receipt **R-3** (G1..G11 PASS=11 FAIL=0 SKIP=0) |
-| **P7a (done)** | Protection (D-4 licences: MIT for the repository, **CC BY 4.0** for the paper), the PDF metadata the PDF did not have, `.zenodo.json`, a frozen 37-page snapshot | **re-anchored** `2026-10-12T03:28:48Z`, root `5d6002ba…`, receipt **R-4** (pending); of the ten pairs **one** moved — the paper's |
+| **P7a (done)** | Protection (D-4 licences: MIT for the repository, **CC BY 4.0** for the paper), the PDF metadata the PDF did not have, `.zenodo.json`, a frozen 37-page snapshot | **re-anchored** `2026-10-12T03:28:48Z`, root `5d6002ba…`, receipt **R-4** (promoted to Bitcoin in `971035`–`971090`); of the ten pairs **one** moved — the paper's |
 | P7b | The Zenodo deposit and the arXiv submission — both need an account, not code | **re-anchor** only if `main.tex` changes |
 
 **Next step: P7b** — the Zenodo deposit (`.zenodo.json` is written, so the upload
-is metadata and not a retyping) and the arXiv submission (`main.tex` alone), plus
-the promotion of receipt **R-4** (`ots upgrade`) once a calendar has aggregated —
-and, whenever a funded key and an endpoint
+is metadata and not a retyping) and the arXiv submission (`main.tex` alone) — and,
+whenever a funded key and an endpoint
 are available — the Fuji deployment the M7a and M8 scripts are waiting for.
 **M7 is delivered**:
 M7b (§5.9) is the ingestion formula `f_c` as an interface, the fraud proof and its

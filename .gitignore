@@ -32,6 +32,11 @@ build/
 .DS_Store
 Thumbs.db
 
+# OpenTimestamps — `ots upgrade` moves the previous receipt to FILE.bak
+# (`otsclient/cmds.py`); the value it holds is recoverable from git history,
+# and the file is the on-disk copy kept for the out-of-band send.
+*.ots.bak
+
 # Secrets
 .env
 .env.local

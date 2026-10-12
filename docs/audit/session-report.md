@@ -505,8 +505,8 @@ que pasa a ser el artefacto de registro.
     bash verification/audit-gate.sh                        # PASS=11 FAIL=0 SKIP=0
     bash verification/fase0_anchor.sh --check              # exit 0; 10 pares idénticos
     sha256sum verification/anchor_root.sha256              # 5d6002ba…
-    sha256sum verification/anchor_root.sha256.ots          # f6209374… (910 B, pendiente)
-    ots info verification/anchor_root.sha256.ots           # compromete 5d6002ba…; 4 Pending, 0 Bitcoin
+    sha256sum verification/anchor_root.sha256.ots          # 38910c8d… (5058 B, promovido; el pendiente era f6209374…)
+    ots info verification/anchor_root.sha256.ots           # compromete 5d6002ba…; 4 Bitcoin (971035/971036/971047/971090)
     git diff --stat -- verification/anchor_root.sha256     # 1 línea, y ninguna de las 9 otras
     md5sum docs/paper/main.tex docs/audit/content-audit-pending.md
 
@@ -516,8 +516,17 @@ mapa entero; una licencia se descarga, no se parafrasea; CFF no sabe declarar
 licencias distintas por artefacto —su lista es OR—; y el PDF solo lleva metadatos
 si se piden.
 
+La promoción llegó **16 h después del sello**: `ots upgrade` respondió con los
+cuatro calendarios (`Got 1 attestation(s) from …`, `Success! Timestamp complete`).
+El recibo pasó de 910 B a **5058 B** (`38910c8d…`) con **4 atestaciones de Bitcoin**
+—una por calendario— en los bloques `971035`, `971036`, `971047` y `971090`, cuyas
+raíces merkle coinciden con las que publica un explorador; el primero agregó a las
+`03:46:29Z`, 17 min después del sello, y por eso a las `03:37Z` (cuando corrió la
+guarda) todavía no había nada que promover. Promover **no re-ancla**: el `.ots` vive
+fuera del root. Detalle y transcript en §R-4.2.
+
 **Pendiente, y no es código:** el depósito en Zenodo (`.zenodo.json` listo), el
-envío a arXiv (bundle de un solo fichero, `main.tex`), la promoción del recibo
-R-4 con `ots upgrade` cuando un calendario agregue, la copia out-of-band del
-`.ots` (§R-1.3), y el despliegue en Fuji que esperan los scripts de M7a/M8.
+envío a arXiv (bundle de un solo fichero, `main.tex`), la copia out-of-band del
+`.ots` (§R-1.3) —que ahora cubre el recibo promovido, no el pendiente— y el
+despliegue en Fuji que esperan los scripts de M7a/M8.
 
