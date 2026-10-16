@@ -92,13 +92,11 @@ contract M7dTransportTest is Test {
     bytes32 internal constant CHAIN_SOURCE = bytes32(uint256(0xA11CE));
     bytes32 internal constant CHAIN_DESTINATION = bytes32(uint256(0xB0B));
 
-    /// @dev The stake the slashed validator declares, and the amount the data layer
-    ///      asks for. `1.0` and `0.9` WAD: the amount is a decision of §5.9's data
-    ///      layer, not a constant of the paper (`S_slash = 10` is a *model*
-    ///      parameter and is not transported), and 0.9 of the stake is chosen so the
-    ///      slash also ejects — which is the effect M2 defines (§5.2.4).
+    /// @dev The stake the slashed validator declares. `1.0` WAD, and the whole of
+    ///      it: since M9b (§12.1.2) the amount is the manager's record and no
+    ///      number crosses the wire for it, so `S_slash = 10` stays a *model*
+    ///      parameter and the slash that ejects is the record being taken.
     uint256 internal constant STAKE_WAD = 1e18;
-    uint256 internal constant SLASH_WAD = 9e17;
 
     /// @dev M5's calibration, 4-decimal scaled: `q99 = 9.0542` right and `9.1371`
     ///      left (`src/rmt/scripts/m5_output.txt`), and `n = 500` for the protocol the
@@ -373,7 +371,6 @@ contract M7dTransportTest is Test {
     {
         return AVIPMessageCodec.SlashingNotification({
             validator: v,
-            amountWad: SLASH_WAD,
             epoch: 0,
             ingestionDigest: INGESTION_DIGEST,
             publishedWad: PUBLISHED_WAD,
@@ -539,15 +536,10 @@ contract M7dTransportTest is Test {
         codec.decodeSlashing(abi.encode(consistent));
     }
 
-    function test_aNotificationWithoutAValidatorAnAmountOrAnInstanceIsRefused() public {
+    function test_aNotificationWithoutAValidatorOrAnInstanceIsRefused() public {
         AVIPMessageCodec.SlashingNotification memory nameless = _m7bNotification(address(0));
         vm.expectRevert(AVIPMessageCodec.EmptyValidator.selector);
         codec.encodeSlashing(nameless);
-
-        AVIPMessageCodec.SlashingNotification memory free = _m7bNotification(validator);
-        free.amountWad = 0;
-        vm.expectRevert(AVIPMessageCodec.ZeroSlashAmount.selector);
-        codec.encodeSlashing(free);
 
         AVIPMessageCodec.SlashingNotification memory unbound = _m7bNotification(validator);
         unbound.ingestionDigest = bytes32(0);
@@ -1012,15 +1004,17 @@ contract M7dTransportTest is Test {
         bytes32 reason = AVIPMessageCodec.provenanceId(CHAIN_SOURCE, 0);
 
         // The manager's own event, with the reason the transport derived and the amount
-        // the data layer asked for: `ValidatorSlashed(address indexed, uint256, bytes32)`.
+        // the record holds — the manager derives it, so the number is `STAKE_WAD` and
+        // not something the notification asked for (§12.1.2, M9b):
+        // `ValidatorSlashed(address indexed, uint256, bytes32)`.
         vm.expectEmit(true, false, false, true, address(manager));
-        emit IAVIPValidatorManager.ValidatorSlashed(validator, SLASH_WAD, reason);
+        emit IAVIPValidatorManager.ValidatorSlashed(validator, STAKE_WAD, reason);
 
         vm.prank(notifier);
         slashingSource.notify(_m7bNotification(validator));
 
         uint256 required = manager.requiredStake(validator);
-        assertEq(manager.stakeOf(validator), STAKE_WAD - SLASH_WAD);
+        assertEq(manager.stakeOf(validator), 0);
         assertTrue(manager.stakeOf(validator) < required);
         assertFalse(manager.isAdmitted(validator));
 
@@ -1031,19 +1025,20 @@ contract M7dTransportTest is Test {
         assertEq(slashingSource.nextNonce(CHAIN_DESTINATION), 1);
     }
 
-    /// @notice Two notifications from one notifier produce two different reasons for
-    ///         the same validator and the same amount: the reason identifies the
-    ///         *message*, so no sender can make two faults share one.
+    /// @notice Two notifications in one epoch produce two different reasons — the
+    ///         reason identifies the *message*, so no sender can make two faults share
+    ///         one. Each is about a different validator, because since M9b the first
+    ///         notification takes its validator's whole record and a second one about
+    ///         the same validator would have nothing left to take (`NothingToSlash`).
     function test_theReasonIsNotSomethingTheNotifierChooses() public {
+        address other = makeAddr("otherValidator");
         _admitValidator();
-
-        AVIPMessageCodec.SlashingNotification memory first = _m7bNotification(validator);
-        AVIPMessageCodec.SlashingNotification memory second = _m7bNotification(validator);
-        second.amountWad = 1e17;
+        vm.prank(other);
+        manager.admit(other, STAKE_WAD, F4b.STATEMENT_NORM, F4b.proof());
 
         vm.startPrank(notifier);
-        slashingSource.notify(first);
-        slashingSource.notify(second);
+        slashingSource.notify(_m7bNotification(validator));
+        slashingSource.notify(_m7bNotification(other));
         vm.stopPrank();
 
         bytes32 reasonZero = slashingDestination.reasonOf(CHAIN_SOURCE, 0);
@@ -1051,7 +1046,9 @@ contract M7dTransportTest is Test {
         assertEq(reasonZero, AVIPMessageCodec.provenanceId(CHAIN_SOURCE, 0));
         assertEq(reasonOne, AVIPMessageCodec.provenanceId(CHAIN_SOURCE, 1));
         assertTrue(reasonZero != reasonOne);
-        assertEq(manager.stakeOf(validator), STAKE_WAD - SLASH_WAD - 1e17);
+        // Two different records, each taken whole.
+        assertEq(manager.stakeOf(validator), 0);
+        assertEq(manager.stakeOf(other), 0);
         assertEq(slashingDestination.executedSlashes(), 2);
     }
 
@@ -1060,14 +1057,14 @@ contract M7dTransportTest is Test {
     ///         Teleporter would record a failed message instead — see
     ///         `test/mocks/MockTeleporterMessenger.sol`); the *receiver's* decision is
     ///         the same either way, and that is what this asserts: no stake moved, no
-    ///         reason recorded, nothing counted.
+    ///         reason recorded, nothing counted. What the manager refuses here is an
+    ///         empty record — M9b's `NothingToSlash`, where M2 refused an amount above
+    ///         it.
     function test_aNotificationTheManagerRefusesLeavesNoTrace() public {
         assertEq(manager.stakeOf(validator), 0);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IAVIPValidatorManager.SlashExceedsStake.selector, validator, SLASH_WAD, uint256(0)
-            )
+            abi.encodeWithSelector(IAVIPValidatorManager.NothingToSlash.selector, validator)
         );
         vm.prank(notifier);
         slashingSource.notify(_m7bNotification(validator));

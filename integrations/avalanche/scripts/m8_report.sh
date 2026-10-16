@@ -23,7 +23,8 @@
 #   (b) M7d, the wire: the stake trajectory (`admit.stake`, `slash.stakeAfter`)
 #       and the slashing reason M8 replays against real escrow must be the ones
 #       M7d's notification carried. The same provenance id must be in M8's fixture
-#       and in the M8 transcript.
+#       and in the M8 transcript. Since M9b the slash takes the whole record, so
+#       `slash.stakeAfter` is `0` (see the note at the check itself).
 #   (c) M4b, the proof: the norm M8 admits at must be the `certifiedNorm (WAD)` of
 #       the real key's transcript — the M8 report admits with the real proof, so
 #       the number is not free.
@@ -113,8 +114,16 @@ m7d_stake="$(grep -E '^  \[m7d\] admit\.stake=' "$M7D" | sed -E 's/.*=//' | head
 m7d_after="$(grep -E '^  \[m7d\] slash\.stakeAfter=' "$M7D" | sed -E 's/.*=//' | head -n1)"
 m7d_reason="$(grep -E '^  \[m7d\] slash\.reason=' "$M7D" | sed -E 's/.*=//' | head -n1)"
 both m7d.admit_stake "$m7d_stake" "$FIXTURE"
-both m7d.slash_stake_after "$m7d_after" "$FIXTURE"
 both m7d.slash_reason "$m7d_reason" "$FIXTURE"
+# `slash.stakeAfter` is `0` since M9b — the slash takes the whole record — and a
+# substring guard looking for "0" would match a line of any file, which is a guard
+# that cannot fail. So the fixture tie for this row is the whole declaration, and
+# the run side is compared numerically, in both directions, just below.
+if [ "$m7d_after" != "0" ]; then
+    both m7d.slash_stake_after "$m7d_after" "$FIXTURE"
+else
+    require_in "m7d.slash_stake_after (fixture)" "M7D_SLASH_STAKE_AFTER = 0;" "$FIXTURE"
+fi
 
 # The tie itself: what the *contracts* recorded in the fresh run must be M7d's.
 run_stake="$(run_only "slash.stakeAfter" "slash.stakeAfter")"

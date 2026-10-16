@@ -2276,10 +2276,16 @@ script with no inputs, the vault script with them, and the manager script handed
 that cannot bind); `bash verification/audit-gate.sh` → unchanged (**PASS=11, FAIL=0,
 SKIP=0**); `git status --porcelain verification/` → 0 lines.
 
-## 5.13 M9a as delivered (registry authority, DEC-2)
+## 5.13 M9 as delivered (the contract batch, P8)
 
-Status: **DEC-2 is closed in code, offline; `M9b` and `M9c` are not started, and
-nothing is deployed** (A8 stays open). `integrations/avalanche/contracts/AVIPRegistry.sol`
+Two of the three milestones have landed — DEC-2's authority pair (M9a) and DEC-4's
+slash amount (M9b). `M9c` (DEC-5's ejection surcharge) is not started, and nothing
+is deployed.
+
+### M9a as delivered (registry authority, DEC-2)
+
+Status: **DEC-2 is closed in code, offline, and M9b with it; `M9c` is not started,
+and nothing is deployed** (A8 stays open). `integrations/avalanche/contracts/AVIPRegistry.sol`
 gains an immutable `guardian` and the propose/execute pair that replaces both
 setters, `IAVIPRegistry.sol` publishes it, `scripts/DeployCommon.sol` and
 `scripts/DeployRegistry.s.sol` take the new role and refuse a plan in which it is not
@@ -2342,6 +2348,74 @@ across runs (`md5 2bf8d16bfa20c1d47fa65690e240f0bd` and
 transcripts' bytes alone; `bash verification/audit-gate.sh` → unchanged
 (**PASS=11, FAIL=0, SKIP=0**); `bash verification/fase0_anchor.sh --check` → exit 0;
 `git status --porcelain verification/ docs/paper/` → 0 lines.
+
+### M9b as delivered (the slash amount, DEC-4)
+
+`slash(address validator, bytes32 reason)` now takes **the record**, and the record
+is what it takes: `AVIPValidatorManager.slash` reads `_stakes[validator]` and
+empties it, so M2's `SlashExceedsStake` — a check that existed only to reconcile two
+numbers — is replaced by `NothingToSlash`, which refuses an empty record. The
+consequence is arithmetic rather than policy: since `requiredStakeFor` is never
+below `S_min > 0` (§5.2.3), a whole-record slash always ejects, and the ejection
+reports the empty record it leaves behind (`ValidatorEjected(v, 0, S_f*)`).
+
+**What left the wire, and why that is the point.** `amountWad` is gone from
+`AVIPMessageCodec.SlashingNotification`, its `ZeroSlashAmount` predicate with it
+(three predicates remain, plus M7b's `NotAFraudProof`), and `AVIPSlashingChannel`'s
+`notify`/`_deliver`/events no longer carry or echo it: the type-3 message carries
+the fraud proof's outcome — validator, epoch, ingestion digest, and the two values
+that disagree — and the destination applies its own book to it. So the number that
+decides what a validator loses is the number the rest of the protocol reads
+(`stakeOf`, and the escrow `admit` demanded against it), rather than a sender's
+claim about it. What a subnet is told is the *fact* of the fraud; what it seizes is
+its own record, which is what "all subnets where the slashed validator is
+registered" (integration §4) means once the amount is a local fact. `SlashingExecuted`
+keeps the envelope-derived `reason` and drops the amount: the amount is recoverable
+by joining on that `reason` against the custody's `StakeDebited` event, which is
+where a fund movement belongs.
+
+**The rounding, which is where M8 and M9b meet.** `debit` floors WAD to base units,
+and the new amount makes that boundary *funded by construction*: `admit` requires
+`financialStake <= escrowed`, so `floor(record / WAD_PER_UNIT) <= escrowUnits` and a
+whole-record slash can never revert `InsufficientEscrow`. What the token cannot
+express stays the validator's — `escrowed` ends above the cleared record by the
+round-up, and `withdrawable` equals it once the ejection releases the lock. Where
+the escrow is exactly the record (a declaration that is a whole number of units)
+nothing is left on either side, and that equality is a test of its own
+(`test_slash_debitsExactlyTheEscrowTheRecordNames`, the case the plan asked for).
+
+**Tests.** `AVIPValidatorManager.t.sol` 34 → **33**: seven slashing tests that
+existed to explore a transported amount (a partial slash that leaves the validator
+admitted, one wei short of the minimum, more than the stake) are replaced by six
+that pin the new rule — the authority, the whole record with a buffer, the ejection
+at the exact minimum, an address that never staked, a second slash of the same
+record (the "zero stake still reverts" case), and that a neighbour's record is
+untouched. `M8StakeVault.t.sol` 62 → **63**: the exact-escrow case above is new; the
+flooring test moves to the `debit` boundary the manager calls, since nothing
+reaches it through `slash` any more; and the fuzz that varied the slashed amount
+now varies the declaration and the escrow around it (the amount is no longer a free
+variable, which is the milestone in one sentence). `M7dTransport.t.sol` keeps its
+48: the amount disappears from its fixtures, its end-to-end assertion becomes
+`STAKE_WAD` (what the record held) and the two notifications it uses to show that a
+`reason` is not the notifier's to choose now name two different validators, because
+the first one's record is empty.
+
+**Validated locally.** `forge test --offline` → **257 passed, 0 failed, 0 skipped**
+over 9 suites (the same total: one test fewer in M2, one more in M8, the transport
+suite unchanged); `forge fmt --check` → 0 diffs; `forge build --offline` → OK;
+`forge lint` → the same **4 notes, no warning**; `bash scripts/m7d_report.sh` → 62
+rows, byte-identical across runs (`md5 40130315ec07f2f3fc469cf43d36e7f1`, one row
+fewer: `notify.amountWad`) and `bash scripts/m8_report.sh` → 42 rows
+(`md5 2955c738f2c2a56cb0f6936c4b8e5ff8`, one row more: `slash.recordBefore`), both
+`status=ok`; `bash scripts/deploy_dryrun.sh` → **11 cases**, transcript unchanged
+byte for byte (`md5 1208fa7a787da04319fb530027bcb8c6`), which is the evidence that
+M9b moves no deployment; `bash verification/audit-gate.sh` → **PASS=11 FAIL=0
+SKIP=0**; `bash verification/fase0_anchor.sh --check` → exit 0;
+`git status --porcelain verification/ docs/paper/` → 0 lines. The M8 drift guard was
+adjusted where its old shape would have gone vacuous: with `slash.stakeAfter` at
+`0`, a substring test for `"0"` could not fail, so the fixture tie is the whole
+declaration (`M7D_SLASH_STAKE_AFTER = 0;`) and the run side is still compared
+numerically in both directions.
 
 ## 6. Interfaces and parameter provenance
 
@@ -2522,8 +2596,8 @@ endpoint: the Fuji deployment the M7a and M8 scripts are ready for.
 
 Decided 2026-10-15. **No sealed file has moved**: `main.tex` and the nine other
 sealed files are untouched, the gate is `PASS=11 FAIL=0 SKIP=0` and the anchor is
-the committed one. Of the batch, only `M9a` has landed, and only in `integrations/`
-plus this plan (§5.13).
+the committed one. Of the batch, `M9a` and `M9b` have landed, and only in
+`integrations/` plus this plan (§5.13).
 
 ### Namespaces (no mixing)
 
@@ -2594,10 +2668,12 @@ certification (`verifyThreshold` then reverts `VerifierNotSet`, `:174-175`).
    `MissingRole("GUARDIAN")`); `contracts/README.md`'s status table and NatSpec
    `@dev` citations follow §9's paper→code rule.
 
-**M9b — DEC-4, the slash amount.** `contracts/AVIPValidatorManager.sol`,
-`contracts/AVIPSlashingChannel.sol`, `contracts/AVIPMessageCodec.sol` and the
-manager interface.
-Today the amount is a **remote parameter**: `_deliver` executes
+**M9b — DEC-4, the slash amount. Delivered** (§5.13: 33 manager tests, 63 vault
+tests and 48 transport tests, 257 in total, the gate and the anchor untouched).
+`contracts/AVIPValidatorManager.sol`, `contracts/AVIPSlashingChannel.sol`,
+`contracts/AVIPMessageCodec.sol` and the manager interface.
+The specification it was closed against, kept as written: the amount was a
+**remote parameter**: `_deliver` executed
 `MANAGER.slash(notification.validator, notification.amountWad, reason)`
 (`AVIPSlashingChannel.sol:185`), `amountWad` is decoded from the Teleporter payload
 (`AVIPMessageCodec.sol:138`) and validated only as non-zero (`:343`) and ≤ the stake
@@ -2612,7 +2688,10 @@ Today the amount is a **remote parameter**: `_deliver` executes
    format) is updated — that file is **not** sealed.
 4. Tests updated: `AVIPValidatorManager.t.sol` (34), `M7dTransport.t.sol` (48),
    `M8StakeVault.t.sol` (62); one new case asserts the debit equals the escrow on
-   record, another that a zero-stake validator still reverts.
+   record, another that a zero-stake validator still reverts. **Delivered as 33, 48
+   and 63** (§5.13): the M2 suite loses the arithmetic the argument made possible
+   and gains the rule, the transport suite is unchanged in number, and the vault
+   suite gains the exact-escrow case.
 5. Consequence for the paper: `main.tex:1028`'s «caller-supplied amount» becomes
    **false** the moment M9b ships, which is why P8 must land in the same release.
 

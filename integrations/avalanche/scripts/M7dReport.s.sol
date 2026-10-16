@@ -69,12 +69,11 @@ contract M7dReport is DeployCommon {
     address internal constant NOTIFIER = ANVIL_2;
     address internal constant VALIDATOR = 0x90F79bf6EB2c4f870365E785982E1f101E93b906;
 
-    /// @dev The stake the validator declares and the amount the data layer asks for:
-    ///      choices of this *run* (the manager bounds the amount by the stake on
-    ///      record), not constants of the paper — M7b's `S_slash = 10` is a model
-    ///      parameter and is not transported.
+    /// @dev The stake the validator declares: a choice of this *run* (the manager
+    ///      takes that record in full), not a constant of the paper — M7b's
+    ///      `S_slash = 10` is a model parameter, and since M9b no amount is
+    ///      transported for it to bound.
     uint256 internal constant STAKE_WAD = 1e18;
-    uint256 internal constant SLASH_WAD = 9e17;
 
     MockTeleporterMessenger internal teleporter;
     Groth16Verifier internal verifier;
@@ -417,7 +416,6 @@ contract M7dReport is DeployCommon {
         bytes32 logged = _reasonFromLogs(vm.getRecordedLogs());
 
         bytes32 reason = AVIPMessageCodec.provenanceId(CHAIN_SOURCE, 0);
-        _m7d("notify.amountWad", vm.toString(notification.amountWad));
         _m7d("notify.publishedWad", vm.toString(notification.publishedWad));
         _m7d("notify.formulaWad", vm.toString(notification.formulaWad));
         _m7d("notify.ingestionDigest", vm.toString(notification.ingestionDigest));
@@ -433,15 +431,15 @@ contract M7dReport is DeployCommon {
             "M7dReport: the manager saw a different reason"
         );
         require(
-            manager.stakeOf(VALIDATOR) == STAKE_WAD - SLASH_WAD && !manager.isAdmitted(VALIDATOR),
-            "M7dReport: the slash did not land"
+            manager.stakeOf(VALIDATOR) == 0 && !manager.isAdmitted(VALIDATOR),
+            "M7dReport: the whole record was not taken"
         );
 
         vm.prank(NOTIFIER);
         try slashingSource.notify(notification) {
-            revert("M7dReport: the second notification exceeded the remaining stake");
+            revert("M7dReport: the second notification found something to take");
         } catch (bytes memory reasonData) {
-            _reject("exceedsStake", reasonData);
+            _reject("nothingToSlash", reasonData);
         }
 
         vm.prank(SEQUENCER);
@@ -543,7 +541,6 @@ contract M7dReport is DeployCommon {
     {
         return AVIPMessageCodec.SlashingNotification({
                 validator: VALIDATOR,
-                amountWad: SLASH_WAD,
                 epoch: F7d.M7B_EPOCH,
                 ingestionDigest: F7d.M7B_INGESTION_DIGEST,
                 publishedWad: F7d.M7B_PUBLISHED_WAD,
@@ -604,7 +601,6 @@ contract M7dReport is DeployCommon {
         if (selector == AVIPMessageCodec.EmptyGraphDigest.selector) return "EmptyGraphDigest";
         if (selector == AVIPMessageCodec.QuietAlert.selector) return "QuietAlert";
         if (selector == AVIPMessageCodec.EmptyValidator.selector) return "EmptyValidator";
-        if (selector == AVIPMessageCodec.ZeroSlashAmount.selector) return "ZeroSlashAmount";
         if (selector == AVIPMessageCodec.EmptyIngestionDigest.selector) {
             return "EmptyIngestionDigest";
         }
@@ -650,8 +646,8 @@ contract M7dReport is DeployCommon {
         if (selector == AVIPSlashingChannel.ManagerNotConfigured.selector) {
             return "ManagerNotConfigured";
         }
-        if (selector == IAVIPValidatorManager.SlashExceedsStake.selector) {
-            return "SlashExceedsStake";
+        if (selector == IAVIPValidatorManager.NothingToSlash.selector) {
+            return "NothingToSlash";
         }
         if (selector == IAVIPValidatorManager.NotSlashAuthority.selector) {
             return "NotSlashAuthority";

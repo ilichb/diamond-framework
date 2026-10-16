@@ -146,6 +146,16 @@ Three message types are defined:
 > transport carries no funds, and the "voting weight" this section names is a rule
 > for a validator set that does not exist on-chain here.
 
+> **Amended in M9b** (§12.1.2, `implementation-plan.md` §5.13): the slashing
+> notification carries the fraud proof's outcome — the validator, the epoch, the
+> ingestion digest and the two values that disagree — and **no amount**. The stake
+> a validator loses is the whole record that the destination's own manager holds
+> (`AVIPValidatorManager.slash(address,bytes32)`), so the quantity the paper's §7.4
+> writes as `L` is derived where the record is rather than transported across
+> subnets: the type-3 payload shrank by one field and M2's `SlashExceedsStake` went
+> with it. What the subnets share is the *fact* of the fraud; what each of them
+> seizes is its own book.
+
 ## 5. Data Layer
 
 The data layer operates per Section 7. Entries of the reputation

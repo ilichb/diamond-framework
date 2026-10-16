@@ -14,12 +14,14 @@ pragma solidity ^0.8.24;
 ///      about.
 ///
 ///      Provenance:
-///        - `M7D_*`: `integrations/avalanche/scripts/m7d_output.txt` (§5.11). M7d's
-///          slashing notification carried a stake of `1000000000000000000` WAD and
-///          left `100000000000000000` after the slash, with the reason
-///          `0x9ee878…298c` — the provenance id M8's custody now forwards to the
-///          sink. M8's report replays *that* trajectory against real escrow, which
-///          is what ties the wire milestone to the funds milestone.
+///        - `M7D_*`: `integrations/avalanche/scripts/m7d_output.txt` (§5.11, amended
+///          by §5.13/M9b). M7d's slashing notification carried a stake of
+///          `1000000000000000000` WAD and the slash took **all of it**: the
+///          transcript's `slash.stakeAfter` is `0`, because the amount is the
+///          record and no longer travels. The reason is `0x9ee878…298c` — the
+///          provenance id M8's custody now forwards to the sink. M8's report
+///          replays *that* trajectory against real escrow, which is what ties the
+///          wire milestone to the funds milestone.
 ///        - `WAD_PER_UNIT = 1e12`: six decimals, the USDC-like case §5.12 discusses.
 ///          Not from a transcript: it is the token scale the report deploys, and
 ///          the fee guard derives `F_0*` in units from it.
@@ -37,20 +39,25 @@ library M8CustodyFixtures {
     uint256 internal constant M7D_ADMIT_STAKE = 1e18;
 
     /// @notice What M7d's notification left after the slash (`m7d_output.txt`,
-    ///         `slash.stakeAfter`), in WAD.
-    uint256 internal constant M7D_SLASH_STAKE_AFTER = 1e17;
+    ///         `slash.stakeAfter`), in WAD. Zero, and not a placeholder: M9b's
+    ///         slash takes the whole record, so the trajectory M8 replays ends at
+    ///         the empty record rather than at a remainder.
+    uint256 internal constant M7D_SLASH_STAKE_AFTER = 0;
 
-    /// @notice The slash M7d's two rows imply: `M7D_ADMIT_STAKE - M7D_SLASH_STAKE_AFTER`.
-    uint256 internal constant M7D_SLASHED_STAKE = 9e17;
+    /// @notice The slash M7d's two rows imply: `M7D_ADMIT_STAKE - M7D_SLASH_STAKE_AFTER`,
+    ///         i.e. the record itself.
+    uint256 internal constant M7D_SLASHED_STAKE = 1e18;
 
     /// @notice `10 ** (18 - 6)`: the scale of the six-decimal token the report
     ///         deploys, so every WAD number above is a whole number of base units
-    ///         (`1e18 / 1e12 = 1_000_000`, `1e17 / 1e12 = 100_000`).
+    ///         (`1e18 / 1e12 = 1_000_000`, `0 / 1e12 = 0`).
     uint256 internal constant WAD_PER_UNIT = 1e12;
 
     /// @notice The escrow that covers `M7D_ADMIT_STAKE` exactly, in base units.
     uint256 internal constant ESCROW_UNITS = 1_000_000;
 
-    /// @notice What the slash moves, in base units (`M7D_SLASHED_STAKE / 1e12`).
-    uint256 internal constant SLASH_UNITS = 900_000;
+    /// @notice What the slash moves, in base units (`M7D_SLASHED_STAKE / 1e12`):
+    ///         the whole escrow, which is the point of M9b's derived amount — a
+    ///         validator whose record is taken has no unseized remainder left.
+    uint256 internal constant SLASH_UNITS = 1_000_000;
 }

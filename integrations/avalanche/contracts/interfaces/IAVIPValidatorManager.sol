@@ -83,8 +83,11 @@ interface IAVIPValidatorManager {
     /// @notice `slash` was called by an address other than the slash authority.
     error NotSlashAuthority(address caller);
 
-    /// @notice The slash would remove more stake than the validator has.
-    error SlashExceedsStake(address validator, uint256 requested, uint256 available);
+    /// @notice `slash` found nothing on record for `validator`: there is no
+    ///         stake to take, so the instruction cannot execute (§12.1.2, M9b).
+    ///         Replaces M2's `SlashExceedsStake`, which a derived amount makes
+    ///         unrepresentable: the amount *is* the record.
+    error NothingToSlash(address validator);
 
     error ZeroRegistry();
     error ZeroSlashAuthority();
@@ -144,12 +147,18 @@ interface IAVIPValidatorManager {
         bytes calldata proof
     ) external;
 
-    /// @notice Slashes `amount` from `validator`.
-    /// @dev With a custody contract configured, the funds leave custody in the
+    /// @notice Slashes the whole stake on record for `validator`.
+    /// @dev The amount is **derived, not transported** (§12.1.2, M9b): the
+    ///      argument is gone because a transported amount is a second number that
+    ///      can disagree with `stakeOf`, and the one that decides how much a
+    ///      validator loses should be the record the rest of the protocol reads.
+    ///      A validator with nothing on record reverts `NothingToSlash`.
+    ///
+    ///      With a custody contract configured, the funds leave custody in the
     ///      same call (`IAVIPCustody.debit`), so the record and the escrow cannot
     ///      diverge; a revert in custody reverts the whole slash.
-    /// @param amount Must not exceed `stakeOf(validator)`.
+    /// @param validator The validator whose record is taken.
     /// @param reason Machine-readable reason (e.g. a provenance id from the
     ///        slashing notification defined in avalanche-integration.md §4).
-    function slash(address validator, uint256 amount, bytes32 reason) external;
+    function slash(address validator, bytes32 reason) external;
 }

@@ -53,7 +53,7 @@ pragma solidity ^0.8.24;
 ///
 ///      **Fail-closed at both ends.** `encode` refuses to build a message whose
 ///      payload is empty where the protocol has no meaning for it (a zero root, a
-///      zero validator, a zero amount, an alert that flags nothing, a "fraud"
+///      zero validator, an alert that flags nothing, a "fraud"
 ///      whose two values agree); every decoder re-checks the same predicates. The
 ///      sender's copy is a courtesy — it fails fast, next to the mistake — and the
 ///      receiver's copy is the boundary, because a message can be hand-built or
@@ -120,10 +120,6 @@ library AVIPMessageCodec {
 
     /// @notice Type 3: a fraud proof's outcome, as an instruction to slash.
     /// @param validator The validator the data layer found at fault.
-    /// @param amountWad The slash amount. M7b's equilibrium names `S_slash = 10`
-    ///        as a *model* parameter; the amount transported here is whatever the
-    ///        data layer decided, and the manager bounds it by the stake on record
-    ///        (`SlashExceedsStake`), so the transport cannot invent funds.
     /// @param epoch The epoch the fraud proof adjudicated.
     /// @param ingestionDigest The digest of the `f_c` instance in force when the
     ///        proof was decided (M7b §5.9's `Ingestion::parameters_digest`), so the
@@ -133,9 +129,16 @@ library AVIPMessageCodec {
     /// @param formulaWad What `f_c(events)` says (M7b's `formula_wad`). A fraud
     ///        proof is exactly `publishedWad != formulaWad`; both ends reject a
     ///        notification where they agree.
+    ///
+    /// @dev **No amount travels** (§12.1.2, M9b). M7b's equilibrium names
+    ///      `S_slash = 10` as a *model* parameter and M2 originally carried that
+    ///      decision as a `uint256 amountWad`; the manager now takes the whole stake
+    ///      on record, so the number leaves the wire instead of crossing it. What
+    ///      crosses is the proof's outcome — the transported amount was a second
+    ///      source of truth for something the destination already knew, and M2's
+    ///      `SlashExceedsStake` existed only to reconcile the two.
     struct SlashingNotification {
         address validator;
-        uint256 amountWad;
         uint256 epoch;
         bytes32 ingestionDigest;
         uint256 publishedWad;
@@ -174,9 +177,6 @@ library AVIPMessageCodec {
 
     /// @notice A slashing notification for the zero address.
     error EmptyValidator();
-
-    /// @notice A slashing notification that slashes nothing.
-    error ZeroSlashAmount();
 
     /// @notice A slashing notification naming no ingestion instance.
     error EmptyIngestionDigest();
@@ -332,15 +332,17 @@ library AVIPMessageCodec {
         _checkSlashing(notification);
     }
 
-    /// @dev The four predicates of a well-formed slashing notification, shared by
+    /// @dev The three predicates of a well-formed slashing notification, shared by
     ///      both ends so that they cannot drift apart. The last one is M7b's
     ///      semantics rather than a formatting rule: `adjudicate` returns
     ///      `Verdict::Fraud` exactly when the published value is not `f_c(events)`
     ///      (`src/datalayer/src/ingestion.rs`, §5.9), so a message where the two
-    ///      agree is a slashing instruction with no proof behind it.
+    ///      agree is a slashing instruction with no proof behind it. M2's fourth
+    ///      predicate — a non-zero amount — went with the field (§12.1.2, M9b): the
+    ///      manager derives the amount from the record it is about to take and
+    ///      refuses an empty one itself (`NothingToSlash`).
     function _checkSlashing(SlashingNotification memory notification) private pure {
         if (notification.validator == address(0)) revert EmptyValidator();
-        if (notification.amountWad == 0) revert ZeroSlashAmount();
         if (notification.ingestionDigest == bytes32(0)) revert EmptyIngestionDigest();
         if (notification.publishedWad == notification.formulaWad) {
             revert NotAFraudProof(notification.publishedWad, notification.formulaWad);

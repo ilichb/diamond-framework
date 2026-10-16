@@ -235,30 +235,36 @@ contract AVIPValidatorManager is IAVIPValidatorManager {
     // -------------------------------------------------------------- slashing
 
     /// @inheritdoc IAVIPValidatorManager
-    function slash(address validator, uint256 amount, bytes32 reason) external {
+    function slash(address validator, bytes32 reason) external {
         if (msg.sender != slashAuthority) revert NotSlashAuthority(msg.sender);
 
+        // The amount is the record itself (§12.1.2, M9b). There is no argument
+        // to bound, so the bound M2 needed cannot be violated: nothing here can
+        // exceed `_stakes[validator]`. An absent record has nothing to take.
         uint256 available = _stakes[validator];
-        if (amount > available) revert SlashExceedsStake(validator, amount, available);
+        if (available == 0) revert NothingToSlash(validator);
 
-        uint256 remaining = available - amount;
-        _stakes[validator] = remaining;
+        uint256 amount = available;
+        _stakes[validator] = 0;
 
         emit ValidatorSlashed(validator, amount, reason);
 
-        // `isAdmitted` must keep implying `stakeOf >= requiredStake`: once the
-        // slash leaves less than `S_f*`, the admission rule no longer holds and
-        // the validator stops being admitted.
-        if (_admitted[validator] && remaining < _requiredStakes[validator]) {
+        // `isAdmitted` must keep implying `stakeOf >= requiredStake`, and a zero
+        // record satisfies that for no admitted validator: `requiredStakeFor` is
+        // at least `S_MIN > 0` for every admitted norm (§5.2.3). So taking the
+        // whole record always ejects, and the ejection reports the record it
+        // leaves behind — the state the admission rule is now false in.
+        if (_admitted[validator] && _stakes[validator] < _requiredStakes[validator]) {
             _admitted[validator] = false;
-            emit ValidatorEjected(validator, remaining, _requiredStakes[validator]);
+            emit ValidatorEjected(validator, _stakes[validator], _requiredStakes[validator]);
         }
 
         // Funds last, and only now: every write on this side has already
         // happened, so the custody contract is the last thing to act and a
         // revert in it (a failing token, a refusing sink) rolls this whole call
-        // back — record and escrow move together or not at all (§5.12). A
-        // zero-amount slash moves nothing and is a no-op in custody.
+        // back — record and escrow move together or not at all (§5.12). The
+        // amount here is never zero: the guard above refuses an empty record, so
+        // custody always has something to move.
         if (address(custody) != address(0)) {
             custody.debit(validator, amount, reason);
         }

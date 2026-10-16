@@ -127,8 +127,8 @@ contract M8Report is DeployCommon {
 
     /// @dev A validator escrows first and is admitted against it. The declaration
     ///      and the slash that follows are M7d's own numbers
-    ///      (`FA8.M7D_ADMIT_STAKE`, `F8.M7D_SLASH_STAKE_AFTER`), which is what makes
-    ///      the two milestones commensurable.
+    ///      (`F8.M7D_ADMIT_STAKE`, and a slash that takes the whole record under
+    ///      §12.1.2/M9b), which is what makes the two milestones commensurable.
     function _escrowAndAdmission() internal {
         vm.prank(SEQUENCER);
         registry.postCommitment(0, bytes32(F4b.STATEMENT_ROOT), N);
@@ -196,28 +196,36 @@ contract M8Report is DeployCommon {
     // ----------------------------------------------------------------- slash
 
     /// @dev M7d's own slash, executed against real escrow: the record and the
-    ///      funds move in the same call, so they cannot diverge.
+    ///      funds move in the same call, so they cannot diverge. The amount is not
+    ///      an argument (§12.1.2, M9b): it is the record, read here *before* the
+    ///      call so the transcript shows the number the manager derived rather than
+    ///      one this script passed in.
     function _slash() internal {
         uint256 burnedBefore = sink.totalBurned();
+        uint256 recordBefore = manager.stakeOf(VALIDATOR);
 
         vm.prank(SLASH_AUTHORITY);
-        manager.slash(VALIDATOR, F8.M7D_SLASHED_STAKE, F8.M7D_SLASH_REASON);
+        manager.slash(VALIDATOR, F8.M7D_SLASH_REASON);
 
-        _m8("slash.amount", vm.toString(F8.M7D_SLASHED_STAKE));
-        _m8("slash.units", vm.toString(F8.SLASH_UNITS));
+        _m8("slash.recordBefore", vm.toString(recordBefore));
+        _m8("slash.amount", vm.toString(recordBefore));
+        _m8("slash.units", vm.toString(recordBefore / F8.WAD_PER_UNIT));
         _m8("slash.reason", vm.toString(F8.M7D_SLASH_REASON));
         _m8("slash.stakeAfter", vm.toString(manager.stakeOf(VALIDATOR)));
         _m8("slash.escrowedAfter", vm.toString(vault.escrowed(VALIDATOR)));
         _m8("slash.admittedAfter", manager.isAdmitted(VALIDATOR) ? "true" : "false");
         _m8("sink.totalBurned", vm.toString(sink.totalBurned()));
 
+        require(recordBefore == F8.M7D_SLASHED_STAKE, "M8Report: the record is not M7d's slash");
         require(
             sink.totalBurned() - burnedBefore == F8.SLASH_UNITS,
             "M8Report: the slash did not reach the sink"
         );
+        // M9b: the whole record is taken, so what is left is nothing — in the
+        // contract's books and in the escrow, which is the point of both numbers.
         require(
             vault.escrowed(VALIDATOR) == F8.M7D_SLASH_STAKE_AFTER,
-            "M8Report: the escrow is not the value M7d's notification implies"
+            "M8Report: the escrow is not what M7d's slash leaves"
         );
         require(
             manager.stakeOf(VALIDATOR) == F8.M7D_SLASH_STAKE_AFTER,

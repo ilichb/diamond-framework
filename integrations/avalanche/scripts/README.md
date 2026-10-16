@@ -130,14 +130,15 @@ bash scripts/m7d_report.sh
 ```
 
 It runs the report offline and pins its `[m7d]` transcript to
-`scripts/m7d_output.txt` (committed, 63 rows). The report wires the three message
+`scripts/m7d_output.txt` (committed, 62 rows). The report wires the three message
 types of `avalanche-integration.md` §4 across two chain ids — a commitment relay,
 a collusion-alert channel and a slashing channel, each deployed once per chain —
 and then exercises each one end to end, printing one machine-readable line per
 fact **including one per refusal** (13 of them: an uncommitted epoch, a link that
 does not tie its own words, an unlisted origin, a second delivery of one message,
 a rewritten epoch, a quiet alert, a rewritten flag, a notification the manager
-refuses, and so on).
+refuses — `NothingToSlash`, since the slashed amount is the record in full and the
+second notification has nothing left to take (§12.1.2, M9b) — and so on).
 
 Three things about it are deliberate:
 
@@ -147,8 +148,10 @@ Three things about it are deliberate:
    EVM), and `--offline` keeps the run hermetic. The addresses in the transcript
    are `anvil` account 0's own CREATEs, reproducible run to run and **not** Fuji
    addresses.
-2. **The transcript is byte-stable**: no gas, no timings, no block numbers, 63
-   rows, `md5 2bf8d16bfa20c1d47fa65690e240f0bd`.
+2. **The transcript is byte-stable**: no gas, no timings, no block numbers, 62
+   rows, `md5 40130315ec07f2f3fc469cf43d36e7f1`. (M9b removed one row — the
+   payload's `notify.amountWad`, which no longer travels — and the transcript was
+   regenerated and pinned again: §5.13.)
 3. **The numbers answer to the milestones they come from, in both directions.**
    `m7d_report.sh` reads each upstream value out of its committed transcript,
    requires it in the declared fixture *and* in the fresh run, and checks that the
@@ -199,18 +202,19 @@ bash scripts/m8_report.sh
 It builds the whole layer (six-decimal token, burn sink, vault, registry with the
 M4b development key, manager), and then walks a validator through the lifecycle —
 escrow, admission bound to that escrow, the `F_0*` fee, and a slash that leaves
-custody for the sink — printing one `[m8]` line per fact and **one per refusal**
+custody for the sink — the whole of the record the manager holds, since M9b
+(§12.1.2) — printing one `[m8]` line per fact and **one per refusal**
 (six of them: a second `bindManager`, a manager deployed against an already-bound
 custody, an unbacked admission, `debit` from a stranger, the fee from a
 non-admitted payer, and a fee-on-transfer token). Every line is reproducible, and
 the script's own `require`s plus the `status=ok` row are what fail the run when the
-custody stops behaving. The pinned transcript is 41 rows
-(`md5 147064b25244913b7398330f8730baf4`), byte-identical across runs. The stake
-trajectory it replays is **M7d's own**
-(`admit.stake`, `slash.stakeAfter`) and the reason it hands the sink is **the
-provenance id M7d derived**, so the wire milestone and the funds milestone are
-checked against the same numbers. The destination is not hidden: the report wires
-the reference sink and says so.
+custody stops behaving. The pinned transcript is 42 rows
+(`md5 2955c738f2c2a56cb0f6936c4b8e5ff8`), byte-identical across runs. The stake
+trajectory it replays is **M7d's own** (`admit.stake`, `slash.stakeAfter` — the
+latter `0` since M9b: the slash takes the whole record) and the reason it hands the
+sink is **the provenance id M7d derived**, so the wire milestone and the funds
+milestone are checked against the same numbers. The destination is not hidden: the
+report wires the reference sink and says so.
 
 **Nothing here is a deployment and no key is used**: the token and sink are the test
 doubles, the proof is real (M4b's key and fixture, through the frozen verifier), and

@@ -203,10 +203,12 @@ contract M8StakeVaultTest is Test {
         manager.admit(validator, declaredWad, THETA_R, _encodeProof(PROOF_A0));
     }
 
-    /// @dev Slashes `validator`, as the role that carries the decision.
-    function _slash(uint256 amountWad, bytes32 reason) internal {
+    /// @dev Slashes `validator`, as the role that carries the decision. Since M9b
+    ///      (§12.1.2) there is no amount: the manager takes the whole record, so
+    ///      the only decisions left are *who* and *why*.
+    function _slash(bytes32 reason) internal {
         vm.prank(slashAuthority);
-        manager.slash(validator, amountWad, reason);
+        manager.slash(validator, reason);
     }
 
     /// @dev The stake on record converted to base units, rounded down.
@@ -599,13 +601,16 @@ contract M8StakeVaultTest is Test {
         _depositAndAdmit(SF_AT_THETA_R);
         assertEq(vault.withdrawable(validator), 0, "locked while admitted");
 
-        // A slash that leaves less than the minimum ejects the validator, and the
-        // lock goes with the admission (§5.2.3).
-        _slash(SF_AT_THETA_R / 2, REASON_LATE_BLOCK);
+        // The slash takes the whole record, which ejects the validator (§5.2.3),
+        // and the lock goes with the admission. What the escrow kept is the
+        // round-up of §5.12: `_unitsCovering` escrowed one unit more than the
+        // record's floor, and that unit is the validator's again.
+        _slash(REASON_LATE_BLOCK);
         assertFalse(manager.isAdmitted(validator), "ejected");
+        assertEq(manager.stakeOf(validator), 0, "record cleared");
 
         uint256 left = vault.escrowedUnits(validator);
-        assertTrue(left > 0, "something is left to return");
+        assertTrue(left > 0, "the round-up is left to return");
         assertEq(vault.withdrawable(validator), left, "everything is free again");
         vm.prank(validator);
         vault.withdraw(left);
@@ -699,26 +704,59 @@ contract M8StakeVaultTest is Test {
 
         // And a slash there moves no funds, because there are none to move.
         vm.prank(slashAuthority);
-        m2.slash(validator, SF_AT_THETA_R, REASON_COLLUSION);
+        m2.slash(validator, REASON_COLLUSION);
+        assertEq(m2.stakeOf(validator), 0, "the record is the whole amount");
         assertEq(vault.escrowedUnits(validator), 0, "the vault was never involved");
         assertEq(sink.totalReceived(), 0, "and neither was the sink");
     }
+
     // ------------------------------------------------------------------ slashing
 
+    /// @dev The case M9b's derived amount makes exact: a declaration that *is* a
+    ///      whole number of base units, escrowed exactly. The slash moves the
+    ///      escrow the record names and the record with it, so nothing is left on
+    ///      either side — where the old transported amount could ask for less and
+    ///      leave a remainder behind.
+    function test_slash_debitsExactlyTheEscrowTheRecordNames() public {
+        uint256 declared = 1e18; // 1_000_000 units, exactly
+        _depositAndAdmit(declared);
+        assertEq(vault.escrowed(validator), declared, "escrow equals the record");
+        assertEq(vault.escrowedUnits(validator), declared / WAD_PER_UNIT_6);
+        assertEq(vault.withdrawable(validator), 0, "locked while admitted");
+
+        uint256 movedUnits = declared / WAD_PER_UNIT_6;
+
+        vm.expectEmit(true, false, false, true, address(vault));
+        emit AVIPStakeVault.StakeDebited(validator, declared, movedUnits, REASON_COLLUSION);
+        _slash(REASON_COLLUSION);
+
+        assertEq(manager.stakeOf(validator), 0, "the whole record went");
+        assertFalse(manager.isAdmitted(validator), "and the admission with it");
+        assertEq(vault.escrowedUnits(validator), 0, "the escrow went too, to the unit");
+        assertEq(vault.withdrawable(validator), 0, "nothing is left to withdraw");
+        assertEq(vault.totalDebited(), movedUnits, "counted as debited");
+        assertEq(sink.totalReceived(), movedUnits, "the sink holds exactly that");
+        assertEq(vault.heldUnits(), 0, "the vault holds nothing");
+        assertTrue(vault.isBacked(validator), "the invariant holds at zero");
+    }
+
     function test_slash_takesTheFundsOutOfCustodyAndIntoTheSink() public {
-        // Declare above the minimum, so the slash has a buffer to take without
-        // ejecting: the point here is where the money goes, not the admission.
+        // An escrow *above* the declaration (`admit` allows it): the slash takes
+        // the record and the surplus stays the validator's, withdrawable because
+        // the same call ejected it.
         uint256 buffer = 1e18;
         uint256 units = _unitsCovering(SF_AT_THETA_R + buffer) + 1_000;
         _deposit(validator, units);
         _admit(SF_AT_THETA_R + buffer);
 
         uint256 sinkBefore = token.balanceOf(address(sink));
-        uint256 movedUnits = buffer / WAD_PER_UNIT_6;
+        uint256 movedUnits = (SF_AT_THETA_R + buffer) / WAD_PER_UNIT_6;
 
         vm.expectEmit(true, false, false, true, address(vault));
-        emit AVIPStakeVault.StakeDebited(validator, buffer, movedUnits, REASON_COLLUSION);
-        _slash(buffer, REASON_COLLUSION);
+        emit AVIPStakeVault.StakeDebited(
+            validator, SF_AT_THETA_R + buffer, movedUnits, REASON_COLLUSION
+        );
+        _slash(REASON_COLLUSION);
 
         assertEq(
             vault.escrowedUnits(validator), units - movedUnits, "escrow fell by the units moved"
@@ -729,27 +767,49 @@ contract M8StakeVaultTest is Test {
         assertEq(sink.totalReceived(), movedUnits, "and was told");
         assertEq(sink.lastReason(), REASON_COLLUSION, "with the provenance id");
         assertEq(sink.lastAmount(), movedUnits, "and the measured amount");
-        assertEq(manager.stakeOf(validator), SF_AT_THETA_R, "the record fell by the same buffer");
-        assertTrue(manager.isAdmitted(validator), "still admitted");
-        assertTrue(vault.isBacked(validator), "and still backed");
+        assertEq(manager.stakeOf(validator), 0, "the record is emptied, not reduced");
+        assertFalse(manager.isAdmitted(validator), "so the validator is out");
+        assertEq(
+            vault.withdrawable(validator),
+            units - movedUnits,
+            "and the surplus is the validator's again"
+        );
+        assertTrue(vault.isBacked(validator), "and the invariant holds");
     }
 
-    function test_slash_belowOneBaseUnitMovesNothingAndStillLowersTheRecord() public {
+    function test_debit_belowOneBaseUnitMovesNothingAndTheRecordCanStillFall() public {
         // The manager slashes in WAD; the token has no unit that small. `debit`
-        // floors, so nothing moves — and the record still drops, which leaves the
-        // vault holding *more* than the record: the direction that keeps
-        // `escrowed >= stakeOf` true.
+        // floors, so nothing moves when it is called with less than one unit —
+        // and the record can drop anyway, which leaves the vault holding *more*
+        // than the record: the direction that keeps `escrowed >= stakeOf` true
+        // (§5.12).
+        //
+        // Since M9b nothing reaches this boundary through `slash`: the amount is
+        // the whole record and `admit` made the escrow cover it, so the floored
+        // units a slash moves are always funded. The rounding is asserted where it
+        // lives — at `debit`, as the manager calls it.
         _depositAndAdmit(SF_AT_THETA_R + 1);
         uint256 escrowBefore = vault.escrowedUnits(validator);
 
-        _slash(1, REASON_LATE_BLOCK); // one wei of WAD
+        vm.prank(address(manager));
+        vault.debit(validator, 1, REASON_LATE_BLOCK); // one wei of WAD
 
         assertEq(vault.escrowedUnits(validator), escrowBefore, "no base unit moved");
         assertEq(sink.totalReceived(), 0, "the sink saw nothing");
         assertEq(vault.totalDebited(), 0, "nothing was debited");
-        assertEq(manager.stakeOf(validator), SF_AT_THETA_R, "but the record fell by one wei");
-        assertTrue(manager.isAdmitted(validator), "still admitted");
-        assertTrue(vault.isBacked(validator), "and now over-backed by that wei");
+
+        // The same record, this time through the manager's own slash: the whole
+        // record goes and the units that move are its floor, which the escrow
+        // covered.
+        _slash(REASON_LATE_BLOCK);
+        assertEq(manager.stakeOf(validator), 0, "the record fell");
+        assertFalse(manager.isAdmitted(validator), "ejected");
+        assertEq(
+            vault.escrowedUnits(validator),
+            escrowBefore - (SF_AT_THETA_R + 1) / WAD_PER_UNIT_6,
+            "exactly the floored units left"
+        );
+        assertTrue(vault.isBacked(validator), "and the invariant holds");
     }
 
     function test_slash_canTakeTheWholeStakeAndLeavesTheSurplusBehind() public {
@@ -757,7 +817,7 @@ contract M8StakeVaultTest is Test {
         _fund(validator, 5);
         _deposit(validator, 5);
 
-        _slash(SF_AT_THETA_R, REASON_COLLUSION); // the whole record
+        _slash(REASON_COLLUSION); // the whole record
 
         assertEq(manager.stakeOf(validator), 0, "record cleared");
         assertFalse(manager.isAdmitted(validator), "ejected");
@@ -782,7 +842,7 @@ contract M8StakeVaultTest is Test {
         token.setBlocked(true);
 
         vm.expectRevert(bytes("mock: token blocked"));
-        _slash(buffer, REASON_COLLUSION);
+        _slash(REASON_COLLUSION);
 
         // The manager wrote `stakeOf` before calling custody; the token's revert
         // rolled that write back with everything else. This is the milestone's
@@ -803,7 +863,7 @@ contract M8StakeVaultTest is Test {
         sink.setRefuse(true);
 
         vm.expectRevert(bytes("mock: sink refuses"));
-        _slash(buffer, REASON_COLLUSION);
+        _slash(REASON_COLLUSION);
 
         assertEq(manager.stakeOf(validator), stakeBefore, "record restored");
         assertEq(vault.escrowedUnits(validator), escrowBefore, "escrow restored");
@@ -849,23 +909,28 @@ contract M8StakeVaultTest is Test {
         assertEq(token.balanceOf(address(sink)), 1_000, "to the sink");
     }
 
-    function testFuzz_slashKeepsTheInvariantAndTheLedger(uint96 slashWad) public {
-        uint256 buffer = 1e18;
-        uint256 units = _unitsCovering(SF_AT_THETA_R + buffer);
+    /// @dev The invariant and the ledger under the amounts that are left free: how
+    ///      much is declared, and how much escrow sits above it. The slash itself
+    ///      takes one number — the record — so what a fuzz can vary is the record
+    ///      and the surplus around it.
+    function testFuzz_slashTakesTheRecordAndKeepsTheInvariant(uint96 declaredWad, uint16 surplus)
+        public
+    {
+        uint256 declared = bound(uint256(declaredWad), SF_AT_THETA_R, 1e24);
+        uint256 units = _unitsCovering(declared) + uint256(surplus);
+        // The escrow is minted here rather than taken from the setUp balance: a
+        // fuzz over the declaration needs an escrow that covers whatever it picks.
+        _fund(validator, units);
         _deposit(validator, units);
-        _admit(SF_AT_THETA_R + buffer);
+        _admit(declared);
 
-        uint256 declared = SF_AT_THETA_R + buffer;
-        uint256 slashAmount = bound(uint256(slashWad), 0, declared);
-        uint256 movedUnits = slashAmount / WAD_PER_UNIT_6;
+        uint256 movedUnits = declared / WAD_PER_UNIT_6;
 
-        _slash(slashAmount, REASON_COLLUSION);
+        _slash(REASON_COLLUSION);
 
-        // The invariant, for every amount the manager can legally take:
+        // The invariant, and the books, for every record and every surplus:
         assertTrue(vault.isBacked(validator), "escrowed >= stakeOf");
-        assertEq(
-            manager.stakeOf(validator), declared - slashAmount, "the record fell by the amount"
-        );
+        assertEq(manager.stakeOf(validator), 0, "the record is emptied");
         assertEq(vault.escrowedUnits(validator), units - movedUnits, "exactly the floored units");
         assertEq(token.balanceOf(address(sink)), movedUnits, "and the sink holds them");
         assertEq(
@@ -980,10 +1045,19 @@ contract M8StakeVaultTest is Test {
         vault.payFee();
         assertEq(sink.totalReceived(), FEE_UNITS_6, "fee arrived");
 
-        _slash(SF_AT_THETA_R / 2, REASON_LATE_BLOCK);
-        assertEq(sink.totalReceived(), FEE_UNITS_6 + SF_AT_THETA_R / 2 / WAD_PER_UNIT_6, "slash");
+        // The whole record goes, and the escrow that covered it was
+        // `ceil(SF/1e12)`, so the slash moves the floor and the round-up unit is
+        // all that comes back.
+        _slash(REASON_LATE_BLOCK);
+        assertEq(
+            sink.totalReceived(),
+            FEE_UNITS_6 + SF_AT_THETA_R / WAD_PER_UNIT_6,
+            "slash moved the record's floor"
+        );
+        assertFalse(manager.isAdmitted(validator), "ejected");
 
         uint256 left = vault.withdrawable(validator);
+        assertTrue(left > 0, "the round-up unit is left");
         vm.prank(validator);
         vault.withdraw(left);
         assertEq(vault.escrowedUnits(validator), 0, "everything came back");
@@ -1072,12 +1146,18 @@ contract M8StakeVaultTest is Test {
                 AVIPStakeVault.debit.selector, validator, uint256(1e18), REASON_COLLUSION
             )
         );
-        _slash(buffer, REASON_COLLUSION);
+        _slash(REASON_COLLUSION);
 
         assertFalse(token.lastReentrySucceeded(), "the re-entry failed");
-        assertEq(sink.totalReceived(), buffer / WAD_PER_UNIT_6, "the sink was paid exactly once");
         assertEq(
-            vault.escrowedUnits(validator), units - buffer / WAD_PER_UNIT_6, "escrow moved once"
+            sink.totalReceived(),
+            (SF_AT_THETA_R + buffer) / WAD_PER_UNIT_6,
+            "the sink was paid exactly once"
+        );
+        assertEq(
+            vault.escrowedUnits(validator),
+            units - (SF_AT_THETA_R + buffer) / WAD_PER_UNIT_6,
+            "escrow moved once"
         );
     }
 
@@ -1092,11 +1172,15 @@ contract M8StakeVaultTest is Test {
         sink.setReentry(
             address(vault), abi.encodeWithSelector(AVIPStakeVault.withdraw.selector, uint256(1_000))
         );
-        _slash(buffer, REASON_COLLUSION);
+        _slash(REASON_COLLUSION);
 
         assertEq(sink.reentryAttempts(), 1, "the sink did try");
         assertFalse(sink.lastReentrySucceeded(), "and the attempt failed");
-        assertEq(vault.escrowedUnits(validator), units - buffer / WAD_PER_UNIT_6, "moved once");
+        assertEq(
+            vault.escrowedUnits(validator),
+            units - (SF_AT_THETA_R + buffer) / WAD_PER_UNIT_6,
+            "moved once"
+        );
     }
 
     function test_aReentrantSinkCannotChargeItselfTheFee() public {
@@ -1122,13 +1206,16 @@ contract M8StakeVaultTest is Test {
         _deposit(stranger, 500); // a second escrow, never admitted
         _deposit(validator, _unitsCovering(SF_AT_THETA_R + buffer) - 1_000 + 5_000);
         _admit(SF_AT_THETA_R + buffer);
-        _slash(buffer, REASON_COLLUSION);
+        // The fee is paid while the validator is still admitted: the slash takes
+        // the whole record and ejects it (§12.1.2, M9b), so the order is forced by
+        // `payFee`'s own rule rather than by preference.
         vm.prank(validator);
         vault.payFee();
+        _slash(REASON_COLLUSION);
         // Read the amount before the prank: the getter is an external call and
         // would consume it (the same pitfall the M2 suite documents).
         uint256 free = vault.withdrawable(validator);
-        assertTrue(free > 0, "the buffer left something free");
+        assertTrue(free > 0, "the ejected validator has its escrow back");
         vm.prank(validator);
         vault.withdraw(free);
         vm.prank(stranger);
@@ -1164,19 +1251,15 @@ contract M8StakeVaultTest is Test {
         _admit(SF_AT_THETA_R + buffer);
         assertTrue(vault.isBacked(validator), "admitted and backed");
 
-        // 2. A slash inside the buffer: still admitted, still backed.
-        _slash(buffer, REASON_COLLUSION);
-        assertTrue(manager.isAdmitted(validator), "still admitted");
-        assertTrue(vault.isBacked(validator), "still backed");
-
-        // 3. A slash that clears the record: ejected, and still backed.
-        _slash(SF_AT_THETA_R, REASON_LATE_BLOCK);
+        // 2. The whole-record slash: the record and the admission go, the escrow
+        //    falls by the record's floor, and the invariant never breaks.
+        _slash(REASON_COLLUSION);
         assertEq(manager.stakeOf(validator), 0, "record cleared");
         assertFalse(manager.isAdmitted(validator), "ejected");
-        assertTrue(vault.isBacked(validator), "backed even so: nothing stands behind it");
+        assertTrue(vault.isBacked(validator), "backed even so: the round-up covers the zero");
 
-        // 4. The validator takes everything it has left; the vault is empty but
-        //    consistent.
+        // 3. The validator takes everything it has left; what the token could not
+        //    express comes back with it, so the vault ends empty but consistent.
         uint256 free = vault.withdrawable(validator);
         vm.prank(validator);
         vault.withdraw(free);
@@ -1236,10 +1319,10 @@ contract M8StakeVaultTest is Test {
         burnManager.admit(validator, SF_AT_THETA_R + buffer, THETA_R, _encodeProof(PROOF_A0));
 
         uint256 supplyBefore = burnToken.totalSupply();
-        uint256 movedUnits = buffer / WAD_PER_UNIT_6;
+        uint256 movedUnits = (SF_AT_THETA_R + buffer) / WAD_PER_UNIT_6;
 
         vm.prank(slashAuthority);
-        burnManager.slash(validator, buffer, REASON_COLLUSION);
+        burnManager.slash(validator, REASON_COLLUSION);
 
         assertEq(burnSink.totalBurned(), movedUnits, "burned exactly what the slash moved");
         assertEq(burnToken.totalSupply(), supplyBefore - movedUnits, "and the supply fell");

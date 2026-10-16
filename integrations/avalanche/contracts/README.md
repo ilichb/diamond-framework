@@ -21,9 +21,9 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
 | Path | Status | Milestone |
 |------|--------|-----------|
 | `AVIPRegistry.sol` | **Implemented + tested** (`../test/AVIPRegistry.t.sol`, 48 tests) | M1, amended in M2 (decode), M3 (`Bn254.decodeProof`) and M9a (the authority pair) |
-| `AVIPValidatorManager.sol` | **Implemented + tested** (`../test/AVIPValidatorManager.t.sol`, 34 tests; amended in M8, whose custody path is covered by `../test/M8StakeVault.t.sol`) | M2, amended in M8 |
+| `AVIPValidatorManager.sol` | **Implemented + tested** (`../test/AVIPValidatorManager.t.sol`, 33 tests; amended in M8, whose custody path is covered by `../test/M8StakeVault.t.sol`) | M2, amended in M8 and M9b (the derived slash amount) |
 | `interfaces/IAVIPRegistry.sol` | Implemented (provisional types, real signatures) | M1, amended in M2, M9a (`guardian`, `CHANGE_DELAY`, `propose*`/`execute*`/`cancel*` and the events they emit) |
-| `interfaces/IAVIPValidatorManager.sol` | Implemented (provisional types, real signatures) | M2, amended in M8 (`custody()`, `FinancialStakeNotBacked`, `CustodyNotBound`) |
+| `interfaces/IAVIPValidatorManager.sol` | Implemented (provisional types, real signatures) | M2, amended in M8 (`custody()`, `FinancialStakeNotBacked`, `CustodyNotBound`) and M9b (`slash(address,bytes32)`, `NothingToSlash` for `SlashExceedsStake`) |
 | `interfaces/IZKThresholdVerifier.sol` | Implemented by `verifiers/Groth16Verifier.sol` | M3 |
 | `interfaces/ITeleporterMessenger.sol` | Declared (the subset M7d calls, verbatim from `icm-contracts`) | M7d |
 | `interfaces/ITeleporterReceiver.sol` | Declared (verbatim from `icm-contracts`), implemented by `AVIPMessageEndpoint.sol` | M7d |
@@ -100,10 +100,15 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
 - **Non-custodial** (plan §5.2.3): the manager declares `financialStake`, stores
   it and emits it; it never transfers or holds a token. There is no ERC-20 and no
   native-value path.
-- **Slashing is authority-only and bounded**, and it revokes the admission: when
-  the remaining stake drops below that validator's `requiredStake`, the validator
-  is ejected (`ValidatorEjected`). The stake is not zeroed, because there is
-  nothing to seize.
+- **Slashing is authority-only, unbounded in amount and *always* ejects (M9b, plan
+  §12.1.2).** `slash(address validator, bytes32 reason)` takes **the whole stake on
+  record** — the amount is derived, never transported — so there is no amount to
+  bound and M2's `SlashExceedsStake` is gone with the argument. The argument was a
+  remote parameter: the transported value and `stakeOf` could disagree, and the
+  check existed only to reconcile them. A validator with nothing on record reverts
+  `NothingToSlash`. Since the amount equals the record and `S_f* >= S_min > 0`, the
+  slash always revokes the admission (`ValidatorEjected`, with the empty record it
+  leaves behind).
 - **Not covered here**: token custody/transfer and fund movement (M8, the Treasury
   Module), removal from the validator set, weight recomputation and reward
   distribution (M6/M7).
@@ -191,7 +196,10 @@ more. M7d fixes what they are on the wire and what each one does on arrival:
   and the calibration they were decided against, once per epoch, so the flag set
   only grows. A slashing notification calls `AVIPValidatorManager.slash` with a
   `reason` **derived from the envelope** (`keccak256(sourceChain ‖ nonce)`), so no
-  sender chooses the provenance id an auditor recomputes.
+  sender chooses the provenance id an auditor recomputes — and with **no amount**,
+  which left the payload in M9b (§12.1.2): the record the destination's manager
+  holds is what a slash takes, so the number a unit of the protocol loses is the
+  destination's own book rather than a sender's claim about it.
 - **The tie is carried, not proven.** M7c's link travels in the commitment message
   and is re-checked at both ends (`link == linkDigest(merkleRoot, statementRoot,
   epoch)`), which is the property §5.10 decided: off-chain and recomputable by any
@@ -219,8 +227,9 @@ Module". M8 supplies it and leaves the one undecided fact a deployment fact:
 - **A slash that moves funds, atomically.** `slash` writes its record and *then*
   calls `custody.debit(validator, amount, reason)` in the same transaction: a
   failing token or a refusing sink reverts both, so record and escrow cannot
-  diverge. `debit` floors, which can only leave the vault holding more than the
-  record.
+  diverge. Since M9b the amount is that record **in full** (§12.1.2), and its floor
+  in base units can never exceed the escrow `admit` demanded of the same record —
+  the rounding can only leave the vault holding more than the record.
 - **The destination is a deployment fact (`D-M8-0`).** The vault transfers to a
   constructor-fixed `IFundSink` and *then* notifies it with the amount and a
   derived reason. `AVIPBurnSink` is the reference choice (destroy them through the
@@ -241,7 +250,8 @@ Module". M8 supplies it and leaves the one undecided fact a deployment fact:
   or rebasing tokens (refused with `InexactTransfer`); a supply claim for the burn
   (the token decides what `burn` means, and `BurnFailed` is reported when it
   cannot); and any on-chain execution of the paper's `S_slash = 10`, which stays a
-  reputation penalty. Nothing is deployed.
+  *model* parameter: what a slash moves is the whole record, and §12.1.2 (M9b) is
+  why no transported figure decides it. Nothing is deployed.
 
 
 ## Project layout

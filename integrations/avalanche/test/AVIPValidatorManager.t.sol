@@ -33,9 +33,11 @@ import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
 ///    reverts with `InvalidZKProof` without admitting anyone (§5.2.4).
 /// 7. `collateralOf` is derived (`Theta - requiredStake`) and is zero while the
 ///    validator is not admitted (§5.2.4).
-/// 8. Slashing: authority-only, never more than the stake, and a slash that
-///    leaves less than `S_f*` revokes the admission — the invariant
-///    `isAdmitted => stakeOf >= requiredStake` is preserved.
+/// 8. Slashing: authority-only, and the amount is the **whole record** — a
+///    validator loses everything it has on record and, because `S_f* > 0`, is
+///    ejected with it — so the invariant `isAdmitted => stakeOf >= requiredStake`
+///    is preserved. An address with nothing on record reverts `NothingToSlash`
+///    (§12.1.2, M9b).
 ///
 /// WHAT IS NOT TESTED
 /// ------------------
@@ -452,99 +454,94 @@ contract AVIPValidatorManagerTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAVIPValidatorManager.NotSlashAuthority.selector, stranger)
         );
-        manager.slash(validator, 1, REASON_COLLUSION);
+        manager.slash(validator, REASON_COLLUSION);
 
         assertEq(manager.stakeOf(validator), SF_AT_THETA_R);
         assertTrue(manager.isAdmitted(validator));
     }
 
-    function test_slash_rejectsMoreThanTheStake() public {
-        _admitAt(THETA_R);
-
-        vm.prank(slashAuthority);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAVIPValidatorManager.SlashExceedsStake.selector,
-                validator,
-                SF_AT_THETA_R + 1,
-                SF_AT_THETA_R
-            )
-        );
-        manager.slash(validator, SF_AT_THETA_R + 1, REASON_COLLUSION);
-    }
-
-    function test_slash_rejectsSlashingAnAddressThatNeverStaked() public {
-        vm.prank(slashAuthority);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAVIPValidatorManager.SlashExceedsStake.selector, stranger, 1, 0)
-        );
-        manager.slash(stranger, 1, REASON_NA);
-    }
-
-    function test_slash_keepsTheValidatorAdmittedWhileTheStakeCoversTheMinimum() public {
-        // A validator that declares exactly `S_f*` has no buffer at all (the
-        // next test shows one wei is enough to eject it). This one declares an
-        // extra unit on top of the minimum.
+    /// @dev M9b (§12.1.2): the amount is the record, so a validator with a buffer
+    ///      loses the buffer too — there is no argument left for "how much", and
+    ///      therefore no way for a caller to ask for less than everything.
+    function test_slash_takesTheWholeRecordEvenWhenThereIsABuffer() public {
         uint256 buffer = 1e18;
         _setVerifierAtEpoch0(true, THETA_R);
         vm.prank(validator);
         manager.admit(validator, SF_AT_THETA_R + buffer, THETA_R, _encodeProof(PROOF_A0));
 
         vm.expectEmit(true, false, false, true, address(manager));
-        emit IAVIPValidatorManager.ValidatorSlashed(validator, buffer, REASON_LATE_BLOCK);
+        emit IAVIPValidatorManager.ValidatorSlashed(
+            validator, SF_AT_THETA_R + buffer, REASON_LATE_BLOCK
+        );
         vm.prank(slashAuthority);
-        manager.slash(validator, buffer, REASON_LATE_BLOCK);
-
-        assertEq(manager.stakeOf(validator), SF_AT_THETA_R);
-        assertTrue(manager.isAdmitted(validator));
-        assertEq(manager.requiredStake(validator), SF_AT_THETA_R);
-
-        // One more wei and the admission rule no longer holds.
-        vm.prank(slashAuthority);
-        manager.slash(validator, 1, REASON_LATE_BLOCK);
-
-        assertFalse(manager.isAdmitted(validator));
-        assertEq(manager.collateralOf(validator), 0);
-    }
-
-    function test_slash_aValidatorStakedAtTheExactMinimumIsEjectedByOneWei() public {
-        _admitAt(THETA_R); // exactly `S_f*`: no buffer
-
-        vm.prank(slashAuthority);
-        manager.slash(validator, 1, REASON_LATE_BLOCK);
-
-        // `stakeOf = S_f* - 1 < S_f*`, so the admission is revoked. Admission is
-        // a rule on the stake, not a status that survives the stake being cut.
-        assertFalse(manager.isAdmitted(validator));
-        assertEq(manager.stakeOf(validator), SF_AT_THETA_R - 1);
-    }
-
-    function test_slash_thatLeavesLessThanTheRequiredStakeEjectsTheValidator() public {
-        _admitAt(THETA_R);
-        uint256 expectedRemaining = SF_AT_THETA_R - SF_AT_THETA_R / 2;
-
-        vm.expectEmit(true, false, false, true, address(manager));
-        emit IAVIPValidatorManager.ValidatorEjected(validator, expectedRemaining, SF_AT_THETA_R);
-        vm.prank(slashAuthority);
-        manager.slash(validator, SF_AT_THETA_R / 2, REASON_COLLUSION);
-
-        // The invariant `isAdmitted => stakeOf >= requiredStake` holds: half the
-        // stake is not enough, so the validator is out and its derived
-        // collateral is zero. The stake itself is not zeroed.
-        assertFalse(manager.isAdmitted(validator));
-        assertEq(manager.collateralOf(validator), 0);
-        assertEq(manager.stakeOf(validator), expectedRemaining);
-        assertLt(manager.stakeOf(validator), manager.requiredStake(validator));
-    }
-
-    function test_slash_canTakeTheWholeStake() public {
-        _admitAt(THETA_R);
-
-        vm.prank(slashAuthority);
-        manager.slash(validator, SF_AT_THETA_R, REASON_COLLUSION);
+        manager.slash(validator, REASON_LATE_BLOCK);
 
         assertEq(manager.stakeOf(validator), 0);
         assertFalse(manager.isAdmitted(validator));
+        assertEq(manager.collateralOf(validator), 0);
+    }
+
+    function test_slash_aValidatorStakedAtTheExactMinimumIsEjected() public {
+        _admitAt(THETA_R); // exactly `S_f*`: no buffer
+
+        // The ejection reports the record the slash leaves, which is empty, and
+        // the requirement it is now below: `0 < S_f*` for every admitted
+        // validator, because `requiredStakeFor` is never below `S_min > 0`.
+        vm.expectEmit(true, false, false, true, address(manager));
+        emit IAVIPValidatorManager.ValidatorEjected(validator, 0, SF_AT_THETA_R);
+        vm.prank(slashAuthority);
+        manager.slash(validator, REASON_LATE_BLOCK);
+
+        // Admission is a rule on the stake, not a status that survives the stake
+        // being taken.
+        assertFalse(manager.isAdmitted(validator));
+        assertEq(manager.stakeOf(validator), 0);
+        assertLt(manager.stakeOf(validator), manager.requiredStake(validator));
+    }
+
+    /// @dev The case M9b's derived amount makes possible and the transported one
+    ///      made an arithmetic exercise: an address that never staked has nothing
+    ///      to take, so the instruction cannot execute.
+    function test_slash_rejectsAnAddressThatNeverStaked() public {
+        vm.prank(slashAuthority);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAVIPValidatorManager.NothingToSlash.selector, stranger)
+        );
+        manager.slash(stranger, REASON_NA);
+    }
+
+    function test_slash_rejectsASecondSlashOfTheSameRecord() public {
+        _admitAt(THETA_R);
+
+        vm.prank(slashAuthority);
+        manager.slash(validator, REASON_COLLUSION);
+
+        // The record is empty now, so the same instruction — the one a replayed
+        // notification would carry — finds nothing instead of slashing zero.
+        vm.prank(slashAuthority);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAVIPValidatorManager.NothingToSlash.selector, validator)
+        );
+        manager.slash(validator, REASON_COLLUSION);
+
+        assertEq(manager.stakeOf(validator), 0);
+    }
+
+    /// @dev Taking one record whole must not reach the neighbour: `_stakes` is per
+    ///      validator, and the whole-record rule is about *which* number is taken,
+    ///      not about who else is admitted.
+    function test_slash_doesNotTouchAnotherValidatorsRecord() public {
+        address other = makeAddr("otherValidator");
+        _admitAt(THETA_R);
+        vm.prank(other);
+        manager.admit(other, SF_AT_THETA_R, THETA_R, _encodeProof(PROOF_A0));
+
+        vm.prank(slashAuthority);
+        manager.slash(validator, REASON_COLLUSION);
+
+        assertEq(manager.stakeOf(other), SF_AT_THETA_R);
+        assertTrue(manager.isAdmitted(other));
+        assertEq(manager.stakeOf(validator), 0);
     }
 
     // ------------------------------------------------------------ constructor

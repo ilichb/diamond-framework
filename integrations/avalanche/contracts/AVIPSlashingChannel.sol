@@ -26,19 +26,19 @@ import {AVIPMessageEndpoint} from "./AVIPMessageEndpoint.sol";
 ///      by sending an empty one: the value is recomputed on arrival. The transport
 ///      is the producer of that provenance id; M8 is its consumer.
 ///
-///      **The notification says what was proven, and the manager bounds what it
-///      executes.** The message carries M7b's `Verdict::Fraud` pair
+///      **The notification says what was proven; the destination says how much
+///      that costs.** The message carries M7b's `Verdict::Fraud` pair
 ///      (`publishedWad`, `formulaWad`) and the digest of the ingestion instance in
-///      force, so the destination records *what* the fraud was; the amount is the
-///      data layer's decision and the manager refuses anything above the stake on
-///      record (`SlashExceedsStake`). A notification can therefore neither mint nor
-///      move funds: it can only ask the manager to slash, and the manager's own
-///      rule decides whether there is anything to take.
+///      force, so the destination records *what* the fraud was — and **no amount**,
+///      because the amount is the stake on record that the manager itself holds
+///      (§12.1.2, M9b). A notification can therefore neither mint nor move funds:
+///      it can only ask the manager to slash the whole record, and the manager's
+///      own rule decides whether there is anything to take.
 ///
 ///      **What happens when the destination cannot execute.** The call to
-///      `slash` reverts for a validator with no stake, for an amount above it, and
-///      if this contract is not the manager's slash authority
-///      (`NotSlashAuthority`). The revert propagates out of
+///      `slash` reverts for a validator with no stake on record
+///      (`NothingToSlash`) and if this contract is not the manager's slash
+///      authority (`NotSlashAuthority`). The revert propagates out of
 ///      `receiveTeleporterMessage` — deliberately. Real Teleporter treats a
 ///      reverting receiver as a *failed* message (`MessageExecutionFailed`) that can
 ///      be retried, and the double in `../test/mocks/MockTeleporterMessenger.sol`
@@ -60,7 +60,6 @@ contract AVIPSlashingChannel is AVIPMessageEndpoint {
     /// @notice Emitted when a slashing notification is sent to the destinations.
     event SlashingNotified(
         address indexed validator,
-        uint256 amountWad,
         uint256 indexed epoch,
         bytes32 ingestionDigest,
         uint256 publishedWad,
@@ -70,12 +69,11 @@ contract AVIPSlashingChannel is AVIPMessageEndpoint {
 
     /// @notice Emitted when a delivered notification has been executed on this
     ///         chain. `reason` is the provenance id the manager also saw.
+    /// @dev The amount is deliberately not repeated: it is derived at execution
+    ///      (§12.1.2, M9b) and the custody's own `StakeDebited` event carries it
+    ///      under the same `reason`, which is the key an auditor joins on (§5.13).
     event SlashingExecuted(
-        bytes32 indexed sourceBlockchainId,
-        uint256 nonce,
-        address indexed validator,
-        uint256 amountWad,
-        bytes32 reason
+        bytes32 indexed sourceBlockchainId, uint256 nonce, address indexed validator, bytes32 reason
     );
 
     /// @notice The only address allowed to `notify`, i.e. to carry the data layer's
@@ -121,9 +119,11 @@ contract AVIPSlashingChannel is AVIPMessageEndpoint {
 
     /// @notice Announces one fraud proof's outcome to every configured subnet.
     /// @dev The payload is validated before it is sent (`EmptyValidator`,
-    ///      `ZeroSlashAmount`, `EmptyIngestionDigest`, `NotAFraudProof`): the last
-    ///      one is M7b's semantics rather than a formatting rule, because a fraud
-    ///      proof *is* a published value that differs from `f_c(events)`.
+    ///      `EmptyIngestionDigest`, `NotAFraudProof`): the last one is M7b's
+    ///      semantics rather than a formatting rule, because a fraud proof *is* a
+    ///      published value that differs from `f_c(events)`. No amount is sent
+    ///      (§12.1.2, M9b): the subnets that execute this take the whole stake on
+    ///      their own record.
     /// @param notification The decision, from §5.9's `Verdict::Fraud`.
     /// @return ids The messenger's id for each destination, in routing-table order.
     function notify(AVIPMessageCodec.SlashingNotification memory notification)
@@ -135,7 +135,6 @@ contract AVIPSlashingChannel is AVIPMessageEndpoint {
         ids = _send(_kind(), AVIPMessageCodec.encodeSlashing(notification));
         emit SlashingNotified(
             notification.validator,
-            notification.amountWad,
             notification.epoch,
             notification.ingestionDigest,
             notification.publishedWad,
@@ -164,11 +163,12 @@ contract AVIPSlashingChannel is AVIPMessageEndpoint {
         return _reasonOf[sourceChainId][nonce];
     }
 
-    /// @dev Decodes, re-validates, derives the reason and asks the manager to slash.
-    ///      The order is deliberate: the record is written and then the manager is
-    ///      called, so a manager revert (`SlashExceedsStake`, `NotSlashAuthority`)
-    ///      rolls the record back with everything else — a chain that cannot execute
-    ///      does not leave a reason behind as if it had.
+    /// @dev Decodes, re-validates, derives the reason and asks the manager to slash
+    ///      the whole stake on its record. The order is deliberate: the record is
+    ///      written and then the manager is called, so a manager revert
+    ///      (`NothingToSlash`, `NotSlashAuthority`) rolls the record back with
+    ///      everything else — a chain that cannot execute does not leave a reason
+    ///      behind as if it had.
     function _deliver(uint8, bytes32 sourceChainId, address, uint256 nonce, bytes memory payload)
         internal
         override
@@ -182,11 +182,9 @@ contract AVIPSlashingChannel is AVIPMessageEndpoint {
         _reasonOf[sourceChainId][nonce] = reason;
         executedSlashes += 1;
 
-        MANAGER.slash(notification.validator, notification.amountWad, reason);
+        MANAGER.slash(notification.validator, reason);
 
-        emit SlashingExecuted(
-            sourceChainId, nonce, notification.validator, notification.amountWad, reason
-        );
+        emit SlashingExecuted(sourceChainId, nonce, notification.validator, reason);
     }
 }
 
