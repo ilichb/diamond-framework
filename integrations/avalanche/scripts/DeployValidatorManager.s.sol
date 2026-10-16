@@ -75,6 +75,14 @@ contract DeployValidatorManager is DeployCommon {
     /// @notice `S_f*(Theta_r) = 1.0 - C_R(Theta_r) = 0.7333...` in WAD.
     uint256 internal constant STAKE_AT_THETA_R = 733_333_333_333_333_334;
 
+    /// @notice The ejection surcharge **κ** of M9c (§12.1.2): `0.1` in WAD, a
+    ///         **deployment constant with no paper value** (§6) — the paper names
+    ///         the term symbolically and claims no magnitude for it, so this script
+    ///         is where the deployed number is asserted and reported. The manager
+    ///         reads it back through `EJECTION_SURCHARGE()`, so the two cannot
+    ///         drift.
+    uint256 internal constant EJECTION_SURCHARGE = 1e17;
+
     /// @notice CLI entry point: resolves the roles from the environment and
     ///         deploys from that plan.
     /// @dev `deploy` guards the chain too. The guard is repeated here so that it
@@ -150,6 +158,9 @@ contract DeployValidatorManager is DeployCommon {
 
         _assertEq("collateralFor(THETA_R)", COLLATERAL_AT_THETA_R, manager.collateralFor(THETA_R));
         _assertEq("requiredStakeFor(THETA_R)", STAKE_AT_THETA_R, manager.requiredStakeFor(THETA_R));
+        // M9c: the ejection surcharge is a deployment constant, not a model
+        // parameter (§6), so the artifact that quotes it is this one.
+        _assertEq("EJECTION_SURCHARGE", EJECTION_SURCHARGE, manager.EJECTION_SURCHARGE());
     }
 
     function _report(Deployment memory d) internal view {
@@ -165,6 +176,7 @@ contract DeployValidatorManager is DeployCommon {
         _logUint("check.F0_STAR", 5e16);
         _logUint("check.collateralFor(THETA_R)", COLLATERAL_AT_THETA_R);
         _logUint("check.requiredStakeFor(THETA_R)", STAKE_AT_THETA_R);
+        _logUint("check.EJECTION_SURCHARGE", EJECTION_SURCHARGE);
         _log("status", "ok");
     }
 }

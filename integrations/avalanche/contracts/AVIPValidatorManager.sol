@@ -21,6 +21,13 @@ import {IAVIPValidatorManager} from "./interfaces/IAVIPValidatorManager.sol";
 ///      what the paper specifies, and because it would start to bind if `S_min`
 ///      were ever raised above `Theta - C_R^inf` (§5.2.4).
 ///
+///      One amendment of §12.1.2 sits on top of the paper's rule (M9c): the stake
+///      a **re-admission** must post is `S_f*(r) + ejections * kappa`, while the
+///      credit `C_R(r)` is untouched. The surcharge is a separate term rather than
+///      an inflation of `S_f*`, because `Theta - S_f*` is the collateral the norm
+///      earns: inflating it would make that credit shrink with a validator's
+///      history and go negative for a serial ejectee.
+///
 ///      Division of labour with the registry (§5.2.1, §5.2.2):
 ///        - the registry certifies the **exact** norm (`||T||_F =
 ///          certifiedNorm`) from its own committed root, and is `view`: it holds
@@ -80,6 +87,23 @@ contract AVIPValidatorManager is IAVIPValidatorManager {
     ///      `U >= 0`) and it is a safe lower bound (§5.2.3).
     uint256 public constant F0_STAR = 5e16;
 
+    /// @notice The ejection surcharge **κ** (§12.1.2, M9c), in WAD: each past
+    ///         ejection adds this much to the next admission's requirement, i.e.
+    ///         `requiredStake(v) = S_f*(r) + ejectionsOf(v) * κ`.
+    /// @dev A **deployment constant with no paper value** (§6): the paper names the
+    ///      term symbolically and claims no magnitude for it, so no
+    ///      `verification/` script and no `F-` entry are opened for it (§9's
+    ///      code→paper rule). `0.1` is a choice of this deployment and not a
+    ///      measurement: a visible fraction of `Theta = 1.0`, large enough to be a
+    ///      whole base unit even for a one-decimal token, small enough that the
+    ///      third chance (not the second) is what a serial ejectee cannot afford.
+    ///      What the *rule* buys does not depend on it: the re-entry cost is a
+    ///      separate term rather than an inflation of `S_f*`, so `Theta - C_R`
+    ///      cannot go negative however many times a validator is ejected —
+    ///      inflating `S_f*` would make a many-times-ejected validator's implied
+    ///      collateral negative long before its requirement became unpayable.
+    uint256 public constant EJECTION_SURCHARGE = 1e17;
+
     /// @notice Registry that certifies `||T||_F` (M1, amended by M2 §5.2).
     /// @dev Storage rather than `immutable`, to keep the same shape as
     ///      `AVIPRegistry.sol`. There is no setter: the constructor fixes it.
@@ -99,8 +123,17 @@ contract AVIPValidatorManager is IAVIPValidatorManager {
     IAVIPCustody public custody;
 
     mapping(address => uint256) private _stakes;
+    /// @dev The requirement the validator is held to while admitted, in WAD:
+    ///      `S_f*(r)` **plus** the surcharge it was admitted against (§12.1.2,
+    ///      M9c), so the ejection rule below keeps comparing `stakeOf` against one
+    ///      number and the norm's credit stays a separate quantity.
     mapping(address => uint256) private _requiredStakes;
     mapping(address => bool) private _admitted;
+    /// @dev How many times each validator has been ejected. Never reset, and read
+    ///      by the next `admit` to price the re-entry; it is also what makes the
+    ///      surcharge inside `_requiredStakes` recoverable without storing a second
+    ///      copy of it (`collateralOf`).
+    mapping(address => uint256) private _ejections;
 
     /// @param registry_ The registry to read epoch commitments from.
     /// @param slashAuthority_ The only address allowed to slash.
@@ -163,17 +196,27 @@ contract AVIPValidatorManager is IAVIPValidatorManager {
     }
 
     /// @inheritdoc IAVIPValidatorManager
+    function ejectionsOf(address validator) external view returns (uint256) {
+        return _ejections[validator];
+    }
+
+    /// @inheritdoc IAVIPValidatorManager
     function isAdmitted(address validator) external view returns (bool) {
         return _admitted[validator];
     }
 
     /// @inheritdoc IAVIPValidatorManager
     function collateralOf(address validator) external view returns (uint256) {
-        // Derived, never stored: `Theta - S_f*` is `C_R` by construction, so
-        // there is no second source of truth to keep in sync (§5.2.4). A
-        // validator that is not admitted has no collateral to its name.
         if (!_admitted[validator]) return 0;
-        return THETA - _requiredStakes[validator];
+        // The norm's credit is `Theta - S_f*(r)`, and `_requiredStakes` holds
+        // `S_f*(r) + surcharge` (§12.1.2, M9c). While a validator is admitted its
+        // ejection count cannot have moved since its admission — an ejection
+        // revokes the admission in the same call — so `_ejections * κ` *is* the
+        // surcharge that was added, and subtracting it recovers the image: the
+        // credit stays a function of the certified norm alone, with no second copy
+        // of it stored (§5.2.4).
+        uint256 image = _requiredStakes[validator] - _ejections[validator] * EJECTION_SURCHARGE;
+        return THETA - image;
     }
 
     // ------------------------------------------------------------- admission
@@ -198,7 +241,13 @@ contract AVIPValidatorManager is IAVIPValidatorManager {
         if (certifiedNorm < THETA_R) revert NormBelowThreshold(certifiedNorm, THETA_R);
 
         uint256 collateral = collateralFor(certifiedNorm);
-        uint256 stake = requiredStakeFor(certifiedNorm);
+        // The requirement is the norm's image *plus* what this validator's history
+        // costs (§12.1.2, M9c). The surcharge is a separate term on purpose:
+        // inflating `requiredStakeFor` would make `Theta - requiredStake` — the
+        // collateral the norm earns — shrink with every ejection, and go negative
+        // for a serial ejectee.
+        uint256 surcharge = _ejections[validator] * EJECTION_SURCHARGE;
+        uint256 stake = requiredStakeFor(certifiedNorm) + surcharge;
         if (financialStake < stake) revert InsufficientFinancialStake(financialStake, stake);
 
         // With custody configured, the declaration must be covered by escrow:
@@ -228,7 +277,7 @@ contract AVIPValidatorManager is IAVIPValidatorManager {
         _stakes[validator] = financialStake;
         _requiredStakes[validator] = stake;
 
-        emit AdmissionEvaluated(validator, epoch, certifiedNorm, collateral, stake);
+        emit AdmissionEvaluated(validator, epoch, certifiedNorm, collateral, stake, surcharge);
         emit ValidatorAdmitted(validator, financialStake, collateral);
     }
 
@@ -256,6 +305,9 @@ contract AVIPValidatorManager is IAVIPValidatorManager {
         // leaves behind — the state the admission rule is now false in.
         if (_admitted[validator] && _stakes[validator] < _requiredStakes[validator]) {
             _admitted[validator] = false;
+            // The count is the record the *next* admission is priced from
+            // (§12.1.2, M9c), so it is written with the ejection and never reset.
+            _ejections[validator] += 1;
             emit ValidatorEjected(validator, _stakes[validator], _requiredStakes[validator]);
         }
 

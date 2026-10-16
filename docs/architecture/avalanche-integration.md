@@ -95,6 +95,19 @@ the admission rule and the slashing conditions. The contract does not
 store the reputation tensor; it stores the Merkle root and verifies
 inclusion proofs for the entries that the admission rule needs.
 
+> **Implemented since this note was written** (milestone M2,
+> `implementation-plan.md` §5.2, with two amendments: M8's custody and M9's
+> `§12.1.2`): the condition above is `CoA = S_f + C_R(||T||_F) >= Theta` with
+> `S_f*(r) = max{0.2, 1.0 - C_R(r)}`, and it is enforced by
+> `AVIPValidatorManager.admit` against a norm the registry certified from its own
+> committed root. Two things the note above does not say and the code does: a
+> re-admission after an ejection must post `S_f*(r) + n_ejections * kappa`, a
+> **deployment constant** that the paper names symbolically and gives no value
+> (M9c, `§12.1.2`), while the reputational credit `C_R` is untouched by that
+> history; and a slash takes the validator's whole recorded stake rather than a
+> figure sent with the decision (M9b), so the loss collateralized on-chain is the
+> stake that was posted.
+
 ## 3. EVM Precompiles and ZK Verification
 
 The zero-knowledge threshold proof of Section 4 is verified on-chain

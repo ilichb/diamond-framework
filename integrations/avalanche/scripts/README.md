@@ -85,7 +85,9 @@ with `MainnetRefused(43114)` **before a single role is read**; `43113` (Fuji) an
 instance it just created — `sequencer`, `verifier`, `guardian`,
 `TENSOR_SIZE = 500`, `MAX_DELTA_ENTRIES = 50`, `CHANGE_DELAY = 172800`, and the
 manager's `Theta = 1.0`, `C_R^inf = 0.8`,
-`S_min = 0.2`, `Theta_r = 0.5`, `F_0* = 0.05` plus both closed forms at
+`S_min = 0.2`, `Theta_r = 0.5`, `F_0* = 0.05`, the ejection surcharge `κ = 0.1`
+(M9c: a deployment constant the paper gives no value for, so this is the artifact
+that quotes it) plus both closed forms at
 `r = Theta_r` — so a wrong argument fails the script instead of the first
 validator.
 
@@ -117,8 +119,9 @@ G to I M8's, J and K M9a's:
 It writes `deploy_dryrun_output.txt` (committed) and, if any expectation fails,
 exits non-zero **without rewriting it**. The transcript keeps only the `[m7a]` and
 `[m8]` lines the scripts log — no gas, no timings — so it is byte-stable: two runs
-diff clean. It is not a deployment, and the addresses in it are the ones a fresh
-EVM hands out, not Fuji addresses.
+diff clean (`md5 d68537cdb33ba64c33f45129c0538646` after M9c's one extra check row,
+`check.EJECTION_SURCHARGE`). It is not a deployment, and the addresses in it are the
+ones a fresh EVM hands out, not Fuji addresses.
 
 ## `M7dReport.s.sol` and `m7d_report.sh` (milestone M7d)
 

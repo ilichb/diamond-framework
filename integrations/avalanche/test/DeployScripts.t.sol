@@ -310,6 +310,9 @@ contract DeployScriptsTest is Test {
         assertEq(
             manager.requiredStakeFor(THETA_R), 733_333_333_333_333_334, "S_f*(Theta_r) = 0.7333..."
         );
+        // M9c: the ejection surcharge is a deployment constant, so the script's
+        // plan is where the deployed value is pinned (it has no paper value).
+        assertEq(manager.EJECTION_SURCHARGE(), 1e17, "kappa = 0.1");
     }
 
     function test_managerScript_refusesAZeroRegistryPlan() public {

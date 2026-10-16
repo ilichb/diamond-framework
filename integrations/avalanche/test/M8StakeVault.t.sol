@@ -832,6 +832,51 @@ contract M8StakeVaultTest is Test {
         assertTrue(vault.isBacked(validator), "nothing stands behind a cleared record");
     }
 
+    /// @dev M9c (§12.1.2): the ejection count is a record about the validator, not
+    ///      about its escrow. Withdrawing everything does not erase it, and it is
+    ///      what prices the next admission.
+    function test_ejection_theCountSurvivesTheWithdrawalAndPricesTheReEntry() public {
+        uint256 kappa = manager.EJECTION_SURCHARGE();
+
+        _depositAndAdmit(SF_AT_THETA_R);
+        _slash(REASON_COLLUSION);
+        assertEq(manager.ejectionsOf(validator), 1, "one ejection on record");
+
+        uint256 free = vault.withdrawable(validator);
+        vm.prank(validator);
+        vault.withdraw(free);
+        assertEq(vault.escrowedUnits(validator), 0, "the escrow is gone");
+        assertEq(manager.ejectionsOf(validator), 1, "the history is not the escrow");
+
+        // The escrow that used to admit this validator is now one surcharge short.
+        _deposit(validator, _unitsCovering(SF_AT_THETA_R));
+        vm.prank(validator);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAVIPValidatorManager.InsufficientFinancialStake.selector,
+                SF_AT_THETA_R,
+                SF_AT_THETA_R + kappa
+            )
+        );
+        manager.admit(validator, SF_AT_THETA_R, THETA_R, _encodeProof(PROOF_A0));
+
+        // One surcharge more, and it is admitted again — with the same credit.
+        uint256 extra = _unitsCovering(SF_AT_THETA_R + kappa) - _unitsCovering(SF_AT_THETA_R);
+        _fund(validator, extra);
+        _deposit(validator, extra);
+        vm.prank(validator);
+        manager.admit(validator, SF_AT_THETA_R + kappa, THETA_R, _encodeProof(PROOF_A0));
+
+        assertTrue(manager.isAdmitted(validator), "back in");
+        assertEq(manager.requiredStake(validator), SF_AT_THETA_R + kappa, "priced by history");
+        assertEq(
+            manager.collateralOf(validator),
+            manager.collateralFor(THETA_R),
+            "the credit did not move"
+        );
+        assertTrue(vault.isBacked(validator), "and the escrow covers the new requirement");
+    }
+
     function test_slash_isAtomicWhenTheTokenRefusesTheTransfer() public {
         uint256 buffer = 1e18;
         _deposit(validator, _unitsCovering(SF_AT_THETA_R + buffer));

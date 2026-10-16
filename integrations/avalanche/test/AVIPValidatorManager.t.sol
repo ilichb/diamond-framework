@@ -247,7 +247,7 @@ contract AVIPValidatorManagerTest is Test {
 
         vm.expectEmit(true, false, false, true, address(manager));
         emit IAVIPValidatorManager.AdmissionEvaluated(
-            validator, 0, THETA_R, CR_AT_THETA_R, SF_AT_THETA_R
+            validator, 0, THETA_R, CR_AT_THETA_R, SF_AT_THETA_R, 0
         );
         vm.expectEmit(true, false, false, true, address(manager));
         emit IAVIPValidatorManager.ValidatorAdmitted(validator, SF_AT_THETA_R, CR_AT_THETA_R);
@@ -281,7 +281,7 @@ contract AVIPValidatorManagerTest is Test {
 
         vm.expectEmit(true, false, false, true, address(manager));
         emit IAVIPValidatorManager.AdmissionEvaluated(
-            validator, 1, THETA_R, CR_AT_THETA_R, SF_AT_THETA_R
+            validator, 1, THETA_R, CR_AT_THETA_R, SF_AT_THETA_R, 0
         );
         vm.prank(validator);
         manager.admit(validator, SF_AT_THETA_R, THETA_R, _encodeProof(PROOF_A0));
@@ -542,6 +542,119 @@ contract AVIPValidatorManagerTest is Test {
         assertEq(manager.stakeOf(other), SF_AT_THETA_R);
         assertTrue(manager.isAdmitted(other));
         assertEq(manager.stakeOf(validator), 0);
+    }
+
+    // --------------------------------------------------- ejection surcharge (M9c)
+
+    /// @dev Ejects `who` by taking its whole record (M9b), which is the only path
+    ///      that increments the counter.
+    function _eject(address who) internal {
+        vm.prank(slashAuthority);
+        manager.slash(who, REASON_COLLUSION);
+    }
+
+    function test_ejection_theSecondAdmissionCostsTheSurcharge() public {
+        uint256 kappa = manager.EJECTION_SURCHARGE();
+        _admitAt(THETA_R);
+        _eject(validator);
+        assertEq(manager.ejectionsOf(validator), 1, "one ejection on record");
+
+        // The image alone is no longer enough...
+        _setVerifierAtEpoch0(true, THETA_R);
+        vm.prank(validator);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAVIPValidatorManager.InsufficientFinancialStake.selector,
+                SF_AT_THETA_R,
+                SF_AT_THETA_R + kappa
+            )
+        );
+        manager.admit(validator, SF_AT_THETA_R, THETA_R, _encodeProof(PROOF_A0));
+
+        // ...the requirement is the image plus the surcharge, and the collateral
+        // the norm earns is what it was before.
+        vm.prank(validator);
+        manager.admit(validator, SF_AT_THETA_R + kappa, THETA_R, _encodeProof(PROOF_A0));
+
+        assertTrue(manager.isAdmitted(validator));
+        assertEq(manager.requiredStake(validator), SF_AT_THETA_R + kappa);
+        assertEq(manager.collateralOf(validator), CR_AT_THETA_R, "the credit is unchanged");
+    }
+
+    function test_ejection_theThirdAdmissionCostsTwiceTheSurcharge() public {
+        uint256 kappa = manager.EJECTION_SURCHARGE();
+        uint256 surcharge = 2 * kappa;
+
+        // Eject twice: the first admission, its ejection, a re-admission at `+κ`,
+        // and that one's ejection.
+        _admitAt(THETA_R);
+        _eject(validator);
+        _setVerifierAtEpoch0(true, THETA_R);
+        vm.prank(validator);
+        manager.admit(validator, SF_AT_THETA_R + kappa, THETA_R, _encodeProof(PROOF_A0));
+        _eject(validator);
+        assertEq(manager.ejectionsOf(validator), 2, "two ejections on record");
+
+        _setVerifierAtEpoch0(true, THETA_R);
+        vm.prank(validator);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAVIPValidatorManager.InsufficientFinancialStake.selector,
+                SF_AT_THETA_R + kappa,
+                SF_AT_THETA_R + surcharge
+            )
+        );
+        manager.admit(validator, SF_AT_THETA_R + kappa, THETA_R, _encodeProof(PROOF_A0));
+
+        vm.prank(validator);
+        manager.admit(validator, SF_AT_THETA_R + surcharge, THETA_R, _encodeProof(PROOF_A0));
+
+        assertEq(manager.requiredStake(validator), SF_AT_THETA_R + surcharge);
+        assertEq(manager.collateralOf(validator), CR_AT_THETA_R, "still the same credit");
+        assertEq(
+            manager.collateralOf(validator) + manager.requiredStake(validator),
+            THETA + surcharge,
+            "the surcharge sits on top of `S_f*`, not inside it"
+        );
+        assertEq(
+            manager.requiredStakeFor(THETA_R),
+            SF_AT_THETA_R,
+            "the policy function is blind to history"
+        );
+    }
+
+    function test_ejection_theEventCarriesTheSurchargeAndTheLargerRequirement() public {
+        uint256 kappa = manager.EJECTION_SURCHARGE();
+        _admitAt(THETA_R);
+        _eject(validator);
+        _setVerifierAtEpoch0(true, THETA_R);
+
+        vm.expectEmit(true, false, false, true, address(manager));
+        emit IAVIPValidatorManager.AdmissionEvaluated(
+            validator, 0, THETA_R, CR_AT_THETA_R, SF_AT_THETA_R + kappa, kappa
+        );
+        vm.prank(validator);
+        manager.admit(validator, SF_AT_THETA_R + kappa, THETA_R, _encodeProof(PROOF_A0));
+    }
+
+    function test_ejection_theCounterIsPerValidatorAndSurvivesReAdmission() public {
+        address other = makeAddr("otherValidator");
+        _admitAt(THETA_R);
+        vm.prank(other);
+        manager.admit(other, SF_AT_THETA_R, THETA_R, _encodeProof(PROOF_A0));
+
+        _eject(validator);
+
+        // The neighbour's history is its own, and a re-admission does not reset
+        // the count: the surcharge is about the *record*, not the sitting session.
+        assertEq(manager.ejectionsOf(other), 0, "untouched");
+        assertEq(manager.requiredStake(other), SF_AT_THETA_R, "and so is its requirement");
+        // Read the constant before the prank (an external call consumes it).
+        uint256 kappa = manager.EJECTION_SURCHARGE();
+        _setVerifierAtEpoch0(true, THETA_R);
+        vm.prank(validator);
+        manager.admit(validator, SF_AT_THETA_R + kappa, THETA_R, _encodeProof(PROOF_A0));
+        assertEq(manager.ejectionsOf(validator), 1, "one, after the second admission");
     }
 
     // ------------------------------------------------------------ constructor

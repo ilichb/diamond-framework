@@ -51,14 +51,24 @@ interface IAVIPValidatorManager {
     /// @param validator The admitted validator.
     /// @param epoch The epoch whose commitment certified the norm.
     /// @param certifiedNorm The exact `||T||_F` the registry certified.
-    /// @param collateral `C_R(certifiedNorm)`.
-    /// @param requiredStake `S_f*(certifiedNorm)` the validator had to meet.
+    /// @param collateral `C_R(certifiedNorm)`, unchanged by ejections (§12.1.2,
+    ///        M9c): the surcharge is a separate term precisely so the credit the
+    ///        norm earns is not rewritten by the validator's history.
+    /// @param requiredStake The requirement the validator met, in WAD:
+    ///        `S_f*(certifiedNorm) + surcharge`.
+    /// @param surcharge The ejection surcharge included in `requiredStake`, i.e.
+    ///        `ejections * EJECTION_SURCHARGE` at this admission (`0` for a
+    ///        validator that has never been ejected). Emitted so the reason for a
+    ///        larger requirement is visible and not merely implied by history; the
+    ///        count it is made of is `surcharge / EJECTION_SURCHARGE`, and
+    ///        `ejectionsOf` reports it on its own.
     event AdmissionEvaluated(
         address indexed validator,
         uint256 epoch,
         uint256 certifiedNorm,
         uint256 collateral,
-        uint256 requiredStake
+        uint256 requiredStake,
+        uint256 surcharge
     );
 
     /// @notice `certifiedNorm` is below the admission threshold `Theta_r`.
@@ -101,14 +111,28 @@ interface IAVIPValidatorManager {
     function stakeOf(address validator) external view returns (uint256);
 
     /// @notice Reputational collateral `C_R(T)` credited to `validator`, i.e.
-    ///         `Theta - requiredStake(validator)`. Derived, never stored
-    ///         (`0` while the validator is not admitted), §5.2.4.
+    ///         `Theta - S_f*(T)` for the norm it was admitted at. Derived, never
+    ///         stored (`0` while the validator is not admitted), §5.2.4 — and in
+    ///         particular **unchanged by ejections** (§12.1.2, M9c): the ejection
+    ///         surcharge raises the requirement without touching the credit.
     function collateralOf(address validator) external view returns (uint256);
 
-    /// @notice Minimum stake `S_f*(T)` required from `validator` at the
-    ///         threshold that was certified when it was admitted (`0` if never
-    ///         admitted).
+    /// @notice The stake `validator` must hold to stay admitted, and the stake a
+    ///         re-admission has to post: `S_f*(T)` plus the surcharge
+    ///         `ejections * EJECTION_SURCHARGE` (`0` if never admitted).
     function requiredStake(address validator) external view returns (uint256);
+
+    /// @notice How many times `validator` has been ejected. Monotone and never
+    ///         reset: it is the record the next admission's surcharge is made of
+    ///         (§12.1.2, M9c).
+    function ejectionsOf(address validator) external view returns (uint256);
+
+    /// @notice The ejection surcharge **κ**, in WAD: what each past ejection adds
+    ///         to the next admission's requirement. A **deployment constant with no
+    ///         paper value** (§6): the paper names the term symbolically and claims
+    ///         no magnitude for it, so no `verification/` script and no `F-` entry
+    ///         exist for it (§9's code→paper rule).
+    function EJECTION_SURCHARGE() external view returns (uint256);
 
     /// @notice True iff `CoA(validator) >= Theta(t)` at the certified norm.
     function isAdmitted(address validator) external view returns (bool);

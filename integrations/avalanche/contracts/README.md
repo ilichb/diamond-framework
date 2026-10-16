@@ -21,7 +21,7 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
 | Path | Status | Milestone |
 |------|--------|-----------|
 | `AVIPRegistry.sol` | **Implemented + tested** (`../test/AVIPRegistry.t.sol`, 48 tests) | M1, amended in M2 (decode), M3 (`Bn254.decodeProof`) and M9a (the authority pair) |
-| `AVIPValidatorManager.sol` | **Implemented + tested** (`../test/AVIPValidatorManager.t.sol`, 33 tests; amended in M8, whose custody path is covered by `../test/M8StakeVault.t.sol`) | M2, amended in M8 and M9b (the derived slash amount) |
+| `AVIPValidatorManager.sol` | **Implemented + tested** (`../test/AVIPValidatorManager.t.sol`, 37 tests; amended in M8, whose custody path is covered by `../test/M8StakeVault.t.sol`) | M2, amended in M8 and M9b/M9c (the derived slash amount, the ejection surcharge) |
 | `interfaces/IAVIPRegistry.sol` | Implemented (provisional types, real signatures) | M1, amended in M2, M9a (`guardian`, `CHANGE_DELAY`, `propose*`/`execute*`/`cancel*` and the events they emit) |
 | `interfaces/IAVIPValidatorManager.sol` | Implemented (provisional types, real signatures) | M2, amended in M8 (`custody()`, `FinancialStakeNotBacked`, `CustodyNotBound`) and M9b (`slash(address,bytes32)`, `NothingToSlash` for `SlashExceedsStake`) |
 | `interfaces/IZKThresholdVerifier.sol` | Implemented by `verifiers/Groth16Verifier.sol` | M3 |
@@ -109,10 +109,23 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
   `NothingToSlash`. Since the amount equals the record and `S_f* >= S_min > 0`, the
   slash always revokes the admission (`ValidatorEjected`, with the empty record it
   leaves behind).
+- **Re-entry is priced by history (M9c, plan §12.1.2).** Every ejection increments a
+  per-validator counter that is never reset, and the next `admit` requires
+  `S_f*(certifiedNorm) + ejections * EJECTION_SURCHARGE` (**κ**, `0.1` in WAD). The
+  surcharge is a **separate term**, not an inflation of `S_f*`: `Theta - S_f*` is the
+  collateral the norm earns, so inflating it would make that credit shrink with the
+  validator's history and go negative for a serial ejectee. `collateralOf` therefore
+  recovers the norm's image from the two stored numbers (the count cannot move while
+  a validator is admitted, since an ejection revokes the admission in the same call)
+  and reports the same credit at every re-admission. The reason a requirement is
+  larger is observable: `AdmissionEvaluated` carries the surcharge. κ is a
+  **deployment constant with no paper value** (§6), which is why
+  `../scripts/DeployValidatorManager.s.sol` asserts and reports it rather than any
+  `verification/` script doing so.
+
 - **Not covered here**: token custody/transfer and fund movement (M8, the Treasury
   Module), removal from the validator set, weight recomputation and reward
   distribution (M6/M7).
-
 The names `AVIPRegistry` and `AVIPValidatorManager` come from the target
 architecture (`docs/architecture/avalanche-integration.md` §1–§2), which
 specified both contracts and, when written, stated that they were *not yet

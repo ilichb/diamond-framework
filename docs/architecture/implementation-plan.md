@@ -2278,14 +2278,13 @@ SKIP=0**); `git status --porcelain verification/` → 0 lines.
 
 ## 5.13 M9 as delivered (the contract batch, P8)
 
-Two of the three milestones have landed — DEC-2's authority pair (M9a) and DEC-4's
-slash amount (M9b). `M9c` (DEC-5's ejection surcharge) is not started, and nothing
-is deployed.
+All three milestones have landed — DEC-2's authority pair (M9a), DEC-4's slash
+amount (M9b) and DEC-5's ejection surcharge (M9c). Nothing is deployed.
 
 ### M9a as delivered (registry authority, DEC-2)
 
-Status: **DEC-2 is closed in code, offline, and M9b with it; `M9c` is not started,
-and nothing is deployed** (A8 stays open). `integrations/avalanche/contracts/AVIPRegistry.sol`
+Status: **DEC-2 is closed in code, offline, and M9b and M9c with it; nothing is
+deployed** (A8 stays open). `integrations/avalanche/contracts/AVIPRegistry.sol`
 gains an immutable `guardian` and the propose/execute pair that replaces both
 setters, `IAVIPRegistry.sol` publishes it, `scripts/DeployCommon.sol` and
 `scripts/DeployRegistry.s.sol` take the new role and refuse a plan in which it is not
@@ -2417,6 +2416,70 @@ adjusted where its old shape would have gone vacuous: with `slash.stakeAfter` at
 declaration (`M7D_SLASH_STAKE_AFTER = 0;`) and the run side is still compared
 numerically in both directions.
 
+### M9c as delivered (the ejection surcharge, DEC-5)
+
+`admit` now requires `S_f*(certifiedNorm) + ejectionsOf(validator) * EJECTION_SURCHARGE`,
+and the second term is the whole of the milestone: the re-entry cost is **its own
+term**, not an inflation of `S_f*`. The reason is arithmetic — `Theta - S_f*(r)` is
+the collateral the norm earns, so folding a history-dependent quantity into `S_f*`
+would make that credit shrink with every ejection and go negative for a validator
+ejected often enough, which is a state no contract should be able to represent.
+`collateralOf` therefore reports the same `C_R` at every re-admission, and §5.2.4's
+"derived, never stored" survives: the surcharge inside `_requiredStakes` is
+recovered from the counter (`- _ejections[v] * κ`), which is exact because the count
+cannot move while a validator is admitted — an ejection revokes the admission in the
+same call.
+
+**The record and its observability.** `slash`'s ejection path increments
+`_ejections[validator]`, which is never reset: what prices the next admission is the
+validator's history rather than the session that ended. `ejectionsOf` reports it,
+`EJECTION_SURCHARGE` reports the price, and `AdmissionEvaluated` gains the
+**surcharge** — so a larger requirement is visible in the event that explains it
+rather than inferred from a count the reader has to multiply. (The count is
+`surcharge / κ`, and the event carries the surcharge because that is the number the
+requirement is made of; carrying both would have been two encodings of one fact, and
+the `admit` frame was already at the edge of the stack.)
+
+**κ is a deployment constant with no paper value** (§6, §9). The paper names the
+term symbolically and claims no magnitude for it, so no `verification/` script and
+no `F-` entry are opened; instead `DeployValidatorManager.s.sol` asserts what it
+deploys (`EJECTION_SURCHARGE = 1e17`, `0.1` WAD), `test/DeployScripts.t.sol` pins it
+where the script's plan is driven, and the dry-run transcript quotes it
+(`check.EJECTION_SURCHARGE=100000000000000000`, one row more). `0.1` is a choice of this deployment and not a measurement: a
+visible fraction of `Theta = 1.0`, a whole base unit even for a one-decimal token,
+and small enough that the third chance, not the second, is what becomes expensive.
+
+**Tests.** `AVIPValidatorManager.t.sol` 33 → **37**: four new cases pin the rule —
+the second admission costs `+κ` (and the image alone is refused), the third costs
+`+2κ` with `requiredStakeFor` blind to history, the event carries the surcharge and
+the larger requirement, and the counter is per validator and survives a
+re-admission. `M8StakeVault.t.sol` 63 → **64**: the case §12.1.2 asks for by name,
+where a validator is ejected, withdraws its whole escrow, and is then one surcharge
+short of admitting again — so the count is a fact about the validator and not about
+the funds, and the escrow that used to suffice is priced against the new
+requirement. `M7dTransport.t.sol` is untouched: no wire format moved, which its
+byte-identical transcript is the evidence for.
+
+**Validated locally.** `forge test --offline` → **262 passed, 0 failed, 0 skipped**
+over 9 suites (257 before M9c; the two M9b expectations stand unchanged);
+`forge fmt --check` → 0 diffs; `forge build --offline` → OK; `forge lint` → the same
+**4 notes, no warning**; `bash scripts/deploy_dryrun.sh` → **11 cases**, transcript
+one row longer and byte-identical across two runs
+(`md5 d68537cdb33ba64c33f45129c0538646`); `m7d_output.txt` and `m8_output.txt`
+unchanged byte for byte (`40130315ec07f2f3fc469cf43d36e7f1` and
+`2955c738f2c2a56cb0f6936c4b8e5ff8`); `bash verification/audit-gate.sh` → **PASS=11
+FAIL=0 SKIP=0**; `bash verification/fase0_anchor.sh --check` → exit 0;
+`git status --porcelain verification/ docs/paper/` → 0 lines.
+
+**What P8 owes, now that all three landed.** The paper's `main.tex` understates and
+misstates in three places this batch closes: §7.4's «caller-supplied amount bounded
+by the validator's own escrowed stake» (false since M9b), §7.5's «the reputation of
+a slashed validator is reduced» (nothing writes a reputation reduction; what the
+code writes is the ejection count and the surcharge), and §10.2's description of
+what is deployed at seal time (the guardian pair of M9a). None of them is in this
+batch's files: §12.1's order puts M9 before P8, and P8 must land in the same
+release.
+
 ## 6. Interfaces and parameter provenance
 
 The contract boundary is fixed by **interfaces** (types only, no logic —
@@ -2468,6 +2531,7 @@ are written at the top of `integrations/avalanche/test/mocks/MockTeleporterMesse
 | Groth16 public inputs `k` | `3` (`[root, epoch, certifiedNorm]`) | §5.2.1; fixed by `AVIPRegistry.verifyThreshold` and `Groth16Verifier` (§5.4) |
 | pairings per verification | `4` | Groth16: `e(−A,B)·e(α,β)·e(vk_x,γ)·e(C,δ)` (§5.4) |
 | `CHANGE_DELAY` (M9a role changes) | `2 days` | **No paper provenance, deliberately**: it appears in no equation of `main.tex` and in no `verification/` script, so it is a deployment constant and not a model parameter (§5.13). `DeployRegistry.s.sol` re-declares it and the dry-run transcript pins it, so §10.2 quotes a value a deployment actually installs |
+| `EJECTION_SURCHARGE` (M9c re-entry, κ) | `1e17` (`0.1` WAD) | **No paper value, deliberately**: the paper names the term symbolically and claims no magnitude for it, so the deployment is where the number lives — `DeployValidatorManager.s.sol` asserts and reports it (`deploy_dryrun_output.txt`, `check.EJECTION_SURCHARGE`) and §9's code→paper rule opens no `verification/` script and no `F-` entry for it. What the paper's rule buys does not depend on the value: `C_R` is untouched by ejections because the term is separate (§5.13) |
 
 ## 7. Conventions for new code
 
@@ -2596,7 +2660,7 @@ endpoint: the Fuji deployment the M7a and M8 scripts are ready for.
 
 Decided 2026-10-15. **No sealed file has moved**: `main.tex` and the nine other
 sealed files are untouched, the gate is `PASS=11 FAIL=0 SKIP=0` and the anchor is
-the committed one. Of the batch, `M9a` and `M9b` have landed, and only in
+the committed one. Of the batch, `M9a`, `M9b` and `M9c` have landed, and only in
 `integrations/` plus this plan (§5.13).
 
 ### Namespaces (no mixing)
@@ -2695,7 +2759,9 @@ The specification it was closed against, kept as written: the amount was a
 5. Consequence for the paper: `main.tex:1028`'s «caller-supplied amount» becomes
    **false** the moment M9b ships, which is why P8 must land in the same release.
 
-**M9c — DEC-5, the ejection surcharge.** `contracts/AVIPValidatorManager.sol`.
+**M9c — DEC-5, the ejection surcharge. Delivered** (§5.13: 37 manager tests, 64
+vault tests, 262 in total, the dry-run transcript one row longer, the gate and the
+anchor untouched). `contracts/AVIPValidatorManager.sol`.
 
 1. `mapping(address => uint256) _ejections;` plus a constant `EJECTION_SURCHARGE`
    (**κ**). `admit` becomes
@@ -2713,6 +2779,9 @@ The specification it was closed against, kept as written: the amount was a
    opened (§9's code→paper rule). §6's parameter table lists it as such.
 5. Tests: re-admission after one ejection costs `+κ` and after two `+2κ`; the
    collateral is unchanged; the counter is per validator and survives withdrawal.
+   **Delivered as 37, 64 and 262 in total, with the counter's survival asserted
+   against real escrow** (§5.13: the validator withdraws everything after its
+   ejection and is then one surcharge short of admitting again).
 
 Acceptance for M9 as a whole: `forge test` green **offline**, with the 238 tests
 that passed before the batch still passing plus the new ones (257 of them once

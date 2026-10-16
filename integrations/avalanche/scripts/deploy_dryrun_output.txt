@@ -78,6 +78,7 @@ D. DeployValidatorManager, chained on C's registry
   [m7a] check.F0_STAR=50000000000000000
   [m7a] check.collateralFor(THETA_R)=266666666666666666
   [m7a] check.requiredStakeFor(THETA_R)=733333333333333334
+  [m7a] check.EJECTION_SURCHARGE=100000000000000000
   [m7a] status=ok
 
 E. DeployRegistry, malformed SEQUENCER
