@@ -20,18 +20,27 @@ The deployment scripts, the off-chain prover and the data layer are specified in
 this document but not yet implemented. Nothing described here has been deployed
 to a live network, and none of it has been audited.
 
-> **Status since this note was written** (`implementation-plan.md` §5.4–§5.11).
+> **Status since this note was written** (`implementation-plan.md` §5.4–§5.13).
 > Every piece the paragraph above calls unimplemented now exists, offline and
-> tested: the deployment scripts (`DeployRegistry.s.sol` and
-> `DeployValidatorManager.s.sol`, M7a, §5.8 — driven through a committed
-> six-case dry run, **not yet run against Fuji**), the off-chain prover (M4,
+> tested: the deployment scripts (`DeployRegistry.s.sol`,
+> `DeployValidatorManager.s.sol` and `DeployStakeVault.s.sol`, M7a, §5.8 — driven
+> through a committed **eleven-case** dry run, **not yet run against Fuji**), the
+> off-chain prover (M4,
 > §5.5 — **not recursive**: the paper-literal recursion is still open, §5.5.7),
 > the RMT detector (M5, §5.6), the data layer's fraud proof and its
 > `eq:ingestion` interface (M7b, §5.9), the Pedersen/Poseidon ↔ keccak bridge
-> that ties the statement's `root` to the registry's Merkle root (M7c, §5.10)
-> and the transport of §4 (M7d, §5.11). The verifying key of M3 is no longer a
+> that ties the statement's `root` to the registry's Merkle root (M7c, §5.10),
+> the transport of §4 (M7d, §5.11) and the treasury/custody of §5.12 (M8: the
+> stake the manager declares is escrowed by `AVIPStakeVault.sol`, a slash moves
+> real tokens into an `IFundSink` and `F_0*` is collected, while the destination
+> of those funds stays a deployment fact). The verifying key of M3 is no longer a
 > placeholder either: M4b installed a real key over the V3 circuit and the
-> unmodified `Groth16Verifier` accepts it (§5.4). The two closing sentences
+> unmodified `Groth16Verifier` accepts it (§5.4). M9 (M9a–M9c, §5.13) then
+> amended the two contracts this section describes: the registry's roles rotate
+> by guardian proposal and a delay rather than by the sitting key, a slash takes
+> the validator's **whole recorded stake** rather than a figure sent with the
+> decision, and a re-entry after an ejection costs `S_f* + n * kappa` as a
+> separate term. The two closing sentences
 > still hold — **nothing here is deployed to a live network and nothing has
 > been audited** — and §6's four phases remain undone: a Fuji deployment needs
 > a funded key and a live endpoint, which no milestone automates.
