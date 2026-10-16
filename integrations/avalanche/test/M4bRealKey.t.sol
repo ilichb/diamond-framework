@@ -51,12 +51,17 @@ contract M4bRealKeyTest is Test {
     Groth16Verifier internal verifier;
     AVIPRegistry internal registry;
     address internal sequencer;
+    /// @dev M9a: the only proposer of a change to `sequencer` or `verifier`. This
+    ///      suite never changes either role, but the registry refuses a zero
+    ///      guardian, so every construction names one.
+    address internal guardian;
 
     function setUp() public {
         verifier = new Groth16Verifier(F.verifyingKey());
 
         sequencer = makeAddr("sequencer");
-        registry = new AVIPRegistry(sequencer, address(verifier));
+        guardian = makeAddr("guardian");
+        registry = new AVIPRegistry(sequencer, address(verifier), guardian);
 
         // Genesis: the registry's own post, with the root the proof certifies.
         vm.prank(sequencer);

@@ -15,13 +15,20 @@ import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
 ///    accepts 50 declared changes and rejects 51 with `FreshnessViolation`.
 /// 3. Epoch discipline: 0-based, strictly sequential, no gaps, no re-posting;
 ///    an epoch that was never posted reads as root `0` and delta `0`.
-/// 4. Access control: only the sequencer posts commitments or rotates roles,
-///    and a zero sequencer cannot be installed.
-/// 5. Merkle inclusion: the convention documented in `AVIPRegistry.sol` accepts
+/// 4. Access control: only the sequencer posts commitments, and a zero sequencer
+///    cannot be installed.
+/// 5. Governance (M9a, §12.1.2): a change to `sequencer` or `verifier` is a
+///    guardian-proposed, delay-gated, permissionlessly-executed pair. The sitting
+///    key can neither propose its own continuation nor veto the rotation that
+///    replaces it; there is nothing to execute without a proposal and nothing
+///    executable during the delay; a cancelled change leaves the role where it
+///    was; a pending verifier change survives a sequencer change, because the two
+///    roles have two independent slots.
+/// 6. Merkle inclusion: the convention documented in `AVIPRegistry.sol` accepts
 ///    valid proofs for a single-leaf tree, an 8-leaf tree and the full 500-leaf
 ///    tensor, and rejects a tampered leaf, a foreign proof, a foreign root and
 ///    root zero.
-/// 6. Norm certification (M1, amended by M2 §5.2 and M3): the registry reads the
+/// 7. Norm certification (M1, amended by M2 §5.2 and M3): the registry reads the
 ///    root from its own state, builds the statement `[root, epoch, certifiedNorm]`,
 ///    decodes the blob with `Bn254.decodeProof` (exactly the first 256 bytes) and
 ///    forwards `(a, b, c)` unchanged to the verifier, propagating its answer. A
@@ -59,6 +66,8 @@ contract AVIPRegistryTest is Test {
     address internal sequencer;
     address internal validator;
     address internal stranger;
+    /// @dev M9a: the only proposer of a change to `sequencer` or `verifier`.
+    address internal guardian;
 
     bytes32[] internal tensor;
     bytes32 internal epoch0Root;
@@ -69,8 +78,9 @@ contract AVIPRegistryTest is Test {
         sequencer = makeAddr("sequencer");
         validator = makeAddr("validator");
         stranger = makeAddr("stranger");
+        guardian = makeAddr("guardian");
 
-        registry = new AVIPRegistry(sequencer, address(0));
+        registry = new AVIPRegistry(sequencer, address(0), guardian);
 
         // Reference tensor of the paper: N = C*D*H = 500 entries.
         bytes32[] memory entries = new bytes32[](N);
@@ -113,7 +123,7 @@ contract AVIPRegistryTest is Test {
     }
 
     function test_postCommitment_genesisRequiresTheWholeTensor() public {
-        AVIPRegistry fresh = new AVIPRegistry(sequencer, address(0));
+        AVIPRegistry fresh = new AVIPRegistry(sequencer, address(0), guardian);
         vm.prank(sequencer);
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.GenesisDelta.selector, N - 1, N));
         fresh.postCommitment(0, keccak256("genesis"), N - 1);
@@ -148,7 +158,7 @@ contract AVIPRegistryTest is Test {
     }
 
     function test_latestEpochIsMaxBeforeGenesis() public {
-        AVIPRegistry fresh = new AVIPRegistry(sequencer, address(0));
+        AVIPRegistry fresh = new AVIPRegistry(sequencer, address(0), guardian);
         assertEq(fresh.latestEpoch(), type(uint256).max);
     }
 
@@ -168,21 +178,306 @@ contract AVIPRegistryTest is Test {
 
     function test_constructor_rejectsTheZeroSequencer() public {
         vm.expectRevert(IAVIPRegistry.ZeroSequencer.selector);
-        new AVIPRegistry(address(0), address(0));
+        new AVIPRegistry(address(0), address(0), guardian);
     }
 
-    function test_setSequencer_rotatesOnlyThroughTheSequencer() public {
+    function test_constructor_rejectsTheZeroGuardian() public {
+        // M9a. A registry whose only proposer is nobody can never rotate its
+        // sequencer nor install a fixed verifier: the first circuit bug would
+        // force a redeploy that loses `_roots` and `_changedEntries`.
+        vm.expectRevert(IAVIPRegistry.ZeroGuardian.selector);
+        new AVIPRegistry(sequencer, address(0), address(0));
+    }
+
+    // ------------------------------------------------------------ governance (M9a)
+
+    // §12.1.2. The two questions that matter are not "does the happy path work":
+    // they are "can the sitting key install its own continuation" and "can the
+    // sitting key block the rotation that replaces it". Both answers are no, and
+    // both are asserted below rather than promised in a comment.
+
+    function test_governance_theDelayIsTheDocumentedDeploymentConstant() public view {
+        assertEq(registry.guardian(), guardian, "the constructor wired the guardian");
+        // §6: a deployment constant, not a model parameter. Two days is the value
+        // `scripts/DeployRegistry.s.sol` installs and `deploy_dryrun_output.txt`
+        // pins.
+        assertEq(registry.CHANGE_DELAY(), 2 days, "CHANGE_DELAY");
+        assertEq(registry.pendingSequencer(), address(0), "nothing pending at genesis");
+        assertEq(registry.pendingVerifier(), address(0), "nothing pending at genesis");
+    }
+
+    function test_governance_onlyTheGuardianProposesAndOnlyItCancels() public {
+        vm.prank(sequencer);
+        vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotGuardian.selector, sequencer));
+        registry.proposeSequencer(stranger);
+
         vm.prank(stranger);
-        vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotSequencer.selector, stranger));
-        registry.setSequencer(stranger);
+        vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotGuardian.selector, stranger));
+        registry.proposeSequencer(stranger);
+
+        vm.prank(guardian);
+        registry.proposeSequencer(stranger);
+        assertEq(registry.pendingSequencer(), stranger, "proposed");
+
+        // The sitting sequencer cannot withdraw a proposal it did not make. It has
+        // no veto; the only thing it can do with the delay is be observed through
+        // it.
+        vm.prank(sequencer);
+        vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotGuardian.selector, sequencer));
+        registry.cancelSequencerChange();
+        assertEq(registry.pendingSequencer(), stranger, "the proposal survives the sitting key");
+
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotGuardian.selector, stranger));
+        registry.cancelSequencerChange();
+        assertEq(registry.pendingSequencer(), stranger, "and survives a stranger");
+    }
+
+    function test_governance_theSequencerProposalRejectsTheZeroAddress() public {
+        vm.prank(guardian);
+        vm.expectRevert(IAVIPRegistry.ZeroSequencer.selector);
+        registry.proposeSequencer(address(0));
+        assertEq(registry.pendingSequencer(), address(0), "nothing pending");
+    }
+
+    function test_governance_theSequencerProposalIsAnnouncedWithItsEta() public {
+        uint64 eta = uint64(block.timestamp + registry.CHANGE_DELAY());
+        vm.expectEmit(true, true, true, true);
+        emit IAVIPRegistry.SequencerProposed(stranger, eta);
+        vm.prank(guardian);
+        registry.proposeSequencer(stranger);
+        assertEq(registry.sequencerChangeEta(), eta, "the eta is on chain, not implied");
+    }
+
+    function test_governance_thereIsNothingToExecuteWithoutAProposal() public {
+        vm.expectRevert(IAVIPRegistry.NoPendingSequencerChange.selector);
+        registry.executeSequencerChange();
+
+        vm.expectRevert(IAVIPRegistry.NoPendingVerifierChange.selector);
+        registry.executeVerifierChange();
+    }
+
+    function test_governance_theChangeIsNotReadyBeforeItsDelay() public {
+        vm.prank(guardian);
+        registry.proposeSequencer(stranger);
+
+        uint256 eta = registry.sequencerChangeEta();
+        vm.expectRevert(
+            abi.encodeWithSelector(IAVIPRegistry.ChangeNotReady.selector, eta, block.timestamp)
+        );
+        registry.executeSequencerChange();
+
+        // One second early is still early.
+        vm.warp(eta - 1);
+        vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.ChangeNotReady.selector, eta, eta - 1));
+        registry.executeSequencerChange();
+
+        // The boundary is inclusive: `block.timestamp >= eta` executes.
+        vm.warp(eta);
+        registry.executeSequencerChange();
+        assertEq(registry.sequencer(), stranger, "the role moved at the eta");
+    }
+
+    function test_governance_anyoneExecutesOnceTheDelayHasElapsed() public {
+        vm.prank(guardian);
+        registry.proposeSequencer(stranger);
+        vm.warp(block.timestamp + registry.CHANGE_DELAY());
+
+        // Permissionless: a validator with no role in the rotation pays the gas
+        // and the change lands. If only the guardian could complete it, a guardian
+        // that went dark would freeze the role it proposed a replacement for.
+        vm.expectEmit(true, true, true, true);
+        emit IAVIPRegistry.SequencerChanged(sequencer, stranger);
+        vm.prank(validator);
+        registry.executeSequencerChange();
+
+        assertEq(registry.sequencer(), stranger, "the role moved");
+        assertEq(registry.pendingSequencer(), address(0), "the slot is cleared");
+        assertEq(registry.sequencerChangeEta(), 0, "and so is the eta");
+
+        vm.expectRevert(IAVIPRegistry.NoPendingSequencerChange.selector);
+        registry.executeSequencerChange();
+    }
+
+    function test_governance_theSittingSequencerCannotBlockOrKeepItsRole() public {
+        vm.prank(guardian);
+        registry.proposeSequencer(stranger);
+        vm.warp(block.timestamp + registry.CHANGE_DELAY());
+
+        vm.prank(stranger);
+        registry.executeSequencerChange();
+
+        // The new sequencer posts; the old one is a stranger now, even though it
+        // still holds the same private key it held before the change.
+        vm.prank(stranger);
+        registry.postCommitment(1, keccak256("epoch-1"), 1);
 
         vm.prank(sequencer);
-        registry.setSequencer(stranger);
-        assertEq(registry.sequencer(), stranger);
+        vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotSequencer.selector, sequencer));
+        registry.postCommitment(2, keccak256("epoch-2"), 1);
+    }
 
+    function test_governance_reproposingRestartsTheDelay() public {
+        vm.prank(guardian);
+        registry.proposeSequencer(stranger);
+        uint256 firstEta = registry.sequencerChangeEta();
+
+        vm.warp(firstEta);
+
+        // A guardian that regrets a proposal must be able to withdraw it, so
+        // re-proposing is allowed — but it restarts the clock. No sequence of
+        // proposals can land a change earlier than `CHANGE_DELAY` after the last
+        // announcement.
+        vm.prank(guardian);
+        registry.proposeSequencer(validator);
+
+        assertEq(registry.pendingSequencer(), validator, "the target was replaced");
+        assertEq(
+            registry.sequencerChangeEta(),
+            uint64(block.timestamp + registry.CHANGE_DELAY()),
+            "the delay restarted"
+        );
+
+        uint256 restartedEta = registry.sequencerChangeEta();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAVIPRegistry.ChangeNotReady.selector, restartedEta, block.timestamp
+            )
+        );
+        registry.executeSequencerChange();
+    }
+
+    function test_governance_cancellingDropsTheChangeAndKeepsTheRole() public {
+        vm.prank(guardian);
+        registry.proposeSequencer(stranger);
+        vm.warp(block.timestamp + registry.CHANGE_DELAY());
+
+        vm.expectEmit(true, true, true, true);
+        emit IAVIPRegistry.SequencerChangeCancelled(stranger);
+        vm.prank(guardian);
+        registry.cancelSequencerChange();
+
+        assertEq(registry.sequencer(), sequencer, "nobody moved");
+        assertEq(registry.pendingSequencer(), address(0), "dropped");
+        assertEq(registry.sequencerChangeEta(), 0, "dropped");
+        vm.expectRevert(IAVIPRegistry.NoPendingSequencerChange.selector);
+        registry.executeSequencerChange();
+
+        // Cancelling twice is the same "there is nothing pending" as executing a
+        // change that never existed.
+        vm.prank(guardian);
+        vm.expectRevert(IAVIPRegistry.NoPendingSequencerChange.selector);
+        registry.cancelSequencerChange();
+    }
+
+    // -------- the verifier half of §12.1.2
+
+    function test_governance_onlyTheGuardianProposesAVerifierChange() public {
+        MockThresholdVerifier mock = _mockVerifier(true, epoch0Root, 0, NORM);
+
+        vm.prank(sequencer);
+        vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotGuardian.selector, sequencer));
+        registry.proposeVerifier(address(mock));
+        assertEq(registry.pendingVerifier(), address(0), "nothing pending");
+
+        vm.prank(sequencer);
+        vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotGuardian.selector, sequencer));
+        registry.cancelVerifierChange();
+    }
+
+    function test_governance_theVerifierProposalRejectsTheZeroAddress() public {
+        // `verifier == address(0)` is a legal *initial* state (M7a deploys none),
+        // but installing it is not a configuration: every `verifyThreshold` would
+        // revert `VerifierNotSet`, which is certification silently switched off
+        // with no event saying so.
+        vm.prank(guardian);
+        vm.expectRevert(IAVIPRegistry.ZeroVerifier.selector);
+        registry.proposeVerifier(address(0));
+        assertEq(registry.pendingVerifier(), address(0), "nothing pending");
+    }
+
+    function test_governance_theVerifierChangeIsNotReadyBeforeItsDelay() public {
+        MockThresholdVerifier mock = _mockVerifier(true, epoch0Root, 0, NORM);
+        vm.prank(guardian);
+        registry.proposeVerifier(address(mock));
+
+        uint256 eta = registry.verifierChangeEta();
+        vm.expectRevert(
+            abi.encodeWithSelector(IAVIPRegistry.ChangeNotReady.selector, eta, block.timestamp)
+        );
+        registry.executeVerifierChange();
+        assertEq(address(registry.verifier()), address(0), "not installed early");
+
+        vm.warp(eta);
+        registry.executeVerifierChange();
+        assertEq(address(registry.verifier()), address(mock), "installed at the eta");
+    }
+
+    function test_governance_anyoneCommitsTheVerifierChangeAndItTakesEffect() public {
+        // The registry starts with certification off...
+        vm.expectRevert(IAVIPRegistry.VerifierNotSet.selector);
+        registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0));
+
+        MockThresholdVerifier accepting = _mockVerifier(true, epoch0Root, 0, NORM);
+        vm.prank(guardian);
+        registry.proposeVerifier(address(accepting));
+        vm.warp(block.timestamp + registry.CHANGE_DELAY());
         vm.prank(stranger);
-        vm.expectRevert(IAVIPRegistry.ZeroSequencer.selector);
-        registry.setSequencer(address(0));
+        registry.executeVerifierChange();
+        assertTrue(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)), "certification on");
+
+        // ... and a circuit fix is a swap, not a redeploy: the same blob against
+        // the same statement draws the new verifier's answer, while the commitment
+        // history the manager reads is the one this registry already holds.
+        bytes32 rootBefore = registry.commitmentOf(0);
+        MockThresholdVerifier rejecting = _mockVerifier(false, epoch0Root, 0, NORM);
+        vm.prank(guardian);
+        registry.proposeVerifier(address(rejecting));
+        vm.warp(block.timestamp + registry.CHANGE_DELAY());
+        vm.prank(validator);
+        registry.executeVerifierChange();
+
+        assertFalse(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)), "certification off");
+        assertEq(registry.commitmentOf(0), rootBefore, "the history survived the swap");
+        assertEq(registry.pendingVerifier(), address(0), "cleared");
+        assertEq(registry.verifierChangeEta(), 0, "cleared");
+    }
+
+    function test_governance_cancellingAVerifierChangeKeepsTheVerifier() public {
+        _setVerifier(true, epoch0Root, 0, NORM);
+        address installed = address(registry.verifier());
+
+        MockThresholdVerifier other = _mockVerifier(false, epoch0Root, 0, NORM);
+        vm.prank(guardian);
+        registry.proposeVerifier(address(other));
+        vm.warp(block.timestamp + registry.CHANGE_DELAY());
+
+        vm.prank(guardian);
+        registry.cancelVerifierChange();
+
+        assertEq(address(registry.verifier()), installed, "unchanged");
+        assertTrue(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)), "same verdict");
+        vm.expectRevert(IAVIPRegistry.NoPendingVerifierChange.selector);
+        registry.executeVerifierChange();
+    }
+
+    function test_governance_theTwoPendingChangesAreIndependent() public {
+        MockThresholdVerifier mock = _mockVerifier(true, epoch0Root, 0, NORM);
+        vm.prank(guardian);
+        registry.proposeSequencer(stranger);
+        vm.prank(guardian);
+        registry.proposeVerifier(address(mock));
+
+        vm.warp(block.timestamp + registry.CHANGE_DELAY());
+
+        // Two roles, two slots: committing one does not touch the other.
+        registry.executeSequencerChange();
+        assertEq(registry.pendingVerifier(), address(mock), "still pending");
+        assertEq(address(registry.verifier()), address(0), "not installed yet");
+
+        registry.executeVerifierChange();
+        assertEq(address(registry.verifier()), address(mock), "installed");
+        assertEq(registry.sequencer(), stranger, "the sequencer change stands");
     }
 
     // ------------------------------------------------------- merkle inclusion
@@ -360,10 +655,23 @@ contract AVIPRegistryTest is Test {
     // ----------------------------------------------------------------- helpers
 
     function _setVerifier(bool answer, bytes32 root, uint256 epoch, uint256 norm) internal {
-        MockThresholdVerifier mock =
-            new MockThresholdVerifier(answer, PROOF_A0, _statement(root, epoch, norm));
-        vm.prank(sequencer);
-        registry.setVerifier(address(mock));
+        // The mock is deployed *before* the prank: `new` is itself a call, so it
+        // would consume the prank and the proposal would then come from this test
+        // contract instead of the guardian (`NotGuardian`).
+        MockThresholdVerifier mock = _mockVerifier(answer, root, epoch, norm);
+        vm.prank(guardian);
+        registry.proposeVerifier(address(mock));
+        // The change is committed by this test, not by the guardian: M9a makes
+        // execution permissionless, so the tests exercise that path every time.
+        vm.warp(block.timestamp + registry.CHANGE_DELAY());
+        registry.executeVerifierChange();
+    }
+
+    function _mockVerifier(bool answer, bytes32 root, uint256 epoch, uint256 norm)
+        internal
+        returns (MockThresholdVerifier)
+    {
+        return new MockThresholdVerifier(answer, PROOF_A0, _statement(root, epoch, norm));
     }
 
     /// @dev The statement the registry is expected to build itself, §5.2.1.

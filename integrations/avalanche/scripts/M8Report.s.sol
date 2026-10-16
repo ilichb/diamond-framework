@@ -53,6 +53,9 @@ contract M8Report is DeployCommon {
     ///      first three are `DeployCommon`'s, the last two are `anvil` accounts 3
     ///      and 4.
     address internal constant SEQUENCER = ANVIL_1;
+    /// @dev M9a: the registry's only proposer of a role change (never the
+    ///      sequencer above, which is what §12.1.2 requires of the pair).
+    address internal constant GUARDIAN = ANVIL_3;
     address internal constant SLASH_AUTHORITY = ANVIL_2;
     address internal constant VALIDATOR = 0x90F79bf6EB2c4f870365E785982E1f101E93b906;
     address internal constant STRANGER = 0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65;
@@ -91,7 +94,7 @@ contract M8Report is DeployCommon {
         sink = new AVIPBurnSink(address(token));
         vault = new AVIPStakeVault(address(token), address(sink), F8.WAD_PER_UNIT);
         verifier = new Groth16Verifier(F4b.verifyingKey());
-        registry = new AVIPRegistry(SEQUENCER, address(verifier));
+        registry = new AVIPRegistry(SEQUENCER, address(verifier), GUARDIAN);
         manager = new AVIPValidatorManager(address(registry), SLASH_AUTHORITY, address(vault));
         vm.stopBroadcast();
 

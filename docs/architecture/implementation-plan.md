@@ -2276,6 +2276,73 @@ script with no inputs, the vault script with them, and the manager script handed
 that cannot bind); `bash verification/audit-gate.sh` → unchanged (**PASS=11, FAIL=0,
 SKIP=0**); `git status --porcelain verification/` → 0 lines.
 
+## 5.13 M9a as delivered (registry authority, DEC-2)
+
+Status: **DEC-2 is closed in code, offline; `M9b` and `M9c` are not started, and
+nothing is deployed** (A8 stays open). `integrations/avalanche/contracts/AVIPRegistry.sol`
+gains an immutable `guardian` and the propose/execute pair that replaces both
+setters, `IAVIPRegistry.sol` publishes it, `scripts/DeployCommon.sol` and
+`scripts/DeployRegistry.s.sol` take the new role and refuse a plan in which it is not
+one, and the two suites over those surfaces grow — `test/AVIPRegistry.t.sol`
+32 → **48** and `test/DeployScripts.t.sol` 21 → **24** — while the five suites that
+only construct a registry (34, 62, 48, 18 and 7) keep their count *and* their
+behaviour, which is the compatibility evidence that posting and certification are
+untouched.
+
+**The defect, stated exactly.** §12.1.2 fixed it as three facts about the old
+contract, and they are one fact seen three ways: `sequencer` was the only caller of
+both setters, so the role that *posts* commitments was the role that *decides who
+posts* them; neither setter emitted an event, so a rotation was invisible after the
+fact; and `setVerifier` had no `address(0)` check, so the sitting key could silently
+disable certification (`verifyThreshold` then reverts `VerifierNotSet`). Nothing was
+self-healing in either direction: a rogue sequencer could not be replaced except by
+the rogue sequencer, and a lost one could not be replaced at all.
+
+**What the code does** — the guardian proposes, the delay gates, anyone executes:
+
+- the constructor rejects `address(0)` as guardian (`ZeroGuardian`) beside M1's
+  `ZeroSequencer`; that the two roles are *different kinds of authority* is enforced
+  one level up, in the deployment path, because a contract cannot check a key policy
+  (below);
+- `proposeSequencer`/`proposeVerifier` are `onlyGuardian`, reject `address(0)`
+  (`ZeroVerifier` on the verifier lane), arm `pending*` plus
+  `*Eta = block.timestamp + CHANGE_DELAY` and emit `<Role>Proposed(next, eta)`;
+  re-proposing restarts the delay rather than shortening it;
+- `executeSequencerChange`/`executeVerifierChange` are **permissionless**: they
+  require the pending value to be non-zero (`NoPendingSequencerChange`,
+  `NoPendingVerifierChange`) and `block.timestamp >= eta` (`ChangeNotReady(eta, now)`),
+  then commit, emit `<Role>Changed(old, new)` and clear;
+- `cancelSequencerChange`/`cancelVerifierChange` are `onlyGuardian`, and the two lanes
+  are independent, so a lost-verifier rotation is not stuck behind a contested
+  sequencer one.
+
+**What it deliberately does not decide.** That the guardian is a multisig is a
+deployment fact, and the contract says so by not pretending to check it: it needs a
+*second authority*, not a particular key policy — which is why the collapse of the two
+roles is refused where the keys are actually resolved (`DeployRegistry`'s
+`RolesCollapsed`, and `MissingRole("GUARDIAN")` for the zero case) and not inside the
+constructor. The verifier **stays mutable** (DEC-2): this registry is also the
+commitment history (`_roots`, `_changedEntries`) that `admit` reads back, so freezing
+the verifier would turn a circuit bug into a redeploy that loses that history.
+`CHANGE_DELAY = 2 days` is a **deployment constant, not a model parameter** (§6): it
+appears in no paper equation and backs no number in this repository, so §6 lists it as
+an absence of provenance rather than inventing one.
+
+**Validated locally.** `forge test --offline` → **257 passed, 0 failed, 0 skipped**
+over 9 suites (238 before M9a); `forge fmt --check` → 0 diffs; `forge build --offline`
+→ OK; `forge lint` → **4 notes, no warning** (the same four `setEnv` calls as in
+§5.12); `bash scripts/deploy_dryrun.sh` → **11 cases**, the two new ones being M9a's
+own refusals at the deployment boundary (a guardian pinned to the sequencer, and one
+pinned to zero — neither creating a contract), with the regenerated
+`scripts/deploy_dryrun_output.txt` byte-identical across two runs
+(`md5 1208fa7a787da04319fb530027bcb8c6`); `bash scripts/m7d_report.sh` and
+`bash scripts/m8_report.sh` → `status=ok`, both pinned transcripts byte-identical
+across runs (`md5 2bf8d16bfa20c1d47fa65690e240f0bd` and
+`147064b25244913b7398330f8730baf4`), so the third constructor argument left the wire
+transcripts' bytes alone; `bash verification/audit-gate.sh` → unchanged
+(**PASS=11, FAIL=0, SKIP=0**); `bash verification/fase0_anchor.sh --check` → exit 0;
+`git status --porcelain verification/ docs/paper/` → 0 lines.
+
 ## 6. Interfaces and parameter provenance
 
 The contract boundary is fixed by **interfaces** (types only, no logic —
@@ -2326,6 +2393,7 @@ are written at the top of `integrations/avalanche/test/mocks/MockTeleporterMesse
 | `F0_STAR` (uniform posted price) | `5e16` (0.05) | Payment Rule (main.tex §6.4); enforced in `AVIPValidatorManager`; IR-safe lower bound on the admissible domain, whose true optimum is 0.07666... (§5.2.3) |
 | Groth16 public inputs `k` | `3` (`[root, epoch, certifiedNorm]`) | §5.2.1; fixed by `AVIPRegistry.verifyThreshold` and `Groth16Verifier` (§5.4) |
 | pairings per verification | `4` | Groth16: `e(−A,B)·e(α,β)·e(vk_x,γ)·e(C,δ)` (§5.4) |
+| `CHANGE_DELAY` (M9a role changes) | `2 days` | **No paper provenance, deliberately**: it appears in no equation of `main.tex` and in no `verification/` script, so it is a deployment constant and not a model parameter (§5.13). `DeployRegistry.s.sol` re-declares it and the dry-run transcript pins it, so §10.2 quotes a value a deployment actually installs |
 
 ## 7. Conventions for new code
 
@@ -2433,12 +2501,256 @@ stable — the same reason the protection phase is last.
 | **P6a (done — `094c41b`)** | The five data-layer amendments of §5.9/§5.12: §7.3's fraud-proof mechanism with the bounty/slash status, §7.3's unstated pool/coverage conventions plus the §10.2 free-rider sentence, the freshness instance with §7.7's `Verified` labels, `eq:revenue`'s missing `N_ATT` factor, and the §7.5/§7.7 non-executable deterrence — twelve lines 1:1, plus §7.4's `We verify` → `We evaluate` (`main.tex:1002`) | **re-anchored** `2026-10-11T21:48:40Z`, root `217d6d51…` (G10/G11 green) |
 | **P6b (done)** | C-gaps: paper apparatus (C1–C4) — `center` → `table[H]` with `\caption`, **1410 → 1566 lines** — plus the two amendments queued above, both applied (§5.12): §10.4's `-502` bounded by §7.5 (`main.tex:1266`) and `\|T\|_F` where the norm is meant (`main.tex:842`, `:882`). It carried the citation drift P6a did not introduce — `F-019`'s `:1215` (the sentence it cites lives at `:1183` on `aaaf460`, `:1268` now) and `C-14`'s `§8.7` pointer; the numbers this row used to quote (`:1297`, `C-48`) were mis-derived. Rather than correcting them, all cited tokens were **re-derived** before the root was regenerated: 316 tokens, 313 remapped, 23 files, 396 citations checked, **0 section changes** (`anchor-receipts.md` §R-3.1) | **re-anchored** `2026-10-12T00:54:19Z`, root `79ac6783…`, receipt **R-3** (G1..G11 PASS=11 FAIL=0 SKIP=0) |
 | **P7a (done)** | Protection (D-4 licences: MIT for the repository, **CC BY 4.0** for the paper), the PDF metadata the PDF did not have, `.zenodo.json`, a frozen 37-page snapshot | **re-anchored** `2026-10-12T03:28:48Z`, root `5d6002ba…`, receipt **R-4** (promoted to Bitcoin in `971035`–`971090`); of the ten pairs **one** moved — the paper's |
-| P7b | The Zenodo deposit and the arXiv submission — both need an account, not code | **re-anchor** only if `main.tex` changes |
+| **P8 (next)** | **M9, the trust-amendment batch** — `M9a` registry authority (DEC-2), `M9b` full-stake slash (DEC-4), `M9c` ejection surcharge (DEC-5), specified in §12.1.2. Contracts, scripts and tests only | **none** — nothing under `integrations/` is in the sealed list |
+| **P9 (next)** | **Fase 4 + Fase 5 as one sealed batch** — the paper text under DEC-1/DEC-2/DEC-4/DEC-5 plus DEC-3 declared (§7.3, §7.4, §7.5, §9.4, §10.2, abstract, §1.2), `N-7` and the three remaining FASE 0 objectives, `F-022`/`M-05` with the **count manifest**, then **one** re-anchor. Detail in §12.1 | **re-anchored once**; `main.tex` is line 1 of the root |
+| P7b | *now blocked by P9* — the Zenodo deposit and the arXiv submission (both need an account, not code). Release `D-3` forbids submitting before the batch above lands | none |
 
-**Next step: P7b** — the Zenodo deposit (`.zenodo.json` is written, so the upload
-is metadata and not a retyping) and the arXiv submission (`main.tex` alone) — and,
-whenever a funded key and an endpoint
-are available — the Fuji deployment the M7a and M8 scripts are waiting for.
+**Next step: P8, then P9** — first the trust-amendment batch (`M9`: DEC-2 +
+DEC-4 + DEC-5; contracts, scripts and tests only, zero anchor risk), then the
+paper batch (Fase 4 + Fase 5) that closes DEC-1…DEC-5 in
+§7.3/§7.4/§7.5/§9.4/§10.2, the abstract and §1.2, repairs `N-7`, adds
+`F-022`/`M-05` with the count manifest, and re-anchors **once**. Both are
+specified in §12.1 below.
+
+**P7b is blocked by P9**: the Zenodo deposit (`.zenodo.json` is written, so the
+upload is metadata and not a retyping) and the arXiv submission (`main.tex`
+alone) wait for that re-anchor, because release `D-3` forbids submitting before
+the batch lands. Unrelated to either, and still waiting on a funded key and an
+endpoint: the Fuji deployment the M7a and M8 scripts are ready for.
+
+## 12.1 The one batch: M9 (system) → Fase 4 (text) → Fase 5 (sealed + re-anchor)
+
+Decided 2026-10-15. **No sealed file has moved**: `main.tex` and the nine other
+sealed files are untouched, the gate is `PASS=11 FAIL=0 SKIP=0` and the anchor is
+the committed one. Of the batch, only `M9a` has landed, and only in `integrations/`
+plus this plan (§5.13).
+
+### Namespaces (no mixing)
+
+| Space | Means | Status |
+|-------|-------|--------|
+| `DEC-1 … DEC-6` | **content** decisions — the audit triage's Part A | closed 2026-10-15 (§12.1.1) |
+| `D-1 … D-4` | the **release process** decisions — triage Part D | untouched; they are why §12.1.4 re-anchors once |
+| `P8.x` / `P9.x` | the execution units of this batch | below |
+| `M9a` / `M9b` / `M9c` | the contract milestones; specified in §12.1.2, and **§5.13** on delivery (the §5.x convention) | P8 |
+| `F-022`, `M-05`, `N-7` | the new numerical entry, its measurement, the dangling-refs finding | §12.1.3 / §12.1.4 |
+
+The four-item list maps as: alcance → **DEC-1**, secuenciador → **DEC-2**,
+importe → **DEC-4**, reputación → **DEC-5**; plus **DEC-3** (time axis, declared as
+a constraint) and **DEC-6** (`γ`, open and non-blocking).
+
+**The order is forced, not chosen.** §10.2 must describe what is deployed at seal
+time, so M9 (contracts) precedes P8 (text); and §9 allows exactly **one** re-anchor
+per batch, so P9 is a single step.
+
+### 12.1.1 The decisions as closed
+
+| ID | Decision | Lands in |
+|----|----------|----------|
+| **DEC-1** | **Scope/custody — (B).** §7.3's «does not move funds» is true of *the delivered data layer*; the defect is a missing actor. The manager and the custody vault are named as delivered and the sentence is qualified, not deleted | `main.tex` §7.3 (`:974-980`), §7.4 (`:1028`) |
+| **DEC-2** | **Sequencer — (B) + declare the state.** `M9a`: a `guardian` multisig is the only proposer, execution is permissionless after `CHANGE_DELAY`, both setters emit events, a zero address is rejected, and the **verifier stays mutable** — freezing it turns a circuit bug into a registry redeploy that loses the commitment history `_roots`/`_changedEntries` (`AVIPRegistry.sol:63-65`, written `:114-116`, read by the manager at `AVIPValidatorManager.sol:216-219`) | `M9a`, `main.tex` §10.2 |
+| **DEC-3** | **Time axis — declared constraint, not enforcement.** The detection window is a *constraint*; `M-05` parametrises the attack model over detection latency **in epochs** instead of one scalar; an on-chain challenge window is **follow-up**, explicitly out of v1 | `main.tex` §10.2 (limitations), `F-022`/`M-05` |
+| **DEC-4** | **Slash amount — (A).** `M9b`: `L` is the **whole posted stake** (`_stakes[validator]`) and the amount leaves the Teleporter payload. `L ≥ S_f*(T) ∈ [0.2, 1.0]` with **no upper bound**, because `admit` caps nothing (`AVIPValidatorManager.sol:200`, `:229`); the model's `Θ = 1.0` is a coverage convention, and the paper must say so | `M9b`, `main.tex` §7.4 (`:1028`), §9.4 (`:1266`) |
+| **DEC-5** | **Reputation — (B) + (C) honest.** `M9c`: the re-entry cost is a **separate ejection surcharge** (`required = requiredStakeFor(norm) + n_ejections·κ`), never an inflation of `requiredStakeFor`, so `collateral` keeps deriving from the norm and `Θ − C_R` cannot go negative. §7.5 stops asserting a reputation reduction that nothing writes | `M9c`, `main.tex` §7.5/§7.4 (`:1030`), abstract, §1.2 (`:76`) |
+| **DEC-6** | **`γ`'s value — open, non-blocking.** `N-6` calls `γ = 0.10` vacuous at horizon 10 and the paper already says so (`:1040`). Either a value is chosen (a numeric claim ⇒ a `verification/` script plus an `F-` entry) or the text states the bound is vacuous for the delivered parameters | **not in this batch** |
+
+Two consequences beyond the four items: the `G = 50` scalar of `A-18`
+(`:470-476`, a worksheet derivation and never a protocol quantity) stops being
+used as a paper quantity, and the attacker `A-21` says is never named gets named.
+Text that does both closes `A-18`, `A-20` and `A-21`, and collapses `A-22` into
+`N-1`.
+
+### 12.1.2 M9 — the contract batch (P8; nothing sealed)
+
+**M9a — DEC-2, registry authority. Delivered** (§5.13: 48 registry tests, 24 script
+tests, 257 in total, the gate and the anchor untouched). `contracts/AVIPRegistry.sol`.
+The specification it was closed against, kept as written: `sequencer` was an `address`
+fixed at construction (`:71-73`, `ZeroSequencer`)
+and is the only caller of both setters (`:86-91`, `:93-96`); neither emits an event
+and `setVerifier` has no `address(0)` check, so the role can silently disable
+certification (`verifyThreshold` then reverts `VerifierNotSet`, `:174-175`).
+
+1. The constructor gains an immutable `guardian` (`ZeroGuardian` revert). The
+   guardian is an authority **distinct** from the sitting keys; that it is a
+   multisig is a deployment fact.
+2. `setSequencer`/`setVerifier` are **removed**. Each becomes a propose/execute
+   pair: `proposeSequencer(address)`/`proposeVerifier(address)` are `onlyGuardian`,
+   reject `address(0)`, set `pending*` and `*Eta = block.timestamp + CHANGE_DELAY`
+   and emit `<Role>Proposed(next, eta)`; `executeSequencerChange()` /
+   `executeVerifierChange()` are **permissionless**, require `block.timestamp >= eta`
+   and a non-zero pending value, commit, emit `<Role>Changed(old, new)` and clear.
+   `cancel*Change()` stays `onlyGuardian`.
+3. `CHANGE_DELAY` is a contract constant, documented in `contracts/README.md` as a
+   **deployment constant, not a model parameter** (§6).
+4. Permissionless execution is the point: a compromised sitting key can neither
+   rotate itself nor veto the guardian's rotation once the delay elapses. A delay
+   on the same role would only make a rotation visible; the second authority is
+   what closes the capture.
+5. Ripple: `scripts/DeployRegistry.s.sol` and `scripts/DeployCommon.sol` take the
+   new argument; `test/DeployScripts.t.sol` and the committed dry-run transcript
+   `scripts/deploy_dryrun_output.txt` are regenerated — the transcript grows from
+   nine to **eleven** cases, the two new ones being this milestone's own refusals
+   (`GUARDIAN == SEQUENCER` → `RolesCollapsed`, `GUARDIAN = 0x0` →
+   `MissingRole("GUARDIAN")`); `contracts/README.md`'s status table and NatSpec
+   `@dev` citations follow §9's paper→code rule.
+
+**M9b — DEC-4, the slash amount.** `contracts/AVIPValidatorManager.sol`,
+`contracts/AVIPSlashingChannel.sol`, `contracts/AVIPMessageCodec.sol` and the
+manager interface.
+Today the amount is a **remote parameter**: `_deliver` executes
+`MANAGER.slash(notification.validator, notification.amountWad, reason)`
+(`AVIPSlashingChannel.sol:185`), `amountWad` is decoded from the Teleporter payload
+(`AVIPMessageCodec.sol:138`) and validated only as non-zero (`:343`) and ≤ the stake
+(`AVIPValidatorManager.sol:242`).
+
+1. `slash(address validator, bytes32 reason)`; the amount is derived inside, from
+   `_stakes[validator]` — the whole posted stake. The "≤ stake" check disappears
+   because the amount *is* the stake.
+2. The `amountWad` field and `ZeroSlashAmount` leave `AVIPMessageCodec`; the
+   encode/decode pair and the `SlashingNotification` struct shrink.
+3. `docs/architecture/avalanche-integration.md` §4 (Teleporter/AWM, the wire
+   format) is updated — that file is **not** sealed.
+4. Tests updated: `AVIPValidatorManager.t.sol` (34), `M7dTransport.t.sol` (48),
+   `M8StakeVault.t.sol` (62); one new case asserts the debit equals the escrow on
+   record, another that a zero-stake validator still reverts.
+5. Consequence for the paper: `main.tex:1028`'s «caller-supplied amount» becomes
+   **false** the moment M9b ships, which is why P8 must land in the same release.
+
+**M9c — DEC-5, the ejection surcharge.** `contracts/AVIPValidatorManager.sol`.
+
+1. `mapping(address => uint256) _ejections;` plus a constant `EJECTION_SURCHARGE`
+   (**κ**). `admit` becomes
+   `stake = requiredStakeFor(norm) + _ejections[validator] * EJECTION_SURCHARGE`,
+   while `collateral` stays `collateralFor(norm)`.
+2. The ejection path (`:249-256`) increments `_ejections[validator]`. Because the
+   surcharge is a separate term, `_requiredStakes` keeps its meaning as the
+   norm-image **plus** surcharge and `Θ − C_R` cannot go negative — inflating
+   `requiredStakeFor` instead would make a many-times-ejected validator's implied
+   collateral negative.
+3. The surcharge appears in `AdmissionEvaluated`, so the reason for the larger
+   requirement is observable.
+4. `κ` is a **deployment constant**: the paper names the term symbolically and
+   claims no value for it, so no `verification/` script and no `F-` entry are
+   opened (§9's code→paper rule). §6's parameter table lists it as such.
+5. Tests: re-admission after one ejection costs `+κ` and after two `+2κ`; the
+   collateral is unchanged; the counter is per validator and survives withdrawal.
+
+Acceptance for M9 as a whole: `forge test` green **offline**, with the 238 tests
+that passed before the batch still passing plus the new ones (257 of them once
+`M9a` landed, §5.13); `cargo` untouched; nothing under `verification/` — and
+therefore nothing sealed — modified. `git status` shows changes confined to
+`integrations/`, `docs/architecture/avalanche-integration.md` and this plan.
+
+### 12.1.3 Fase 4 (P8) — the paper text
+
+P8.1 **§7.3 (`:974-980`) — DEC-1.** Keep «the delivered data layer … does not move
+funds»; add the two subjects it omits: the manager that adjudicates and debits, and
+the custody vault that holds the escrow. The paper names «the delivered manager»
+exactly once (`:1028`), never names the vault, and uses `custody` once, in «chain
+of custody» (`:1493`).
+
+P8.2 **§7.4 (`:1026-1034`) — DEC-4 and DEC-5.** `L` is the whole posted stake,
+`L ≥ S_f*(T) ∈ [0.2, 1.0]`, unbounded above; the «caller-supplied amount» clause
+goes; the reputation-reduction sentence at `:1030` is withdrawn or qualified,
+because `slash` writes no reputation state; the ejection surcharge with its `κ`
+takes its place as the executable re-entry cost.
+
+P8.3 **§7.4/§5.7 — DEC-3 and `M-05`.** The attacker `A-21` says is unnamed is
+named, the scalar gain of `A-18` is replaced by the declared model (gain = the
+stake the norm buys, loss = the escrow actually debited), and the detection window
+enters as an explicit **constraint**. Whatever it costs is stated as a function of
+latency in epochs, so the numbers must come from P9.3's script: the paper cannot
+state a new quantity before that script exists, and that is the second reason P8
+and P9 are one batch.
+
+P8.4 **§9.4 (`:1266`) — DEC-4.** «bounded by `Θ = 1.0` per validator» is the
+**model's** coverage convention. It must be labelled as such, or a reader can file
+it as an executable cap, which the contract does not enforce.
+
+P8.5 **§10.2 — DEC-2 and DEC-3.** Declare the state as it is after M9a: the
+guardian as sole proposer, `CHANGE_DELAY`, permissionless execution, the events,
+the rejected zero address, and the verifier's mutability with its reason (the
+registry keeps the commitment history `admit` depends on). Then declare DEC-3: the
+detection window is a constraint of this model and on-chain enforcement is
+follow-up. `sequencer` does not appear in `main.tex` at all today, so this is an
+addition, not a correction.
+
+P8.6 **Abstract and §1.2 (`:76`) — DEC-5.** «reputational collateral» and «partial
+substitutes» overstate what is executed; the term becomes reputation-weighted
+*access cost*. The **title survives**: «Reputation-Weighted Validator Selection»
+describes exactly the discount `collateralFor` applies.
+
+P8.7 **Gate discipline inside P8.** No line may contain `Estimate` **and**
+`Verified` (G8); `pdflatex` must end clean with `errors=0, Undefined=0` (G9), so
+any new table, equation or label needs its references to exist; the abstract's
+prose «twenty-one claims» is payload for G5 and must not be edited in isolation.
+
+### 12.1.4 Fase 5 (P9) — the sealed batch, one re-anchor
+
+P9.1 **`N-7`** in `docs/audit/content-audit-pending.md`: `:45` points at
+`main.tex:837` and `:69` at `main.tex:805`, both blank today (the reference
+`Θ = 1.0` with its parameters lives at `main.tex:870` now), and `:69` describes
+`VaR_tech`, a symbol that no longer exists — the replacement is `S_{\min}`
+(`main.tex:834,840,941`).
+
+P9.2 **The three remaining FASE 0 objectives**, same file: the «No open finding
+remains» overclaim (`:1707-1708`), `C-01`'s status (`:46`, `:155-160`), and the
+internal refs of P9.1.
+
+P9.3 **`M-05` and `F-022`, with the count manifest.** `M-05` is a measurement the
+triage declares necessary and that does not exist yet (`:478-483`): a deterministic
+`verification/mechanism/m05_attack_model.py` emitting the attacker's loss — and the
+resulting deterrence — **as a function of detection latency in epochs**, declaring
+its sample size and seed per the log's rules; registered in `verification/README.md`
+(the source `run_all.sh` parses for its command list),
+`verification/baseline_verified/manifest.txt` and
+`verification/fase1_determinism_evidence.txt`; its output joins
+`output_manifest.sha256` (**35 → 36 pairs**); and `F-022` records it in
+`numerical-verification.md`.
+
+The **count manifest is not only G5.** A literal count today lives inside two
+sealed files: `audit-gate.sh:99` (`F-` = 21, exact) and `:106` (`C-` = 50, exact)
+gate their values, `audit-gate.sh:44-48` floors the `.py` count at 35, and
+`fase0_anchor.sh:189,196` *prints* «35 pares». Adding `F-022`, or `M-05`'s script,
+therefore moves a number hardcoded in four places. P9.3 introduces one derived
+source for the three counts (21 F entries, 50 C worksheets, 35 output pairs — the
+last asserted as a floor, never as equality) and makes every message derive from
+it, so the next entry does not need a four-file edit. Leaving the constants where
+they are is possible, but it is exactly the state that made the reviewer ask for a
+manifest.
+
+P9.4 **The citation re-derivation.** Fase 4 moves `main.tex` lines, and
+`claim-registry.csv` (sealed, 27 rows) stores a `line` column pointing into
+`main.tex`; `content-audit-pending.md` and other documents cite `main.tex:NNN` too.
+The batch therefore repeats P6b's job (`anchor-receipts.md` §R-3.1): a `difflib`
+HEAD→worktree line map over every citation form the repository uses, then verify
+**0 LaTeX section changes** and a strictly monotone map.
+
+P9.5 **One re-anchor, in the order §9 fixes**: `run_all.sh` → `fase0_anchor.sh` →
+`audit-gate.sh` (`FAIL=0`) → `fase0_anchor.sh --check` (exit 0) → a new receipt in
+`anchor-receipts.md` → OTS re-seal. `audit_manifest.sha256` (not sealed) is
+regenerated with its UTC header, the anchoring HEAD and its two pairs;
+`output_manifest.sha256` moves only if `M-05`'s output does.
+
+P9.6 **Loose end, adjacent but outside P9**: `.zenodo.json` carried a one-line
+worktree difference left by an earlier session (one blank line at EOF); it has since
+been restored to the committed bytes, so the file P7b deposits is byte-identical to
+the one `bfe329d` committed. It is unsealed and belongs to release `D-1`/P7b —
+nothing about it enters this batch.
+
+### Acceptance and rollback
+
+The batch is done when, in one session: `forge test` offline green with the
+pre-batch 238 tests still in it (257 after `M9a`, §5.13); `pdflatex` clean;
+`bash verification/audit-gate.sh` →
+`PASS=11 FAIL=0 SKIP=0` with G5 and G6 reading the manifest instead of a literal;
+`bash verification/fase0_anchor.sh --check` → exit 0; a receipt recorded. On any
+discrepancy §9's rule stands: `git reset --hard HEAD` and report. No sealed file is
+edited before P9, and P8 never re-anchors.
+
+*(The file's chronicle of delivered milestones resumes below; it is kept at the end
+of §12 as the plan's historical appendix.)*
+
 **M7 is delivered**:
 M7b (§5.9) is the ingestion formula `f_c` as an interface, the fraud proof and its
 audit equilibrium `n*(B) = ⌊B/B*⌋` with `S_slash = 10`; M7c (§5.10) resolves the
@@ -2460,8 +2772,8 @@ unchanged, which the M2 suite running untouched is the evidence for.
 `DeployRegistry.s.sol`/`DeployValidatorManager.s.sol` exists over the shared
 `DeployCommon` floor, refuses C-Chain mainnet by construction, is driven in tests
 through `deploy(Plan)` (no environment) and is verified out of process by
-`scripts/deploy_dryrun.sh`, whose **nine-case** transcript is committed (six from
-M7a, plus M8's three, §5.12). What remains of
+`scripts/deploy_dryrun.sh`, whose **eleven-case** transcript is committed (six from
+M7a, plus M8's three, §5.12, plus M9a's two, §5.13). What remains of
 A8 is the Fuji deployment itself — a funded key and a live endpoint, which no
 milestone here automates — plus the phase-4 P-Chain registration.
 

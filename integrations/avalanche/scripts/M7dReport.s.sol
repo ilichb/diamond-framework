@@ -62,6 +62,9 @@ contract M7dReport is DeployCommon {
     ///      which is what makes "these are four different roles" visible in the
     ///      transcript rather than assumed.
     address internal constant SEQUENCER = ANVIL_0;
+    /// @dev M9a: the registry's only proposer of a role change. Never the
+    ///      sequencer above, which is what §12.1.2 requires of the pair.
+    address internal constant GUARDIAN = ANVIL_3;
     address internal constant ALERTER = ANVIL_1;
     address internal constant NOTIFIER = ANVIL_2;
     address internal constant VALIDATOR = 0x90F79bf6EB2c4f870365E785982E1f101E93b906;
@@ -107,8 +110,8 @@ contract M7dReport is DeployCommon {
 
         teleporter = new MockTeleporterMessenger();
         verifier = new Groth16Verifier(F4b.verifyingKey());
-        registryForAdmission = new AVIPRegistry(SEQUENCER, address(verifier));
-        registryForCommitment = new AVIPRegistry(SEQUENCER, address(verifier));
+        registryForAdmission = new AVIPRegistry(SEQUENCER, address(verifier), GUARDIAN);
+        registryForCommitment = new AVIPRegistry(SEQUENCER, address(verifier), GUARDIAN);
         manager = new AVIPValidatorManager(
             address(registryForAdmission), slashingDestinationAddress, address(0)
         );

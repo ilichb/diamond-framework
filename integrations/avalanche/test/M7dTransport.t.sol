@@ -150,6 +150,8 @@ contract M7dTransportTest is Test {
     address internal alerter;
     address internal notifier;
     address internal validator;
+    /// @dev M9a: the only proposer of a change to `sequencer` or `verifier`.
+    address internal guardian;
 
     function setUp() public {
         // Every pair of endpoints is mutually referential: a source's routing table
@@ -177,9 +179,10 @@ contract M7dTransportTest is Test {
         alerter = makeAddr("alerter");
         notifier = makeAddr("notifier");
         validator = makeAddr("validator");
+        guardian = makeAddr("guardian");
 
-        registryForAdmission = new AVIPRegistry(sequencer, address(verifier));
-        registryForCommitment = new AVIPRegistry(sequencer, address(verifier));
+        registryForAdmission = new AVIPRegistry(sequencer, address(verifier), guardian);
+        registryForCommitment = new AVIPRegistry(sequencer, address(verifier), guardian);
         manager = new AVIPValidatorManager(
             address(registryForAdmission), predictedSlashingDestination, address(0)
         );

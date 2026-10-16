@@ -170,7 +170,13 @@ The integration proceeds in four phases:
    movements (escrow, slash, `F_0*`) against a test deployment of an `IFundSink`.
    The scripts are `DeployRegistry.s.sol`, `DeployValidatorManager.s.sol` (with
    `CUSTODY`) and `DeployStakeVault.s.sol`; none of them is automated against a
-   live network.
+   live network. `DeployRegistry.s.sol` resolves three roles and not two: beside
+   `SEQUENCER` and `VERIFIER` it takes `GUARDIAN`, the only account allowed to
+   *propose* a change to either of the other two. Anybody may then execute that
+   change once the registry's `CHANGE_DELAY` (two days) has elapsed, which is what
+   keeps the sitting sequencer from being the only key able to replace itself; a
+   zero `GUARDIAN`, or one equal to the `SEQUENCER`, is refused before anything is
+   deployed.
 
 2. **Off-chain prover.** Implement the Pedersen commitment and the
    Bulletproofs proof generation in Rust. Integrate the recursive

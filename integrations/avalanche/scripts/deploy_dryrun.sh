@@ -25,6 +25,8 @@
 #   G  vault, no environment                   MissingRole("TOKEN"), nothing deployed
 #   H  vault, TOKEN/SINK/WAD_PER_UNIT          the custody half, left unbound (§5.12)
 #   I  manager, CUSTODY that cannot bind       the handshake fails the deployment
+#   J  registry, GUARDIAN == SEQUENCER         RolesCollapsed, nothing deployed
+#   K  registry, GUARDIAN = 0x0                MissingRole("GUARDIAN")
 #
 # Nothing is broadcast: without `--rpc-url ... --broadcast`, `forge script`
 # simulates locally. No RPC endpoint, no keys, no funds, no network (`--offline`),
@@ -42,11 +44,12 @@ OUT=scripts/deploy_dryrun_output.txt
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-# `anvil`'s first three accounts, and the address a first `CREATE` from account 0
+# `anvil`'s first four accounts, and the address a first `CREATE` from account 0
 # lands on in a fresh EVM (each case is a fresh process, so this is fixed).
 ANVIL_0=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 ANVIL_1=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
 ANVIL_2=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+ANVIL_3=0x90F79bf6EB2c4f870365E785982E1f101E93b906
 FIRST_CREATE=0x5FbDB2315678afecb367f032d93F642f64180aa3
 
 REGISTRY_SCRIPT=scripts/DeployRegistry.s.sol:DeployRegistry
@@ -77,7 +80,7 @@ run_case() {
 
     local out="$TMP_DIR/$tag.out"
     set +e
-    env -u DEPLOYER -u SEQUENCER -u SLASH_AUTHORITY -u VERIFIER -u REGISTRY \
+    env -u DEPLOYER -u SEQUENCER -u GUARDIAN -u SLASH_AUTHORITY -u VERIFIER -u REGISTRY \
         -u CUSTODY -u TOKEN -u SINK -u WAD_PER_UNIT \
         ${env_args[@]+"${env_args[@]}"} "$@" >"$out" 2>&1
     echo $? >"$TMP_DIR/$tag.status"
@@ -116,7 +119,9 @@ expect_ok A
 expect_line A "  [m7a] sender=$ANVIL_0"
 expect_line A "  [m7a] AVIPRegistry=$FIRST_CREATE"
 expect_line A "  [m7a] role.sequencer=$ANVIL_1"
+expect_line A "  [m7a] role.guardian=$ANVIL_3"
 expect_line A "  [m7a] role.verifier=0x0000000000000000000000000000000000000000"
+expect_line A "  [m7a] check.CHANGE_DELAY=172800"
 expect_line A "  [m7a] status=ok"
 
 # ---------------------------------------------------------------- case B
@@ -132,6 +137,10 @@ run_case C ${ENV_C[@]+"${ENV_C[@]}"} -- forge script "$REGISTRY_SCRIPT" --offlin
 expect_ok C
 expect_line C "  [m7a] role.sequencer=$ANVIL_2"
 expect_line C "  [m7a] role.verifier=$ANVIL_1"
+# M9a: `GUARDIAN` is unset here on purpose. The guardian is the one role with no
+# zero default, so it falls back to anvil 3 rather than to the environment's
+# sequencer — a collapse the script refuses (`RolesCollapsed`).
+expect_line C "  [m7a] role.guardian=$ANVIL_3"
 
 # ---------------------------------------------------------------- case D
 # The hand-off: the manager is pointed at the registry case C created, which is
@@ -196,6 +205,30 @@ expect_error I "Error: script failed: call to non-contract address $ANVIL_2"
 grep -q 'role.custody=' "$TMP_DIR/I.log" &&
     fail "I: a custody that cannot answer the bind must stop the deployment"
 
+# ---------------------------------------------------------------- case J
+# M9a. The pair collapsed: `RolesCollapsed` is not a busybody check. A registry
+# whose guardian is its own sequencer has no second authority at all, so the
+# delay would merely announce the capture it was installed to prevent — and the
+# refusal below also proves `GUARDIAN` is read, since both addresses are pinned
+# by the environment here rather than defaulted.
+ENV_J=(DEPLOYER=$ANVIL_0 SEQUENCER=$ANVIL_2 GUARDIAN=$ANVIL_2)
+run_case J ${ENV_J[@]+"${ENV_J[@]}"} -- forge script "$REGISTRY_SCRIPT" --offline
+expect_failure J
+expect_error J 'Error: script failed: RolesCollapsed("GUARDIAN", "SEQUENCER")'
+grep -q 'AVIPRegistry=' "$TMP_DIR/J.log" &&
+    fail "J: a collapsed pair must be refused before anything is deployed"
+
+# ---------------------------------------------------------------- case K
+# The guardian is the one role with no zero default, in the contract and in the
+# script: an explicit zero is refused with the name of the variable instead of
+# being replaced by anvil 3 (which is what an absent variable gets).
+ENV_K=(DEPLOYER=$ANVIL_0 SEQUENCER=$ANVIL_1 GUARDIAN=0x0000000000000000000000000000000000000000)
+run_case K ${ENV_K[@]+"${ENV_K[@]}"} -- forge script "$REGISTRY_SCRIPT" --offline
+expect_failure K
+expect_error K 'Error: script failed: MissingRole("GUARDIAN")'
+grep -q 'AVIPRegistry=' "$TMP_DIR/K.log" &&
+    fail "K: an explicit zero guardian must be refused, not defaulted"
+
 # ------------------------------------------------------------- transcript
 
 if [ "$FAILURES" -ne 0 ]; then
@@ -241,18 +274,23 @@ Cases G to I are M8's (§5.12): the vault script deploys the custody half of the
 handshake and leaves it unbound, and the manager script can only complete the
 handshake against a custody that answers it.
 
+Cases J and K are M9a's (§12.1.2): the authority pair the registry now carries is
+refused when it collapses (GUARDIAN == SEQUENCER — the capture the proposal delay
+exists to prevent, since one key would be proposing its own continuation) and when
+the guardian is the zero address. Neither refusal creates a contract.
+
 Gas and timings are deliberately absent — the transcript keeps only the `[m7a]`
 and `[m8]` lines the scripts log — so it is byte-stable and carries no cost claim.
 HEADER
 
     section A "DeployRegistry, no environment" \
-        "the defaults the contract documents: anvil 0 deploys, anvil 1 sequences, no verifier" \
+        "the defaults the contract documents: anvil 0 deploys, anvil 1 sequences, anvil 3 guards, no verifier" \
         "forge script $REGISTRY_SCRIPT --offline"
     section B "DeployValidatorManager, no environment" \
         "MissingRole(\"REGISTRY\"): the one role with no default is refused, not guessed" \
         "forge script $MANAGER_SCRIPT --offline"
     section C "DeployRegistry, roles pinned" \
-        "the environment wins over the defaults: anvil 2 sequences, anvil 1 verifies" \
+        "the environment wins over the defaults: anvil 2 sequences, anvil 1 verifies, anvil 3 guards unasked" \
         "${ENV_C[*]} forge script $REGISTRY_SCRIPT --offline"
     section D "DeployValidatorManager, chained on C's registry" \
         "the address C created is wired in, and anvil 1 may slash" \
@@ -272,6 +310,12 @@ HEADER
     section I "DeployValidatorManager, a custody that cannot bind" \
         "the handshake is not a formality: a CUSTODY with no code fails the deployment" \
         "${ENV_I[*]} forge script $MANAGER_SCRIPT --offline"
+    section J "DeployRegistry, GUARDIAN pinned to the SEQUENCER" \
+        "RolesCollapsed(\"GUARDIAN\", \"SEQUENCER\"): the capture the delay exists to prevent, refused" \
+        "${ENV_J[*]} forge script $REGISTRY_SCRIPT --offline"
+    section K "DeployRegistry, GUARDIAN pinned to zero" \
+        "MissingRole(\"GUARDIAN\"): the one role with no zero default is refused, not guessed" \
+        "${ENV_K[*]} forge script $REGISTRY_SCRIPT --offline"
 
     cat <<'FOOTER'
 
@@ -283,5 +327,5 @@ WHAT THIS IS NOT
 FOOTER
 } >"$OUT"
 
-echo "deploy_dryrun: 9 cases ok; wrote $OUT"
+echo "deploy_dryrun: 11 cases ok; wrote $OUT"
 

@@ -81,6 +81,8 @@ contract AVIPValidatorManagerTest is Test {
     address internal slashAuthority;
     address internal validator;
     address internal stranger;
+    /// @dev M9a: the only proposer of a change to `sequencer` or `verifier`.
+    address internal guardian;
 
     bytes32 internal epoch0Root;
 
@@ -90,8 +92,9 @@ contract AVIPValidatorManagerTest is Test {
         slashAuthority = makeAddr("slashAuthority");
         validator = makeAddr("validator");
         stranger = makeAddr("stranger");
+        guardian = makeAddr("guardian");
 
-        registry = new AVIPRegistry(sequencer, address(0));
+        registry = new AVIPRegistry(sequencer, address(0), guardian);
         epoch0Root = keccak256("tensor");
         vm.prank(sequencer);
         registry.postCommitment(0, epoch0Root, N);
@@ -105,10 +108,24 @@ contract AVIPValidatorManagerTest is Test {
     ///      `answer`. The registry builds `[root, epoch, norm]` itself, so the
     ///      double has to be told which statement to expect (§5.2.1).
     function _setVerifier(bool answer, bytes32 root, uint256 epoch, uint256 norm) internal {
-        MockThresholdVerifier mock =
-            new MockThresholdVerifier(answer, PROOF_A0, _statement(root, epoch, norm));
-        vm.prank(sequencer);
-        registry.setVerifier(address(mock));
+        // M9a: a verifier is installed by a propose/execute pair now. The mock is
+        // deployed *before* the prank (`new` is itself a call, so an inline
+        // `_mockVerifier(...)` would consume the prank and the proposal would come
+        // from this test contract), the guardian proposes, the delay elapses, and
+        // this test — not the guardian — commits the change, which is the
+        // permissionless path §12.1.2 describes.
+        MockThresholdVerifier mock = _mockVerifier(answer, root, epoch, norm);
+        vm.prank(guardian);
+        registry.proposeVerifier(address(mock));
+        vm.warp(block.timestamp + registry.CHANGE_DELAY());
+        registry.executeVerifierChange();
+    }
+
+    function _mockVerifier(bool answer, bytes32 root, uint256 epoch, uint256 norm)
+        internal
+        returns (MockThresholdVerifier)
+    {
+        return new MockThresholdVerifier(answer, PROOF_A0, _statement(root, epoch, norm));
     }
 
     /// @dev The verifier for the statement the manager builds at epoch 0.
@@ -286,7 +303,7 @@ contract AVIPValidatorManagerTest is Test {
     }
 
     function test_admit_revertsWithoutACommitment() public {
-        AVIPRegistry empty = new AVIPRegistry(sequencer, address(0));
+        AVIPRegistry empty = new AVIPRegistry(sequencer, address(0), guardian);
         AVIPValidatorManager fresh =
             new AVIPValidatorManager(address(empty), slashAuthority, address(0));
         _setVerifierAtEpoch0(true, THETA_R);

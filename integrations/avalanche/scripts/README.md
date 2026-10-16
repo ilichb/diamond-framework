@@ -66,6 +66,7 @@ Roles come from the environment, never from the deployer:
 |----------|---------|------|
 | `DEPLOYER` | anvil 0 | the sender of `vm.startBroadcast` |
 | `SEQUENCER` | anvil 1 | the registry's only writer of commitments; a zero one reverts `MissingRole("SEQUENCER")` |
+| `GUARDIAN` | anvil 3 | M9a's second authority (plan §12.1.2): it alone proposes and cancels a role change, which **anyone** may then execute once the 2-day `CHANGE_DELAY` has elapsed. A zero one reverts `MissingRole("GUARDIAN")`; `GUARDIAN == SEQUENCER` reverts `RolesCollapsed`, because one key proposing its own continuation is the capture the delay exists to prevent |
 | `VERIFIER` | `address(0)` | the M3 threshold verifier; M7a deploys none, so the registry certifies nothing (`VerifierNotSet`) |
 | `REGISTRY` | **none** | the manager's registry; absent reverts `MissingRole("REGISTRY")` |
 | `SLASH_AUTHORITY` | anvil 2 | the manager's only slasher |
@@ -81,8 +82,9 @@ because `envOr` answers a typo with the default.
 The chain guard is a `require`, not a comment: `43114` (C-Chain mainnet) reverts
 with `MainnetRefused(43114)` **before a single role is read**; `43113` (Fuji) and
 `31337` (anvil/dry run) pass. `deploy` then reads its own wiring back from the
-instance it just created — `sequencer`, `verifier`, `TENSOR_SIZE = 500`,
-`MAX_DELTA_ENTRIES = 50`, and the manager's `Theta = 1.0`, `C_R^inf = 0.8`,
+instance it just created — `sequencer`, `verifier`, `guardian`,
+`TENSOR_SIZE = 500`, `MAX_DELTA_ENTRIES = 50`, `CHANGE_DELAY = 172800`, and the
+manager's `Theta = 1.0`, `C_R^inf = 0.8`,
 `S_min = 0.2`, `Theta_r = 0.5`, `F_0* = 0.05` plus both closed forms at
 `r = Theta_r` — so a wrong argument fails the script instead of the first
 validator.
@@ -93,13 +95,14 @@ validator.
 bash scripts/deploy_dryrun.sh
 ```
 
-Six cases, **one fresh `forge script` process each** (the environment is
+Eleven cases, **one fresh `forge script` process each** (the environment is
 process-wide, so two cases sharing a process could not prove how either was
-read), and each case asserts what its transcript must contain:
+read), and each case asserts what its transcript must contain. A to F are M7a's,
+G to I M8's, J and K M9a's:
 
 | Case | Environment | Expects |
 |------|-------------|---------|
-| A | none | the documented defaults: anvil 0 deploys, anvil 1 sequences, no verifier |
+| A | none | the documented defaults: anvil 0 deploys, anvil 1 sequences, anvil 3 guards, no verifier |
 | B | none, manager | `MissingRole("REGISTRY")` |
 | C | `SEQUENCER`, `VERIFIER`, `DEPLOYER` | the environment wins over the defaults |
 | D | `REGISTRY` = the address case C printed | the manager chains onto it |
@@ -108,6 +111,8 @@ read), and each case asserts what its transcript must contain:
 | G | none, vault script | `MissingRole("TOKEN")`, and nothing is deployed before the inputs resolve |
 | H | vault script: `TOKEN`, `SINK`, `WAD_PER_UNIT` | the custody half of §5.12, wired and left unbound (`check.manager=unbound`) |
 | I | manager script: `CUSTODY` = an address with no code | the handshake refuses: the deployment fails instead of producing a manager with no custody |
+| J | registry: `GUARDIAN` = `SEQUENCER` | `RolesCollapsed("GUARDIAN", "SEQUENCER")`, and nothing is created |
+| K | registry: `GUARDIAN=0x0` | `MissingRole("GUARDIAN")` — the one role with no zero default is refused, not guessed |
 
 It writes `deploy_dryrun_output.txt` (committed) and, if any expectation fails,
 exits non-zero **without rewriting it**. The transcript keeps only the `[m7a]` and
@@ -251,7 +256,7 @@ REGISTRY=0x... forge script \
     scripts/DeployValidatorManager.s.sol:DeployValidatorManager
 TOKEN=0x... SINK=0x... WAD_PER_UNIT=1000000000000 forge script \
     scripts/DeployStakeVault.s.sol:DeployStakeVault        # M8: custody first
-bash scripts/deploy_dryrun.sh                             # the nine cases above
+bash scripts/deploy_dryrun.sh                             # the eleven cases above
 bash scripts/m8_report.sh                                 # M8's audit, offline
 ```
 

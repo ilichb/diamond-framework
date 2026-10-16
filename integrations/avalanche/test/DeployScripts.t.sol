@@ -29,10 +29,11 @@ contract DeployCommonHarness is DeployCommon {
 ///    default, a well-formed one is used, and a malformed one **reverts** rather
 ///    than silently deploying a protocol wired to the default.
 /// 2. **The two M7a scripts** (`scripts/DeployRegistry.s.sol`,
-///    `scripts/DeployValidatorManager.s.sol`) deploy the frozen M1/M2 contracts
-///    with no contract change and wire what they were given: the sequencer and an
-///    optional verifier on the registry, the registry address and the slash
-///    authority on the manager. `deploy` — the only function that creates state,
+///    `scripts/DeployValidatorManager.s.sol`) deploy the M1/M2 contracts (M1
+///    amended by M9a's authority pair) and wire what they were given: the
+///    sequencer, an optional verifier and the role-change guardian on the
+///    registry, the registry address and the slash authority on the manager.
+///    `deploy` — the only function that creates state,
 ///    and therefore the home of the chain guard and of the plan validation — is
 ///    driven here directly, so no test in this file lets the environment decide
 ///    what gets deployed (see the note below).
@@ -85,6 +86,7 @@ contract DeployScriptsTest is Test {
     address internal constant ANVIL_0 = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
     address internal constant ANVIL_1 = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
     address internal constant ANVIL_2 = 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC;
+    address internal constant ANVIL_3 = 0x90F79bf6EB2c4f870365E785982E1f101E93b906;
 
     uint256 internal constant THETA_R = 5e17; // 0.5, the worst admissible type
     uint256 internal constant PROOF_A0 = 42; // arbitrary; the double only checks it is forwarded
@@ -162,12 +164,16 @@ contract DeployScriptsTest is Test {
         assertEq(d.deployer, ANVIL_0, "deployer, from the plan");
         assertEq(d.sequencer, ANVIL_1, "sequencer, from the plan");
         assertEq(d.verifier, ANVIL_2, "verifier, from the plan");
+        assertEq(d.guardian, ANVIL_3, "guardian, from the plan");
         assertGt(d.registry.code.length, 0, "registry deployed");
 
         AVIPRegistry registry = AVIPRegistry(d.registry);
         assertEq(registry.sequencer(), ANVIL_1, "sequencer wired");
         assertEq(address(registry.verifier()), ANVIL_2, "verifier wired");
+        assertEq(registry.guardian(), ANVIL_3, "guardian wired");
+        assertEq(registry.CHANGE_DELAY(), 2 days, "the delay the script installs");
         assertTrue(registry.sequencer() != d.deployer, "the writer is not the deployer");
+        assertTrue(registry.guardian() != registry.sequencer(), "the proposer is not the writer");
     }
 
     function test_registryScript_installsNoVerifierWhenThePlanHasNone() public {
@@ -200,6 +206,57 @@ contract DeployScriptsTest is Test {
         // the plan is refused even though the caller supplied it explicitly.
         vm.expectRevert(abi.encodeWithSelector(DeployCommon.MissingRole.selector, "SEQUENCER"));
         registryScript.deploy(_registryPlan(address(0), address(0)));
+    }
+
+    function test_registryScript_refusesAZeroGuardianPlan() public {
+        // M9a. A guardian of zero is not "ungoverned": it is frozen. Neither role
+        // could ever be replaced, so the plan is refused before anything exists.
+        DeployRegistry.Plan memory plan = DeployRegistry.Plan({
+            deployer: ANVIL_0, sequencer: ANVIL_1, verifier: address(0), guardian: address(0)
+        });
+        vm.expectRevert(abi.encodeWithSelector(DeployCommon.MissingRole.selector, "GUARDIAN"));
+        registryScript.deploy(plan);
+    }
+
+    function test_registryScript_refusesAGuardianThatIsTheSequencer() public {
+        // The capture §12.1.2 closes: one key that both posts commitments and
+        // proposes its own continuation. The delay would then only *announce* the
+        // capture, so the plan is refused rather than deployed with a warning.
+        DeployRegistry.Plan memory plan = DeployRegistry.Plan({
+            deployer: ANVIL_0, sequencer: ANVIL_1, verifier: address(0), guardian: ANVIL_1
+        });
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployCommon.RolesCollapsed.selector, "GUARDIAN", "SEQUENCER")
+        );
+        registryScript.deploy(plan);
+    }
+
+    function test_registryScript_theDeployedRegistryCanRotateItsOwnSequencer() public {
+        // What the deployed pair is for: the instance the script hands over is
+        // governable after the deployment ends. The guardian proposes, the delay
+        // the same script installed elapses, and the rotation lands — while the
+        // guardian itself cannot write a commitment, and the old sequencer cannot
+        // block the change.
+        AVIPRegistry registry =
+            AVIPRegistry(registryScript.deploy(_registryPlan(ANVIL_1, ANVIL_2)).registry);
+
+        vm.prank(ANVIL_2);
+        vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotGuardian.selector, ANVIL_2));
+        registry.proposeSequencer(ANVIL_2);
+
+        vm.prank(ANVIL_3);
+        registry.proposeSequencer(ANVIL_2);
+        vm.warp(block.timestamp + registry.CHANGE_DELAY());
+        registry.executeSequencerChange();
+
+        assertEq(registry.sequencer(), ANVIL_2, "rotated");
+        vm.prank(ANVIL_1);
+        vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotSequencer.selector, ANVIL_1));
+        registry.postCommitment(0, keccak256("tensor"), 500);
+
+        vm.prank(ANVIL_2);
+        registry.postCommitment(0, keccak256("tensor"), 500);
+        assertEq(registry.latestEpoch(), 0, "the new sequencer posts");
     }
 
     function test_registryScript_refusesCChainMainnet() public {
@@ -375,15 +432,22 @@ contract DeployScriptsTest is Test {
 
         // 4. ... and installs the threshold verifier. M7a deploys no verifier, so
         //    the M1/M2 double stands in for the address an operator installs. The
-        //    double is deployed *before* the prank on purpose: a `new` inside the
+        //    double is deployed *before* any prank on purpose: a `new` inside a
         //    pranked statement would consume the prank (the CREATE is the next
-        //    call) and `setVerifier` would then run as the test contract.
+        //    call), so the mock would be deployed by the wrong sender.
+        //
+        //    M9a changed the shape of this step: installing a verifier is now a
+        //    guardian proposal plus a delayed, permissionless execution. Both are
+        //    performed here, because the pair the scripts deploy must remain
+        //    governable after the deployment ends — that is what the delay is for.
         bytes memory proof = _proof(PROOF_A0);
         MockThresholdVerifier verifier =
             new MockThresholdVerifier(true, PROOF_A0, _statement(root, 0, THETA_R));
         assertEq(address(registry.verifier()), address(0), "no verifier while unset");
-        vm.prank(r.sequencer);
-        registry.setVerifier(address(verifier));
+        vm.prank(r.guardian);
+        registry.proposeVerifier(address(verifier));
+        vm.warp(block.timestamp + registry.CHANGE_DELAY());
+        registry.executeVerifierChange();
         assertEq(address(registry.verifier()), address(verifier), "verifier installed");
 
         // 5. A validator admits itself against the pair the scripts deployed.
@@ -402,14 +466,18 @@ contract DeployScriptsTest is Test {
 
     // ------------------------------------------------------------- helpers
 
-    /// @dev The plan the registry script would build from `DEPLOYER`, `SEQUENCER`
-    ///      and `VERIFIER`: the deployer is `anvil` account 0 in every test here.
+    /// @dev The plan the registry script would build from `DEPLOYER`, `SEQUENCER`,
+    ///      `VERIFIER` and `GUARDIAN`: the deployer and the guardian are `anvil`
+    ///      accounts 0 and 3 in every test here, and the guardian is deliberately
+    ///      not the sequencer, which the script refuses (`RolesCollapsed`).
     function _registryPlan(address sequencer, address verifier)
         internal
         pure
         returns (DeployRegistry.Plan memory)
     {
-        return DeployRegistry.Plan({deployer: ANVIL_0, sequencer: sequencer, verifier: verifier});
+        return DeployRegistry.Plan({
+            deployer: ANVIL_0, sequencer: sequencer, verifier: verifier, guardian: ANVIL_3
+        });
     }
 
     /// @dev A token and a sink for the vault script's plan: it needs two addresses
@@ -457,7 +525,7 @@ contract DeployScriptsTest is Test {
     /// @dev A registry the manager script can point at. The scripts deploy their
     ///      own instances; this one is a fixture for the manager tests.
     function _fixtureRegistry() internal returns (address) {
-        return address(new AVIPRegistry(ANVIL_1, address(0)));
+        return address(new AVIPRegistry(ANVIL_1, address(0), ANVIL_3));
     }
 
     /// @dev The statement the registry is expected to build itself from its own

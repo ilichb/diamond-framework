@@ -23,7 +23,8 @@ import {console2} from "forge-std/console2.sol";
 ///
 ///      2. **Roles come from the environment, never from the deployer.** The
 ///         inputs are `DEPLOYER` (the sender), `SEQUENCER` (the registry's only
-///         writer), `SLASH_AUTHORITY` (the manager's only slasher) and
+///         writer), `GUARDIAN` (the registry's only proposer of role changes,
+///         M9a §12.1.2), `SLASH_AUTHORITY` (the manager's only slasher) and
 ///         `VERIFIER` (the M3 threshold verifier). An absent or empty variable
 ///         falls back to a public, valueless `anvil` address: a half-configured
 ///         run cannot mint a role to an account nobody controls, and a dry run
@@ -54,13 +55,14 @@ abstract contract DeployCommon is Script {
     /// @notice Chain id of a local `anvil`, and of a `forge script` dry run.
     uint256 internal constant LOCAL_CHAIN = 31_337;
 
-    /// @notice `anvil` accounts 0, 1 and 2. Public development keys that hold
+    /// @notice `anvil` accounts 0, 1, 2 and 3. Public development keys that hold
     ///         nothing on any real network, which is exactly why they are the
     ///         defaults: a missing role falls back to an address that cannot be
     ///         stolen rather than to the deployer.
     address internal constant ANVIL_0 = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
     address internal constant ANVIL_1 = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
     address internal constant ANVIL_2 = 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC;
+    address internal constant ANVIL_3 = 0x90F79bf6EB2c4f870365E785982E1f101E93b906;
 
     /// @notice Role `name` is absent, empty, or resolved to the zero address.
     error MissingRole(string name);
@@ -71,6 +73,13 @@ abstract contract DeployCommon is Script {
 
     /// @notice The script was pointed at C-Chain mainnet.
     error MainnetRefused(uint256 chainId);
+
+    /// @notice Two roles that the protocol keeps separate were resolved to the
+    ///         same address. A `GUARDIAN` that is also the `SEQUENCER` is not a
+    ///         second authority: it is one key that can both post commitments and
+    ///         propose its own continuation (M9a, §12.1.2), which is the capture
+    ///         the proposal/execute pair exists to close.
+    error RolesCollapsed(string role, string other);
 
     /// @dev Fail closed on the one chain where a mistake costs money.
     function _refuseMainnet() internal view {
@@ -130,6 +139,15 @@ abstract contract DeployCommon is Script {
     ///      and the registry treats "no verifier set" as "certify nothing".
     function _verifier() internal view returns (address) {
         return _roleOr("VERIFIER", address(0));
+    }
+
+    /// @dev Never `address(0)`, and deliberately at the far end of the anvil
+    ///      range from `SEQUENCER`: the registry's `guardian` is a *proposer*, so
+    ///      an unconfigured deployment must not silently hand that power to the
+    ///      sequencer's own key (M9a, §12.1.2; the contract rejects a zero
+    ///      guardian outright).
+    function _guardian() internal view returns (address) {
+        return _roleOr("GUARDIAN", ANVIL_3);
     }
 
     /// @dev `address(0)` by default and deliberately: with no custody the manager

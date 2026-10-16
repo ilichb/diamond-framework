@@ -12,7 +12,8 @@ import {Bn254} from "./verifiers/Bn254.sol";
 ///         that the committed tensor has Frobenius norm `certifiedNorm`.
 ///
 /// @dev Milestone M1 of `docs/architecture/implementation-plan.md`, amended by
-///      M2 §5.2 and by M3 §5.4. The registry certifies the *exact* norm and
+///      M2 §5.2, by M3 §5.4 and by M9a §12.1.2 (the authority pair described
+///      below). The registry certifies the *exact* norm and
 ///      stays `view` (it keeps no per-validator state, so no caller can lock
 ///      another validator out); the admission threshold `||T||_F >= Theta_r` is
 ///      enforced by `AVIPValidatorManager` (§5.2.2).
@@ -29,6 +30,18 @@ import {Bn254} from "./verifiers/Bn254.sol";
 ///        - pair hash  `keccak256(abi.encodePacked(min, max))`, i.e. pairs are
 ///          sorted, so an inclusion proof needs no direction bits;
 ///        - the root of a single-leaf tree is that leaf's hash.
+///
+///      Authority (M9a, §12.1.2). `sequencer` is the only writer of commitments;
+///      `guardian` is the only proposer of changes to `sequencer` and to
+///      `verifier`. The two roles are separate and neither acts alone on a
+///      rotation: the guardian proposes, the proposal waits `CHANGE_DELAY`, and
+///      then anyone may execute it. A compromised sitting key can therefore
+///      neither rotate itself nor veto the rotation that replaces it, and a
+///      compromised guardian cannot install a key without the delay being
+///      observable first. The verifier stays *mutable* on purpose: this registry
+///      is also the commitment history `admit` depends on (`_roots`,
+///      `_changedEntries`), so freezing the verifier would turn a circuit bug
+///      into a redeploy that loses that history.
 ///
 ///      Deliberately NOT implemented here:
 ///        - the data layer and its fraud proof (gap A7, milestone M7);
@@ -60,6 +73,42 @@ contract AVIPRegistry is IAVIPRegistry {
     ///         `verifyThreshold` reverts instead of accepting anything.
     IZKThresholdVerifier public verifier;
 
+    /// @notice Authority allowed to *propose* changes to `sequencer` and
+    ///         `verifier`. That it is a multisig is a deployment fact, not
+    ///         something a contract can check; that it is immutable is not: an
+    ///         authority that can rewrite itself is not a second authority
+    ///         (§12.1.2).
+    /// @dev The name stays lower-case although the lint would like
+    ///      `SCREAMING_SNAKE_CASE`: `guardian` is part of the published API
+    ///      (`guardian()` is read by the deploy script, its report and its tests),
+    ///      and a second spelling for one role is a bug waiting to happen.
+    // forge-lint: disable-next-line(screaming-snake-case-immutable)
+    address public immutable guardian;
+
+    /// @notice Delay between a proposal and the earliest execution, in seconds.
+    /// @dev **A deployment constant, not a model parameter**: it appears in no
+    ///      paper equation and in no `verification/` script (§6). Two days is
+    ///      long enough for the sitting keys to see `SequencerProposed` and act
+    ///      on a rotation they did not ask for, and short enough that an operator
+    ///      can still rotate a lost key inside one working session.
+    uint256 public constant CHANGE_DELAY = 2 days;
+
+    /// @notice The sequencer the guardian has proposed, or `address(0)` when no
+    ///         sequencer change is pending.
+    address public pendingSequencer;
+
+    /// @notice Unix time from which `executeSequencerChange` succeeds
+    ///         (`0` while nothing is pending).
+    uint64 public sequencerChangeEta;
+
+    /// @notice The verifier the guardian has proposed, or `address(0)` when no
+    ///         verifier change is pending.
+    address public pendingVerifier;
+
+    /// @notice Unix time from which `executeVerifierChange` succeeds
+    ///         (`0` while nothing is pending).
+    uint64 public verifierChangeEta;
+
     mapping(uint256 => bytes32) private _roots;
     mapping(uint256 => uint32) private _changedEntries;
     uint256 private _latestEpoch;
@@ -68,10 +117,17 @@ contract AVIPRegistry is IAVIPRegistry {
     /// @param sequencer_ The only address allowed to post commitments.
     /// @param verifier_ The threshold verifier, or the zero address to leave it
     ///        unset until M3.
-    constructor(address sequencer_, address verifier_) {
+    /// @param guardian_ The only address allowed to propose a change to
+    ///        `sequencer` or `verifier`. Rejected when zero (M9a): an authority
+    ///        whose only power is to propose must still exist, or both roles are
+    ///        frozen forever — the sequencer could never be rotated and a circuit
+    ///        fix could never be installed.
+    constructor(address sequencer_, address verifier_, address guardian_) {
         if (sequencer_ == address(0)) revert ZeroSequencer();
+        if (guardian_ == address(0)) revert ZeroGuardian();
         sequencer = sequencer_;
         verifier = IZKThresholdVerifier(verifier_);
+        guardian = guardian_;
     }
 
     modifier onlySequencer() {
@@ -83,16 +139,115 @@ contract AVIPRegistry is IAVIPRegistry {
         if (msg.sender != sequencer) revert NotSequencer(msg.sender);
     }
 
-    /// @notice Hands the sequencer role to `newSequencer`. Testnet-stage
-    ///         governance: the sequencer rotates itself.
-    function setSequencer(address newSequencer) external onlySequencer {
-        if (newSequencer == address(0)) revert ZeroSequencer();
-        sequencer = newSequencer;
+    modifier onlyGuardian() {
+        _checkGuardian();
+        _;
     }
 
-    /// @notice Sets the threshold verifier (M3).
-    function setVerifier(address newVerifier) external onlySequencer {
-        verifier = IZKThresholdVerifier(newVerifier);
+    function _checkGuardian() internal view {
+        if (msg.sender != guardian) revert NotGuardian(msg.sender);
+    }
+
+    /// @notice Proposes `next` as the sequencer (M9a).
+    /// @dev Guardian only, `next` non-zero. Re-proposing while a change is
+    ///      pending overwrites it and restarts `CHANGE_DELAY`, so a guardian that
+    ///      regrets a proposal can always withdraw it — and can never land a
+    ///      change earlier than `CHANGE_DELAY` after it was last announced.
+    function proposeSequencer(address next) external onlyGuardian {
+        if (next == address(0)) revert ZeroSequencer();
+
+        // casting to 'uint64' is safe because the value is this block's timestamp
+        // plus a constant `CHANGE_DELAY`: it stays far below `2**64` for any
+        // timestamp a chain will see, and the same width is used by
+        // `CommitmentPosted` for the same reason.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint64 eta = uint64(block.timestamp + CHANGE_DELAY);
+        pendingSequencer = next;
+        sequencerChangeEta = eta;
+
+        emit SequencerProposed(next, eta);
+    }
+
+    /// @notice Commits the proposed sequencer change (M9a).
+    /// @dev **Permissionless once the delay has elapsed**, and that is the point:
+    ///      a sitting key that is compromised or simply lost must not be able to
+    ///      block the rotation that replaces it. Anyone can pay the gas; nobody
+    ///      can change *what* is committed, because the target was fixed by the
+    ///      guardian at proposal time and announced in `SequencerProposed`.
+    function executeSequencerChange() external {
+        address next = pendingSequencer;
+        if (next == address(0)) revert NoPendingSequencerChange();
+
+        uint256 eta = sequencerChangeEta;
+        if (block.timestamp < eta) revert ChangeNotReady(eta, block.timestamp);
+
+        address previous = sequencer;
+        sequencer = next;
+        pendingSequencer = address(0);
+        sequencerChangeEta = 0;
+
+        emit SequencerChanged(previous, next);
+    }
+
+    /// @notice Drops the pending sequencer change (M9a). Guardian only: the same
+    ///         authority that can announce a rotation can call it off.
+    function cancelSequencerChange() external onlyGuardian {
+        address dropped = pendingSequencer;
+        if (dropped == address(0)) revert NoPendingSequencerChange();
+
+        pendingSequencer = address(0);
+        sequencerChangeEta = 0;
+
+        emit SequencerChangeCancelled(dropped);
+    }
+
+    /// @notice Proposes `next` as the threshold verifier (M9a).
+    /// @dev Guardian only and `next` non-zero. The zero address is rejected
+    ///      although `verifier == address(0)` is a legal *initial* state (M7a
+    ///      deploys no verifier): as a *rotation* it is not a configuration, it
+    ///      is the silent disabling of certification, since `verifyThreshold`
+    ///      then reverts `VerifierNotSet` for every epoch.
+    function proposeVerifier(address next) external onlyGuardian {
+        if (next == address(0)) revert ZeroVerifier();
+
+        // casting to 'uint64' is safe for the same reason as in
+        // `proposeSequencer`: a block timestamp plus a constant delay.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint64 eta = uint64(block.timestamp + CHANGE_DELAY);
+        pendingVerifier = next;
+        verifierChangeEta = eta;
+
+        emit VerifierProposed(next, eta);
+    }
+
+    /// @notice Commits the proposed verifier change (M9a).
+    /// @dev Permissionless once the delay has elapsed, for the same reason as
+    ///      `executeSequencerChange`: the party being replaced does not hold a
+    ///      veto over its replacement.
+    function executeVerifierChange() external {
+        address next = pendingVerifier;
+        if (next == address(0)) revert NoPendingVerifierChange();
+
+        uint256 eta = verifierChangeEta;
+        if (block.timestamp < eta) revert ChangeNotReady(eta, block.timestamp);
+
+        address previous = address(verifier);
+        verifier = IZKThresholdVerifier(next);
+        pendingVerifier = address(0);
+        verifierChangeEta = 0;
+
+        emit VerifierChanged(previous, next);
+    }
+
+    /// @notice Drops the pending verifier change (M9a). Guardian only.
+    function cancelVerifierChange() external onlyGuardian {
+        address dropped = pendingVerifier;
+        if (dropped == address(0)) revert NoPendingVerifierChange();
+
+        pendingVerifier = address(0);
+        verifierChangeEta = 0;
+
+        emit VerifierChangeCancelled(dropped);
     }
 
     /// @inheritdoc IAVIPRegistry

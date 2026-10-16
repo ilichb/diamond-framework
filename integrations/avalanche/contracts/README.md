@@ -20,9 +20,9 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
 
 | Path | Status | Milestone |
 |------|--------|-----------|
-| `AVIPRegistry.sol` | **Implemented + tested** (`../test/AVIPRegistry.t.sol`, 32 tests) | M1, amended in M2 (decode) and M3 (`Bn254.decodeProof`) |
+| `AVIPRegistry.sol` | **Implemented + tested** (`../test/AVIPRegistry.t.sol`, 48 tests) | M1, amended in M2 (decode), M3 (`Bn254.decodeProof`) and M9a (the authority pair) |
 | `AVIPValidatorManager.sol` | **Implemented + tested** (`../test/AVIPValidatorManager.t.sol`, 34 tests; amended in M8, whose custody path is covered by `../test/M8StakeVault.t.sol`) | M2, amended in M8 |
-| `interfaces/IAVIPRegistry.sol` | Implemented (provisional types, real signatures) | M1, amended in M2 |
+| `interfaces/IAVIPRegistry.sol` | Implemented (provisional types, real signatures) | M1, amended in M2, M9a (`guardian`, `CHANGE_DELAY`, `propose*`/`execute*`/`cancel*` and the events they emit) |
 | `interfaces/IAVIPValidatorManager.sol` | Implemented (provisional types, real signatures) | M2, amended in M8 (`custody()`, `FinancialStakeNotBacked`, `CustodyNotBound`) |
 | `interfaces/IZKThresholdVerifier.sol` | Implemented by `verifiers/Groth16Verifier.sol` | M3 |
 | `interfaces/ITeleporterMessenger.sol` | Declared (the subset M7d calls, verbatim from `icm-contracts`) | M7d |
@@ -59,6 +59,24 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
   `||T||_F >= Theta_r` is the manager's job (§5.2.2 of the plan), which keeps
   economic parameters out of the circuit and the trusted setup. With no proof in
   the blob the registry reverts with `InvalidZKProof`.
+- **A role cannot rotate itself (M9a, plan §12.1.2).** The constructor takes an
+  immutable `guardian` and `setSequencer`/`setVerifier` are gone. Each role now
+  changes in three steps: `propose*` is `onlyGuardian`, rejects `address(0)` and
+  arms `eta = now + CHANGE_DELAY`; `execute*` is **permissionless** and commits
+  only once `eta` has elapsed; `cancel*` returns to the guardian. Every step
+  emits (`SequencerProposed`/`Changed`/`ChangeCancelled` and the `Verifier`
+  triple). `CHANGE_DELAY = 2 days` is a **deployment constant, not a model
+  parameter** (§6): it is the window in which a rotation is visible, while the
+  second authority is what makes it effective — the sitting sequencer can
+  neither rotate itself nor veto the proposal that replaces it, and the guardian
+  alone cannot install a key without the delay passing first. The guardian must
+  differ from the sequencer (`RolesCollapsed`), since one key holding both would
+  propose its own continuation and the delay would only announce it.
+- **The verifier stays mutable on purpose.** `setVerifier`'s `address(0)` hole is
+  gone, but the slower `propose*`/`execute*` path replaces it rather than freezing
+  it: this registry is also the commitment history (`_roots`, `_changedEntries`)
+  that `admit` reads back, so a frozen verifier would turn a circuit bug into a
+  redeploy that loses the history.
 - **Not covered here**: the data layer's fraud proof and the admission rule,
   which lives in `AVIPValidatorManager`. The blob is decoded by
   `Bn254.decodeProof` (M3); the pairing itself is `Groth16Verifier`. See the

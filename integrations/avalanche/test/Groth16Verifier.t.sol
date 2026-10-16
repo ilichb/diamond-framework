@@ -63,6 +63,8 @@ contract Groth16VerifierTest is Test {
     address internal sequencer;
     address internal slashAuthority;
     address internal validator;
+    /// @dev M9a: the only proposer of a change to `sequencer` or `verifier`.
+    address internal guardian;
 
     function setUp() public {
         verifier = new Groth16Verifier(Groth16Fixtures.verifyingKey());
@@ -70,6 +72,7 @@ contract Groth16VerifierTest is Test {
         sequencer = makeAddr("sequencer");
         slashAuthority = makeAddr("slashAuthority");
         validator = makeAddr("validator");
+        guardian = makeAddr("guardian");
     }
 
     /// @dev The blob the registry consumes: `(a, b, c)`, 256 bytes.
@@ -283,7 +286,7 @@ contract Groth16VerifierTest is Test {
     // ------------------------------------------------------------ integration
 
     function test_registry_acceptsTheFixtureProofAndBindsItToTheNorm() public {
-        AVIPRegistry registry = new AVIPRegistry(sequencer, address(verifier));
+        AVIPRegistry registry = new AVIPRegistry(sequencer, address(verifier), guardian);
         vm.prank(sequencer);
         registry.postCommitment(0, keccak256("tensor"), N);
 
@@ -300,7 +303,7 @@ contract Groth16VerifierTest is Test {
     }
 
     function test_manager_admitsAValidatorWithTheFixtureProof() public {
-        AVIPRegistry registry = new AVIPRegistry(sequencer, address(verifier));
+        AVIPRegistry registry = new AVIPRegistry(sequencer, address(verifier), guardian);
         vm.prank(sequencer);
         registry.postCommitment(0, keccak256("tensor"), N);
 
@@ -317,7 +320,7 @@ contract Groth16VerifierTest is Test {
     }
 
     function test_manager_rejectsAProofWhoseStatementIsAnotherNorm() public {
-        AVIPRegistry registry = new AVIPRegistry(sequencer, address(verifier));
+        AVIPRegistry registry = new AVIPRegistry(sequencer, address(verifier), guardian);
         vm.prank(sequencer);
         registry.postCommitment(0, keccak256("tensor"), N);
 
