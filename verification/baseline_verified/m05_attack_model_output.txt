@@ -1,0 +1,78 @@
+==============================================================================
+M-05 - DETERRENCE VERSUS DETECTION LATENCY (findings A-18 / A-21)
+==============================================================================
+
+Declared model (not the worksheet's scalars V_FRAUD / S_SLASH):
+  gain  G(k, omega) = k * omega * DeltaS    (capital cost avoided)
+  loss  L = S_f*(r_fraud) + n * kappa       (escrow debited + surcharge)
+  deterrence: E = (1 - q) * G - q * L < 0  <=>  q > G / (G + L)
+
+Parameters:
+  THETA = 1, CR_INF = 4/5 -> S_MIN = 1/5
+  omega in [1/100, 1/10] (private cost of capital, Section 5.3)
+  GAMMA = 1/10 (freshness), KAPPA = 1/10 (EJECTION_SURCHARGE, M9c)
+  sample: N_REPLICATES = 10000, RNG_SEED = 42
+  reference inflation: r_true = 0 -> r_fraud = 1
+
+Table 1. The stake the inflated norm buys, by certified norm
+   r_fraud       C_R(r)      S_f*(r)       DeltaS      L (n=0)
+--------------------------------------------------------------
+    0.2500     0.160000     0.840000     0.160000     0.840000
+    0.5000     0.266667     0.733333     0.266667     0.733333
+    1.0000     0.400000     0.600000     0.400000     0.600000
+    2.0000     0.533333     0.466667     0.533333     0.466667
+    4.0000     0.640000     0.360000     0.640000     0.360000
+     limit     0.800000     0.200000     0.800000     0.200000
+(limit as r -> inf, reached from above: at r = 1e9 the unfloored
+ allocation is S_MIN + 8.0e-10, the infimum the floor meets but
+ never exceeds -- paper line 840)
+(the loss over the admissible range is S_f*(r) in [0.2, 1.0])
+
+Table 2. Required detection probability q_min at k epochs (r_fraud = 1)
+     k   omega = 0.01   omega = 0.10
+------------------------------------
+     1       0.006623       0.062500
+     2       0.013158       0.117647
+     3       0.019608       0.166667
+     5       0.032258       0.250000
+    10       0.062500       0.400000
+    20       0.117647       0.571429
+
+Table 3. Break-even latency k_be(q, omega), epochs (r_fraud = 1, n = 0)
+     q     omega = 0.01     omega = 0.10
+----------------------------------------
+  1.00 no bound (E < 0) no bound (E < 0)
+  0.50         150.0000          15.0000
+  0.10          16.6667           1.6667
+
+Table 4. The ejection surcharge inside the loss (r_fraud = 1, q = 0.10)
+   n      L_eff   q_min(k=1, 0.10)   k_be(0.10, 0.10)
+------------------------------------------------------
+   1   0.700000           0.054054             1.9444
+   2   0.800000           0.047619             2.2222
+   3   0.900000           0.042553             2.5000
+(kappa = 1/10 is added per ejection, never folded into S_f*: DEC-5)
+
+Population omega ~ Uniform[0.01, 0.1], N = 10000, seed = 42
+                 statistic   q_min(k=1)   q_min(k=5) k_be(q=0.10)
+------------------------------------------------------------------
+                       min     0.006641     0.032346      16.6196
+                    median     0.035275     0.154566       3.0387
+                       max     0.062499     0.249996       1.6667
+        exact at omega_max     0.062500     0.250000       1.6667
+
+==============================================================================
+VERIFICATION
+==============================================================================
+
+freshness window (gamma*k < 1)               = 9 epochs    (expected 9 epochs)
+S_f*(r) -> S_MIN, unfloored at r = 1e9       = 0.200000    (expected 0.200000)
+DeltaS -> C_R^inf, value at r = 1e9          = 0.800000    (expected 0.800000)
+q_min(k=1, omega=0.10)                       = 0.062500    (expected 0.062500)
+q_min(k=5, omega=0.10)                       = 0.250000    (expected 0.250000)
+k_be(0.10, omega=0.10)                       = 1.666667    (expected 1.666667)
+k_be(0.10, omega=0.01)                       = 16.666667   (expected 16.666667)
+ratio L/G at the worst-case type (k=1)       = 15.000000   (expected 15.000000)
+k_be(0.10, omega=0.01) exceeds the window    = True        (expected True)
+
+All assertions passed (Tables 1-4 in exact rational arithmetic).

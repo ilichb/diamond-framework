@@ -45,15 +45,15 @@ memoria.
 | 4 | `main.tex:75` | "four contributions" | 4 (§1.3) | OK |
 | 5 | `main.tex:81` | "twenty-one quantitative claims" | 21 | OK |
 | 6 | `main.tex:116` | "~67 minutes ... 15 min ... 24 min" | 67 | OK |
-| 7 | `main.tex:1194` | "the 35 scripts" | 35 | OK |
-| 8 | `main.tex:1196` | "21 entries (F-001 through F-021)" | 21 | OK |
-| 9 | `main.tex:1209-1224` | §9.2 table + "All others < 5 s each" | 15 filas ≥5 s | **C-37** |
-| 10 | `main.tex:1229` | "~67 minutes ... 15 min ... 24 min" | 67 | OK |
-| 11 | `main.tex:1289` | "21 entries documented" | 21 | OK |
-| 12 | `main.tex:1412` | "built from five components" | 5 (§12) | OK |
-| 13 | `main.tex:1420` | "the five simulated configurations" | 5 | OK |
-| 14 | `main.tex:1423` | "with 21 entries" | 21 | OK |
-| 15 | `main.tex:1473` | "Falsification log & 21 entries" | 21 | OK |
+| 7 | `main.tex:1202` | "the 35 scripts" | 35 | OK |
+| 8 | `main.tex:1204` | "21 entries (F-001 through F-021)" | 21 | OK |
+| 9 | `main.tex:1217-1232` | §9.2 table + "All others < 5 s each" | 15 filas ≥5 s | **C-37** |
+| 10 | `main.tex:1237` | "~67 minutes ... 15 min ... 24 min" | 67 | OK |
+| 11 | `main.tex:1297` | "21 entries documented" | 21 | OK |
+| 12 | `main.tex:1424` | "built from five components" | 5 (§12) | OK |
+| 13 | `main.tex:1432` | "the five simulated configurations" | 5 | OK |
+| 14 | `main.tex:1435` | "with 21 entries" | 21 | OK |
+| 15 | `main.tex:1485` | "Falsification log & 21 entries" | 21 | OK |
 
 ## Tabla de cruce (auditoría)
 

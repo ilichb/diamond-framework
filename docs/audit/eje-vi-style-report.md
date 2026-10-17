@@ -242,7 +242,7 @@ y se validan con `pdflatex` ×2 → `^!` = 0, `Undefined` = 0):
 | `8c04346` | C-47 | `main.tex:115,1147`: `heavy-tail` → `heavy-tailed` (sin tocar `heavy_tail_*.py`) | `grep -cE 'heavy-tail([^e]\|$)'` = 0 |
 | `d04d5a4` | C-48 | `main.tex:969,994`: `fraud-proof` → `fraud proof` | `grep -c 'fraud-proof'` = 0 |
 | `e08c862` | C-49 | `main.tex:76,1337`: `collusion test` → `collusion detection` | `grep -c 'collusion test'` = 0 |
-| `6cc8130` | C-50 | `main.tex:1428`: `log of falsifications` → `falsification log` | `grep -c 'log of falsifications'` = 0 |
+| `6cc8130` | C-50 | `main.tex:1440`: `log of falsifications` → `falsification log` | `grep -c 'log of falsifications'` = 0 |
 
 ### Estado final de los 6 inventarios (re-derivado en el árbol final)
 

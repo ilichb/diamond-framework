@@ -43,7 +43,7 @@ otros). Los `.tex` revisados están limpios de esas ediciones.
 **Pasaje A:** Abstract (`main.tex` L42) y §1.3 (`main.tex` L75–83): *"The paper
 makes four contributions: … and a set of design decisions with explicit
 boundaries, stating where the protocol cannot deliver a guarantee."*
-**Pasaje B:** §11.3 (`main.tex` L1430–1436): *"The paper contributes: … 4. Local
+**Pasaje B:** §11.3 (`main.tex` L1442–1436): *"The paper contributes: … 4. Local
 benchmarks of the EVM precompile costs for the cryptographic primitives used in
 the protocol."*
 **Tensión:** Las tres listas afirman "four contributions" y coinciden en las tres
@@ -77,11 +77,11 @@ en §5.5 (`subsec:detection-power`) en `main.tex` L763.
 ### C-40 — "five components" (§11.1) contra una tabla de siete componentes (§11.6)
 
 **Severidad:** Minor
-**Pasaje A:** §11.1 (`main.tex` L1414): *"The protocol is built from five
+**Pasaje A:** §11.1 (`main.tex` L1426): *"The protocol is built from five
 components, each verified numerically in this paper:"* — enumera cinco, con el
 quinto *"Payment, data layer, and bootstrap (Sections 6–8)"* agrupando tres
 secciones.
-**Pasaje B:** §11.6 (`main.tex` L1465–1473): tabla con cabecera **"Component /
+**Pasaje B:** §11.6 (`main.tex` L1477–1473): tabla con cabecera **"Component /
 Status / Evidence"** y **siete** filas de componente (Reputation dynamics,
 Tensor compression, ZK threshold proof, Collusion detection, Payment rule,
 **Data layer**, **Bootstrap**), separando en filas lo que §11.1 funde en una.
@@ -116,14 +116,14 @@ configuración usa el script (probable origen).
 ### C-42 — §11.4 atribuye a §10 dos problemas que en realidad son de §9.5
 
 **Severidad:** Minor
-**Pasaje A:** §11.4 Open Problems (`main.tex` L1440): *"The limitations section
+**Pasaje A:** §11.4 Open Problems (`main.tex` L1452): *"The limitations section
 (Section~\ref{sec:limitations}) identifies several open problems that are not
 resolved in this paper:"* seguido de seis ítems, entre ellos *"Recursive proving
 time"* y *"Teleporter latency"*.
-**Pasaje B:** §9.5 "Deferred Benchmarks" (`main.tex` L1271–1275): *"Recursive
-SNARK proving time. … Teleporter latency. …"*. §9.1 (`main.tex` L1191) los
+**Pasaje B:** §9.5 "Deferred Benchmarks" (`main.tex` L1279–1275): *"Recursive
+SNARK proving time. … Teleporter latency. …"*. §9.1 (`main.tex` L1199) los
 declara *"deferred to future work"*. Grep de "proving time|Teleporter|latency"
-restringido a §10 (`main.tex` L1305–1409) → **cero** coincidencias.
+restringido a §10 (`main.tex` L1313–1409) → **cero** coincidencias.
 **Tensión:** §11.4 encuadra su lista como los problemas que *"identifica la
 sección de limitaciones (Sección 10)"*, pero dos de los seis ítems
 (*Recursive proving time*, *Teleporter latency*) viven en §9.5 (Deferred
@@ -143,7 +143,7 @@ lista completa a §10 (p. ej. "the open problems of the paper, spanning §9.5 an
 | 2 | §2.3 | "reach R0 within the horizon falls from 1.0 to 0.82" | "horizon" es la ventana del script citado (`mfpt_jump_diffusion.py`); el 39.7% del test de censura es de otro experimento (λ=0, T_max=300), no de esta cifra. Término de simulación estándar; no hay segundo pasaje en tensión. |
 | 3 | §8.2 vs §8.3 | `C̃_R(R)` (L1029) vs `C_R(R(t))` (L1051) | `C_R(x) = 0.8x/(1+x)` y `C̃_R(x) = 0.8x/(1+x)` son **la misma forma algebraica** (verificado numéricamente). Alimentar `C_R` con la `R` acotada da idéntico valor que `C̃_R`. La distinción es de dominio (r no acotado vs R∈[0,1)), no de fórmula: sin tensión numérica. |
 | 4 | §4.1 vs §6 | Θr = 0.5 (L558) vs Θ = 1.0 (L1017) | Símbolos distintos con dominios distintos: Θr es el umbral de **norma** Frobenius del ZK; Θ es el umbral de **colateral híbrido** (CoA ≥ Θ). No se refieren a la misma cantidad; admitir puede exigir ambos. Sin contradicción (notación potencialmente confundible). |
-| 5 | §8.2 | `R = r/(1+r)`, `R ∈ [0,1)` | El puente §2.5↔§8.2 **sí se declara** explícitamente en `main.tex` L1100. Cumple lo pedido por el checklist. |
+| 5 | §8.2 | `R = r/(1+r)`, `R ∈ [0,1)` | El puente §2.5↔§8.2 **sí se declara** explícitamente en `main.tex` L1108. Cumple lo pedido por el checklist. |
 | 6 | §10.4 | "−λmin(B) > 9.1371" (L1508) | Coincide exactamente con el cuantil de cola izquierda de §5.4 (`main.tex` L868/L874). Verificado sin fricción. |
 | 7 | §9.2/§9.5 | runtimes y benchmarks diferidos | Los dos benchmarks diferidos aparecen en Abstract (L51), §9.1 (L1112), §9.5 (L1186–1190) y §9.6 (L1208–1209), coherentes entre sí. El checklist menciona "§9.4" pero en el paper los benchmarks diferidos están en §9.5 (§9.4 es "Stability"); no hay fricción en el paper. |
 
@@ -201,7 +201,7 @@ checklist que resultaron limpios):
    L918–925 apuntan ambos a max{S_min, Θ−C_R^∞} (§6) y a slashing (§7). Sin
    costuras.
 6. **§8.2 (R = r/(1+r), R acotado) ↔ §2.1 (r no acotado)** — el cambio de dominio
-   se declara (`main.tex` L1100). Sin fricción.
+   se declara (`main.tex` L1108). Sin fricción.
 7. **§9.2 (runtimes) ↔ §9.5 (deferred) ↔ Abstract** — los dos benchmarks
    diferidos (recursive SNARK proving time, Teleporter latency) aparecen en
    Abstract L51, §9.1 L1112, §9.5 L1186–1190 y tabla §9.6 L1208–1209. Coherentes.

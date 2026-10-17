@@ -128,7 +128,7 @@ verifier does not recompute the Frobenius norm.
   validator's honesty. The validator references the published
   commitment; it does not create one.
 - **Option 3 (transport).** For Avalanche L1 source chains, the root
-  is propagated via Warp Messaging (`main.tex:1222`). The trust
+  is propagated via Warp Messaging (`main.tex:1230`). The trust
   anchor is the source chain's quorum. For non-Avalanche chains, the
   transport requires a light client or a ZK bridge; a centralized
   oracle is excluded by `main.tex:66`.
@@ -145,7 +145,7 @@ are rejected.
    does not assume.
 3. Option 1 requires `C*D*H = 500` state inclusion proofs
    inside the recursive circuit. The proving time is the benchmark
-   the paper explicitly defers (`main.tex:1220`).
+   the paper explicitly defers (`main.tex:1228`).
 4. Option 2 removes the ZK soundness surface that §4.2 already
    exploited once (`main.tex:469`) and does not depend on the
    unmeasured proving time.
@@ -168,7 +168,7 @@ are rejected.
 **Costs accepted.**
 
 - A dispute window before a new validator activates.
-- Dependence on honest auditors (`main.tex:1266`).
+- Dependence on honest auditors (`main.tex:1274`).
 - `T` is visible. Any adversary that reads the source chains sees it.
 
 **Next step:** rewrite `main.tex` §4.1 (`:442`), §1.2 (`:66`) and §6.2
@@ -243,7 +243,7 @@ a lower bound for the process as defined.
 ### C-04 — Section 2 is used downstream via the map r = ||T||_F
 
 **Location:** §2.5 (`main.tex:286`), §6.3 (`main.tex:817`),
-§8.1 (`main.tex:1071`).
+§8.1 (`main.tex:1079`).
 **Status:** Cerrado.
 **Severity:** Structural.
 
@@ -278,7 +278,7 @@ of the normalized variable `R`, not of `r`.
 **Evidence:**
 - `main.tex:286` (state `r` and closed form).
 - `main.tex:817` (`C_R(T) ≡ C_R(||T||_F)`).
-- `main.tex:1071` (bootstrap `R = r/(1+r)` and `\tilde{C}_R(R)`).
+- `main.tex:1079` (bootstrap `R = r/(1+r)` and `\tilde{C}_R(R)`).
 - Compilation clean; references `sec:reputation`, `sec:payment`,
   `eq:allocation`, `eq:netgain` all resolve.
 
@@ -553,7 +553,7 @@ separately, not part of C-09.
 
 **Location:** §1.2 (`main.tex:67`; the subsection opens at
 `main.tex:59`), §5.4 (`main.tex:665`, the calibration itself), §5.7
-(`main.tex:745`) and §10.7 (`main.tex:1304-1306`).
+(`main.tex:745`) and §10.7 (`main.tex:1312-1314`).
 **Status:** Confirmed.
 **Severity:** Moderate.
 
@@ -561,7 +561,7 @@ The Introduction motivates the collusion test by the need for
 robustness against heavy-tailed interaction graphs (`main.tex:67`). The
 calibration of §5.4 reports `q99 = 9.0542` on Erdős–Rényi graphs only
 (`calibration_modularity.py`, `N_H0 = 2000`). `main.tex:745` and
-`main.tex:1306` acknowledge that the calibration is on ER and
+`main.tex:1314` acknowledge that the calibration is on ER and
 Chung–Lu and that "their validity on real graphs is an open question".
 
 **Resolution:** `verification/rmt/calibration_heavy_tail.py`
@@ -624,9 +624,9 @@ clique (`m = 20`, `10x` local density) collapses to `0.000` for
   (`N_H0 = 500`) reproduces the mean and the standard deviation
   (`8.7693` / `0.1107`); its `q99 = 9.0314` differs from the canonical
   value by `0.0228`, about `1.3` times the paper's own standard error
-  of the `q99` estimate (`0.017`, `main.tex:1211`). The ER control also
+  of the `q99` estimate (`0.017`, `main.tex:1219`). The ER control also
   reproduces the paper's H1 power: `0.960` against a single clique of
-  size 20, with the paper's `0.972` (`main.tex:1211`) inside its Wilson
+  size 20, with the paper's `0.972` (`main.tex:1219`) inside its Wilson
   interval `[0.923, 0.980]`.
 - Wilson intervals computed with the same estimator as
   `verification/rmt/wilson_intervals.py` (`wilson_ci`): ER row
@@ -681,7 +681,7 @@ reference values `[CONJECTURE]`:
 - `grep -nF 'Theta_r' docs/paper/main.tex` returns `:325`, `:445`,
   `:430`, `:434`, `:437` after this edit; `:316`, `:426`, `:432`,
   `:435` before.
-- `grep -nF 'VaR' docs/paper/main.tex` returns `:809`, `:815`, `:1090`
+- `grep -nF 'VaR' docs/paper/main.tex` returns `:809`, `:815`, `:1098`
   after this edit; `:756`, `:1015` before.
 - `grep -rnE 'THETA_R|VAR_TECH' verification/ --include='*.py'`
   returns the script lines cited above.
@@ -714,7 +714,7 @@ versa), making the dependency explicit.
 ### C-13 — C_R has three incompatible forms; the map T → r is now declared
 
 **Location:** §2.5 (`main.tex:279-286`), §6.3 (`main.tex:817`),
-§8.1 (`main.tex:1071`), `verification/` (`c_r(norm_T)`, `c_r(R)`).
+§8.1 (`main.tex:1079`), `verification/` (`c_r(norm_T)`, `c_r(R)`).
 **Status:** Cerrado.
 **Severity:** Structural.
 
@@ -750,7 +750,7 @@ not closed.
 **Evidence:**
 - `main.tex:286` (state `r` and closed form).
 - `main.tex:817` (`C_R(T) ≡ C_R(||T||_F)`).
-- `main.tex:1071` (bootstrap `R = r/(1+r)` and `\tilde{C}_R(R)`).
+- `main.tex:1079` (bootstrap `R = r/(1+r)` and `\tilde{C}_R(R)`).
 - `grep -nF 'C_R' docs/paper/main.tex` shows consistent use.
 - `verification/` unchanged; the two executable forms are now
   reconciled by the declared map.
@@ -762,27 +762,27 @@ separate finding. This block closes the map inconsistency only.
 
 ### C-14 — `R_{\mathrm{std}}` is never defined; the two reported values are unlabelled
 
-**Location:** §8.1 (`main.tex:1063`), §8.2 summary table (`main.tex:1126`),
-§8.2 prose (`main.tex:1141`), §8.7 (`main.tex:1215`), §9 (`main.tex:1294`).
+**Location:** §8.1 (`main.tex:1071`), §8.2 summary table (`main.tex:1134`),
+§8.2 prose (`main.tex:1149`), §8.7 (`main.tex:1223`), §9 (`main.tex:1302`).
 **Status:** Cerrado. `R_{\mathrm{std}}` defined at the end of §8.2;
-operating point and seed count declared at `main.tex:1155` and
-`main.tex:1315`.
+operating point and seed count declared at `main.tex:1163` and
+`main.tex:1323`.
 **Severity:** Minor.
 
-The symbol `R_{\mathrm{std}}` occurs three times (`main.tex:1063`, `:1126`,
-`:1133`) and appears twice more as the gloss "standard deviation of
-reputation" (`:1066`, `:1205`). It is never defined. The text does not say
+The symbol `R_{\mathrm{std}}` occurs three times (`main.tex:1071`, `:1134`,
+`:1141`) and appears twice more as the gloss "standard deviation of
+reputation" (`:1074`, `:1213`). It is never defined. The text does not say
 whether the standard deviation is across validators or across time, over
 the full epoch history or the final epoch, over active or all slots, or
 with which `ddof`. There is no notation table, no `\newcommand`, no
 `\DeclareMathOperator`.
 
-`main.tex:1141` juxtaposes two numbers taken at different operating
+`main.tex:1149` juxtaposes two numbers taken at different operating
 points and with different sample sizes as if comparable. `0.0282` comes
 from `compare_reputation_models.py` at `mu/g = 5.0` (one seed, 42).
 `0.0424` comes from `sweep_net_gain.py` at `mu/g = 1.5` (mean over seeds
 42-46). Neither the operating point nor the seed count is declared at
-`:1066` or at `:1205`, where `0.0424` is reported alone.
+`:1074` or at `:1213`, where `0.0424` is reported alone.
 
 The statistic used in both scripts is the same: `R[active].std()`, numpy
 default `ddof = 0`, cross-sectional over active validators (n = 100) at
@@ -790,7 +790,7 @@ the final epoch (t = 500). Neither script uses a temporal std nor a std
 across seeds. The code is correct; the paper's presentation is not.
 
 **Evidence:** `grep -nF 'R_{\mathrm{std}}' docs/paper/main.tex` returns
-`:995`, `:1055`, `:1133`. The only executable definition in the
+`:995`, `:1063`, `:1141`. The only executable definition in the
 repository is the dict key `"R_std": active_R.std()` at
 `verification/bootstrap/compare_reputation_models.py:151` and
 `verification/bootstrap/sweep_net_gain.py:90`; there is no function
@@ -819,12 +819,12 @@ Two numerical consequences:
   at `mu/g = 2.0` `[0.042853, 0.044086]`. The argmax at `1.5` is not
   statistically distinguishable from `2.0` at N = 100. This is
   consistent with F-005 ("the optimum is a band, not a point") and with
-  `main.tex:1215` ("nearby values give similar results").
+  `main.tex:1223` ("nearby values give similar results").
 
 **Next step:** define `R_{\mathrm{std}}` in §8.1 as the cross-sectional
 sample standard deviation (`ddof = 0`) of `R` over active validators at
-the final epoch; declare the operating point and seed count at `:1066`
-and `:1205`; and either report the N = 100 mean with its 95% CI in place
+the final epoch; declare the operating point and seed count at `:1074`
+and `:1213`; and either report the N = 100 mean with its 95% CI in place
 of the single 5-seed realization, or label `0.0424` as a point estimate
 without an interval.
 
@@ -853,7 +853,7 @@ and the stray blank line are removed.
 
 ### C-16 — Script counter in §9 is stale
 
-**Location:** `main.tex:1168` (`The README lists the N scripts`).
+**Location:** `main.tex:1176` (`The README lists the N scripts`).
 **Status:** Cerrado.
 **Severity:** Minor.
 
@@ -874,7 +874,7 @@ outputs in `results/` but were never added to the README.
   `clique_spectra_seeds.py` and `asym_weights.py`; both have rows in
   `## Runtime`. The total runtime is unchanged (~12 min) because the
   two additions total ~22 s.
-- `main.tex:1168` now reads `30 scripts`.
+- `main.tex:1176` now reads `30 scripts`.
 - The reference is now consistent across the paper, the README, and
   the disk.
 
@@ -893,14 +893,14 @@ outputs in `results/` but were never added to the README.
 
 ### C-17 — Falsification counter says 18 in two places, 19 in four
 
-**Location:** `main.tex:1251` (§9.6 table), `main.tex:1385` (§11.2).
+**Location:** `main.tex:1259` (§9.6 table), `main.tex:1397` (§11.2).
 **Status:** Cerrado.
 **Severity:** Minor.
 
 The log has 19 entries (F-001 through F-019). The paper says 19 in the
-abstract (`:49`), §1.3 (`:88`), §9.2 (`:1091`), and §11.6 (`:1342`
-before the edit). It said 18 in §9.6 (`:1166` before the edit) and
-§11.2 (`:1296` before the edit). The 18 was residue from when the log
+abstract (`:49`), §1.3 (`:88`), §9.2 (`:1099`), and §11.6 (`:1354`
+before the edit). It said 18 in §9.6 (`:1174` before the edit) and
+§11.2 (`:1304` before the edit). The 18 was residue from when the log
 had 18 entries.
 
 `falsifications` is a misleading count: 16 of the 19 entries are
@@ -921,7 +921,7 @@ changed from `falsifications` to `entries` in both.
 
 ### C-18 — §9.2 runtime table contradicts the README
 
-**Location:** `main.tex:1174-1191` (§9.2 Reproducibility).
+**Location:** `main.tex:1182-1199` (§9.2 Reproducibility).
 **Status:** Cerrado.
 **Severity:** Minor.
 
@@ -1375,7 +1375,7 @@ twice with no `^!` and no `Undefined`.
 ### C-37 — §9.2 runtime table omits the heavy-tail rows
 
 **Location:** `docs/paper/main.tex` §9.2 (Reproducibility), the runtime
-table (`main.tex:1209`--`1142`).
+table (`main.tex:1217`--`1142`).
 **Status:** Cerrado.
 **Severity:** Minor.
 
@@ -1407,7 +1407,7 @@ lists the same rows; `pdflatex` twice with no `^!` and no `Undefined`.
 ### C-38 — §11.3 fourth contribution disagrees with the Abstract and §1.3
 
 **Location:** `docs/paper/main.tex` Abstract (`main.tex:42`), §1.3
-(`main.tex:75`--`90`), §11.3 (`main.tex:1430`--`1343`).
+(`main.tex:75`--`90`), §11.3 (`main.tex:1442`--`1343`).
 **Status:** Cerrado.
 **Severity:** Minor.
 
@@ -1455,8 +1455,8 @@ power measured'` → "Section 5.5"; `pdflatex` twice with no `^!` and no
 
 ### C-40 — §11.1 "five components" vs the seven-row §11.6 table
 
-**Location:** `docs/paper/main.tex` §11.1 (`main.tex:1414`) and §11.6
-(`main.tex:1465`--`1376`).
+**Location:** `docs/paper/main.tex` §11.1 (`main.tex:1426`) and §11.6
+(`main.tex:1477`--`1376`).
 **Status:** Cerrado.
 **Severity:** Minor.
 
@@ -1502,8 +1502,8 @@ twice with no `^!` and no `Undefined`.
 
 ### C-42 — §11.4 attributes §9.5 items to §10
 
-**Location:** `docs/paper/main.tex` §9.5 (`main.tex:1270`), §11.4
-(`main.tex:1440`).
+**Location:** `docs/paper/main.tex` §9.5 (`main.tex:1278`), §11.4
+(`main.tex:1452`).
 **Status:** Cerrado.
 **Severity:** Minor.
 
@@ -1617,7 +1617,7 @@ unhyphenated sense is the one used elsewhere.
 ### C-47 — `heavy-tail` → `heavy-tailed` (§1.5, §9.2)
 
 **Location:** `docs/paper/main.tex` §1.5 (`main.tex:115`), §9.2
-(`main.tex:1229`).
+(`main.tex:1237`).
 **Status:** Cerrado.
 **Severity:** Minor.
 
@@ -1638,7 +1638,7 @@ the count of `heavy_tail_n5000.py` is unchanged; `pdflatex` twice with no
 ### C-48 — `fraud-proof` → `fraud proof`
 
 **Location:** `docs/paper/main.tex` §7.2 (`main.tex:969`), §7.7
-(`main.tex:1062`).
+(`main.tex:1070`).
 **Status:** Cerrado.
 **Severity:** Minor.
 
@@ -1648,7 +1648,7 @@ section title (`\subsection{The Fraud Proof Mechanism}`, `main.tex:975`,
 section title are unhyphenated.
 
 **Resolution.** Option (a): removed the hyphen at `main.tex:969` and at
-the first occurrence in `main.tex:1062`; the title was already
+the first occurrence in `main.tex:1070`; the title was already
 unhyphenated. Option (b) (unify to the hyphenated form) was discarded: it
 would touch 4 strings against 2.
 
@@ -1661,14 +1661,14 @@ would touch 4 strings against 2.
 ### C-49 — `collusion test` → `collusion detection`
 
 **Location:** `docs/paper/main.tex` §1.3 (`main.tex:76`), §11
-(`main.tex:1430`).
+(`main.tex:1442`).
 **Status:** Cerrado.
 **Severity:** Minor.
 
 The protocol-component list in §1.3 named the component "the collusion
 test", while the section title (`\section{Collusion Detection}`,
 `main.tex:597`, §5) and the parallel enumeration in `main.tex:43` both use
-"the collusion detection". A second occurrence in §11 (`main.tex:1430`,
+"the collusion detection". A second occurrence in §11 (`main.tex:1442`,
 the F-018 entry) also read "the collusion test".
 
 **Resolution.** `collusion test` → `collusion detection` at both
@@ -1683,7 +1683,7 @@ with no `^!` and no `Undefined`.
 
 ### C-50 — `log of falsifications` → `falsification log`
 
-**Location:** `docs/paper/main.tex` §11 (`main.tex:1428`).
+**Location:** `docs/paper/main.tex` §11 (`main.tex:1440`).
 **Status:** Cerrado.
 **Severity:** Minor.
 

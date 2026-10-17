@@ -98,7 +98,7 @@ what the gap looked like when this plan was written, not its current status.
 | B2 | README badge required "Python 3.11+"; this machine runs 3.10.12 and the suite passes | `README.md:9` | badge lowered to 3.10+ |
 | B3 | `benchmarks/README.md` was `forge init` boilerplate; it did not document the benchmark | 64 generic lines | rewritten: what is measured, how to reproduce it offline, artefact provenance, what is **not** tested |
 | B4 | `CITATION.cff` published a GitHub `url` and a release date for a private, unreleased repo | `CITATION.cff` | `url` and `date-released` removed; an `abstract` states there is no release, tag or DOI |
-| B5 | The paper cites **solc 0.8.33**; the README badge and one benchmark artefact cite **0.8.24** | `main.tex:1257` vs `benchmarks/results/gas_ingest_output.txt:4` | badge aligned to 0.8.33, which is what both Foundry projects pin; the 0.8.24 artefact is left untouched as evidence and its provenance is documented in `benchmarks/README.md` |
+| B5 | The paper cites **solc 0.8.33**; the README badge and one benchmark artefact cite **0.8.24** | `main.tex:1265` vs `benchmarks/results/gas_ingest_output.txt:4` | badge aligned to 0.8.33, which is what both Foundry projects pin; the 0.8.24 artefact is left untouched as evidence and its provenance is documented in `benchmarks/README.md` |
 
 ### 2.4 Paper apparatus gaps (require a re-anchor — later phase)
 
@@ -1723,7 +1723,7 @@ that the paper never states:
 §10.2 already carries the neighbouring limitation — *"assumes auditors respond to
 profit… Below that threshold, the mechanism provides no detection regardless of the
 value of the reputation at stake"* (`main.tex:1321`), status `Design` in the
-Limitations table (`:1305`) — but it covers only `B < B*`, not the free-rider and
+Limitations table (`:1313`) — but it covers only `B < B*`, not the free-rider and
 dilution case, which is the one the archived note named. **Amendment:** state both
 conventions in §7.3 (the pool divided by the auditors; coverage as a step), and extend
 the §10.2 bounty limitation with one sentence on free-riding and dilution, at the same
@@ -2688,9 +2688,9 @@ per batch, so P9 is a single step.
 | **DEC-1** | **Scope/custody — (B).** §7.3's «does not move funds» is true of *the delivered data layer*; the defect is a missing actor. The manager and the custody vault are named as delivered and the sentence is qualified, not deleted | `main.tex` §7.3 (`:974-980`), §7.4 (`:1028`) |
 | **DEC-2** | **Sequencer — (B) + declare the state.** `M9a`: a `guardian` multisig is the only proposer, execution is permissionless after `CHANGE_DELAY`, both setters emit events, a zero address is rejected, and the **verifier stays mutable** — freezing it turns a circuit bug into a registry redeploy that loses the commitment history `_roots`/`_changedEntries` (`AVIPRegistry.sol:63-65`, written `:114-116`, read by the manager at `AVIPValidatorManager.sol:216-219`) | `M9a`, `main.tex` §10.2 |
 | **DEC-3** | **Time axis — declared constraint, not enforcement.** The detection window is a *constraint*; `M-05` parametrises the attack model over detection latency **in epochs** instead of one scalar; an on-chain challenge window is **follow-up**, explicitly out of v1 | `main.tex` §10.2 (limitations), `F-022`/`M-05` |
-| **DEC-4** | **Slash amount — (A).** `M9b`: `L` is the **whole posted stake** (`_stakes[validator]`) and the amount leaves the Teleporter payload. `L ≥ S_f*(T) ∈ [0.2, 1.0]` with **no upper bound**, because `admit` caps nothing (`AVIPValidatorManager.sol:200`, `:229`); the model's `Θ = 1.0` is a coverage convention, and the paper must say so | `M9b`, `main.tex` §7.4 (`:1028`), §9.4 (`:1266`) |
+| **DEC-4** | **Slash amount — (A).** `M9b`: `L` is the **whole posted stake** (`_stakes[validator]`) and the amount leaves the Teleporter payload. `L ≥ S_f*(T) ∈ [0.2, 1.0]` with **no upper bound**, because `admit` caps nothing (`AVIPValidatorManager.sol:200`, `:229`); the model's `Θ = 1.0` is a coverage convention, and the paper must say so | `M9b`, `main.tex` §7.4 (`:1028`), §9.4 (`:1274`) |
 | **DEC-5** | **Reputation — (B) + (C) honest.** `M9c`: the re-entry cost is a **separate ejection surcharge** (`required = requiredStakeFor(norm) + n_ejections·κ`), never an inflation of `requiredStakeFor`, so `collateral` keeps deriving from the norm and `Θ − C_R` cannot go negative. §7.5 stops asserting a reputation reduction that nothing writes | `M9c`, `main.tex` §7.5/§7.4 (`:1030`), abstract, §1.2 (`:76`) |
-| **DEC-6** | **`γ`'s value — open, non-blocking.** `N-6` calls `γ = 0.10` vacuous at horizon 10 and the paper already says so (`:1040`). Either a value is chosen (a numeric claim ⇒ a `verification/` script plus an `F-` entry) or the text states the bound is vacuous for the delivered parameters | **not in this batch** |
+| **DEC-6** | **`γ`'s value — open, non-blocking.** `N-6` calls `γ = 0.10` vacuous at horizon 10 and the paper already says so (`:1048`). Either a value is chosen (a numeric claim ⇒ a `verification/` script plus an `F-` entry) or the text states the bound is vacuous for the delivered parameters | **not in this batch** |
 
 Two consequences beyond the four items: the `G = 50` scalar of `A-18`
 (`:470-476`, a worksheet derivation and never a protocol quantity) stops being
@@ -2795,9 +2795,9 @@ P8.1 **§7.3 (`:974-980`) — DEC-1.** Keep «the delivered data layer … does 
 funds»; add the two subjects it omits: the manager that adjudicates and debits, and
 the custody vault that holds the escrow. The paper names «the delivered manager»
 exactly once (`:1028`), never names the vault, and uses `custody` once, in «chain
-of custody» (`:1493`).
+of custody» (`:1505`).
 
-P8.2 **§7.4 (`:1026-1034`) — DEC-4 and DEC-5.** `L` is the whole posted stake,
+P8.2 **§7.4 (`:1026-1042`) — DEC-4 and DEC-5.** `L` is the whole posted stake,
 `L ≥ S_f*(T) ∈ [0.2, 1.0]`, unbounded above; the «caller-supplied amount» clause
 goes; the reputation-reduction sentence at `:1030` is withdrawn or qualified,
 because `slash` writes no reputation state; the ejection surcharge with its `κ`
@@ -2811,7 +2811,7 @@ latency in epochs, so the numbers must come from P9.3's script: the paper cannot
 state a new quantity before that script exists, and that is the second reason P8
 and P9 are one batch.
 
-P8.4 **§9.4 (`:1266`) — DEC-4.** «bounded by `Θ = 1.0` per validator» is the
+P8.4 **§9.4 (`:1274`) — DEC-4.** «bounded by `Θ = 1.0` per validator» is the
 **model's** coverage convention. It must be labelled as such, or a reader can file
 it as an executable cap, which the contract does not enforce.
 
@@ -2873,6 +2873,17 @@ P9.4 **The citation re-derivation.** Fase 4 moves `main.tex` lines, and
 The batch therefore repeats P6b's job (`anchor-receipts.md` §R-3.1): a `difflib`
 HEAD→worktree line map over every citation form the repository uses, then verify
 **0 LaTeX section changes** and a strictly monotone map.
+
+**Estado (2026-10-16): hecho.** El mapa se derivó de los hunks del diff —diez hunks,
++21/−9 = +12 líneas netas; tramos en `anchor-receipts.md` §R-5—, se inventariaron 411
+tokens de texto más 27 filas del registro y se reescribieron **120 punteros en 9
+documentos**, con **0 cambios de sección** y una segunda pasada byte-idéntica (la
+base es siempre el blob de `HEAD`). `bash verification/audit-gate.sh` conserva
+**8 PASS / 3 FAIL**: G4/G5/G6 pasan con los ficheros reescritos y G9 compila limpio;
+los tres FAIL (G2, G10, G11) son pre-existentes del lote de `M-05` y se reproducen
+idénticos con los documentos revertidos a HEAD. El inventario de **98 citas ya
+muertas** y las exclusiones (triage, recibos, dos `.py` cuyo comentario se imprime y
+las diez líneas de crónica) están en §R-5. Lo que sella es P9.5.
 
 P9.5 **One re-anchor, in the order §9 fixes**: `run_all.sh` → `fase0_anchor.sh` →
 `audit-gate.sh` (`FAIL=0`) → `fase0_anchor.sh --check` (exit 0) → a new receipt in

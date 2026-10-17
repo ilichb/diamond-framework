@@ -519,3 +519,177 @@ minero, acotada por la regla de *median-time-past*. Promover no exige re-anclar:
 sellado fue el root, que no cambió, y este fichero no está entre los diez —lo
 demuestra el `git diff --stat` de §R-4.1, que ve **una** sola línea, la del paper.
 
+## R-5 — Recibo de la re-derivación de punteros de P9.4
+
+P9.4 repite el trabajo de §R-3.1 sobre el árbol que dejan P9.1, P9.2 y F-022.
+`main.tex` pasa de **1566 a 1578 líneas** (`git diff --numstat`: 21 inserciones y 9
+borrados) en diez hunks, de modo que toda cita `main.tex:NNN` sellada queda
+desplazada. La re-derivación se hizo con `~/p9/p9_pointers.py` (herramienta
+desechable, no versionada) y **no** con `difflib`: el mapa se deriva de los hunks del
+diff —que son exactos— y resulta una función a trozos estrictamente monótona:
+
+| rango en HEAD (`607f9b9`) | rango en el árbol de trabajo | causa |
+|---|---|---|
+| 1–1029 | 1–1029 (identidad) | hunks 1:1 en 41, 58–59, 76, 976 y 1028 |
+| 1030 | 1030 | reemplazo 1→8; la frase de reducción de reputación sigue aquí |
+| 1031–1032 | 1038–1039 | cola del reemplazo anterior |
+| 1033–1322 | +8 | inserción en 1040 (`\label{subsec:freshness}`) |
+| 1323–1566 | +12 | cuatro líneas insertadas en 1331 (publisher y ventana de detección) |
+
+Cifras derivadas (tabla puente completa en `~/p9/p9_table.tsv`, 422 filas):
+
+- **411 tokens** de texto inventariados en 25 ficheros: `main.tex:NNN` 263,
+  `` `main.tex` LNNN `` 32, `` `:NNN` `` 101 y `:NNN` desnudo 15; más las **27** filas
+  del registro con columna `line`.
+- **120 punteros reescritos** (71 + 9 + 29 + 6 de texto, más 5 en el registro) en
+  **9 ficheros** del alcance; los otros cuatro no tenían ningún puntero desplazado.
+- **11 overrides** verificados a mano donde el párrafo cita el paper sin nombrar
+  `main.tex` (P8.2/P8.4 del plan y seis líneas de `content-audit-pending.md`).
+- **0 cambios de sección LaTeX**: al ser el mapa monótono, ninguna cita puede
+  cruzar un `\section`/`\subsection`.
+- Segunda pasada **byte-idéntica**: la transformación toma siempre el blob de `HEAD`
+  como base, así que es una función pura y no acumula desplazamiento.
+
+**Alcance y exclusiones.** Se reescriben solo los documentos que forman parte del
+ancla auditada y siguen vivos: los siete informes de auditoría, `claim-registry.csv`
+y el plan. Quedan **sin remapear**, por decisión registrada aquí:
+
+- `docs/audit/triage-external-review-2026-10.md` (hoja de trabajo sin sellar): 24
+  punteros que habrían entrado.
+- `anchor-receipts.md` (este fichero): sus §R-3.1 y §R-4 citan lo que se hizo a
+  líneas concretas; remapearlas falsificaría el recibo.
+- `verification/eip_cost_check.py` y `data-layer/attacker_profit_analytical.py`: su
+  comentario de línea **se imprime** en el output sellado, de modo que remapear el
+  fuente rompería el baseline sin beneficio (mismo criterio que P6b).
+- Cuatro scripts más (`src/zk/.../range_proof.rs`, `rmt/calibration_heavy_tail.py`,
+  `rmt/clique_spectra_seeds.py`, `zk/threshold_quantization.py`) y cuatro outputs
+  sellados: fuera del alcance de P9.4.
+- Las diez líneas de **crónica** del plan (1725, 1735, 1743, 2170, 2224, 2232, 2234,
+  2238, 2241, 2640), que citan lo que P6a/P6b hicieron: esos números son hechos
+  históricos, no punteros vivos.
+
+**Citas ya muertas.** La columna `muertos` de la tabla puente marca **98** punteros
+cuya línea destino no existe o está en blanco: 71 en ficheros del alcance
+(`content-audit-pending.md` 38, plan 8, `eje-v` 6, `eje-iii` 6, `session-report` 4,
+`eje-vi-session-context` 3, `eje-vi-style` 2, `eje-ii` 2, `eje-iv` 1, registro 1) y
+27 en ficheros solo informados. El remap **mueve el número, no adjudica el
+significado**: una cita muerta sigue muerta, desplazada igual que las vivas, para que
+una futura corrección parta de la misma base. El caso medido es el de §R-3.1 otra
+vez: `content-audit-pending.md` dice que `R_{\mathrm{std}}` aparece en
+`main.tex:1063`, `:1126` y `:1133`, pero en HEAD esas líneas son una blanca,
+`\subsection{Results}` y `\begin{tabular}` —las ocurrencias reales están en
+1106/1174/1268—; tras P9.4 la cita es `:1071`, `:1134`, `:1141` y sigue sin apuntar
+a la frase. Decidir *qué* debe citar cada número es edición de contenido.
+
+**Verificación.** `bash verification/audit-gate.sh` da **8 PASS / 3 FAIL** tanto
+antes como después de remapear: G4, G5 y G6 —las tres guardas que leen el registro y
+los dos documentos— pasan con los ficheros reescritos, y G9 (`pdflatex` limpio,
+errors=0, Undefined=0) confirma que el paper sigue compilando. Los tres FAIL
+(G2 `EXIT 0 = 35/36`, G10 manifiesto de 35 outputs, G11 `fase0_anchor`:
+`output_manifest.sha256` discrepa) son **pre-existentes** del lote de `M-05`, no de
+este remap: se reproducen idénticos con los documentos revertidos a HEAD
+(`git stash push -- docs/audit docs/architecture/implementation-plan.md`).
+
+**Nota de disciplina.** Este recibo no se remapea (§R-4.1) y P9.4 no toca `main.tex`:
+los números de §R-3.1 y §R-4 siguen siendo los que fijó cada sello. El commit de P9.4
+debe preservar los nueve documentos tal como quedaron, y el re-anclaje de P9.5 es el
+que sella el conjunto.
+
+**Anexo — inventario nominal de las 98 citas muertas.** Formato `L<línea del
+documento>:<número citado>`; todos los números citan `main.tex`, y la lista se
+re-deriva con `awk -F'\t' '$6!="ok"' ~/p9/p9_table_final.tsv`. Un muerto no es
+necesariamente un error: el propio plan documenta en P9.1 que `:837` y `:805` están
+en blanco hoy. **Casi todos son ≤1029, o sea identidad pura: ya estaban muertos en
+HEAD**; los únicos desplazados son `L1726:1305`, `L684:1090`, `L774:1066` y
+`L126:1305`.
+
+- `content-audit-pending.md` (38): L45:837, L69:805, L77:469, L96:469, L150:469,
+  L183:176-188, L245:286, L246:1071, L279:286, L281:1071, L355:231-233,
+  L391:231-233, L555:665, L651:325, L651:445, L651:456, L661:463-464, L681:325,
+  L681:445, L684:1090, L694:803, L702:469, L708:469, L716:279-286, L717:1071,
+  L751:286, L753:1071, L765:1063, L772:1063, L774:1066, L1165:81, L1187:42,
+  L1346:727, L1385:116, L1409:42, L1410:75, L1537:460, L1537:535.
+- `implementation-plan.md` (8): L539:526, L1726:1305, L1739:70, L2688:974-980,
+  L2689:114-116, L2691:229, L2839:837, L2839:805.
+- `threshold_quantization.py` (10): L8:445, L10:805, L19:325, L21:463-464, L25:526,
+  L41:463-464, L47:526, L48:526, L67:805, L97:325.
+- `eje-iii-counters-report.md` (6): L42:42, L43:42, L44:72, L45:75, L46:81, L47:116.
+- `eje-v-integrated-read-report.md` (6): L43:42, L43:75, L89:77, L104:206,
+  L126:1305, L142:176.
+- `session-report.md` (4): L94:803, L146:803, L171:619, L182:621.
+- `eje-vi-session-context.md` (3): L38:768, L158:768, L255:768.
+- `eje-ii-consistency-report.md` (2): L103:641, L137:564.
+- `eje-vi-style-report.md` (2): L168:768, L171:768.
+- `eje-iv-reproduction-report.md` (1): L661:727. `claim-registry.csv` (1): L10:286.
+- **Solo informados, no reescritos** (17; los 10 de `threshold_quantization.py` van
+  arriba): `triage-external-review` 13 (L156:764, L462:953-1000, L995:166-169,
+  L997:187-190, L999:837, L999:837, L999:805, L999:805, L1070:879-901,
+  L1070:1231-1258, L1165:837, L1165:805, L1259:187-190);
+  `attacker_profit_analytical.py` 2 (L7:975-979, L80:975-979); los dos outputs
+  sellados de `threshold_quantization` 2 (`baseline_verified/…output.txt` L7:325 y
+  `zk/results/…output.txt` L7:325). `bloque-b-report.md` no tiene ninguna.
+
+Suma: 81 + 17 = 98.
+
+### R-5.1 — Cierre del re-anclaje (P9.5, 2026-10-17)
+
+El cuerpo de §R-5 selló la **re-derivación de punteros** de P9.4; este cierre sella el
+**árbol** en el que esos punteros viven. El ancla vigente describía el `main.tex` de
+`fb5cae97` (1566 líneas); P9.1, P9.2 y F-022 lo llevaron a `b2085341` (1578 líneas,
+21 inserciones y 9 borrados) sin re-anclar, de modo que `fase0_anchor.sh --check` y las
+guardas G2, G10 y G11 llevaban en **FAIL** desde el lote `M-05` (8 PASS / 3 FAIL).
+P9.5 regenera la evidencia con el pipeline completo —36 scripts, `m05_attack_model.py`
+incluido— y re-sella.
+
+| artefacto | antes (HEAD `607f9b9`) | después (árbol sellado) |
+|---|---|---|
+| `docs/paper/main.tex` | `fb5cae97…` (1566 líneas) | `b2085341…` (1578 líneas) |
+| `output_manifest.sha256` | 35 pares | **36 pares** |
+| `fase1_determinism_evidence.txt` | 35 líneas `EXIT 0` | **36 líneas** |
+| `baseline_verified/manifest.txt` | 36 filas | 36 filas (regeneradas) |
+| `anchor_root.sha256` | `5d6002ba…` | `459be332…` |
+| `anchor_root.sha256.ots` | sellaba `5d6002ba…` | sella `459be332…` |
+
+**Corrida.** `bash verification/run_all.sh`: 36 scripts, 36 códigos de salida cero, 0
+`MISSING`, 5 340 s de cómputo acumulado. Los 35 outputs preexistentes salen
+**byte-idénticos** a los de HEAD —`git status` no marca ninguno; el único fichero nuevo
+es `m05_attack_model_output.txt`—, lo que confirma el determinismo que §R-3.1 declaró
+con `cmp -s`. La máquina estaba cargada (load ~12 sobre 6 núcleos): los scripts con BLAS
+multihilo tardaron hasta 13× más (`calibration_heavy_tail` 873 s frente a 66,4;
+`recalibrate_top` 820 s frente a 62,9) sin que cambiara un byte del resultado, mientras
+que los monohilo conservaron su tiempo base (`heavy_tail_n5000` 945,7 s frente a 920;
+`heavy_tail_scaled_clique` 500,5 s frente a 499). La corrida se partió en dos tramos por
+un corte de suministro y se retomó con `--resume`: las 27 filas ya cerradas se
+conservaron y solo se re-ejecutaron las 9 restantes; el `heavy_tail_n5000` interrumpido
+se rehízo entero, sin heredar su salida parcial.
+
+**Gate.** `bash verification/audit-gate.sh`: **PASS=11 FAIL=0 SKIP=0**. Las tres guardas
+cierran por su causa, no por relajación: G2 `EXIT 0 = 36/36`, G10 `manifiesto verifica
+(36 outputs; HEAD anclado 607f9b9 -> actual 607f9b9)` y G11 `ancla re-derivada byte a
+byte (fase0_anchor.sh --check, exit 0)`. G5 sigue en **21** por diseño: F-022 (21→22) se
+difiere a P9.6 junto con P9.3 —el manifiesto de conteos—, porque los literales 21/50
+viven dentro de `audit-gate.sh` y subirlos en este mismo commit habría roto G5 mientras
+se re-anclaba.
+
+**OTS.** `ots stamp verification/anchor_root.sha256` sella `459be332…` con cuatro
+atestaciones **pendientes**: `alice.btc.calendar.opentimestamps.org`,
+`bob.btc.calendar.opentimestamps.org`, `btc.calendar.catallaxy.com` y
+`finney.calendar.eternitywall.com`. Pendiente significa aún sin confirmación en bloque
+Bitcoin: `ots upgrade` la resolverá en unas horas y, hasta entonces, el sello prueba
+*cuándo se envió*, no que esté en la cadena. El `.ots` anterior —que sellaba
+`5d6002ba…`, el `anchor_root.sha256` de HEAD— queda reemplazado; su copia se conserva
+fuera del repo en `~/p9/anchor_root.sha256.ots.antiguo_12oct`. El `.ots` no figura entre
+los diez pares de `anchor_root.sha256`, de modo que instalarlo no invalida el ancla.
+
+**Alcance.** P9.5 no edita `main.tex` ni los nueve documentos de P9.4: sus trece sha256
+son los mismos antes y después (el `main.tex` del árbol sigue siendo el de ayer, mtime
+2026-10-16 12:29). Lo que cambia en `verification/` es exactamente el resultado de
+re-ejecutar el pipeline y re-sellar: `manifest.txt`, `output_manifest.txt` (las dos
+copias), `output_manifest.sha256`, `audit_manifest.sha256`, `anchor_root.sha256` y su
+`.ots`. `fase0_anchor.sh --check` sale con **exit 0**.
+
+**Deuda menor detectada.** El mensaje de `fase0_anchor.sh --check` imprime «IDENTICO
+byte a byte (35 pares)» con el 35 escrito a mano (línea 196) aunque el fichero tenga 36:
+la comparación es real y pasa, el número del texto no. Entra en el mismo paquete de
+literales que F-022 y P9.3.
+

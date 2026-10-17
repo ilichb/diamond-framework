@@ -6,7 +6,8 @@ claim in the Diamond Framework paper.
 ## Structure
 
 - `stochastics/` — Reputation dynamics (positivity, MFPT, stationarity).
-- `mechanism/` — Frobenius counterexample, fee specification.
+- `mechanism/` — Frobenius counterexample, fee specification, M-05 attack
+  model (deterrence versus detection latency).
 - `zk/` — Constraint counts, soundness of the threshold circuit, and the
   threshold-to-stake quantization of the allocation rule.
 - `rmt/` — Spectral calibration for collusion detection.
@@ -21,7 +22,7 @@ into a temporary directory and diffs it against the committed one). A fourth
 helper, `verification/eip_cost_check.py`, is the script behind guard G7: it
 recomputes the EIP gas cost recorded as F-017 and exits 0. It is not a numbered
 entry either, and it is why `find verification -maxdepth 2 -name '*.py'` counts
-36 while the catalogue lists 35 — the extra `.py` writes no output (see
+37 while the catalogue lists 36 — the extra `.py` writes no output (see
 `docs/audit/post-closure-audit.md:136`).
 
 ## Running
@@ -38,6 +39,7 @@ entry either, and it is why `find verification -maxdepth 2 -name '*.py'` counts
     python3 mechanism/fee_specification.py
     python3 mechanism/fee_specification_net.py
     python3 mechanism/financial_floor_sensitivity.py
+    python3 mechanism/m05_attack_model.py
     python3 zk/constraint_count_check.py
     python3 zk/soundness_zk_check.py
     python3 zk/threshold_quantization.py
@@ -106,7 +108,7 @@ which parallelises as the table notes).
 | All others | < 5 s each |
 
 Scripts are CWD-independent: the suite reads no data file, and none of its
-36 `.py` files (`find verification -maxdepth 2 -name '*.py'`) writes one
+37 `.py` files (`find verification -maxdepth 2 -name '*.py'`) writes one
 either — the `results/*.csv` rules in `.gitignore` are preventive, not a
 description of outputs that exist.
 

@@ -21,8 +21,8 @@ id,line,section,token,class,verified,evidence
 182,634,The Normalization Problem,0.037,ANALIT,1 / 27.2 = 0.0368,in-text table restating main.tex:590
 232,724,Null Distribution and Calibration,2.52,ANALIT,(9.1371 - 8.8601) / 0.1101 = 2.52,calibration_modularity_output.txt:9 (q99 / mean / std)
 280,754,Detection Power,97.2,UNIT,0.9720 x 100 = 97.2,calibration_modularity_output.txt:18 and wilson_intervals_output.txt:12
-456,1160,Recommendation,77.6,UNIT,0.7764 x 100 = 77.6,simulate_bootstrap_net_gain_output.txt:19
-468,1255,On-Chain Gas Costs,6.5,UNIT,6500000 / 1e6 = 6.5,succinctness_comparison_output.txt:39
-486,1295,Summary of the Section,6.5,UNIT,6500000 / 1e6 = 6.5,succinctness_comparison_output.txt:39
-510,1396,Summary of the Section,10.2,REF,subsections 10.1-10.10 exist under Limitations (section 10),main.tex:1220-1296
-511,1397,Summary of the Section,10.2,REF,subsection 10.2 = Summary of the Section,main.tex:1296
+456,1168,Recommendation,77.6,UNIT,0.7764 x 100 = 77.6,simulate_bootstrap_net_gain_output.txt:19
+468,1263,On-Chain Gas Costs,6.5,UNIT,6500000 / 1e6 = 6.5,succinctness_comparison_output.txt:39
+486,1303,Summary of the Section,6.5,UNIT,6500000 / 1e6 = 6.5,succinctness_comparison_output.txt:39
+510,1408,Summary of the Section,10.2,REF,subsections 10.1-10.10 exist under Limitations (section 10),main.tex:1228-1304
+511,1409,Summary of the Section,10.2,REF,subsection 10.2 = Summary of the Section,main.tex:1304

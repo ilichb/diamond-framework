@@ -47,3 +47,8 @@ r_std_specification.py EXIT 0
 frozen_vs_durable COMPARED 35 DIFFERENCES 0
 run1_vs_durable COMPARED 35 DIFFERENCES 0
 run2_vs_durable COMPARED 35 DIFFERENCES 0
+# --- P9.5 (2026-10-17): M-05 incorporado al pipeline (36 scripts) ---
+# run_all.sh -> 36 scripts, 36 codigos de salida cero (ver baseline_verified/manifest.txt)
+m05_attack_model.py EXIT 0
+# las tres comparaciones byte a byte anteriores siguen cubriendo 35: m05 no tiene
+# contraparte en baseline_2026-10-06 (corrida anterior a su incorporacion).

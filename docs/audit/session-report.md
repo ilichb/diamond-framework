@@ -108,7 +108,7 @@ specific tensor», cierto solo bajo el *Option B repair* de §4.3-4.4
 Refs verificadas: `\label{sec:zk}` (→ §4) y `\label{subsec:recursive}`
 (→ §4.4) resuelven en `main.aux`.
 
-### A.2 — §8.2 «Reputation Models», fin de sección (C-14), tras `main.tex:1080`
+### A.2 — §8.2 «Reputation Models», fin de sección (C-14), tras `main.tex:1088`
 
 Problema (C-14): `R_{\mathrm{std}}` nunca se define. Párrafo nuevo tras
 el párrafo del sweep:
@@ -123,7 +123,7 @@ el párrafo del sweep:
 > Nota de etiqueta: la sección es **§8.2**, no §8.1 (el párrafo del sweep
 > es el último de §8.2, justo antes de `\subsection{Bootstrap Simulation}`).
 
-### A.3 — §8.7 (C-14), `main.tex:1155→1082`
+### A.3 — §8.7 (C-14), `main.tex:1163→1082`
 
 El párrafo yuxtaponía `0.0282` y `0.0424` como si fueran comparables.
 
@@ -134,7 +134,7 @@ El párrafo yuxtaponía `0.0282` y `0.0424` como si fueran comparables.
   the sweep optimum $\mu/g = 1.5$, averaged over five seeds; both fall
   below...`
 
-### A.4 — §10.5 (C-14), `main.tex:1315→1228`
+### A.4 — §10.5 (C-14), `main.tex:1323→1228`
 
 - **Antes:** `...is 0.0424 at the sweep optimum, below the 0.05 threshold...`
 - **Después:** `...is 0.0424 at the sweep optimum $\mu/g = 1.5$ (five
@@ -145,7 +145,7 @@ El párrafo yuxtaponía `0.0282` y `0.0424` como si fueran comparables.
 
 - C-12 `Status:` → Cerrado. Forward reference added at main.tex:803 (§6.2 → §4.4).
 - C-14 `Status:` → Cerrado. R_std defined at the end of §8.2; operating
-  point and seed count declared at main.tex:1155 and main.tex:1315.
+  point and seed count declared at main.tex:1163 and main.tex:1323.
 
 ---
 
@@ -452,7 +452,7 @@ declarados (handoff §3).
 **Estado: P6b cerrado.** El aparato del paper (C1–C4: `center` → `table[H]` con
 `\caption`) llevó `main.tex` de 1410 a 1566 líneas; las dos amendments que §10
 dejó en cola quedaron aplicadas (§10.4's `-502` acotado por §7.5 en
-`main.tex:1266`; `\|T\|_F` donde se quiere la norma en `main.tex:842` y `:882`).
+`main.tex:1274`; `\|T\|_F` donde se quiere la norma en `main.tex:842` y `:882`).
 Como el paper cambió, las citas `main.tex:NNNN` de los tres inputs sellados se
 re-derivaron **antes** de regenerar el root (316 tokens, 313 remapeados, 23
 ficheros, 396 citas validadas, 0 cambios de sección; `anchor-receipts.md`
