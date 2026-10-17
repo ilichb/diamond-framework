@@ -1,0 +1,16 @@
+# Count manifest (P9.6a, 2026-10-17).
+#
+# Los conteos que el gate verifica dejan de ser literales tecleados en los
+# scripts. Se declaran aqui, se sellan como 11o par de anchor_root.sha256 y
+# audit-gate.sh los compara con el recuento real:
+#   G2  scripts  -> comandos python3 del bloque "## Running" de README.md,
+#                   contrastado ademas con el numero de scripts del pipeline
+#   G5  F-log    -> lineas '### F-' de docs/audit/numerical-verification.md
+#   G6  C-log    -> lineas '### C-' de docs/audit/content-audit-pending.md
+#
+# Formato: <clave> <valor>. '#' inicia comentario. El orden de las claves no
+# es significativo (se busca por clave); el fichero es determinista byte a
+# byte porque no lleva fecha.
+F-log 22
+C-log 50
+scripts 36

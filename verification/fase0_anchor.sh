@@ -33,11 +33,17 @@
 # de outputs), que se reproduce identica.
 #
 # D1 EXTENSION (2026-10-08). El generador tambien emite
-# verification/anchor_root.sha256, que hashea los 10 ficheros de la cadena
+# verification/anchor_root.sha256, que hashea los 11 ficheros de la cadena
 # de custodia completa: el ancla (main.tex + output_manifest.txt +
 # output_manifest.sha256), el verificador (audit-gate.sh, este generador,
 # run_all.sh y el workflow de CI), y los inputs estables que audita
 # (claim-registry.csv, numerical-verification.md, content-audit-pending.md).
+#
+# P9.6a (2026-10-17). Undecimo par: verification/count_manifest.txt.  Los
+# conteos auditables (F-log, C-log, scripts) dejan de ser literales en
+# audit-gate.sh y pasan a estar sellados aqui; el gate los lee y los compara
+# con el recuento real.  Un conteo que cambie sin actualizar el manifiesto
+# deja de pasar el gate.
 #
 # El root es determinista byte a byte: sin header, sin timestamp, sin
 # HEAD. El sellado externo (OpenTimestamps) del root es el testigo
@@ -49,7 +55,7 @@
 # transitivamente sin que el gate cambie de definicion.
 #
 # DISCIPLINA: regenerar anchor_root.sha256 es el ULTIMO acto antes de
-# git add. Cualquier retoque posterior de los 10 ficheros (incluido un
+# git add. Cualquier retoque posterior de los 11 ficheros (incluido un
 # comentario en este script) invalida el root.
 #
 set -euo pipefail
@@ -64,8 +70,9 @@ PAPER_REL="docs/paper/main.tex"
 
 ROOT_SHA_REL="verification/anchor_root.sha256"
 
-# Rutas del root: 10 ficheros, orden hardcodeado (reproducibilidad byte a
-# byte; el orden del manifiesto es parte del contrato).
+# Rutas del root: 11 ficheros, orden hardcodeado (reproducibilidad byte a
+# byte; el orden del manifiesto es parte del contrato).  El par 11
+# (count_manifest.txt) lo anadio P9.6a.
 ANCHOR_PATHS=(
     "${PAPER_REL}"
     "${LIST_REL}"
@@ -81,6 +88,7 @@ INPUT_PATHS=(
     "docs/audit/claim-registry.csv"
     "docs/audit/numerical-verification.md"
     "docs/audit/content-audit-pending.md"
+    "verification/count_manifest.txt"
 )
 ROOT_PATHS=("${ANCHOR_PATHS[@]}" "${VERIFIER_PATHS[@]}" "${INPUT_PATHS[@]}")
 
@@ -172,7 +180,7 @@ H_OUT="$(sha256sum -- "${OUT_DIR}/output_manifest.sha256" | cut -d' ' -f1)"
     printf '%s  %s\n' "${H_OUT}" "${OUT_SHA_REL}"
 } > "${OUT_DIR}/audit_manifest.sha256"
 
-# ---- 4b. anchor_root.sha256 (10 pares, sin header ni timestamp) ------------
+# ---- 4b. anchor_root.sha256 (11 pares, sin header ni timestamp) ------------
 # Cubre la cadena de custodia completa: ancla + verificador + inputs del
 # verificador. NO incluye audit_manifest.sha256 (timestamp no determinista),
 # ni el root mismo, ni el receipt .ots (ciclo). NO incluye HEAD (lo registra
@@ -186,14 +194,17 @@ printf 'fase0_anchor: %d outputs -> %s\n' "${n}" "${OUT_SHA_REL}"
 printf 'fase0_anchor: sello UTC %s, HEAD %s\n' "${TS}" "${HEAD_REV}"
 
 # ---- 5. --check: prueba de determinismo contra el ancla commiteada ---------
-# Lo determinista es la cadena derivada de ficheros: los 35 pares de
-# output_manifest.sha256, los 2 pares de audit_manifest.sha256 y los 10 pares
+# Lo determinista es la cadena derivada de ficheros: los pares de
+# output_manifest.sha256, los 2 pares de audit_manifest.sha256 y los 11 pares
 # del root.  Lo NO determinista es el timestamp y el HEAD anclado (el generador
 # sella el HEAD *actual*, y G10 lo acepta como ancestro del actual: D7-b).
 if [ "${CHECK}" -eq 1 ]; then
     status=0
     if cmp -s "${OUT_DIR}/output_manifest.sha256" "${OUT_SHA_REL}"; then
-        echo "fase0_anchor: output_manifest.sha256  IDENTICO byte a byte (35 pares)"
+        # Conteo derivado del fichero regenerado, nunca tecleado: el literal
+        # "35 pares" sobrevivio a M-05 (36 scripts) sin que nada fallara.
+        n_out="$(wc -l < "${OUT_DIR}/output_manifest.sha256")"
+        echo "fase0_anchor: output_manifest.sha256  IDENTICO byte a byte (${n_out} pares)"
     else
         echo "fase0_anchor: output_manifest.sha256  DISCREPA de ${OUT_SHA_REL}" >&2
         status=1

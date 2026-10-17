@@ -28,6 +28,8 @@ MANIFEST="${MANIFEST:-verification/baseline_verified/manifest.txt}"
 PAPER="${PAPER:-docs/paper/main.tex}"
 OUT_SHA="verification/output_manifest.sha256"
 AUDIT_SHA="verification/audit_manifest.sha256"
+# Conteos auditables: datos sellados (11o par del root), no literales.
+COUNT_MANIFEST="verification/count_manifest.txt"
 
 PASS=0; FAIL=0; SKIP=0; LINE=()
 emit() {
@@ -39,6 +41,8 @@ emit() {
     esac
 }
 count() { grep -c "$1" "$2" 2>/dev/null || true; }
+# Valor de una clave del manifiesto de conteos; vacio si la clave falta.
+cman() { awk -v k="$1" '!/^#/ && $1 == k {print $2; exit}' "${COUNT_MANIFEST}" 2>/dev/null || true; }
 
 # ---- G1: Scripts presentes --------------------------------------------------
 # Definicion: find verification -maxdepth 2 -name "*.py" | wc -l  -> >= 35
@@ -48,16 +52,28 @@ G1="$(find verification -maxdepth 2 -name '*.py' | wc -l)"
     || emit G1 FAIL "scripts .py = ${G1} (< 35)"
 
 # ---- G2: Exits (el harness ya los valido; el gate los reafirma) -------------
-# Definicion: grep -c "EXIT 0" "${EVID}"
+# Definicion: grep -c "EXIT 0" "${EVID}"  ==  clave `scripts` del manifiesto de
+# conteos (verification/count_manifest.txt, sellada como 11o par del root).
 # [ADAPTED] el log del harness se emite con una linea "<script> EXIT <code>"
-# por script; el esperado es el nº de scripts con codigo numerico del
-# manifiesto de la corrida durable (0 MISSING).
-want="$(awk 'NR>1 && $2 ~ /^[0-9]+$/ {n++} END{print n+0}' "${MANIFEST}" 2>/dev/null || echo 0)"
+# por script.  El esperado ya no se teclea ni se infiere del manifiesto de la
+# corrida: se declara en el manifiesto sellado y se contrasta con el numero de
+# comandos del bloque "## Running" de verification/README.md (si el README y el
+# manifiesto discrepan, FAIL explicito con ambos valores).  El manifiesto de la
+# corrida sigue cubriendose con la comprobacion de 0 MISSING.
+want="$(cman scripts)"
+readme_n="$(grep -cE '^[[:space:]]*python3[[:space:]]' verification/README.md 2>/dev/null || true)"
+missing="$(count 'MISSING' "${MANIFEST}")"
 G2="$(count 'EXIT 0' "${EVID}")"
-if [ "${want:-0}" -gt 0 ] && [ "${G2:-0}" -eq "${want}" ]; then
-    emit G2 PASS "EXIT 0 = ${G2}/${want} scripts"
+if [ -z "${want:-}" ]; then
+    emit G2 FAIL "count_manifest sin clave 'scripts'"
+elif [ "${readme_n:-0}" -ne "${want}" ]; then
+    emit G2 FAIL "scripts en README = ${readme_n:-0} != manifiesto = ${want}"
+elif [ "${missing:-0}" -ne 0 ]; then
+    emit G2 FAIL "manifiesto de corrida con ${missing} MISSING"
+elif [ "${G2:-0}" -eq "${want}" ]; then
+    emit G2 PASS "EXIT 0 = ${G2}/${want} scripts (manifiesto)"
 else
-    emit G2 FAIL "EXIT 0 = ${G2:-0}/${want} (esperado: todos)"
+    emit G2 FAIL "EXIT 0 = ${G2:-0}/${want} (manifiesto; esperado: todos)"
 fi
 
 # ---- G3: Reproducibilidad (0 DRIFT) ----------------------------------------
@@ -91,21 +107,31 @@ else
 fi
 
 # ---- G5: F-Log count -------------------------------------------------------
-# Definicion: grep -c '^### F-' docs/audit/numerical-verification.md -> 21.
-# (Corregido de 19 a 21 por el Auditor en el cierre del Bloque B — D1: el
-# artefacto derivado da 21 y el propio paper escribe "twenty-one" en
-# main.tex L41/L80. La cifra 19 provenia del session-report de la sesion 3.)
+# Definicion: grep -c '^### F-' docs/audit/numerical-verification.md  ==  clave
+# `F-log` de verification/count_manifest.txt (sellada como 11o par del root).
+# (El valor 21 era un literal del cierre del Bloque B — D1: el artefacto
+# derivado daba 21 y el paper escribe "twenty-one" en main.tex L41/L80; la
+# cifra 19 provenia del session-report de la sesion 3.  Quedo obsoleto al anadir
+# F-022 en P9.6a: el esperado viaja ahora en el manifiesto sellado, de modo que
+# un F- nuevo sin actualizar el manifiesto es FAIL explicito.)
 G5="$(count '^### F-' docs/audit/numerical-verification.md)"
-[ "${G5:-0}" -eq 21 ] \
-    && emit G5 PASS "F- entries = ${G5} (ratificado: 21)" \
-    || emit G5 FAIL "F- entries = ${G5} (esperado 21)"
+g5_want="$(cman F-log)"
+if [ -n "${g5_want:-}" ] && [ "${G5:-0}" -eq "${g5_want}" ]; then
+    emit G5 PASS "F- entries = ${G5} (manifiesto: ${g5_want})"
+else
+    emit G5 FAIL "F- entries = ${G5:-0} (manifiesto: ${g5_want:-AUSENTE})"
+fi
 
 # ---- G6: Worksheet count ----------------------------------------------------
-# Definicion: grep -c '^### C-' docs/audit/content-audit-pending.md -> 50.
+# Definicion: grep -c '^### C-' docs/audit/content-audit-pending.md  ==  clave
+# `C-log` de verification/count_manifest.txt (sellada como 11o par del root).
 G6="$(count '^### C-' docs/audit/content-audit-pending.md)"
-[ "${G6:-0}" -eq 50 ] \
-    && emit G6 PASS "C- worksheets = ${G6}" \
-    || emit G6 FAIL "C- worksheets = ${G6} (esperado 50)"
+g6_want="$(cman C-log)"
+if [ -n "${g6_want:-}" ] && [ "${G6:-0}" -eq "${g6_want}" ]; then
+    emit G6 PASS "C- worksheets = ${G6} (manifiesto: ${g6_want})"
+else
+    emit G6 FAIL "C- worksheets = ${G6:-0} (manifiesto: ${g6_want:-AUSENTE})"
+fi
 
 # ---- G7: Gas exacto ---------------------------------------------------------
 # Definicion: python3 verification/eip_cost_check.py -> exit 0.
@@ -191,7 +217,7 @@ fi
 
 # ---- G11: El ancla se re-deriva (Fase 0, generador) -------------------------
 # Definicion: bash verification/fase0_anchor.sh --check  -> exit 0.
-# El generador rehace el ancla completa en un directorio temporal (los 35 pares
+# El generador rehace el ancla completa en un directorio temporal (los pares
 # de output_manifest.sha256, el sello de audit_manifest.sha256 y el criterio de
 # ancestro de HEAD, D7-b) y la compara con la commiteada. No escribe en el repo:
 # mktemp -d + trap (fase0_anchor.sh:110-111; re-verificado al cerrar D1, D12).

@@ -404,6 +404,60 @@ claim that fails its test is corrected or removed, not quietly reworded.
   output in
   `verification/rmt/results/heavy_tail_scaled_clique_output.txt`.
 
+### F-022 — Deterrence is a function of detection latency, not a worksheet constant
+
+- **Claim under test:** §7.5 states the attacker's profit with two constants
+  of the simulation worksheet — `V_fraud = 1.0` and `S_slash = 10.0` — and
+  the deterrence condition `q > G/(G+L)` leaves `G` and `L` as scalars.
+  Neither constant is a protocol quantity (findings A-18 and A-21): no
+  contract carries a fraud value, and the delivered manager debits the
+  validator's whole recorded stake (DEC-4), so `S_slash = 10.0` appears in
+  no transferred amount. Rebuilt from the declared quantities, the gain is
+  the stake the certified norm buys, and the binding variable is the
+  detection latency `k` in epochs — which §7.5 never states.
+- **Test:** `verification/mechanism/m05_attack_model.py`, `N_REPLICATES =
+  10 000`, `RNG_SEED = 42`. Declared model, per undetected epoch:
+  `G(k, ω) = k·ω·ΔS` and `L = S_f*(r_fraud) + n·κ`, with
+  `E = (1−q)·G − q·L < 0 ⟺ q > G/(G+L)`. Parameters: `Θ = 1`,
+  `C_R^∞ = 0.8` (`S_min = 0.2`), `γ = 0.10`, `κ = 0.10` (the manager's
+  `EJECTION_SURCHARGE`, M9c), `ω ~ U[0.01, 0.10]`, `r_true = 0 →
+  r_fraud = 1`. Tables 1–4 use exact rational arithmetic
+  (`fractions.Fraction`, no rounding); only the population block samples.
+- **Verdict:** **Confirmed** (the scalar is not the binding parameter).
+  The stake the inflated norm avoids is `ΔS = C_R(r_fraud)` unfloored:
+  `0.160`, `0.267`, `0.400`, `0.533`, `0.640` at `r = 0.25, 0.5, 1, 2, 4`,
+  with `ΔS → 0.8` and `S_f* → 0.2` as `r → ∞`, while the loss stays in
+  `S_f* ∈ [0.2, 1.0]` (Table 1). At `r_fraud = 1` the required
+  per-epoch detection probability rises with latency — `q_min = 0.0066,
+  0.0132, 0.0196, 0.0323, 0.0625, 0.1176` for `ω = 0.01` and `0.0625,
+  0.1176, 0.1667, 0.2500, 0.4000, 0.5714` for `ω = 0.10` at
+  `k = 1, 2, 3, 5, 10, 20` (Table 2) — so a fixed `q` deters only up to a
+  break-even latency: `k_be = 1.667` epochs at `q = 0.10, ω = 0.10` and
+  `16.667` at `q = 0.10, ω = 0.01` (Table 3). `q = 1` — an active auditor,
+  the delivered step convention — admits no finite bound, as expected.
+  The population block (median `ω = 0.0353`) gives `q_min(k=1) = 0.0353`
+  and `q_min(k=5) = 0.1546`, and `k_be(q=0.10)` a median of `3.039`
+  epochs. The ejection surcharge raises the loss without touching the
+  stake (`L_eff = 0.70, 0.80, 0.90` for `n = 1, 2, 3`), lowering
+  `q_min(k=1)` from `0.0625` to `0.0426` and stretching `k_be` from `1.667`
+  to `2.500` (Table 4), and it is added per ejection, never folded into
+  `S_f*` (DEC-5). The freshness window `γ·k < 1` admits at most `k = 9`
+  epochs, and `k_be(q=0.10, ω=0.01) = 16.67` lies **beyond** it: for the
+  low-capital type with slow detection the bound is vacuous, which is the
+  precise sense in which freshness and detection are complementary.
+- **Conclusion:** the worksheet's `V_fraud`/`S_slash` pair is not evidence of
+  deterrence. §7.5 now evaluates (eq. deterrence) over `k` epochs from this
+  script, and the detection window is declared a constraint of the model,
+  not an enforced on-chain delay (DEC-3; no exit queue or unbonding delay
+  in the delivered manager). The worst-case type (`ω = 0.10`) requires
+  `q > 0.0625` at one epoch, `q > 0.25` at five and `q > 0.375` at the nine
+  the freshness bound admits; the step convention holds the first with
+  margin `L/G = 15`. The profit figures of the equilibrium table remain
+  worksheet bookkeeping and are labelled as such.
+- **Sample:** `m05_attack_model.py`, deterministic (seed 42), output in
+  `verification/baseline_verified/m05_attack_model_output.txt`; the 36th
+  pair of `output_manifest.sha256`.
+
 ## Open items
 
 | Item | Owner component | Status |

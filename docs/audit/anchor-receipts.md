@@ -688,8 +688,89 @@ re-ejecutar el pipeline y re-sellar: `manifest.txt`, `output_manifest.txt` (las 
 copias), `output_manifest.sha256`, `audit_manifest.sha256`, `anchor_root.sha256` y su
 `.ots`. `fase0_anchor.sh --check` sale con **exit 0**.
 
-**Deuda menor detectada.** El mensaje de `fase0_anchor.sh --check` imprime «IDENTICO
-byte a byte (35 pares)» con el 35 escrito a mano (línea 196) aunque el fichero tenga 36:
-la comparación es real y pasa, el número del texto no. Entra en el mismo paquete de
-literales que F-022 y P9.3.
+### R-6 — Manifiesto de conteos y registro de `M-05` (P9.6a, 2026-10-17)
+
+R-5.1 cerró el re-anclaje de P9.5 dejando una deuda explícita: los conteos que el
+gate verifica seguían siendo literales dentro de los ficheros sellados. `audit-gate.sh`
+fijaba 21 entradas `F-` y 50 worksheets `C-`; `fase0_anchor.sh:196` imprimía «35
+pares» con 36 reales. El triage externo había declarado ambos cambios inseparables
+(«La entrada `F-022` y el manifiesto de conteos van juntos, o no van»): añadir `F-022`
+sin desacoplar G5 del literal habría dejado el gate en FAIL por diseño. R-6 los
+entrega en un solo acto.
+
+| artefacto | antes (`690a151`) | después (este lote) |
+|---|---|---|
+| entradas `### F-` | 21 | **22** (`F-022`) |
+| pares de `anchor_root.sha256` | 10 | **11** (`count_manifest.txt`) |
+| G5 / G6 | literales `21` / `50` | claves `F-log` / `C-log` selladas |
+| G2 (esperado) | filas del manifiesto de la corrida | clave `scripts` + contraste con el README |
+| `fase0_anchor.sh --check` | «(35 pares)» tecleado | «(36 pares)» derivado |
+| `anchor_root.sha256` | `459be332…` | `559af48c…` |
+| `anchor_root.sha256.ots` | sella `459be332…` | sella `559af48c…` |
+
+**`F-022` registra `M-05`, no una corrección de conteos.** La entrada documenta la
+medición que el triage declaró necesaria (A-18/A-21): la deterción
+`q > G/(G+L)` evaluada sobre la latencia de detección `k` en épocas, con
+`G(k, ω) = k·ω·ΔS` y `L = S_f*(r_fraud) + n·κ`, en lugar de los escalares de la
+hoja de cálculo (`V_fraud = 1.0`, `S_slash = 10.0`), que no son cantidades del
+protocolo. `m05_attack_model.py` (semilla 42, 10 000 réplicas) da, para el tipo de
+peor caso (`ω = 0.10`), `q > 0.0625` a una época, `0.25` a cinco y `0.375` a las
+nueve que admite la frescura (`γ·k < 1`), con un punto de ruptura
+`k_be(q = 0.10, ω = 0.01) = 16.67` más allá de esa ventana: para el tipo de bajo
+capital con detección lenta la cota es vacua. El paper ya cita el script en §7.5 y
+§7.8 (ventana declarada, no impuesta on-chain, DEC-3); lo que faltaba era su
+registro en `numerical-verification.md`. La entrada ocupa el hueco 22 que el propio
+`--check` reclamaba.
+
+**El manifiesto.** `verification/count_manifest.txt` declara tres pares
+clave-valor —`F-log 22`, `C-log 50`, `scripts 36`— con el formato documentado en
+cabecera y sin fecha, de modo que es determinista byte a byte. `fase0_anchor.sh` lo
+hashea como **11.º par** del root (orden fijo: 3 del ancla + 4 del verificador +
+3 inputs estables + el manifiesto). `audit-gate.sh` lo lee con `cman()` y compara
+contra la re-derivación: G5 y G6 contra `grep -c '^### [FC]-'`, G2 contra las líneas
+`EXIT 0` de la evidencia **y** contra el número de comandos `python3` del README, de
+forma que manifiesto y catálogo no pueden separarse. Una clave ausente o un valor
+desfasado es FAIL explícito con ambos números; el manifiesto de la corrida conserva
+su comprobación de 0 `MISSING`. Cambiar un conteo exige ahora editar un fichero
+sellado, que mueve el root y obliga a re-anclar: la misma disciplina que el resto.
+
+Las tres rutas de fallo se probaron por mutación temporal y se restauró el fichero
+byte-idéntico: `F-log 22→21` → `G5 FAIL F- entries = 22 (manifiesto: 21)`; clave
+`scripts` borrada → `G2 FAIL count_manifest sin clave 'scripts'`; `scripts 36→37` →
+`G2 FAIL scripts en README = 36 != manifiesto = 37`.
+
+**La línea 196.** `fase0_anchor.sh` deriva el número de pares del fichero regenerado
+(`wc -l` sobre el `output_manifest.sha256` del directorio temporal que acaba de
+compararse), así que el mensaje no puede volver a desfasarse. Sus comentarios y los
+del gate se actualizan a 11 pares; el texto «10 ficheros» desaparece de los ficheros
+sellados.
+
+**Gate y determinismo.** `bash verification/audit-gate.sh` → **PASS=11 FAIL=0
+SKIP=0**, con `G2 EXIT 0 = 36/36 scripts (manifiesto)`, `G5 F- entries = 22
+(manifiesto: 22)`, `G6 C- worksheets = 50 (manifiesto: 50)` y `G10 ... HEAD anclado
+690a151 -> actual 690a151`; `bash verification/fase0_anchor.sh --check` → exit 0,
+`36 pares` y `11 pares` derivados.
+
+**OTS.** `ots stamp` sella `559af48c…` con cuatro atestaciones pendientes (alice,
+bob, catallaxy, finney). El `.ots` que sellaba `459be332…` —con dos transacciones
+Bitcoin en curso, `16489786…` (alice) y `43aa805c…` (catallaxy)— queda reemplazado
+en el árbol pero se conserva en el commit `690a151` y fuera del repo en
+`~/p9/anchor_root.sha256.ots.459be332_pre_R6`. Ningún `.ots` figura entre los 11
+pares: instalarlo no invalida el ancla. `ots upgrade` se repetirá en P9.6b hasta
+obtener atestación de bloque.
+
+**Alcance.** Sellados tocados: `audit-gate.sh` (par 4), `fase0_anchor.sh` (par 5),
+`numerical-verification.md` (par 9) y `count_manifest.txt` (par 11, nuevo), más
+`anchor_root.sha256` y su `.ots`. No sellados: este recibo y
+`implementation-plan.md`. `main.tex` (`b2085341…`, 1578 líneas),
+`content-audit-pending.md` y `claim-registry.csv` quedan intactos.
+
+**Rojo esperado antes de R-7.** Fase 4 (texto de `main.tex`) y `M9a/b/c`
+(`integrations/`) tocan ficheros sellados sin regenerar los manifiestos, de modo
+que `G10` y `G11` —y con ellos el resumen del gate— estarán en **FAIL** durante
+todo ese tramo. Es el estado previsto por la decisión O1 (una sola re-ancla para
+Fase 4 + M9, en lugar de tres intermedias), no una regresión: no se corrige, no se
+regeneran manifiestos y no se commitea un ancla parcial. El único criterio de
+salida es **R-7** con `PASS=11 FAIL=0 SKIP=0` y `fase0_anchor.sh --check` exit 0
+sobre el lote cerrado.
 

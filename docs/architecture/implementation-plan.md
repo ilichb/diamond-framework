@@ -2897,6 +2897,18 @@ been restored to the committed bytes, so the file P7b deposits is byte-identical
 the one `bfe329d` committed. It is unsealed and belongs to release `D-1`/P7b —
 nothing about it enters this batch.
 
+**Estado (2026-10-17): P9.6a hecho; P9.6b espera a OTS.** El manifiesto de conteos
+existe (`verification/count_manifest.txt`, tres pares) y es el **11.º par** de
+`anchor_root.sha256`; G2, G5 y G6 lo leen en lugar de literales —un conteo que
+cambie sin actualizarlo es FAIL explícito— y `F-022`, el registro de `M-05`, sube
+la serie `F-` a 22. `fase0_anchor.sh --check` deriva el número de pares del fichero
+regenerado (`36 pares`, `11 pares`), no de un literal. `bash
+verification/audit-gate.sh` → `PASS=11 FAIL=0 SKIP=0`; `--check` exit 0; root
+`559af48c…` anclado sobre `690a151`, con el detalle en `anchor-receipts.md` §R-6.
+Queda **P9.6b**: `ots upgrade` hasta obtener la atestación de bloque Bitcoin y
+anotar tx y altura en §R-6 — el `.ots` no es un par del root, de modo que ese paso
+no re-ancla.
+
 ### Acceptance and rollback
 
 The batch is done when, in one session: `forge test` offline green with the
