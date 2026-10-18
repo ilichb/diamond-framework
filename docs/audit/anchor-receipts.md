@@ -774,3 +774,69 @@ regeneran manifiestos y no se commitea un ancla parcial. El único criterio de
 salida es **R-7** con `PASS=11 FAIL=0 SKIP=0` y `fase0_anchor.sh --check` exit 0
 sobre el lote cerrado.
 
+
+### R-7 — Cierre de Fase 4 (texto del paper) y M9a/b/c: re-anclaje único (2026-10-17)
+
+**Qué cierra.** El tramo que el recibo de R-6 declaró en rojo esperado: el texto de Fase 4
+en `main.tex` y la verificación de `M9a/b/c` en `integrations/`. Una sola re-ancla para
+ambos, conforme a la decisión O1. `M9a/b/c` no aporta cambios de fichero —sus contratos ya
+estaban commiteados y `git status` no los lista—, así que el lote sellado que se mueve es el
+texto del paper.
+
+**El pre-compromiso.** `ab8f268` (`docs/audit/fase4-decisions.md`) firmó DEC-1…DEC-5 antes
+de tocar una línea. La verificación DEC↔código se hizo contra `AVIPRegistry.sol`,
+`AVIPStakeVault.sol` y `AVIPValidatorManager.sol`: las cinco decisiones describen el código
+entregado. DEC-4 se resolvió como falsa alarma: `slash(address,bytes32)` no lleva importe
+porque el importe *es* el stake completo (`amount = _stakes[validator]`, `_stakes = 0`).
+
+**Los siete cambios (ocho líneas), todos de redacción.** (i) `:76` — cae «financial stake and
+reputation are partial substitutes in the cost of admission»; la regla ahora dice que la
+reputación *rebaja el stake que la admisión exige*, que es lo que DEC-5 firma (un crédito,
+no colateral apropiable). (ii) `:280` — `$C_R(r)$` deja de llamarse «reputational collateral»
+y pasa a «reputation-weighted access cost». (iii) `:769` y (iv) `:774` — «reputational
+collateral destruction» → «the decay of reputation». (v) `:817` — la definición de `$C_R$` en
+la ecuación de admisión, mismo término. (vi) `:1037` — `$L = S_f^*$` → `at least $S_f^*$`,
+porque `slash` toma el stake entero que el registro nombra. (vii) `:1076` — `$C_R(0)$` en
+génesis, mismo término.
+
+**El cambio delicado, `:1333`.** La limitación de DEC-3 estaba infravalorada: v1 no tiene
+*ninguna* salida voluntaria, de modo que `$L \to 0$` no es un riesgo lento sino inalcanzable.
+Se comprobó antes de escribir: `grep -nE 'exit|unstake|withdraw|release'` sobre
+`AVIPValidatorManager.sol` devuelve **cero** coincidencias, y en `AVIPStakeVault.sol` solo
+aparece `withdraw`, capado por `withdrawable = escrowed - ceil(stakeOf)` mientras el validador
+está admitido (el propio contrato lo documenta: «no cooldown and no exit queue: leaving the
+set is the manager's business»). El texto nuevo afirma exactamente eso: la premisa del modelo
+se cumple *por construcción* —no hay salida y el único camino fuera del conjunto admitido es
+el slash—, y lo que falta no es el escrow sino la ordenación: un unbonding delay y una
+challenge window on-chain son trabajo posterior, y una salida futura tendría que secuenciarse
+contra la adjudicación antes de poder leer~\eqref{eq:deterrence} como cobertura.
+
+**Evidencia de texto.** `grep -c 'partial substitutes'` = 0 y `grep -c 'reputational
+collateral'` = 0. `main.tex` sigue en 1578 líneas, el resumen conserva «twenty-two claims»
+(G5) y no entra ninguna tabla, figura ni ecuación nuevos (G8 = 0 mezclas Estimate/Verified).
+`pdflatex` ×2: `errors=0`, `Undefined=0`, PDF de 554 688 bytes.
+
+**Evidencia de código.** `forge test --offline` en `integrations/avalanche`: 9 suites,
+**262 tests passed, 0 failed, 0 skipped**.
+
+**Evidencia de ancla.** `run_all.sh`: 36/36 scripts con `EXIT 0`; los 36 outputs son
+byte-idénticos a los del ancla anterior (`git diff` de `baseline_verified/` vacío salvo
+`manifest.txt`, que solo cambia la columna `runtime_s` y no figura en la lista cerrada).
+`fase0_anchor.sh`: 36 outputs, sello UTC `2026-10-18T00:04:17Z`, HEAD anclado `ab8f268`;
+root nuevo `943dc96a…` (el anterior era `559af48c…`), con los 11 pares y `main.tex` movido de
+`b2085341…` a `24132371…` como único par distinto. `fase0_anchor.sh --check` → exit 0
+(`36 pares` y `11 pares` idénticos byte a byte). `audit-gate.sh` → **PASS=11 FAIL=0 SKIP=0**,
+con `G10 ... HEAD anclado ab8f268 -> actual ab8f268` y `G11 ... exit 0`: los dos rojos
+declarados en R-6 quedan cerrados.
+
+**OTS.** `ots stamp` sella `943dc96a…` con tres atestaciones pendientes (alice, bob,
+catallaxy); el cuarto calendario enviado (Eternity Wall) aún no había devuelto atestación en
+esta corrida. El `.ots` que sellaba `559af48c…` se conserva en `727fc1a` y fuera del
+repo en `~/p9/anchor_root.sha256.ots.559af48c_pre_R7`. Ningún `.ots` figura entre los 11
+pares. `ots upgrade` se repetirá hasta obtener atestación de bloque.
+
+**Alcance.** Sellados tocados: `main.tex` (par 1), `anchor_root.sha256` (derivado) y su
+`.ots`. `output_manifest.sha256` no cambia; `audit_manifest.sha256` cambia solo en el sello
+UTC y el HEAD. No sellados: este recibo, `baseline_verified/manifest.txt` (registro de la
+corrida) e `implementation-plan.md`.
+
