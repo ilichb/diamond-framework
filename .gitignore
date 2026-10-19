@@ -64,3 +64,5 @@ src/zk/target/
 src/rmt/target/
 src/reputation/target/
 src/datalayer/target/
+# copia de conveniencia; canónico: measure_block_time_output.txt
+verification/baseline_verified/fuji_block_time_output.txt
