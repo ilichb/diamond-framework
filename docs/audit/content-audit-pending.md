@@ -42,12 +42,12 @@ that cannot be verified are marked with the local worksheet status
 ### C-01 — ZK proof returns a bit; payment rule needs a value
 
 **Location:** §4.1 (threshold proof) and §6.3 (allocation rule);
-`Theta = 1.0` at `main.tex:837` (§6.4).
+`Theta = 1.0` at `main.tex:896-900` (§6.4, `eq:f0-value`).
 **Status:** Cerrado (resolved by the C-02 decision; residual gaps tracked under C-04 and C-11).
 **Severity:** Structural.
 
 The proof of §4.1 demonstrates `||T||_F >= Theta_r`, a boolean. The
-allocation rule of §6.3, `S_f*(T) = max{VaR_tech, Theta - C_R(T)}`,
+allocation rule of §6.3, `S_f*(T) = max{S_min, Theta - C_R(T)}`,
 requires `C_R(T)` as a continuous function of the tensor norm. No
 mechanism bridges the boolean and the continuous value.
 
@@ -65,8 +65,9 @@ proof per threshold; on-chain gas stays constant (~250k) under recursion,
 so the marginal cost is off-chain.
 
 **Adjacent discoveries (block the numerical resolution):** `Theta_r` has
-no numeric value anywhere in the repo; `VaR_tech` appears once, in
-`main.tex:805`, and is never defined or valued (recorded as C-11);
+no numeric value anywhere in the repo; `S_{\min}` (formerly `VaR_tech`)
+is defined in §6.3 at `main.tex:857-866` and valued at `0.2` there
+(recorded as C-11);
 `C_R` carries three incompatible definitions (the §2.5 integro-PDE value
 function in a scalar `r`, the tensor-valued `C_R(T)` of §6.3, and
 `0.8x/(1+x)` in `fee_specification.py`), which overlaps C-04.
@@ -87,7 +88,7 @@ commitment scheme, or a linear `C_R` expressible over the commitment
 (design proposal, not a consequence of the text)? Each choice has
 different cost implications.
 
-**Next step:** state the `C_R` functional form, `Theta_r` and `VaR_tech`
+**Next step:** state the `C_R` functional form, `Theta_r` and `S_min`
 in §6 (the soundness design is already decided in §4.4), or label the gap
 `[CONJECTURE]` and present §6.3 as a design proposal.
 
@@ -642,8 +643,8 @@ experiment, to be run at `n >= 5000`.
 
 ### C-11 — The allocation rule uses symbols the paper never defines
 
-**Location:** §4.1 (`Theta_r` defined at `main.tex:449`) and §6.3
-(`VaR_tech` defined at `main.tex:815`).
+**Location:** §4.1 (`Theta_r` defined at `main.tex:465`) and §6.3
+(`S_{\min}` defined at `main.tex:866`).
 **Status:** Cerrado (textual; definitions added to the paper).
 **Severity:** Minor.
 

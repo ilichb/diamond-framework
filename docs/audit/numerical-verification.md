@@ -473,9 +473,12 @@ claim that fails its test is corrected or removed, not quietly reworded.
   not an enforced on-chain delay (DEC-3; no exit queue or unbonding delay
   in the delivered manager). The block-time measurement gives that
   constraint a measured per-block scale: `1.0 s` at the median and `11.0 s`
-  at p95. It does not fix the epoch duration; the epoch-to-block mapping
-  remains a design parameter, and the wall-clock conversion is `k·N_b·B`
-  once that parameter is chosen. The worst-case type (`ω = 0.10`) requires
+  at p95. It does not fix the epoch duration; `N_b` remains a deployment
+  parameter not fixed on-chain, and the wall-clock conversion is `k·N_b·B_blk`
+  (with `B_blk` the block time, distinct from the bounty `B`) once that
+  parameter is chosen. The paper declares `N_b` in §9.2 and §10.2; this
+  entry is the numerical anchor for the formula and the measured bounds.
+  The worst-case type (`ω = 0.10`) requires
   `q > 0.0625` at one epoch, `q > 0.25` at five and `q > 0.375` at the nine
   the freshness bound admits; the step convention holds the first with
   margin `L/G = 15`. The profit figures of the equilibrium table remain

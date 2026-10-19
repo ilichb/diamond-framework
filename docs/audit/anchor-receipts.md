@@ -964,3 +964,187 @@ Ningún `.ots` figura entre los 11 pares.
 lista de salida y output 38). No sellados: este recibo,
 `verification/README.md`, `fase1_determinism_evidence.txt`,
 `fuji_block_time_output.txt`, el script nuevo y el fixture.
+
+### R-10 — Once puntos del reviewer externo (N-3, N-7…N-15, M9): re-anclaje (2026-10-18)
+
+**Qué cierra.** El lote de once puntos de revisión externa: `N-3`, `N-7`,
+`N-8`, `N-9`, `N-10`, `N-11`, `N-12`, `N-13`, `N-14`, `N-15` y `M9`. No toca
+contratos ni el registro de claims. Los cambios viven en `docs/paper/main.tex`
+(diez puntos), en `docs/audit/content-audit-pending.md` (`N-7`, fichero sellado)
+y en `docs/audit/numerical-verification.md` (`N-3`, fila F-022, fichero sellado).
+
+**Disposición por punto.**
+
+- **`N-3` — eje temporal.** §9.2 declara que `N_b` (bloques por época) es un
+  parámetro de despliegue y no está fijado on-chain; la conversión es
+  `k·N_b·B_blk`, con `B_blk` el block time (distinto del bounty `B`). §10.2
+  repite la declaración como limitación. La fila nueva de `tab:sec9-summary`
+  («Epoch block count `N_b` is a deployment parameter», *Declared*) apunta a
+  §9.2. F-022 de `numerical-verification.md` deja de decir «epoch-to-block
+  mapping remains a design parameter» y declara `N_b` como parámetro de
+  despliegue, con la fórmula y las cotas medidas (mediana `1.0 s`, p95
+  `11.0 s`, máximo `28.0 s`); la entrada es el anclaje numérico de la fórmula,
+  no una duración de época.
+- **`N-7` — referencias colgantes en fichero sellado.** En
+  `content-audit-pending.md`, C-01 apunta ahora a `main.tex:896-900`
+  (`eq:f0-value`); C-11 apunta a `main.tex:465` (`Theta_r`) y
+  `main.tex:866` (`S_{\min}`). C-01 usa `S_f^*(T) = max{S_min, Theta - C_R(T)}`
+  y el «Next step» de C-01 usa `S_min`; la historia del nombre queda en
+  C-11/C-19/C-21, donde se documenta el renombrado. La ubicación de C-11 se corrigió
+  también (`main.tex:449/815` → `465/866`), que era otra referencia actual
+  obsoleta. `grep -n 'VaR_tech' docs/paper/main.tex` = 0.
+- **`N-8` — posicionamiento.** §1.3 añade un párrafo *Positioning*: EigenTrust
+  agrega feedback de pares pero no usa la reputación para precio de admisión
+  (`kamvar2003`); DPoS y delegación mueven peso de voto transferible, no un
+  estado de reputación derivado de eventos de consenso (`larimer2014`,
+  `goodman2014`). El párrafo declara además que las capas de identidad y
+  delegación que el posicionamiento asume son limitaciones (§10.2).
+- **`N-9` — mercado secundario de identidades.** §1.2 declara que
+  «non-transferable» califica al estado de reputación, no a la identidad: sin
+  una capa de identidad persistente y costosa de recrear, vender la clave de
+  firma transferiría el flujo de ingresos. §10.2 registra la limitación y
+  excluye del modelo un mercado secundario de identidades o claves.
+- **`N-10` — break-even criptográfico.** §9.3 añade la ecuación
+  `g^* = (ΔS_med / G)·10^18` wei por gas, con `ΔS_med = 0.2236` unidades de
+  stake (`Θ = 1.0` → `S_f^* = 0.7764` en la mediana). A `G = 206.000` gas,
+  `g^* = 1.085×10^12` wei (1,085 gwei); a `G = 250.000`, `8.944×10^11` wei
+  (894 gwei). A los 160 wei de los recibos de Fuji, la verificación cuesta
+  `3.30×10^-11` AVAX (206k) y `4.00×10^-11` AVAX (250k), casi diez órdenes de
+  magnitud por debajo del break-even. La fila «Break-even gas price at median
+  stake reduction» entra en `tab:sec9-summary` como *Analytical*.
+- **`N-11` — umbral 0.05.** §8.2 declara la correlación actividad–reputación
+  (0.76 frente a 0.08–0.11) como criterio de selección del modelo, y §8.7
+  elimina el umbral `R_std ≥ 0.05`: el barrido fija el punto de operación
+  `δ/g = 1.5`, no selecciona el modelo, y `R_std` se reporta como sensibilidad,
+  no como pass/fail. §10.2 usa la misma redacción. Se retira `cong2021` de la
+  bibliografía al quedar sin cita.
+- **`N-12` — espacio de tipos.** §6.7 acota la tautología de IC al reporte de
+  `T`: no cubre información privada sobre *timing* de entrada, rotación de
+  claves o agresión de canales. La fila de `tab:sec6-summary` pasa a «IC is
+  tautological in `T`; not in entry timing» y §6.2 recibe el label
+  `subsec:verified` para que la remisión resuelva.
+- **`N-13` — estimador de rango.** §3.3 declara que no se fija estimador para
+  el caso ruidoso: `(4,3,3)` es un parámetro de diseño y el barrido de
+  `tab:tensor-rank` es una comprobación de sensibilidad, no una regla de
+  selección; no se aplica criterio de energía, scree ni análisis paralelo.
+- **`N-14` — recursión SNARK.** §4.4 fija el framework de la configuración de
+  referencia: recursión Groth16 sobre BN254, con Groth16 como prueba interna.
+  Halo (`bowe2019`), ciclos de curvas (`bensasson2014cycles`) y folding
+  (`kothapalli2022`) quedan citados como alternativas no medidas. Se elimina la
+  frase que decía que el framework «is not fixed in this paper», que era el
+  defecto señalado; el coste de ~250k gas y el rango de proving time quedan
+  condicionados a esa elección y siguen sin verificar.
+- **`N-15` — tabla del equilibrio vs free-riding.** §7.4 explica que la columna
+  de verifier profit reparte el pool entre los `n^*` auditores y supone que
+  todos auditan; el free-riding no está modelado, de modo que la columna es
+  condicional a participación plena, no una predicción de equilibrio. La
+  cabecera pasa a «Verifier profit (per auditor)», el caption y §10.2 repiten
+  la salvedad, y el `+0.20` queda explicado como residuo Monte Carlo
+  (`(D_obs - D_theory)·B/n^*`), no como ausencia de dilución.
+- **`M9` — lote de contratos.** §10.2 declara que M9a–M9c (autoridad del
+  registry, slash del stake completo y recargo de eyección) están implementados
+  y pasan la suite offline, pero el deploy de Fuji se hizo con
+  `verifier = address(0)`, de modo que `verifyThreshold` revierte
+  `VerifierNotSet` hasta instalar un verificador real. El ejercicio on-chain
+  completo de admisión, slash y eyección queda declarado como trabajo de
+  Fase 2; la evidencia de la lógica contractual en este paper es la suite
+  offline.
+
+**Evidencia textual.** `main.tex` pasa de 1.599 a 1.626 líneas (+27) y de 38
+a 40 páginas. `grep -c 'twenty-two' main.tex` = 1 (G5); no hay ninguna mezcla
+`Estimate…Verified` (G8); `pdflatex` termina con `errors=0`, `Undefined=0` y
+cero warnings. Las remisiones nuevas resuelven: `subsec:verified`,
+`subsec:stability` y `eq:gas-breakeven`. `\fref` se usa igual que en el resto
+del paper y `\spath` sigue definido.
+
+**Pruebas.** `verification/run_all.sh --resume` → **38/38 scripts, exit 0**,
+`DRIFT=0` (G2/G3). `verification/audit-gate.sh` → **PASS=11 FAIL=0 SKIP=0**,
+con `G4 claims Orphan/sin clase = 0 (27 filas)`, `G5 F-entries = 22`,
+`G6 C-worksheets = 50`, `G7 eip_cost_check exit 0`, `G9 pdflatex limpio`,
+`G10 HEAD anclado f00cad2 -> actual f00cad2` y `G11 ancla re-derivada byte a
+byte (exit 0)`.
+
+**Anclaje.** `fase0_anchor.sh` re-deriva los 38 outputs y los 11 pares;
+sello UTC `2026-10-19T05:07:58Z`, HEAD
+`f00cad206e8a37e59aec6a334b3a6e492a2b98ce` (el commit de R-9). Raíz anterior
+`e5c3333c095532c1c8a90b9abd3481b66f63e46221ad8b4d833d39b98a15a139`; raíz
+nueva `a6a9ef327c533948312715cc10bf212400348343e0acfbb132c3806caf578185`.
+La primera pasada de este lote (05:04:44Z) dio `2190713d…`, pero una corrección
+de notación en `numerical-verification.md` (`k·N_b·B` → `k·N_b·B_blk`, para no
+confundir el block time con el bounty `B`) obligó a re-anclar; `2190713d…` es
+un root intermedio, no el ancla del lote.
+
+Pares que cambian (tres de once):
+
+- `docs/paper/main.tex`: `e451bd1e…` → `02ba24ad50ada07745c01dc83ba450db1fba3ca6ab976040ddf4b46d5b83bdb0`.
+- `docs/audit/numerical-verification.md`: `3d35456e…` → `bfd686df9f27f331904616bb80ae429b6114cf77ceefd308c44fcc55dcdb1f9d`.
+- `docs/audit/content-audit-pending.md`: `1d601d8f…` → `3be8701c3b86d3067526ec1166e117cf154b28c18419e73a6df99c965865c970`.
+
+No cambian: `output_manifest.txt` (`492f3e4e…`), `output_manifest.sha256`
+(`c97f1344…`), `audit-gate.sh` (`612a4c5f…`), `fase0_anchor.sh` (`205130ab…`),
+`run_all.sh` (`0e6b5117…`), el workflow (`8c904a15…`), `claim-registry.csv`
+(`7ecf17d4…`) ni `count_manifest.txt` (`460f2f69…`). `audit_manifest.sha256`
+pasa de `55d38753…` a `871cbc5a…` por el sello UTC y los dos pares derivados.
+`fase0_anchor.sh --check` → exit 0, con `output_manifest.sha256` idéntico byte a
+byte (38 pares), `audit_manifest.sha256` con pares idénticos, HEAD igual al
+actual y `anchor_root.sha256` idéntico byte a byte (11 pares).
+
+**OTS.** `ots stamp` sobre la raíz nueva (`a6a9ef32…`) devuelve cuatro
+atestaciones pendientes: alice, bob, catallaxy y finney. El `.ots` no contiene
+atestación Bitcoin todavía (pendiente de confirmación). La versión 0.7.2 no
+acepta `-o` y falla si el `.ots` existe, así que el `.ots` anterior (que sellaba
+`e5c3333c…`) se conserva en
+`~/p9/anchor_root.sha256.ots.e5c3333c_pre_R10`, y el intermedio de `2190713d…`
+en `~/p9/anchor_root.sha256.ots.2190713d_pre_R10b`, antes de sellar. Ningún
+`.ots` figura entre los 11 pares.
+
+**Alcance.** Sellados tocados: `main.tex` (par 1), `numerical-verification.md`
+(par 9) y `content-audit-pending.md` (par 10); además `anchor_root.sha256`
+(derivado) y su `.ots`, y `audit_manifest.sha256` (derivado). No sellados: este
+recibo, `verification/README.md`, `fase1_determinism_evidence.txt`,
+`fuji_block_time_output.txt` y cualquier fixture. `baseline_verified/` no
+cambia porque los 38 outputs no cambian.
+
+**Estado.** Lote cerrado y anclado, pendiente de commit. El commit de R-10 será
+descendiente de `f00cad2`; G10 lo acepta por la regla D7-b (ancestro del HEAD
+anclado). No se modifican contratos ni el registro de claims.
+
+**Revisión R-10a (2026-10-19).** Cierra los dos bloqueos del preflight de R-10
+y sustituye el ancla de R-10; el resto del recibo se conserva como historia
+del lote.
+
+- **N-10 (horizonte explícito).** `eq:gas-breakeven` pasa a
+  `g^* = k·ω·ΔS_med/G × 10^18`, con `k = 10` épocas, `ω = 0.10` (extremo
+  superior del soporte de coste de capital) y una sola verificación Groth16
+  pagada por admisión. Los valores no cambian: 1.085 gwei a 206k gas y
+  894 gwei a 250k, porque `k·ω = 1`. La frase de coste se corrige a
+  «almost ten orders of magnitude»: 160 wei/gas frente a 1.085×10^12 wei/gas
+  son 6,78×10^9 (9,83 órdenes), no cinco.
+- **`cong2021` restaurada.** Se reinserta el `\bibitem` y se cita en §8.2 en
+  la frase de correlación; el paper queda con 21 `\bibitem` y ninguna cita
+  huérfana. No hay bajas no solicitadas.
+- **Evidencia.** `main.tex` 1.626 → 1.627 líneas, 40 páginas, `pdflatex`
+  errors=0/Undefined=0. `run_all.sh` 38/38 exit 0; `audit-gate.sh`
+  PASS=11 FAIL=0 SKIP=0; `fase0_anchor.sh --check` exit 0.
+- **Pares.** `main.tex` `02ba24ad…` →
+  `94e42b8261c5c718035b452027cddd606f0503b9e4ee128338840bd60f8a9d45`;
+  `audit_manifest.sha256` `871cbc5a…` →
+  `814a73f08c63764b62b4514df41b1998a0524770b7e51ce8b59f7d89852caa42`.
+  `numerical-verification.md` y `content-audit-pending.md` conservan sus
+  hashes de R-10 (`bfd686df…`, `3be8701c…`); `output_manifest.*` no cambia.
+  El diff sigue tocando 7 ficheros.
+- **Ancla.** Sello UTC `2026-10-19T16:18:59Z`, HEAD `f00cad2`. Raíz anterior
+  `a6a9ef32…`; raíz nueva
+  `3138d321bdc048614651b3aa4187d106262a8a8c0055bfa7ed4792b1d088e815`.
+  El `.ots` anterior se conserva en
+  `~/p9/anchor_root.sha256.ots.a6a9ef32_pre_R10a` (y la raíz en
+  `~/p9/anchor_root.sha256.a6a9ef32_pre_R10a`). El `.ots` nuevo (980 bytes)
+  tiene cuatro atestaciones pendientes (alice, bob, catallaxy, finney), sin
+  atestación Bitcoin todavía.
+- **Nota de verificación.** El chequeo N-10 con `grep -B2` no alcanza la
+  frase de `k = 10`, que está cuatro líneas antes del `\label`; la
+  comprobación reproducible es `grep -B5 -A9 'eq:gas-breakeven'` y debe
+  encontrar tanto `k = 10` como `\omega = 0.10`.
+- **Estado.** R-10a cerrado y anclado, pendiente de commit. El commit será
+  descendiente de `f00cad2` (regla D7-b). No se tocan contratos,
+  `integrations/` ni el registro de claims.

@@ -58,6 +58,8 @@ In proof-of-work networks, physical capacity constraints (hardware, energy, cool
 \subsection{Reputation as a Weighted Access Cost}
 The Diamond Framework introduces a second instrument to the admission decision: verifiable, non-transferable reputation. A validator with a long history of contributions faces a large opportunity cost if it misbehaves, because destruction of its reputation eliminates future income streams. This opportunity cost lowers the financial barrier for honest participants without degrading the Cost of Attack that secures the network, because what it buys is a discount on the stake the rule requires: a reputation-weighted access cost, not collateral that a slash can seize.
 
+Non-transferability applies to the reputation state, not to the validator's identity. The protocol assumes an identity layer that makes a validator identity persistent and costly to recreate; it does not provide that layer. Without it, selling a signing key would transfer the reputation-weighted income stream even though the reputation token itself cannot be transferred. A secondary market for identities or keys is outside the scope of the model and is declared as a limitation in Section~\ref{sec:limitations}.
+
 Making this intuition rigorous requires solving several problems:
 
 \begin{enumerate}[leftmargin=*]
@@ -80,6 +82,8 @@ The paper makes four contributions.
 \textbf{A falsification log.} During development, twenty-one quantitative claims were made, tested, and either confirmed or corrected. The corrections include a fabricated simulation figure, a mismeasurement of a gas cost, a factor of two in an integral, a rounding rule that shifted a phase transition, and an unverified projection of a multidimensional type. The log is part of the paper's record, not a supplement to it.
 
 \textbf{Design decisions with explicit boundaries.} Where the protocol cannot deliver a guarantee---for adversaries that are not rational, for collusion below the Kesten--Stigum boundary, for real reputation data that is not available---the paper states the boundary and does not claim the guarantee. The limitations section separates methodological limits (the numerical methods could be improved) from design limits (the protocol does not solve these problems even with perfect methods).
+
+\textbf{Positioning.} The protocol sits between two literatures and is not a variant of either. EigenTrust-style systems aggregate peer feedback into a reputation score but do not price admission with it~\cite{kamvar2003}. Delegated proof-of-stake and stake delegation move voting weight to delegates or pools, but the delegated weight is transferable and is not a reputation state derived from consensus events~\cite{larimer2014,goodman2014}. In this paper reputation is derived from finalized consensus events, is bound to a validator identity, and enters the admission rule only as a discount on the financial stake the rule requires; it is not a transferable token, a delegated voting weight, or a weight in consensus. The identity and delegation layers that this positioning assumes are stated as limitations in Section~\ref{sec:limitations}.
 
 \subsection{Paper Structure}
 Section~\ref{sec:reputation} presents the reputation dynamics: a CIR diffusion with multiplicative downward jumps, the positivity proof, and the exact mean first-passage time.
@@ -388,6 +392,8 @@ Third, and most importantly: \textbf{HOSVD does not capture block structure.} A 
 
 The practical implication is that Tucker compression is efficient for tensors with low-rank structure and inefficient for tensors with community structure. Which regime the reputation tensor occupies is an empirical question that depends on the correlation of validator scores across chains, domains, and horizons. We do not resolve this question in this paper.
 
+We also do not fix a rank estimator for the noisy case. The rank $(4,3,3)$ is a design parameter, and the sweep of Table~\ref{tab:tensor-rank} is a sensitivity check, not a selection rule: no energy criterion, scree test, or parallel analysis is applied. A data-driven estimator for the noisy regime is left to future work.
+
 \subsection{Error Versus Rank}
 For the low-rank noisy tensor, the reconstruction error decreases monotonically with rank (Table~\ref{tab:tensor-rank}):
 
@@ -541,13 +547,13 @@ None of the three sound designs admits direct on-chain verification at acceptabl
 
 \subsection{Recursive Verification}
 \label{subsec:recursive}
-The Bulletproofs verification, which is $O(N)$ in scalar multiplications and costs $\sim$6.5M gas for $N = 500$ if performed on-chain, is instead performed off-chain. A recursive SNARK~\cite{groth2016} then attests that the off-chain verification was correct, and only the recursive proof is posted on-chain.
+The Bulletproofs verification, which is $O(N)$ in scalar multiplications and costs $\sim$6.5M gas for $N = 500$ if performed on-chain, is instead performed off-chain. A recursive SNARK~\cite{bowe2019,bensasson2014cycles,kothapalli2022} then attests that the off-chain verification was correct, and only the recursive proof is posted on-chain. Groth16 remains the inner proof~\cite{groth2016}; the recursion layer is a separate choice, fixed below for the reference configuration.
 
 The recursive proof has constant size and constant verification cost. For a Groth16 recursion over BN254, the on-chain cost is approximately 250k gas, dominated by the \texttt{ecPairing} step at 181{,}142 gas. This is the same order of magnitude as the cost of verifying a single Groth16 proof directly.
 
 We do not measure the proving time of the recursive proof in this paper. The recursive circuit is larger than the inner verification circuit by a factor that depends on the SNARK used for recursion. For the reference configuration, we estimate the recursive proving time in the range of tens of seconds on a modern CPU, but the estimate is not verified.
 
-The choice of recursion framework (Groth16 recursion, Plonk recursion, Halo2 recursion) is not fixed in this paper. All three produce constant-size on-chain proofs at similar gas cost; the difference is the proving time and the trusted setup requirements.
+The recursion framework is fixed for the reference configuration: Groth16 recursion over BN254, matching the inner scheme. Halo-style composition~\cite{bowe2019}, cycles of elliptic curves~\cite{bensasson2014cycles}, and folding schemes~\cite{kothapalli2022} are alternatives that also produce constant-size on-chain proofs at similar gas cost; they differ in proving time and trusted-setup requirements and are not benchmarked here. Fixing the framework is what makes the $\sim$250k gas estimate and the proving-time range of the previous paragraph well defined; the estimate remains unverified.
 
 The protocol adopts Option B with recursive SNARK composition. Selecting it does not remove the Tucker representation from the protocol: Tucker remains useful for data transmission outside the circuit (Section~\ref{sec:tensor}), but the circuit operates on the raw committed tensor.
 
@@ -840,9 +846,10 @@ The allocation of collateral between its financial and reputational components d
 We address the two candidate sources of private information below.
 
 \subsection{Verified Reputation}
+\label{subsec:verified}
 The reputation tensor $T$ is verifiable on-chain via the zero-knowledge threshold proof of Section~\ref{sec:zk}. A validator whose reputation exceeds the threshold can prove it. A validator whose reputation falls below the threshold cannot produce a valid proof.
 
-Consequently, $T$ is not a private type in the sense of mechanism design. The validator cannot misreport it: the proof binds the validator to a specific tensor, and the verifier checks the binding. This binding property holds under the Option B repair of Section~\ref{subsec:recursive}, which replaces the original circuit of Section~\ref{sec:zk} with a Pedersen commitment and a Bulletproofs argument. The revelation principle does not apply because there is nothing to reveal.
+Consequently, $T$ is not a private type in the sense of mechanism design. The validator cannot misreport it: the proof binds the validator to a specific tensor, and the verifier checks the binding. This binding property holds under the Option B repair of Section~\ref{subsec:recursive}, which replaces the original circuit of Section~\ref{sec:zk} with a Pedersen commitment and a Bulletproofs argument. The revelation principle does not apply because there is nothing to reveal. The claim is local to $T$: it does not assert that validators have no private information. Entry timing, key rotation, and channel-aggression strategies can be private and can affect revenue, and the mechanism neither elicits nor prices those dimensions.
 
 \subsection{Private Cost of Capital}
 The validator's cost of capital $\omega \in [\underline{\omega}, \bar{\omega}]$ is private. It represents the opportunity cost of locking financial stake. A validator with low $\omega$ can lock stake cheaply; a validator with high $\omega$ faces a higher opportunity cost.
@@ -940,7 +947,7 @@ $F_0$ & Fraction with $U < 0$ & Gross revenue & Net revenue \\
 At $F_0 = 0.06$ (20\% above $F_0^*$), 0.2\% of the sampled validators violate IR. The gross revenue trade-off is linear: increasing the fee above $F_0^*$ gains revenue at the cost of excluding the worst-case types. Net of the excluded validators, the revenue at $F_0 = 0.06$ is $59.88$ rather than $60.00$.
 
 \subsection{Incentive Compatibility}
-Incentive Compatibility is tautological in this mechanism. There is no private type to misreport: $T$ is verified on-chain, and $S_f^*(T)$ does not depend on $\omega$. A validator cannot improve its allocation by misreporting, because the allocation is determined by a public, verifiable signal.
+Incentive Compatibility is tautological in this mechanism. There is no private type to misreport: $T$ is verified on-chain, and $S_f^*(T)$ does not depend on $\omega$. A validator cannot improve its allocation by misreporting, because the allocation is determined by a public, verifiable signal. The tautology is limited to the reporting of $T$; it is not a claim of full incentive compatibility over entry timing, key rotation, or channel behavior (Section~\ref{subsec:verified}).
 
 The falsification log records this as F-006. The original formulation of the protocol applied Myerson's optimal auction rule~\cite{myerson1981}, which requires a private one-dimensional type. The current mechanism does not have one. The payment rule is a saturated uniform posted price, not a Myerson auction.
 
@@ -962,7 +969,7 @@ $F_0^* = \pi_{\mathrm{val}} - \bar{\omega} \Theta$ & Analytical & \spath{fee_spe
 IR holds for all types & Verified & \spath{fee_specification.py} \\
 IR saturation exact at worst-case type & Verified & \spath{fee_specification.py} \\
 $F_0 = 1.2 F_0^*$ violates IR for 0.2\% & Verified & \spath{fee_specification.py} \\
-IC is tautological & Logical & --- \\
+IC is tautological in $T$; not in entry timing & Logical & --- \\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -1022,12 +1029,12 @@ We evaluate~\eqref{eq:equilibrium} and~\eqref{eq:bstar} by Monte Carlo \fref{ver
 
 \begin{table}[H]
 \centering
-\caption{The audit equilibrium by budget: auditors, detection, attacker and verifier profit, integrity.}
+\caption{The audit equilibrium by budget: auditors, detection, attacker and verifier profit, integrity. Verifier profit is per active auditor under equal division and full participation; free-riding is not represented (Section~\ref{sec:limitations}).}
 \label{tab:equilibrium}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lrrrrr}
 \toprule
-$B$ & $n^*(B)$ & Detection & Attacker profit & Verifier profit & Integrity \\
+$B$ & $n^*(B)$ & Detection & Attacker profit & Verifier profit (per auditor) & Integrity \\
 \midrule
 0.75 & 0 & 0.000 & $+49.91$ & 0.00 & 0.9002 \\
 1.00 & 1 & 1.000 & $-502.00$ & $+0.20$ & 1.0000 \\
@@ -1039,7 +1046,7 @@ $B$ & $n^*(B)$ & Detection & Attacker profit & Verifier profit & Integrity \\
 \end{tabular}}
 \end{table}
 
-The table reports the interior equilibrium points, where $B$ is either below the threshold or an exact integer multiple of $B^*$. The transition at $B = B^*$ is exact. For $B$ below the threshold no verifier audits; the attacker earns $V_{\mathrm{fraud}} \cdot N_{\mathrm{ATT}} \cdot p_{\mathrm{fraud}}$ per epoch without friction. For $B$ at or above the threshold the auditor coverage reaches 100\% in this model, and the attacker's expected profit is negative because the slashing dominates the fraud gain.
+The table reports the interior equilibrium points, where $B$ is either below the threshold or an exact integer multiple of $B^*$. The transition at $B = B^*$ is exact. The verifier-profit column divides the pool among the $n^*$ active auditors and assumes that every one of them audits; free-riding would change the individual payoff and is not modeled, so the column is conditional on full participation, not an equilibrium prediction (Section~\ref{sec:limitations}). For $B$ below the threshold no verifier audits; the attacker earns $V_{\mathrm{fraud}} \cdot N_{\mathrm{ATT}} \cdot p_{\mathrm{fraud}}$ per epoch without friction. For $B$ at or above the threshold the auditor coverage reaches 100\% in this model, and the attacker's expected profit is negative because the slashing dominates the fraud gain.
 
 At the interior equilibrium points the analytical verifier profit is zero: the per-auditor revenue $D \cdot B / n^*$ equals the per-auditor cost $N_{\mathrm{ATT}} \cdot c_{\mathrm{audit}} = 50$ exactly when $n^* = B/B^*$. The observed $+0.20$ is the Monte Carlo deviation from zero, equal to $(D_{\text{obs}} - D_{\text{theory}}) \cdot B / n^*$. With $D_{\text{obs}} \approx 50.2$ and $D_{\text{theory}} = 50.0$, the deviation is $0.2 \cdot B^* = 0.20$. Between interior points the verifier profit is strictly positive; the value depends on $B$ and is tabulated in the script output.
 
@@ -1126,9 +1133,7 @@ R^* = \frac{g \cdot a}{g \cdot a + \delta}
 
 The bootstrap operates on a bounded reputation score $R \in [0, 1)$, distinct from the unbounded state $r$ of Section~\ref{sec:reputation}; the two are related by $R = r/(1+r)$. During the bootstrap phase (from $R(0) = 0$, before the protocol reaches its stationary regime) the value function $C_R(r)$ of Section~\ref{sec:reputation} is replaced by the bootstrap-specific form $\tilde{C}_R(R) = 0.8 \, R / (1 + R)$. All bootstrap numbers in this section are computed under $\tilde{C}_R$. The value function $C_R(r)$ applies to the post-bootstrap steady state.
 
-The correlation between activity and reputation at stationarity is 0.76 in the reference simulation, versus 0.08--0.11 for the saturating models \fref{verification/bootstrap/compare_reputation_models.py}. We therefore use net\_gain throughout the bootstrap analysis.
-
-The sweep over $\delta$ at fixed $g = 0.01$ \fref{verification/bootstrap/sweep_net_gain.py} gives a maximum of $R_{\mathrm{std}}$ at $\delta/g = 1.5$. We use $g = 0.01$, $\delta = 0.015$.
+The correlation between activity and reputation at stationarity is 0.76 in the reference simulation, versus 0.08--0.11 for the saturating models \fref{verification/bootstrap/compare_reputation_models.py}. This correlation is the declared model-selection criterion: net\_gain is selected because its stationary reputation tracks contribution, and the saturating models fail that property by an order of magnitude. The sweep over $\delta$ at fixed $g = 0.01$ \fref{verification/bootstrap/sweep_net_gain.py} gives a maximum of $R_{\mathrm{std}}$ at $\delta/g = 1.5$. We use $g = 0.01$, $\delta = 0.015$. The sweep fixes the operating point; it is not a selection test and no threshold on $R_{\mathrm{std}}$ is used to choose the model.
 
 The quantity $R_{\mathrm{std}}$ is the cross-sectional sample standard deviation of the reputation score $R$ over the active validators at the final epoch of the simulation, with the population convention (numpy default \texttt{ddof = 0}); the reference simulation runs $N = 100$ validators over $T = 500$ epochs \fref{verification/bootstrap/r_std_specification.py}.
 
@@ -1209,7 +1214,7 @@ Hybrid\_no\_decay is recommended & Design & --- \\
 
 The Section's quantitative content is limited to the bootstrap simulation under the net\_gain model and the comparison of three policies. The saturation of the alternative models is documented as F-016.
 
-The selection of net\_gain is based on its correlation with activity~\cite{cong2021} (0.76 vs 0.08--0.11 for the saturating models), not on satisfying all four criteria of the model comparison. The standard deviation of reputation under net\_gain is 0.0282 in \spath{compare_reputation_models.py} at $\delta/g = 5.0$ with one seed, and 0.0424 in \spath{sweep_net_gain.py} at the sweep optimum $\delta/g = 1.5$, averaged over five seeds; both fall below the 0.05 threshold used in the comparison script. The threshold is a heuristic, not a requirement, and the net\_gain model is chosen for the correlation property, which the saturating models fail by an order of magnitude.
+The selection criterion is the activity--reputation correlation reported in Section~\ref{sec:bootstrap}: 0.76 for net\_gain versus 0.08--0.11 for the saturating models~\cite{cong2021}, which is the property that matters for the admission rule. The standard deviation of reputation under net\_gain is 0.0424 at the sweep optimum $\delta/g = 1.5$ (five seeds), and it is reported for completeness, not as a pass/fail threshold. The sweep fixes the operating point $\delta/g = 1.5$; it does not select the model, and no threshold on $R_{\mathrm{std}}$ is used.
 
 \section{Evaluation}
 \label{sec:evaluation}
@@ -1281,16 +1286,26 @@ The overhead is 142 gas in all five measurements, consistent with a single \text
 
 The direct verification of a Bulletproofs proof of Section~\ref{sec:zk} for $n = 500$ elements requires $2n$ scalar multiplications and $2n$ point additions: approximately 6.5M gas. This is $31\times$ the cost of a Groth16 verification. The recursive SNARK of Section~\ref{subsec:recursive} reduces this to the constant cost of the recursive proof, approximately 250k gas.
 
+The gas cost and the stake reduction can be compared directly. At the median validator the bootstrap of Section~\ref{sec:bootstrap} reduces the stake from $\Theta = 1.0$ to $S_f^* = 0.7764$, a saving of $\Delta S_{\mathrm{med}} = 0.2236$ units of stake. The break-even gas price is computed over a reference horizon of $k = 10$ epochs, at the upper end $\omega = 0.10$ of the cost-of-capital support, with the Groth16 verification paid once per admission:
+
+\begin{equation}
+g^* = \frac{k \cdot \omega \cdot \Delta S_{\mathrm{med}}}{G} \times 10^{18}\ \text{wei per gas},
+\label{eq:gas-breakeven}
+\end{equation}
+
+where one unit of stake is $10^{18}$ wei; if one unit of stake is worth $p$ native units, the threshold scales by $p$. For $G = 206{,}000$ gas, $g^* \approx 1{,}085$~gwei; for $G = 250{,}000$ gas, $g^* \approx 894$~gwei. At the reference fee of 160 wei/gas the cost is $3.30 \times 10^{-11}$ (resp.\ $4.00 \times 10^{-11}$) AVAX per admission, almost ten orders of magnitude below break-even. Below-median validators save less, and their break-even gas price is proportionally lower.
+
 The measurement uses a local Foundry instance with Solc 0.8.33. The precompile gas schedule is a constant of the EVM protocol, so the measurements apply identically to any EVM-compatible chain including Avalanche C-Chain.
 
 \subsection{Stability of Conclusions}
+\label{subsec:stability}
 The conclusions of the paper depend on parameter choices that are fixed at design time. We check that small variations do not change the qualitative outcome.
 
 \textbf{Reputation dynamics (Section~\ref{sec:reputation}).} The domain validity of the multiplicative-jump specification is verified pathwise: 0 of 100{,}000 trajectories leave the positive domain for any parameter choice that satisfies Feller. The mean first-passage time converges to the exact value as $dt \to 0$, with a relative error of 0.22\% at $dt = 5 \times 10^{-4}$. The conclusions do not depend on the discretization.
 
 \textbf{Collusion detection (Section~\ref{sec:collusion}).} The null quantile $q_{99} = 9.0542$ is calibrated with $N_{H_0} = 2000$ replicates. The standard error of the $q_{99}$ estimate is $\sqrt{p(1-p)/N} / f(q_{99})$, evaluated at the empirical $z$-score of $q_{99}$ (2.568), giving 0.017 in $\lambda_{\max}(B)$ units, or 0.186\% of its value. The 95\% confidence interval is approximately $[9.021, 9.087]$. The corresponding theoretical value, using the standard normal density at $z = 2.326$, is 0.103\%. The lowest true positive rate across the five simulated configurations is 0.972 (single clique of size 20), well above the $\alpha = 0.01$ threshold. The qualitative boundary does not depend on the calibration sample size.
 
-\textbf{Data layer (Section~\ref{sec:datalayer}).} The equilibrium $n^*(B) = \lfloor B/B^* \rfloor$ is exact given the parameters. The attacker profit is $-502$ in the model with slashing $S_{\mathrm{slash}} = 10$ and $+49.91$ without detection. Both figures are model bookkeeping under the coverage convention of Section~\ref{sec:datalayer}, not executable losses: the loss collateralized on-chain is the escrowed stake of Section~\ref{sec:payment}, which is at least $S_f^*(T) \in [0.2, 1.0]$ and unbounded above, because the admission path caps nothing. The $\Theta = 1.0$ that bounds the model is a coverage convention, not a cap the contract enforces. The detection latency enters as a declared constraint: the deterrence condition~\eqref{eq:deterrence} is evaluated over $k$ epochs \fref{verification/mechanism/m05_attack_model.py}, where the probability the worst-case type requires rises from $0.0625$ at one epoch to $0.375$ at the nine the freshness bound admits. The discontinuity at $B = B^*$ is a property of the equilibrium, not of the Monte Carlo.
+\textbf{Data layer (Section~\ref{sec:datalayer}).} The equilibrium $n^*(B) = \lfloor B/B^* \rfloor$ is exact given the parameters. The attacker profit is $-502$ in the model with slashing $S_{\mathrm{slash}} = 10$ and $+49.91$ without detection. Both figures are model bookkeeping under the coverage convention of Section~\ref{sec:datalayer}, not executable losses: the loss collateralized on-chain is the escrowed stake of Section~\ref{sec:payment}, which is at least $S_f^*(T) \in [0.2, 1.0]$ and unbounded above, because the admission path caps nothing. The $\Theta = 1.0$ that bounds the model is a coverage convention, not a cap the contract enforces. The detection latency enters as a declared constraint: the deterrence condition~\eqref{eq:deterrence} is evaluated over $k$ epochs \fref{verification/mechanism/m05_attack_model.py}, where the probability the worst-case type requires rises from $0.0625$ at one epoch to $0.375$ at the nine the freshness bound admits. The discontinuity at $B = B^*$ is a property of the equilibrium, not of the Monte Carlo. The wall-clock scale of $k$ epochs is $k\,N_b\,B_{\mathrm{blk}}$, where $N_b$ is the number of blocks per epoch and $B_{\mathrm{blk}}$ is the block time (distinct from the bounty $B$). $N_b$ is a deployment parameter and is not fixed on-chain. The measured C-Chain block time over $N = 100$ blocks gives $B_{\mathrm{blk}} = 1.0$~s at the median, $11.0$~s at p95, and $28.0$~s at the observed maximum; the conservative scale uses the upper tail, not the median.
 
 \textbf{Bootstrap (Section~\ref{sec:bootstrap}).} The stationary reputation under net\_gain is $R^* = ga/(ga + \delta)$. The measured median $R = 0.3936$ matches the analytic $R^* = 0.4$ for unit activity. The choice $\delta/g = 1.5$ maximizes $R_{\mathrm{std}}$ in the sweep; nearby values give similar results.
 
@@ -1324,6 +1339,8 @@ Groth16 verification $\approx 206$k gas & Measured + estimate & \spath{GasBenchm
 Bulletproofs direct: $\sim$6.5M gas & Estimated & \spath{GasBenchmarks.sol} \\
 Recursive SNARK: $\sim$250k gas & Estimated & --- \\
 Conclusions stable under parameter variation & Verified & Multiple \\
+Break-even gas price at median stake reduction & Analytical & Section~\ref{subsec:evalgas} \\
+Epoch block count $N_b$ is a deployment parameter & Declared & Section~\ref{subsec:stability} \\
 Recursive proving time & Deferred & --- \\
 Teleporter latency & Deferred & --- \\
 \bottomrule
@@ -1347,11 +1364,17 @@ The protocol assumes a rational, profit-maximizing adversary. Every security arg
 
 \textbf{The cost of Sybil reputation is a market cost.} A validator accumulates reputation by producing consensus events on the source chains, and the cost of these events is set by the market for validation on those chains. A Sybil adversary that controls validators on a source chain pays the marginal cost of those validators, not the market cost. The protocol does not model this case; it assumes the adversary does not control the source chains.
 
-\textbf{The data layer bounty $B^*$ of Section~\ref{sec:datalayer} assumes auditors respond to profit.} If no verifier is willing to audit at any bounty, the fraud is not detected. The equilibrium $n^*(B) = \lfloor B/B^* \rfloor$ has a solution only if $B$ is at least $B^*$. Below that threshold, the mechanism provides no detection regardless of the value of the reputation at stake. It also assumes that a verifier audits on its own account: the bounty is a common pool divided among the auditors who are active, so the income per auditor falls as participation grows, and a verifier that expects the others to audit has an incentive to free-ride on their work instead --- a dilution of the individual reward that the model does not represent.
+\textbf{The data layer bounty $B^*$ of Section~\ref{sec:datalayer} assumes auditors respond to profit.} If no verifier is willing to audit at any bounty, the fraud is not detected. The equilibrium $n^*(B) = \lfloor B/B^* \rfloor$ has a solution only if $B$ is at least $B^*$. Below that threshold, the mechanism provides no detection regardless of the value of the reputation at stake. It also assumes that a verifier audits on its own account: the bounty is a common pool divided among the auditors who are active, so the income per auditor falls as participation grows, and a verifier that expects the others to audit has an incentive to free-ride on their work instead --- a dilution of the individual reward that the model does not represent. The equilibrium table reports the representative auditor's payoff under equal division and full participation, so its verifier-profit column is conditional on full participation, not a second equilibrium.
 
 \textbf{The publisher of the commitment is trusted, and the trust is bounded by a delay.} The commitment of Section~\ref{sec:datalayer} is posted by a single role, and in the delivered registry that role is held by a guardian distinct from the sitting keys: only the guardian may propose a change of the sequencer or of the verifier, the change takes effect only after a fixed delay, and executing a proposed change is permissionless once that delay has elapsed. Both setters emit events, and a proposal of the zero address is rejected. The verifier stays mutable by design: the registry holds the commitment history that the admission rule depends on, so freezing it would turn a circuit defect into a redeployment that loses that history. What this section still assumes is that the guardian does not act against the protocol --- a trust assumption about a quorum, not a property of the code.
 
 \textbf{The detection window of Section~\ref{sec:datalayer} is a declared constraint of the model, not an enforced delay.} The loss of~\eqref{eq:deterrence} is realized only if the escrow is still posted when the fraud is adjudicated. In v1 that premise holds by construction rather than by enforcement: the manager exposes no exit, and the custody vault caps a withdrawal at the escrow above the stake on record, so an admitted validator cannot withdraw the stake that backs its admission, and the only way out of the admitted set is the slash itself. The gap is therefore not a missing escrow but a missing ordering: an unbonding delay and an on-chain challenge window are follow-up work, not properties of v1, and an exit path added later would have to be sequenced against the adjudication before~\eqref{eq:deterrence} could be read as covering it.
+
+\textbf{The epoch duration is a deployment parameter, not an on-chain constant.} The deterrence condition~\eqref{eq:deterrence} is expressed in epochs. Converting $k$ epochs to wall-clock time requires the formula $k\,N_b\,B_{\mathrm{blk}}$, with $N_b$ the number of blocks per epoch and $B_{\mathrm{blk}}$ the block time (distinct from the bounty $B$). No contract fixes $N_b$. The measured C-Chain block time gives $B_{\mathrm{blk}} = 1.0$~s at the median, $11.0$~s at p95, and $28.0$~s at the observed maximum (Section~\ref{subsec:evalgas}); the conservative reading uses the upper tail. The wall-clock bound is therefore conditional on a deployment choice that this paper declares but does not enforce.
+
+\textbf{The identity layer is assumed, not provided.} The non-transferability claim applies to the reputation state, not to the validator's identity. The protocol does not provide an identity layer: it assumes one that makes a validator identity persistent and costly to recreate. Without that layer, selling a signing key would transfer the reputation-weighted income stream even though the reputation token itself cannot be transferred. A secondary market for identities or keys is outside the scope of the model and is declared here as a limitation.
+
+\textbf{The contract batch is tested offline, not fully exercised on-chain.} M9a--M9c (registry authority, full-stake slash, and ejection surcharge) are implemented and pass the offline test suite. The Fuji deployment was made with \texttt{verifier = address(0)}, so \texttt{verifyThreshold} reverts \texttt{VerifierNotSet} until a real verifier is installed. A complete on-chain exercise of the admission, slash, and ejection paths therefore requires the real verifier and is Phase~2 work; the offline suite is the evidence for the contract logic in this paper.
 
 These assumptions are standard in the cryptoeconomic literature but they are not universal. The protocol's guarantees do not extend to adversaries that violate them.
 
@@ -1375,7 +1398,7 @@ R' = g \cdot a \cdot (1-R) - \delta \cdot R
 \label{eq:netgain-limits}
 \end{equation}
 
-selected for its correlation between activity and reputation (0.76 vs 0.08--0.11 for the saturating alternatives). The selection does not satisfy all four criteria of the model comparison: the standard deviation of reputation under net\_gain is 0.0424 at the sweep optimum $\delta/g = 1.5$ (five seeds; the $N = 100$ mean is $0.043970$ with 95\% CI $[0.043351, 0.044588]$), below the 0.05 threshold used in the comparison script. The threshold is a heuristic.
+selected for its correlation between activity and reputation (0.76 vs 0.08--0.11 for the saturating alternatives). This correlation is the selection criterion. The standard deviation of reputation under net\_gain is 0.0424 at the operating point $\delta/g = 1.5$ (five seeds; the $N = 100$ mean is $0.043970$ with 95\% CI $[0.043351, 0.044588]$); it is reported as a sensitivity check, not as a pass/fail threshold.
 
 If the true reputation dynamics differ from net\_gain --- if the activity of a validator has decreasing returns, if reputation decays with a different functional form, if there are non-linear effects --- the bootstrap results change. The reference stake reduction is 22.4\% at the median validator \fref{verification/bootstrap/simulate_bootstrap_net_gain.py}. The qualitative ranking of policies (hybrid\_no\_decay dominates hybrid\_decay) is robust to small changes in the gain rule; the specific numbers of other rules are not tabulated in this paper.
 
@@ -1580,12 +1603,17 @@ The reproduction protocol is the same one that produced the numbers in this pape
 \begin{thebibliography}{99}
 \bibitem{bai2010} Z.~Bai and J.~W.~Silverstein. \newblock {\em Spectral Analysis of Large Dimensional Random Matrices}. \newblock Springer Series in Statistics. Springer, 2nd edition, 2010.
 \bibitem{bauer2012} F.~Bauer and J.~Jost. \newblock Bipartite and neighborhood graphs and the spectrum of the normalized graph Laplacian. \newblock {\em Communications on Pure and Applied Mathematics}, 2012.
+\bibitem{bensasson2014cycles} E.~Ben-Sasson, A.~Chiesa, E.~Tromer, and M.~Virza. \newblock Scalable zero knowledge via cycles of elliptic curves. \newblock In {\em Advances in Cryptology -- CRYPTO 2014}, LNCS 8617, pages 276--294. Springer, 2014.
+\bibitem{bowe2019} S.~Bowe, J.~Grigg, and D.~Hopwood. \newblock Recursive proof composition without a trusted setup. \newblock Cryptology ePrint Archive, Report 2019/1021, 2019.
 \bibitem{chung2003} F.~Chung and L.~Lu. \newblock The average distances in random graphs with given expected degrees. \newblock {\em Proceedings of the National Academy of Sciences}, 99(25):15879--15882, 2002.
 \bibitem{coja2009} A.~Coja-Oghlan. \newblock Graph partitioning via adaptive spectral techniques. \newblock {\em Combinatorics, Probability and Computing}, 19(2):227--284, 2010.
 \bibitem{cong2021} L.~W.~Cong, Y.~Li, and N.~Wang. \newblock Tokenomics: Dynamic adoption and valuation. \newblock {\em The Review of Financial Studies}, 34(3):1105--1155, 2021.
 \bibitem{gmr1985} S.~Goldwasser, S.~Micali, and C.~Rackoff. \newblock The knowledge complexity of interactive proof systems. \newblock {\em SIAM Journal on Computing}, 18(1):186--208, 1989.
+\bibitem{goodman2014} J.~Goodman. \newblock Tezos: A self-amending crypto-ledger position paper. \newblock Position paper, 2014.
 \bibitem{groth2016} J.~Groth. \newblock On the size of pairing-based non-interactive arguments. \newblock In {\em Advances in Cryptology -- EUROCRYPT 2016}, pages 305--326. Springer, 2016.
 \bibitem{kamvar2003} S.~D.~Kamvar, M.~T.~Schlosser, and H.~Garcia-Molina. \newblock The EigenTrust algorithm for reputation management in P2P networks. \newblock In {\em Proceedings of the 12th International Conference on World Wide Web (WWW)}, pages 640--651, 2003.
+\bibitem{kothapalli2022} A.~Kothapalli, S.~Setty, and I.~Tzialla. \newblock Nova: Recursive zero-knowledge arguments from folding schemes. \newblock In {\em Advances in Cryptology -- CRYPTO 2022}, LNCS 13510, pages 359--388. Springer, 2022.
+\bibitem{larimer2014} D.~Larimer. \newblock Delegated proof-of-stake (DPoS). \newblock BitShares whitepaper, 2014.
 \bibitem{myerson1981} R.~B.~Myerson. \newblock Optimal auction design. \newblock {\em Mathematics of Operations Research}, 6(1):58--73, 1981.
 \bibitem{oksendal2007} B.~{\O}ksendal and A.~Sulem. \newblock {\em Applied Stochastic Control of Jump Diffusions}. \newblock Universitext. Springer, Berlin, 2007.
 \bibitem{roughgarden2021} T.~Roughgarden. \newblock Transaction fee mechanism design. \newblock In {\em Proceedings of the 22nd ACM Conference on Economics and Computation (EC)}, pages 792--792, 2021.
