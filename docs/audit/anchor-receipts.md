@@ -1148,3 +1148,87 @@ del lote.
 - **Estado.** R-10a cerrado y anclado, pendiente de commit. El commit será
   descendiente de `f00cad2` (regla D7-b). No se tocan contratos,
   `integrations/` ni el registro de claims.
+
+## R-11 — P0 pre-v0.2.0 y bootstrap de session logs (2026-10-19)
+
+**Qué cierra.** El lote de consistencia previo a v0.2.0: los contadores del
+paper, la tabla de outputs pineados, los overclaims de ZK y de verificación
+recursiva, y el bootstrap del sistema de session logs. No se añaden N-16+ ni se
+toca `integrations/`.
+
+**Paper.** `main.tex` queda con `F=22` en los cinco sitios que decían 21
+(`:82`, `:1228`, `:1336`, `:1484`, `:1534`) y con F-022 citada explícitamente en
+§7.5 y contada en §9.2. `tab:pinned-outputs` pasa de 35 a **38** filas, en el
+orden exacto del manifiesto: `m05_attack_model_output.txt` en la posición 12 y
+`read_fuji_gas_output.txt` + `measure_block_time_output.txt` al final; el diff
+contra `verification/output_manifest.txt` queda vacío. La frase de §9.2 pasa de
+«35 scripts» a «38 scripts». Los overclaims se reescriben: el abstract ya no
+dice que el ZK está «verified numerically»; §5.2 dice que el proof está
+especificado, no desplegado; §9.3 ya no promete «testnet deployment of the
+recursive verification»; la tabla de §11 marca el ZK como «Specified (repair
+estimated)», no «Verified»; y «ten files» pasa a «eleven files». Las frases
+«Every quantitative claim» se sustituyen por «Every claim backed by a script»
+en abstract, contribuciones, §9.2, conclusión y apéndice, para no prometer un
+script para las filas `Estimate`/`Design`/`Deferred`. En `README.md` la fila de
+Bulletproofs queda marcada **Estimate**, y la política de scripts excluye
+explícitamente estimaciones, decisiones de diseño y conjeturas.
+
+**Session logs.** Se añaden `docs/audit/SESSIONS.md`, `docs/audit/sessions/`
+(README, `_TEMPLATE.md`, S-001…S-012) reconstruidos desde `git log` y este
+recibo. La tabla propuesta en el encargo no se usó: confundía `fb5cae97…`
+(hash de `main.tex` en S-001) con el root `5d6002ba…`, y situaba M9 en S-003
+cuando M9a/b/c son S-004/S-005. Los ficheros que el encargo daba por existentes
+(`verification/anchor-receipts.md`, `docs/audit/session-log.md`) no existen; el
+recibo real es este fichero y no se inventa un `session-log.md`.
+
+**Evidencia.** `bash verification/run_all.sh --resume` → 38/38 scripts saltados
+por estar ya completos, 0 `MISSING`, y `git diff` vacío en
+`verification/output_manifest.txt`, `verification/output_manifest.sha256` y
+`verification/baseline_verified/`. No se repitió la corrida completa de ~67 min
+porque ningún script cambió; la evidencia sellada sigue certificando 38/38.
+`pdflatex` ×2 → 40 páginas, 0 errores, 0 referencias indefinidas, 0 overfull o
+underfull; PDF de 569 259 bytes. `bash verification/audit-gate.sh` →
+**PASS=11 FAIL=0 SKIP=0**; `bash verification/fase0_anchor.sh --check` →
+exit 0 (38 pares y 11 pares idénticos).
+
+**Pares.** `main.tex` `94e42b82…` →
+`107217541102518f573f7f842f46f8fb30047328f5f9e3aefe8a44b76efd3a4e`;
+`audit_manifest.sha256` `814a73f0…` →
+`8b94c47752f2d62cfe9f10da27e423d82cbd960fa23f1edc7c4047e7aff2730f`;
+`output_manifest.sha256` no cambia (`c97f1344…`). El PDF congelado es
+`docs/paper/releases/diamond-framework-2026-10-19.pdf`, 40 páginas, 569 259
+bytes, sha256 `1b5ac7ac844ca3dedf846356ffe2a0f1fb1e04df3c70411e3124069cfbf9e10d`;
+no entra en el root (solo los PDFs bajo `releases/` se versionan).
+
+**Ancla.** Sello UTC `2026-10-19T18:12:55Z`, HEAD `b16f561`. Raíz anterior
+`3138d321…`; raíz nueva
+`d8b63d299568db92c408e1b21c9302de3fb6c02dc6334129cedd7679550d7649`.
+El root anterior y su `.ots` se conservan en
+`~/p9/anchor_root.sha256.3138d321_pre_R11` y
+`~/p9/anchor_root.sha256.ots.3138d321_pre_R11`.
+
+**OTS.** `ots stamp verification/anchor_root.sha256` sella `d8b63d29…` con
+cuatro atestaciones **pendientes** (`a.pool.opentimestamps.org`,
+`b.pool.opentimestamps.org`, `a.pool.eternitywall.com`,
+`ots.btc.catallaxy.com`). El `.ots` nuevo tiene 805 bytes y sha256
+`5af120dbdc5ccafa07b40b8a8cbc5a3ef0b138aafa21980f577891c3453c038f`;
+no contiene atestación Bitcoin todavía. No se ejecutó `ots upgrade`: la regla
+del encargo exige esperar a que las cuatro atestaciones confirmen.
+
+**Alcance.** Sellados tocados: `main.tex` (par 1), `anchor_root.sha256`
+(derivado) y su `.ots`; `audit_manifest.sha256` (derivado). No cambian
+`output_manifest.*`, `run_all.sh`, `audit-gate.sh`, `fase0_anchor.sh`, el
+workflow, el registro de claims, `numerical-verification.md`,
+`content-audit-pending.md` ni `count_manifest.txt`. No sellados: `README.md`,
+`docs/paper/README.md`, `docs/paper/releases/README.md`,
+`docs/architecture/implementation-plan.md`, `docs/audit/handoff.md`,
+`SESSIONS.md`, `sessions/` y este recibo.
+
+**Actas históricas.** No se reescriben los documentos fechados que aún dicen
+«21 entries» (`content-audit-pending.md`, `bloque-b-report.md`,
+`eje-iii-counters-report.md`, etc.): son actas de su fecha, con cifras caducas
+por diseño. La corrección vive en el paper, el README, el handoff y este recibo.
+
+**Estado.** R-11 cerrado y anclado, pendiente de commit. El commit será
+descendiente de `b16f561` (regla D7-b); no se enmienda `b16f561`. No se tocan
+contratos ni `integrations/`.

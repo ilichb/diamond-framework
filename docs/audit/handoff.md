@@ -285,15 +285,15 @@ Consolidated during session 8 (the P7a batch):
   nothing; it prints the EIP-196/197 cost table to stdout, which the gate
   discards with `>/dev/null 2>&1` — G7 reads only its exit code).
 - Every suite script has a corresponding `*_output.txt` under the sibling
-  `results/` directory (35 of 35).
+  `results/` directory (38 of 38).
 - All scripts are deterministic: seed declared, no clock, no entropy,
   no disk I/O.
 - Every figure cited in `main.tex` traces to a script, a benchmark, or
   a falsification log entry.
-- Falsification log F-001 through F-021 (21 entries). Seventeen are
-  refuted or partially refuted, three are not applicable, misapplied,
-  or mis-tested, and one (F-021) confirms a structural failure that
-  amends the paper.
+- Falsification log F-001 through F-022 (22 entries). The entries record
+  refuted or partially refuted claims, not-applicable or mis-tested
+  claims, and structural failures; F-021 confirms a structural failure
+  that amends the paper, and F-022 records the detection-latency model.
 
 Re-derive with:
 
@@ -321,8 +321,8 @@ is what a new session should run first:
 | G7 | `python3 verification/eip_cost_check.py` exits 0 |
 | G8 | no `Estimate`/`Verified` mix on one line of `docs/paper/main.tex` |
 | G9 | `pdflatex` on `main.tex` x2: 0 `!` errors and 0 `Undefined`; SKIP without `pdflatex` |
-| G10 | the anchor verifies: the master manifest pairs, **and** the 35 output hashes, **and** the anchored HEAD is an ancestor of HEAD |
-| G11 | the anchor **re-derives**: `bash verification/fase0_anchor.sh --check` exits 0 (the 35 pairs, the seal and the anchored HEAD, recomputed in a temp dir) |
+| G10 | the anchor verifies: the master manifest pairs, **and** the 38 output hashes, **and** the anchored HEAD is an ancestor of HEAD |
+| G11 | the anchor **re-derives**: `bash verification/fase0_anchor.sh --check` exits 0 (the 38 pairs, the seal and the anchored HEAD, recomputed in a temp dir) |
 
 The same gate runs in CI (`.github/workflows/audit-gate.yml`, active since
 `48b6a3c`, fixed in `56bf653`): `fetch-depth: 0` is **required** because G10
@@ -341,7 +341,7 @@ degraded local run.
 
 The anchor chain (Bloque B, `794ba7c`) is
 
-    outputs  <-  verification/output_manifest.sha256       (35 pairs)
+    outputs  <-  verification/output_manifest.sha256       (38 pairs)
              <-  verification/audit_manifest.sha256        (HEAD + 2 pairs)
              <-  docs/paper/main.tex
 
@@ -389,8 +389,8 @@ silently) is covered by a guard, not by discipline.
 
 **Re-anchoring recipe.** Any change to `docs/paper/main.tex` or to
 `verification/baseline_verified/` invalidates the two older artefacts, and any
-change to one of the ten files listed above — the anchor, the verifier, or the
-three audit inputs — invalidates `anchor_root.sha256` as well (G11 and the
+change to one of the eleven files listed above — the anchor, the verifier, or the
+three audit inputs plus the count manifest — invalidates `anchor_root.sha256` as well (G11 and the
 external seal follow it). Re-anchor atomically:
 
 1. Make the change.

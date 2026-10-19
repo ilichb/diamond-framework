@@ -6,6 +6,8 @@ its bytes, once published, never change.
 
 ## Files
 
+- `diamond-framework-2026-10-19.pdf` — 40 pages, 569259 bytes.
+  `sha256 1b5ac7ac844ca3dedf846356ffe2a0f1fb1e04df3c70411e3124069cfbf9e10d`
 - `diamond-framework-2026-10-11.pdf` — 37 pages, 545018 bytes.
   `sha256 13e85c757e2b6efbb717325e2a4e75062f5ad484e426b1c160e24ae7bfa5b56a`
 - `diamond-framework-2026-10-08.pdf` — 34 pages, 530095 bytes.
@@ -29,7 +31,36 @@ derivable, not memorized:
 - These are the only PDFs git tracks: `.gitignore` carries `*.pdf` with
   the single negation `!docs/paper/releases/*.pdf`.
 
-## Provenance of the 2026-10-11 snapshot (the current one)
+## Provenance of the 2026-10-19 snapshot (the current one)
+
+`diamond-framework-2026-10-19.pdf` is frozen from the R-11 source: the
+revision that closes the pre-v0.2.0 consistency pass (F=22, 38 pinned
+outputs, softened ZK and recursive claims) and whose `main.tex` the R-11
+anchor root seals (`../audit/anchor-receipts.md`). Two `pdflatex` passes over
+that source produce it: 40 pages, 569259 bytes, 0 errors, 0 undefined
+references, and 0 overfull or underfull boxes.
+
+    git rev-parse --short HEAD                             # the commit that added this file
+    sha256sum docs/paper/main.tex                          # 10721754…d3a4e, entry #1 of the root
+    head -1 verification/anchor_root.sha256                # the same hash
+    sha256sum releases/diamond-framework-2026-10-19.pdf    # 1b5ac7ac…e10d
+    git hash-object releases/diamond-framework-2026-10-19.pdf
+
+Its embedded metadata, read from the file rather than remembered:
+
+    Title:        Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation
+    Author:       Ilich Blanco
+    Subject:      Reputation-weighted validator selection, cryptoeconomics, zero-knowledge proofs
+    Keywords:     proof-of-stake, validator selection, reputation, zero-knowledge proofs, cryptoeconomics, Avalanche, OpenTimestamps
+    Producer:     pdfTeX-1.40.22
+    CreationDate: Mon Oct 19 14:06:52 2026 -04   (ModDate matches)
+
+The filename date is the local day (UTC-04) the file was frozen into this
+repository; the UTC anchor seal written in the same session is recorded in
+R-11 (`../audit/anchor-receipts.md`). This snapshot supersedes
+`diamond-framework-2026-10-11.pdf`, and it is the file a deposit uploads.
+
+## Provenance of the 2026-10-11 snapshot (historical)
 
 `diamond-framework-2026-10-11.pdf` is frozen from the `main.tex` of the P7a
 batch: the revision the anchor root `5d6002ba…` seals, whose receipt is R-4
@@ -53,8 +84,9 @@ Its embedded metadata, read from the file rather than remembered:
 
 The filename date is the local day (UTC-04) the file was frozen into this
 repository; the UTC anchor seal written in the same session reads
-`2026-10-12T03:28:48Z`. This snapshot supersedes
-`diamond-framework-2026-10-08.pdf`, and it is the file a deposit uploads.
+`2026-10-12T03:28:48Z`. This snapshot superseded
+`diamond-framework-2026-10-08.pdf`, and it was the file a deposit uploads until
+`2026-10-19`.
 
 ## Provenance of the 2026-10-08 snapshot
 

@@ -2,7 +2,7 @@
 
 `main.tex` is the source of truth for the paper: a single LaTeX
 document (`article`, A4, 11pt) containing the title block, the
-abstract, a table of contents, eleven sections, and the sixteen-item
+abstract, a table of contents, eleven sections, and the twenty-one-item
 reference list.
 
 The earlier Markdown sections are kept in `_deprecated-md/` for
@@ -42,10 +42,10 @@ The page count follows the content, so it is read from the build:
 
     cd docs/paper && pdflatex -interaction=nonstopmode -halt-on-error main.tex && pdfinfo main.pdf | grep Pages
 
-The current source is 37 pages (`Pages: 37`, three `pdflatex` passes, 0 errors).
+The current source is 40 pages (`Pages: 40`, two `pdflatex` passes, 0 errors, 0 undefined, 0 overfull or underfull boxes).
 Release snapshots are archived under
-`releases/`; the latest is `releases/diamond-framework-2026-10-11.pdf`
-(37 pages, 545018 bytes, SHA-256 `13e85c75…a56a`), frozen from the P7a source —
+`releases/`; the latest is `releases/diamond-framework-2026-10-19.pdf`
+(40 pages, 569259 bytes, SHA-256 `1b5ac7ac…e10d`), frozen from the R-11 source —
 the very source whose `main.tex` the anchor root seals. The earlier snapshots stay
 as published and are no longer
 the artifact of record. Snapshots are frozen documents: they are not

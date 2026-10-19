@@ -17,7 +17,7 @@ Related: [`../../verification/README.md`](../../verification/README.md),
 The repository contains three things today, all verified:
 
 1. the **paper** (`docs/paper/main.tex`, sections 2–11),
-2. the **numerical verification suite** (`verification/`, 35 scripts, a
+2. the **numerical verification suite** (`verification/`, 38 scripts, a
    harness, an audit gate G1–G11 and a tamper-evident anchor),
 3. the **EVM gas benchmarks** (`integrations/avalanche/benchmarks/`, Foundry).
 
@@ -49,8 +49,8 @@ submission.
 
 | Artefact | Path | Anchor-sealed |
 |----------|------|---------------|
-| Paper (11 sections, 34 pp) | `docs/paper/main.tex` | **yes** (pair #1) |
-| Numerical suite (35 scripts) | `verification/{stochastics,mechanism,zk,rmt,tensor,data-layer,bootstrap}/` | outputs yes (35 pairs) |
+| Paper (11 sections, 40 pp) | `docs/paper/main.tex` | **yes** (pair #1) |
+| Numerical suite (38 scripts) | `verification/{stochastics,mechanism,zk,rmt,tensor,data-layer,bootstrap}/` | outputs yes (38 pairs) |
 | Harness | `verification/run_all.sh` | **yes** (pair #6) |
 | Audit gate G1–G11 | `verification/audit-gate.sh` | **yes** (pair #4) |
 | Anchor generator | `verification/fase0_anchor.sh` | **yes** (pair #5) |

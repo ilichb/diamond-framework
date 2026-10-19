@@ -38,9 +38,9 @@
 \begin{abstract}
 The Diamond Framework addresses the structural tension in Proof-of-Stake between security and accessibility. High collateral requirements deter honest but capital-constrained validators; low requirements expose the network to Sybil attacks. The framework replaces a fraction of the financial stake with verifiable, non-transferable reputation.
 
-The paper makes four contributions: a cryptoeconomic protocol in which reputation lowers the financial stake that admission requires --- a reputation-weighted access cost, not collateral at risk; a numerical verification suite that pairs every quantitative claim with a reproducible script; a falsification log documenting twenty-two claims that were made, tested, and corrected during development; and a set of design decisions with explicit boundaries, stating where the protocol cannot deliver a guarantee.
+The paper makes four contributions: a cryptoeconomic protocol in which reputation lowers the financial stake that admission requires --- a reputation-weighted access cost, not collateral at risk; a numerical verification suite that pairs every claim backed by a reproducible script with that script and states the status of the rest; a falsification log documenting twenty-two claims that were made, tested, and corrected during development; and a set of design decisions with explicit boundaries, stating where the protocol cannot deliver a guarantee.
 
-The protocol is verified numerically for the reputation dynamics, the tensor representation, the zero-knowledge threshold proof, the collusion detection, the payment rule, the data layer, and the bootstrap transition. EVM precompile costs are measured locally with Foundry. Two benchmarks are deferred: the recursive SNARK proving time and the Teleporter latency, both requiring infrastructure not available in this paper.
+The protocol is verified numerically for the reputation dynamics, the tensor representation, the collusion detection, the payment rule, the data layer, and the bootstrap transition. The zero-knowledge threshold proof is analysed: the original circuit is shown unsound and a repair (Option B) is specified with estimated costs, not implemented. EVM precompile costs are measured locally with Foundry. Two benchmarks are deferred: the recursive SNARK proving time and the Teleporter latency, both requiring infrastructure not available in this paper.
 \end{abstract}
 
 \tableofcontents
@@ -77,9 +77,9 @@ The paper makes four contributions.
 
 \textbf{A cryptoeconomic protocol.} We present a validator admission rule in which reputation lowers the financial stake that admission requires. The rule is $\mathrm{CoA}(i) = S_f(i) + C_R(T(i)) \geq \Theta(t)$, where $C_R(T)$ is a reputation-weighted access cost computed from a verified reputation tensor $T$: a credit against the financial stake the rule requires, and not collateral that the protocol can seize. The protocol includes the reputation dynamics, the collusion detection, the payment rule, the data layer, and the bootstrap simulation.
 
-\textbf{A numerical verification suite.} Every quantitative claim in the paper is paired with a script that reproduces it. The scripts are self-contained, depend only on NumPy and SciPy, and declare their seeds and sample sizes. The suite covers stochastic simulation, spectral calibration, game-theoretic equilibrium, and EVM gas benchmarks. Claims without scripts are labeled as conjectures.
+\textbf{A numerical verification suite.} Every claim backed by a reproducible script is paired with it. The scripts are self-contained, depend only on NumPy and SciPy, and declare their seeds and sample sizes. The suite covers stochastic simulation, spectral calibration, game-theoretic equilibrium, and EVM gas benchmarks. Claims that are estimates, design choices, deferred benchmarks, or conjectures state their status and, where applicable, the source of the estimate.
 
-\textbf{A falsification log.} During development, twenty-one quantitative claims were made, tested, and either confirmed or corrected. The corrections include a fabricated simulation figure, a mismeasurement of a gas cost, a factor of two in an integral, a rounding rule that shifted a phase transition, and an unverified projection of a multidimensional type. The log is part of the paper's record, not a supplement to it.
+\textbf{A falsification log.} During development, twenty-two quantitative claims were made, tested, and either confirmed or corrected. The corrections include a fabricated simulation figure, a mismeasurement of a gas cost, a factor of two in an integral, a rounding rule that shifted a phase transition, and an unverified projection of a multidimensional type. The log is part of the paper's record, not a supplement to it.
 
 \textbf{Design decisions with explicit boundaries.} Where the protocol cannot deliver a guarantee---for adversaries that are not rational, for collusion below the Kesten--Stigum boundary, for real reputation data that is not available---the paper states the boundary and does not claim the guarantee. The limitations section separates methodological limits (the numerical methods could be improved) from design limits (the protocol does not solve these problems even with perfect methods).
 
@@ -116,7 +116,7 @@ The paper is accompanied by a public repository containing:
 \item The paper source (\spath{docs/paper/main.tex}).
 \end{itemize}
 
-Every quantitative claim in the paper can be traced to a script, a benchmark, or a log entry. The commands to reproduce the claims are listed in \spath{verification/README.md}. Running the full suite takes approximately 67 minutes on a single core, dominated by the heavy-tailed recalibrations (\spath{heavy_tail_n5000.py}, $\sim$15 min; \spath{heavy_tail_scaled_clique.py}, $\sim$24 min) and the RMT calibration (\spath{recalibrate_top.py}, $\sim$10 min).
+Every claim backed by a script, a benchmark, or a log entry can be traced to that source. The commands to reproduce the claims are listed in \spath{verification/README.md}. Running the full suite takes approximately 67 minutes on a single core, dominated by the heavy-tailed recalibrations (\spath{heavy_tail_n5000.py}, $\sim$15 min; \spath{heavy_tail_scaled_clique.py}, $\sim$24 min) and the RMT calibration (\spath{recalibrate_top.py}, $\sim$10 min).
 
 \section{Reputation Dynamics}
 \label{sec:reputation}
@@ -847,7 +847,7 @@ We address the two candidate sources of private information below.
 
 \subsection{Verified Reputation}
 \label{subsec:verified}
-The reputation tensor $T$ is verifiable on-chain via the zero-knowledge threshold proof of Section~\ref{sec:zk}. A validator whose reputation exceeds the threshold can prove it. A validator whose reputation falls below the threshold cannot produce a valid proof.
+The reputation tensor $T$ is designed to be verifiable on-chain via the zero-knowledge threshold proof of Section~\ref{sec:zk}; the proof is specified but not deployed. Under that specification, a validator whose reputation exceeds the threshold can prove it, and a validator whose reputation falls below the threshold cannot produce a valid proof.
 
 Consequently, $T$ is not a private type in the sense of mechanism design. The validator cannot misreport it: the proof binds the validator to a specific tensor, and the verifier checks the binding. This binding property holds under the Option B repair of Section~\ref{subsec:recursive}, which replaces the original circuit of Section~\ref{sec:zk} with a Pedersen commitment and a Bulletproofs argument. The revelation principle does not apply because there is nothing to reveal. The claim is local to $T$: it does not assert that validators have no private information. Entry timing, key rotation, and channel-aggression strategies can be private and can affect revenue, and the mechanism neither elicits nor prices those dimensions.
 
@@ -1071,7 +1071,7 @@ The freshness parameter $\gamma$ bounds the propagation of undetected fraud acro
 \label{eq:freshness}
 \end{equation}
 
-in the worst case, where the adversary can insert fresh fraud each epoch. The growth is linear, not exponential, and the bound constrains only while $\gamma \cdot k < 1$: the example pair $\gamma = 0.10$ with $k = 10$ epochs gives $\gamma \cdot k = 1.0$, where the maximum fraudulent fraction is 1.0 --- the whole tensor --- so there the bound permits everything and constrains nothing. Below that threshold the constraint bites: $\gamma = 0.05$ gives a maximum of 0.5 after 10 epochs, and $\gamma = 0.02$ gives 0.2. While $\gamma \cdot k < 1$ the freshness constraint prevents a single undetected fraud from contaminating the entire tensor. This is also the constraint that bounds the detection latency of~\eqref{eq:deterrence}: the same $k$ is the number of epochs an undetected fraud can run, so $\gamma$ fixes the largest window the detection probability must survive. For the reference pair $\gamma = 0.10$ that window is nine epochs, and the probability the worst-case type requires there is $0.375$, against the $0.0625$ of a single epoch \fref{verification/mechanism/m05_attack_model.py}. The freshness parameter is therefore the second line of defense in a precise sense: where the audit fails, freshness is what limits the loss, and it does so by capping $k$ rather than by reducing $q$.
+in the worst case, where the adversary can insert fresh fraud each epoch. The growth is linear, not exponential, and the bound constrains only while $\gamma \cdot k < 1$: the example pair $\gamma = 0.10$ with $k = 10$ epochs gives $\gamma \cdot k = 1.0$, where the maximum fraudulent fraction is 1.0 --- the whole tensor --- so there the bound permits everything and constrains nothing. Below that threshold the constraint bites: $\gamma = 0.05$ gives a maximum of 0.5 after 10 epochs, and $\gamma = 0.02$ gives 0.2. While $\gamma \cdot k < 1$ the freshness constraint prevents a single undetected fraud from contaminating the entire tensor. This is also the constraint that bounds the detection latency of~\eqref{eq:deterrence}: the same $k$ is the number of epochs an undetected fraud can run, so $\gamma$ fixes the largest window the detection probability must survive. For the reference pair $\gamma = 0.10$ that window is nine epochs, and the probability the worst-case type requires there is $0.375$, against the $0.0625$ of a single epoch \fref{verification/mechanism/m05_attack_model.py}. The freshness parameter is therefore the second line of defense in a precise sense: where the audit fails, freshness is what limits the loss, and it does so by capping $k$ rather than by reducing $q$. F-022 records the detection-latency model and the block-time calibration that parametrise the deterrence condition over $k$.
 
 \subsection{Summary of the Section}
 Table~\ref{tab:sec7-summary} lists the claims of this section with their status and the script that backs each.
@@ -1223,9 +1223,9 @@ The selection criterion is the activity--reputation correlation reported in Sect
 This section evaluates three things: the reproducibility of the numerical claims, the measured on-chain gas costs of the cryptographic primitives, and the stability of the conclusions under parameter variation. Two benchmarks are deferred to future work because they require a live network: the proving time of the recursive SNARK, and the latency of cross-chain message propagation.
 
 \subsection{Reproducibility}
-Every quantitative claim in Sections~\ref{sec:reputation} through~\ref{sec:bootstrap} is accompanied by a script in \spath{verification/}. The scripts are self-contained: they depend only on NumPy and SciPy, and they declare their seeds and sample sizes at the top of each file. Running \texttt{pip install -r verification/requirements.txt} followed by the commands listed in \spath{verification/README.md} reproduces every number reported in the paper. The README lists the 35 scripts and their expected runtimes.
+Every claim in Sections~\ref{sec:reputation} through~\ref{sec:bootstrap} that is backed by a script is accompanied by it in \spath{verification/}. The scripts are self-contained: they depend only on NumPy and SciPy, and they declare their seeds and sample sizes at the top of each file. Running \texttt{pip install -r verification/requirements.txt} followed by the commands listed in \spath{verification/README.md} reproduces every number reported in the paper. The README lists the 38 scripts and their expected runtimes.
 
-The project documents its own falsifications in \spath{docs/audit/numerical-verification.md}. As of this writing the log contains 21 entries (F-001 through F-021), each one a claim that was made, tested, and corrected. The log exists because the numerical verification is the primary defense against errors of the kind that would otherwise propagate through the paper unchallenged.
+The project documents its own falsifications in \spath{docs/audit/numerical-verification.md}. As of this writing the log contains 22 entries (F-001 through F-022), each one a claim that was made, tested, and corrected. The log exists because the numerical verification is the primary defense against errors of the kind that would otherwise propagate through the paper unchallenged.
 
 The scripts run in the following time ranges on a 2020-era desktop (Table~\ref{tab:runtime}):
 
@@ -1333,7 +1333,7 @@ Table~\ref{tab:sec9-summary} lists the claims of this section with their status 
 Claim & Status & Source \\
 \midrule
 Verification suite reproduces all claims & Verified & \spath{verification/} \\
-21 entries documented & Verified & \spath{docs/audit/} \\
+22 entries documented & Verified & \spath{docs/audit/} \\
 \texttt{ecPairing} $k=4 = 181{,}142$ gas & Measured & \spath{GasBenchmarks.sol} \\
 Groth16 verification $\approx 206$k gas & Measured + estimate & \spath{GasBenchmarks.sol} \\
 Bulletproofs direct: $\sim$6.5M gas & Estimated & \spath{GasBenchmarks.sol} \\
@@ -1468,12 +1468,12 @@ The methodological limitations (calibration on synthetic data, specific model ch
 \label{sec:conclusion}
 
 \subsection{Summary}
-The Diamond Framework replaces a fraction of the financial stake required of a proof-of-stake validator with verifiable, non-transferable reputation. The protocol is built from seven components, each verified numerically in this paper:
+The Diamond Framework replaces a fraction of the financial stake required of a proof-of-stake validator with verifiable, non-transferable reputation. The protocol is built from seven components; six are verified numerically in this paper, and the zero-knowledge proof is analysed with its original circuit shown unsound and a repair specified:
 
 \begin{enumerate}[leftmargin=*]
 \item \textbf{Reputation dynamics} (Section~\ref{sec:reputation}). The process is a CIR diffusion with multiplicative downward jumps. It remains in its positive domain by construction. The exact mean first-passage time is computed by numerical integration and confirmed by two independent simulation methods.
 \item \textbf{Tensor representation and compression} (Section~\ref{sec:tensor}). The reputation tensor is compressed by Tucker decomposition for storage and transmission. The compression is exact for low-rank tensors and fails for blocky tensors; it is not used in the security path.
-\item \textbf{Zero-knowledge threshold proof} (Section~\ref{sec:zk}). The original circuit specification is unsound. The protocol adopts a Pedersen commitment with a Bulletproofs inner-product argument, recursively composed for constant on-chain verification cost. The EVM precompile costs are measured locally and match EIP-196 and EIP-197 exactly.
+\item \textbf{Zero-knowledge threshold proof} (Section~\ref{sec:zk}). The original circuit specification is unsound. The protocol adopts a Pedersen commitment with a Bulletproofs inner-product argument, recursively composed for constant on-chain verification cost. The recursive composition is specified but not implemented; the EVM precompile costs are measured locally and match EIP-196 and EIP-197 exactly.
 \item \textbf{Collusion detection} (Section~\ref{sec:collusion}). The modularity matrix $B = W - dd^{\top}/(2m)$ replaces the normalized adjacency matrix $A_{\mathrm{sym}}$. The empirical null quantile at $\alpha = 0.01$ is 9.0542 with $N_{H_0} = 2000$ replicates. The lowest true positive rate across the five simulated configurations is 0.972; the boundary below which detection degrades is below the tested range. The boundary is characterized as a conjecture.
 \item \textbf{Payment rule} (Section~\ref{sec:payment}). The payment rule is a saturated uniform posted price, not a Myerson auction.
 \item \textbf{Data layer} (Section~\ref{sec:datalayer}). The data layer equilibrium is $n^*(B) = \lfloor B/B^* \rfloor$ with $B^* = c_{\mathrm{audit}}/p_{\mathrm{fraud}}$.
@@ -1481,7 +1481,7 @@ The Diamond Framework replaces a fraction of the financial stake required of a p
 \end{enumerate}
 
 \subsection{Methodology}
-Every quantitative claim in this paper is paired with a script that reproduces it. Claims without scripts are labeled as conjectures. The project maintains a public falsification log (\spath{docs/audit/numerical-verification.md}) with 21 entries: each one a claim that was made during development and tested.
+Every claim backed by a script is paired with it. Claims that are estimates, design choices, deferred benchmarks, or conjectures state their status. The project maintains a public falsification log (\spath{docs/audit/numerical-verification.md}) with 22 entries: each one a claim that was made during development and tested.
 
 The falsification log includes errors of several kinds: a fabricated simulation figure (F-001), a mismeasurement of a gas cost (F-017), a factor of two in an integral (F-011), a rounding rule that shifted a phase transition (F-014), an unverified projection of a multidimensional type (F-004), and an incorrect eigenvalue statistic in the collusion detection (F-018). The corrections are documented in the same file as the original claims.
 
@@ -1490,7 +1490,7 @@ The paper contributes:
 
 \begin{enumerate}[leftmargin=*]
 \item A cryptoeconomic protocol that uses verifiable reputation as partial collateral, with an explicit adversary model and a stated detection boundary.
-\item A numerical verification suite that covers every quantitative claim in the paper, with declared seeds and sample sizes, including local benchmarks of the EVM precompile costs for the cryptographic primitives.
+\item A numerical verification suite that covers every claim backed by a script in the paper, with declared seeds and sample sizes, including local benchmarks of the EVM precompile costs for the cryptographic primitives.
 \item A falsification log that documents errors of measurement, analysis, and model selection as they were found, with the corrections.
 \item A set of design decisions with explicit boundaries, stating where the protocol cannot deliver a guarantee (Section~\ref{sec:limitations}).
 \end{enumerate}
@@ -1525,13 +1525,13 @@ Component & Status & Evidence \\
 \midrule
 Reputation dynamics & Verified & \spath{stochastics/} \\
 Tensor compression & Verified & \spath{tensor/} \\
-ZK threshold proof & Verified & \spath{zk/}, \spath{integrations/avalanche/benchmarks/} \\
+ZK threshold proof & Specified (repair estimated) & \spath{zk/}, \spath{integrations/avalanche/benchmarks/} \\
 Collusion detection & Verified & \spath{rmt/} \\
 Payment rule & Verified & \spath{mechanism/} \\
 Data layer & Verified & \spath{data-layer/} \\
 Bootstrap & Verified & \spath{bootstrap/} \\
 Reproducibility & Verified & \spath{verification/README.md} \\
-Falsification log & 21 entries & \spath{docs/audit/} \\
+Falsification log & 22 entries & \spath{docs/audit/} \\
 External audit & Not performed & --- \\
 Real-data calibration & Open & --- \\
 Testnet benchmarks & Open & --- \\
@@ -1539,14 +1539,14 @@ Testnet benchmarks & Open & --- \\
 \end{tabular}}
 \end{table}
 
-The protocol is ready for external audit of the cryptographic components and for testnet deployment of the recursive verification. The remaining open problems are stated in Section~\ref{sec:limitations} and listed in Section~\ref{sec:conclusion}.
+The protocol is ready for external audit of the cryptographic components. The recursive SNARK and the on-chain verifier are specified but not implemented; testnet deployment of the recursive verification is future work. The remaining open problems are stated in Section~\ref{sec:limitations} and listed in Section~\ref{sec:conclusion}.
 
 \appendix
 
 \section{Reproduction Protocol}
 \label{app:reproduction}
 
-Every quantitative claim in this paper is produced by a script under \spath{verification/}, and the suite is built so that a claim can be re-derived rather than trusted. The chain of custody is closed and it includes this document. \spath{verification/run_all.sh} runs every script and writes the closed list of the outputs it produced to \fref{verification/output_manifest.txt}; \spath{verification/fase0_anchor.sh} hashes exactly that list into \fref{verification/output_manifest.sha256} and seals it, together with this paper, into \fref{verification/audit_manifest.sha256}; and \fref{verification/anchor_root.sha256} commits the ten files of the chain --- this paper among them --- so that no document of the chain can be edited without invalidating the root. The suite is deterministic: the harness records a byte-for-byte comparison of the outputs of two independent runs in \fref{verification/fase1_determinism_evidence.txt}, and a re-run reproduces the manifest.
+Every claim backed by a script under \spath{verification/} is produced by that script, and the suite is built so that a claim can be re-derived rather than trusted. The chain of custody is closed and it includes this document. \spath{verification/run_all.sh} runs every script and writes the closed list of the outputs it produced to \fref{verification/output_manifest.txt}; \spath{verification/fase0_anchor.sh} hashes exactly that list into \fref{verification/output_manifest.sha256} and seals it, together with this paper, into \fref{verification/audit_manifest.sha256}; and \fref{verification/anchor_root.sha256} commits the eleven files of the chain --- this paper among them --- so that no document of the chain can be edited without invalidating the root. The suite is deterministic: the harness records a byte-for-byte comparison of the outputs of two independent runs in \fref{verification/fase1_determinism_evidence.txt}, and a re-run reproduces the manifest.
 
 Table~\ref{tab:pinned-outputs} lists the pinned outputs, in the order of the closed list.
 
@@ -1570,6 +1570,7 @@ Output \\
 \spath{fee_specification_output.txt} \\
 \spath{fee_specification_net_output.txt} \\
 \spath{financial_floor_sensitivity_output.txt} \\
+\spath{m05_attack_model_output.txt} \\
 \spath{constraint_count_check_output.txt} \\
 \spath{soundness_zk_check_output.txt} \\
 \spath{threshold_quantization_output.txt} \\
@@ -1594,6 +1595,8 @@ Output \\
 \spath{sweep_net_gain_output.txt} \\
 \spath{simulate_bootstrap_net_gain_output.txt} \\
 \spath{r_std_specification_output.txt} \\
+\spath{read_fuji_gas_output.txt} \\
+\spath{measure_block_time_output.txt} \\
 \bottomrule
 \end{tabular}
 \end{table}

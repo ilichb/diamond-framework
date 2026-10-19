@@ -38,13 +38,13 @@ The core insight is an opportunity-cost argument:
 | Principle | What it means in the protocol |
 |-----------|-------------------------------|
 | **Non-transferable** | Reputation cannot be bought, sold, or delegated. It accrues to a validator's own verifiable history, so it cannot be rented from the capital market. |
-| **Verifiable** | Possession is proven with ZK threshold proofs (Bulletproofs), not by trusting a committee or a centralized registry. |
+| **Verifiable** | Possession is designed to be proven with ZK threshold proofs (Bulletproofs), not by trusting a committee or a centralized registry. |
 | **Partial** | Reputation never replaces stake entirely. A capital floor remains, so the Cost of Attack is bounded below by capital and not by history. |
 | **Out of the security path by default** | Research tooling that only reduces cost (e.g. tensor compression) never decides admission or slashing. |
 
 ### Non-goals
 
-- **Not a finished protocol.** Sections 2 through 11 are written and verified; the open items are external audit, real-data calibration, and testnet benchmarks.
+- **Not a finished protocol.** Sections 2 through 11 are written; each claim is labelled Verified, Measured, Estimated, Design, or Deferred. The open items are external audit, real-data calibration, testnet benchmarks, and the paper-literal recursive SNARK.
 - **Not audited.** No external security review has been performed, and there is no mainnet deployment. Fuji phase 1 (chain 43113) is a testnet deployment only.
 - **Not formally verified.** All proofs are mathematical arguments, not machine-checked proofs.
 - **Not a production implementation.** The off-chain components under `src/` (`reputation/`,
@@ -59,14 +59,15 @@ The core insight is an opportunity-cost argument:
 ## Status
 
 > **Repository status:** research in progress. The tree, the paper and the verification
-> scripts are published incrementally. Every number in the table below is published only
-> together with the script that produces it, per [CONTRIBUTING.md](CONTRIBUTING.md).
+> scripts are published incrementally. Every number marked measured or verified in the
+> table below is published together with the script that produces it; estimates are
+> labelled, per [CONTRIBUTING.md](CONTRIBUTING.md).
 
 | Component | Result | Verification artifact |
 |-----------|--------|-----------------------|
 | Reputation dynamics | Positive under multiplicative jumps (0% violations) | [`verification/stochastics/`](verification/stochastics) |
 | Tensor compression | Tucker reduces storage by 70.8%; **not** used in the security path | [`verification/`](verification) |
-| ZK threshold proof | Bulletproofs: 0 R1CS constraints, 0.72 KB proof | [`verification/zk/`](verification/zk) |
+| ZK threshold proof | **Estimate** — Bulletproofs: 0 R1CS constraints, 0.72 KB proof; the original circuit is unsound and the repair is specified, not implemented | [`verification/zk/`](verification/zk) |
 | RMT collusion detection | Modularity matrix; TPR characterized for cliques | [`verification/rmt/`](verification/rmt) |
 | Data layer / fraud proofs | Equilibrium `n* = floor(B/B*)`; attacker profit `-502` | [`verification/data-layer/`](verification/data-layer) |
 | Bootstrap dynamics | Verified — μ/g sweep: the optimum is a band, μ/g ∈ [1, 2] (argmax R_std = 0.0424 at μ/g = 1.5) | [`verification/bootstrap/`](verification/bootstrap) |
@@ -116,7 +117,7 @@ diamond-framework/
 
 ### Method
 
-1. **Every quantitative claim requires a script.** If a number appears in a document, the
+1. **Every quantitative claim that is not labelled as an estimate, design choice, or conjecture requires a script.** If such a number appears in a document, the
    script that produced it lives in `verification/`.
 2. **Every script states its sample size.** Monte Carlo runs declare `N_REPLICATES`;
    empirical quantiles declare the estimation method (empirical, Wilson, etc.).
@@ -150,7 +151,7 @@ The suite is closed over its own documents, so a claim can be re-derived rather 
 [`verification/audit-gate.sh`](verification/audit-gate.sh) runs the eleven checks (G1–G11) that
 hold the tree together;
 [`verification/fase0_anchor.sh`](verification/fase0_anchor.sh) derives the root of
-[`verification/anchor_root.sha256`](verification/anchor_root.sha256), which commits the ten
+[`verification/anchor_root.sha256`](verification/anchor_root.sha256), which commits the eleven
 files of the chain — this paper among them — so that no document of the chain can be edited
 without invalidating the root.
 
@@ -159,8 +160,10 @@ the audit is witnessed by something the project does not control. The receipts, 
 are aggregated into, and the command that derives each value live in
 [`docs/audit/anchor-receipts.md`](docs/audit/anchor-receipts.md), deliberately *outside* the
 root: a receipt sealed inside it would be circular. Bitcoin appears only as that external
-witness — it plays no part in the protocol, which targets Avalanche. A change to any of the ten
-files invalidates the seal and requires re-anchoring.
+witness — it plays no part in the protocol, which targets Avalanche. A change to any of the eleven
+files invalidates the seal and requires re-anchoring. The session index is
+[`docs/audit/SESSIONS.md`](docs/audit/SESSIONS.md), with one record per session under
+[`docs/audit/sessions/`](docs/audit/sessions/).
 
 ---
 
@@ -226,7 +229,7 @@ second column, headed `Status` everywhere except in the Limitations table, which
 `Measured` (once `Measured + estimate`), `Estimated` (once `Estimate`), `Arithmetic`,
 `Analytical`, `Logical`, `Design`, `Selection`, `Method`, `Deferred`, `Conjecture`. The
 Conclusion's table also uses that column for repository-level items: `Open`,
-`Not performed`, `21 entries`. The third column names the backing script, source path
+`Not performed`, `22 entries`. The third column names the backing script, source path
 or section — `---` when there is none. Claims that resist measurement are marked
 `[CONJECTURE]` in the prose. The paper closes with an appendix, *Reproduction Protocol*: it
 states the chain of custody end to end and pins the outputs of the suite in the order of the
@@ -238,7 +241,7 @@ closed list of the manifest.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). The four core rules:
 
-1. Every quantitative claim requires a script.
+1. Every quantitative claim not labelled as an estimate, design choice, or conjecture requires a script.
 2. Every script requires a stated sample size.
 3. Every script requires reproducible output (with a declared seed).
 4. Conjectures must be labelled `[CONJECTURE]`.
@@ -280,4 +283,4 @@ Machine-readable metadata lives in [`CITATION.cff`](CITATION.cff).
 Ilich Blanco — Andromeda Computer. Questions, issues and discussions: use
 [GitHub Issues](https://github.com/ilichb/diamond-framework/issues).
 
-<div align="center"><sub>Research in progress — every number ships with its script.</sub></div>
+<div align="center"><sub>Research in progress — every measured number ships with its script; estimates are labelled.</sub></div>
