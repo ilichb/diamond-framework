@@ -1,0 +1,41 @@
+No files changed, compilation skipped
+Script ran successfully.
+
+== Return ==
+0: struct DeployMockToken.Deployment Deployment({ deployer: 0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb, token: 0xf1db80d21d8596fE1571cAe2Da0b1Be089c8cA0C, name: "AVIP Mock Token", decimals: 18, wadPerUnit: 1 })
+
+== Logs ==
+  [fuji] chain.id=43113
+  [fuji] chain.name=fuji
+  [fuji] sender=0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb
+  [fuji] deployer=0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb
+  [fuji] token=0xf1db80d21d8596fE1571cAe2Da0b1Be089c8cA0C
+  [fuji] token.kind=mock-burnable-erc20
+  [fuji] token.name=AVIP Mock Token
+  [fuji] token.decimals=18
+  [fuji] token.total_supply=0
+  [fuji] wad_per_unit=1
+  [fuji] status=ok
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 43113
+
+Estimated gas price: 0.00000017 gwei
+
+Estimated total gas used for script: 2127750
+
+Estimated amount required: 0.0000000003617175 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /home/ilich/Escritorio/diamond-framework/integrations/avalanche/broadcast/DeployMockToken.s.sol/43113/run-latest.json
+
+Sensitive values saved to: /home/ilich/Escritorio/diamond-framework/integrations/avalanche/cache/DeployMockToken.s.sol/43113/run-latest.json

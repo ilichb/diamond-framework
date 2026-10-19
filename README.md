@@ -207,7 +207,7 @@ has **not** been audited.
 | `mu` sweep over bootstrap dynamics | Bootstrap | **Done** (μ/g ∈ [1, 2]; F-005) |
 | Payment rule specification | Mechanism design | **Done** (posted price F0*, IR verified) |
 | Gas benchmarks | Avalanche integration | **Done** (Foundry, integrations/avalanche/benchmarks/) |
-| Deployment scripts | Avalanche integration | **Done** (M7a: `DeployRegistry`/`DeployValidatorManager`, dry run + tests; Fuji deployment pending) |
+| Deployment scripts | Avalanche integration | **Done** (M7a: `DeployRegistry`/`DeployValidatorManager`, dry run + tests; Fuji deployment done 2026-10-18, chain 43113) |
 | Data layer: audit equilibrium + `f_c` | Off-chain (Rust) | **Done** (M7b: the sealed table reproduced row by row on numpy's own stream, `eq:ingestion` as an interface plus the three-valued fraud proof; `src/datalayer/scripts/m7b_report.sh`. M7c: the Pedersen/Poseidon ↔ keccak Merkle bridge over M1's own fold, `src/zk/src/bridge.rs`, `src/zk/scripts/m7c_report.sh`) |
 | Teleporter / AWM transport | Avalanche integration | **Done** (M7d: the three message types of `avalanche-integration.md` §4 as a wire format plus one contract per type — per-kind origin allowlists, at-most-once delivery, the commitment recorded once per epoch, the alert flag that cannot be erased, and a slashing notification whose `reason` is derived from the envelope; `integrations/avalanche/scripts/m7d_report.sh`. Offline against a Teleporter double: **no deployment**) |
 | Teleporter latency | Avalanche integration | Pending (requires testnet) |

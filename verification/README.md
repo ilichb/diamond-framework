@@ -14,6 +14,8 @@ claim in the Diamond Framework paper.
 - `tensor/` — Tucker compression analysis.
 - `data-layer/` — Fraud proof incentive equilibrium.
 - `bootstrap/` — Genesis transition and reputation models.
+- `fuji/` — Gas of the Fuji deployment (chain 43113), read from the pinned
+  broadcast receipts.
 
 Three shell helpers orchestrate and check the suite; they are not part of the
 numbered claims: `run_all.sh` (harness), `audit-gate.sh` (guards G1..G11) and
@@ -22,7 +24,7 @@ into a temporary directory and diffs it against the committed one). A fourth
 helper, `verification/eip_cost_check.py`, is the script behind guard G7: it
 recomputes the EIP gas cost recorded as F-017 and exits 0. It is not a numbered
 entry either, and it is why `find verification -maxdepth 2 -name '*.py'` counts
-37 while the catalogue lists 36 — the extra `.py` writes no output (see
+38 while the catalogue lists 37 — the extra `.py` writes no output (see
 `docs/audit/post-closure-audit.md:136`).
 
 ## Running
@@ -64,6 +66,13 @@ entry either, and it is why `find verification -maxdepth 2 -name '*.py'` counts
     python3 bootstrap/sweep_net_gain.py
     python3 bootstrap/simulate_bootstrap_net_gain.py
     python3 bootstrap/r_std_specification.py
+    python3 fuji/read_fuji_gas.py
+
+`fuji/read_fuji_gas.py` is the Fuji-deployment gas reader. It is the only
+catalogued script that reads data files: the three pinned broadcast JSONs in
+`integrations/avalanche/scripts/fuji_20261018/`. It writes the same table to
+stdout (captured by the harness) and to
+`verification/baseline_verified/fuji_gas_output.txt`.
 
 ## Runtime
 
@@ -107,9 +116,13 @@ which parallelises as the table notes).
 | cr_ide_solver.py | < 1 s |
 | All others | < 5 s each |
 
-Scripts are CWD-independent: the suite reads no data file, and none of its
-37 `.py` files (`find verification -maxdepth 2 -name '*.py'`) writes one
-either — the `results/*.csv` rules in `.gitignore` are preventive, not a
+Scripts are CWD-independent. `fuji/read_fuji_gas.py` is the only catalogued
+script that reads data files (the three pinned Fuji broadcast JSONs) and the
+only one that writes one (`verification/baseline_verified/fuji_gas_output.txt`);
+the harness captures its stdout as `read_fuji_gas_output.txt`, so the anchored
+output carries the same table. The other 37 `.py` files under `verification/`
+(`find verification -maxdepth 2 -name '*.py'`) neither read nor write data
+files — the `results/*.csv` rules in `.gitignore` are preventive, not a
 description of outputs that exist.
 
 ## Reproducibility

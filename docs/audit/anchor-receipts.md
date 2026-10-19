@@ -840,3 +840,48 @@ pares. `ots upgrade` se repetirá hasta obtener atestación de bloque.
 UTC y el HEAD. No sellados: este recibo, `baseline_verified/manifest.txt` (registro de la
 corrida) e `implementation-plan.md`.
 
+### R-8 — Gas del deploy de Fuji en el paper (P10): re-anclaje (2026-10-18)
+
+**Qué cierra.** LOT 1 / P10: el gas de las cinco creaciones del deploy de Fuji
+(chain 43113) entra en el paper como medición reproducible offline. No toca
+contratos, ni F-022, ni el registro de claims.
+
+**La medición.** `verification/fuji/read_fuji_gas.py` lee los tres broadcast JSON
+pineados (`token.json`, `sink.json`, `phase1.json`), empareja transacción y
+recibo por `transactionHash`, exige `chain == 43113` y `status == 0x1`, y deriva
+gas y coste con `Decimal`; no consulta ningún RPC. La salida son las cinco filas,
+el `TOTAL`, `chain_id=43113` y `block_range=59670678-59670735`. El total es
+7.787.000 gas y 1.24592e-9 AVAX a 160 nAVAX; el `1.2459552e-09` del ejemplo del
+encargo no sale de esa aritmética y no se usó. La tabla `tab:fuji-gas` de
+`main.tex` redondea esas cifras y se insertó antes de `\subsection{Estimates and
+Their Provenance}` (la numeración actual es §4.6; el encargo la llamaba §6).
+§9.4 *Deferred Benchmarks* remite a la tabla.
+
+**Evidencia de determinismo.** `run_all.sh` → 37/37 `EXIT 0`, 0 `MISSING`; los
+36 outputs anteriores son byte-idénticos (solo cambia `manifest.txt` por los
+runtimes y la fila nueva, y `output_manifest.txt` +1). `read_fuji_gas_output.txt`
+(anclado) y `baseline_verified/fuji_gas_output.txt` (copia de conveniencia, no
+anclada) son byte-idénticos. `pdflatex` ×2: `errors=0`, `Undefined=0`, PDF de
+38 páginas.
+
+**El ancla.** `fase0_anchor.sh`: 37 outputs, sello UTC `2026-10-19T02:47:07Z`,
+HEAD `d46349c`; root nuevo `6715786f…` (el anterior era `943dc96a…`), con los
+11 pares; `main.tex` pasa de `24132371…` a `32fc7738…`, y también cambian
+`count_manifest.txt` (36→37) y `run_all.sh`.
+`audit-gate.sh` → **PASS=11 FAIL=0 SKIP=0**, con `G2 EXIT 0 = 37/37 scripts
+(manifiesto)`, `G10 ... HEAD anclado d46349c -> actual d46349c` y `G11 ... exit
+0`; `fase0_anchor.sh --check` → exit 0 (37 pares y 11 pares idénticos).
+
+**OTS.** `ots stamp` sella `6715786f…` con cuatro atestaciones pendientes
+(alice, bob, catallaxy, finney). La versión instalada (0.7.2) no acepta `-o`:
+escribe `verification/anchor_root.sha256.ots` por defecto, que es la ruta
+requerida. El `.ots` anterior (que sellaba `943dc96a…`) se conserva fuera del
+repo en `~/p9/anchor_root.sha256.ots.943dc96a_pre_R8`. Ningún `.ots` figura entre
+los 11 pares.
+
+**Alcance.** Sellados tocados: `main.tex` (par 1), `count_manifest.txt` (par 11),
+`run_all.sh` (par 6), `anchor_root.sha256` (derivado) y su `.ots`; además
+`output_manifest.sha256`/`audit_manifest.sha256` (derivados),
+`verification/output_manifest.txt` y `baseline_verified/` (registro de corrida).
+No sellados: este recibo, `README.md`, `verification/README.md`,
+`fase1_determinism_evidence.txt` y `fuji_gas_output.txt`. F-022 no tocado.

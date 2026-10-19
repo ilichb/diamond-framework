@@ -559,6 +559,25 @@ First, the calldata cost of transmitting the tensor (EIP-2028: 4 gas per zero by
 
 This is $3.3\times$ the cost of verifying a Groth16 proof directly ($\sim$206k gas) and $2.7\times$ the cost of the recursive proof ($\sim$250k gas); only the direct on-chain Bulletproofs verification ($\sim$6.5M gas, Section~\ref{subsec:recursive}) is more expensive. Transmitting the tensor and computing its norm on-chain does not dominate the constant-size proof, so the succinctness argument holds on the reference tensor.
 
+\begin{table}[H]
+\centering
+\caption{Gas of the Fuji deployment (chain 43113, 2026-10-18). The five creation transactions are pinned in \protect\spath{integrations/avalanche/scripts/fuji_20261018/}; the table is reproduced by \protect\spath{verification/fuji/read_fuji_gas.py}.}
+\label{tab:fuji-gas}
+\begin{tabular}{lrr}
+\toprule
+Contract & Gas & Cost (AVAX) \\
+\midrule
+\texttt{MockBurnableERC20}   & 1{,}636{,}731 & $2.62 \times 10^{-10}$ \\
+\texttt{AVIPBurnSink}        &   408{,}820 & $6.54 \times 10^{-11}$ \\
+\texttt{AVIPRegistry}        & 2{,}210{,}748 & $3.54 \times 10^{-10}$ \\
+\texttt{AVIPStakeVault}      & 1{,}948{,}628 & $3.12 \times 10^{-10}$ \\
+\texttt{AVIPValidatorManager} & 1{,}582{,}073 & $2.53 \times 10^{-10}$ \\
+\midrule
+Total & 7{,}787{,}000 & $1.25 \times 10^{-9}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Estimates and Their Provenance}
 The gas measurements for the EVM precompiles are exact: they match EIP-196 and EIP-197 to the gas unit. The Poseidon-2 measurement of 104{,}963 gas \fref{integrations/avalanche/benchmarks/src/GasBenchmarks.sol} is an upper bound from an unoptimized Solidity implementation; production implementations are 20--40k gas. The relevant constraint on Poseidon in this paper is the R1CS count of 240 per hash, which is independent of the on-chain gas cost.
 
@@ -1284,6 +1303,8 @@ Two benchmarks are not reported in this paper because they require a live networ
 \textbf{Teleporter latency.} The protocol uses Avalanche Warp Messaging (AWM) through the Teleporter contract to propagate reputation commitments across subnets. The message latency depends on the Avalanche consensus timing and is bounded by the finality time of the source subnet. This is not measurable without a live testnet deployment.
 
 Both benchmarks are declared as future work. The protocols for measuring them are defined in the repository.
+
+The gas of the Fuji deployment is measured and reported in Table~\ref{tab:fuji-gas}.
 
 \subsection{Summary of the Section}
 Table~\ref{tab:sec9-summary} lists the claims of this section with their status and their source.

@@ -55,10 +55,11 @@ abstract contract DeployCommon is Script {
     /// @notice Chain id of a local `anvil`, and of a `forge script` dry run.
     uint256 internal constant LOCAL_CHAIN = 31_337;
 
-    /// @notice `anvil` accounts 0, 1, 2 and 3. Public development keys that hold
-    ///         nothing on any real network, which is exactly why they are the
-    ///         defaults: a missing role falls back to an address that cannot be
-    ///         stolen rather than to the deployer.
+    /// @notice `anvil` accounts 0, 1, 2 and 3. On `anvil` (31337) they are
+    ///         harmless. On any chain other than 31337 they are public addresses
+    ///         with real activity (high nonces and, on Fuji, a balance); a
+    ///         deployment there must set `DEPLOYER`, `SEQUENCER` and
+    ///         `SLASH_AUTHORITY` explicitly. `_roleOr` refuses them there.
     address internal constant ANVIL_0 = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
     address internal constant ANVIL_1 = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
     address internal constant ANVIL_2 = 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC;
@@ -81,6 +82,12 @@ abstract contract DeployCommon is Script {
     ///         the proposal/execute pair exists to close.
     error RolesCollapsed(string role, string other);
 
+    /// @notice A role resolved to one of the public `anvil` accounts on a chain
+    ///         other than the local one. Those addresses are not valueless on
+    ///         Fuji (they have nonces and balance), so using one as a deployment
+    ///         authority is a configuration error, not a harmless default.
+    error AnvilDefaultOnLiveNetwork(string role, address account, uint256 chainId);
+
     /// @dev Fail closed on the one chain where a mistake costs money.
     function _refuseMainnet() internal view {
         if (block.chainid == C_CHAIN_MAINNET) revert MainnetRefused(block.chainid);
@@ -93,13 +100,32 @@ abstract contract DeployCommon is Script {
         try vm.envString(name) returns (string memory value) {
             raw = value;
         } catch {
-            return fallbackTo; // absent
+            return _refuseAnvilDefault(name, fallbackTo); // absent
         }
-        if (bytes(raw).length == 0) return fallbackTo; // present but empty
+        if (bytes(raw).length == 0) {
+            return _refuseAnvilDefault(name, fallbackTo); // present but empty
+        }
         // Parsed strictly, and NOT through `envOr`: `envOr` answers a malformed
         // value with the default, which is exactly the silent fallback this
         // helper exists to prevent (`vm.parseAddress` reverts instead).
-        return vm.parseAddress(raw);
+        return _refuseAnvilDefault(name, vm.parseAddress(raw));
+    }
+
+    /// @dev A3/B-7: an `anvil` key is a public development key, and on Fuji it
+    ///      is a live address with a nonce (and a balance). It is harmless only
+    ///      on the local chain, where the dry run needs it. This guard is also
+    ///      applied by the phase-1 script to explicit `Plan` values, so a caller
+    ///      cannot bypass the environment check by constructing a plan directly.
+    function _refuseAnvilDefault(string memory role, address account)
+        internal
+        view
+        returns (address)
+    {
+        if (block.chainid == LOCAL_CHAIN) return account;
+        if (account == ANVIL_0 || account == ANVIL_1 || account == ANVIL_2 || account == ANVIL_3) {
+            revert AnvilDefaultOnLiveNetwork(role, account, block.chainid);
+        }
+        return account;
     }
 
     /// @dev Reads a role the script cannot invent: `REGISTRY`, for instance.
