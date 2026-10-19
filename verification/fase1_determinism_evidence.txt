@@ -55,3 +55,6 @@ m05_attack_model.py EXIT 0
 # --- P10 (2026-10-18): gas de Fuji incorporado al pipeline (37 scripts) ---
 # run_all.sh -> 37 scripts, 37 codigos de salida cero (ver baseline_verified/manifest.txt)
 read_fuji_gas.py EXIT 0
+# --- P10b (2026-10-18): block time de Fuji incorporado al pipeline (38 scripts) ---
+# run_all.sh -> 38 scripts, 38 codigos de salida cero (ver baseline_verified/manifest.txt)
+measure_block_time.py EXIT 0

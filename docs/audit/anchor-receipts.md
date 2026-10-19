@@ -885,3 +885,82 @@ los 11 pares.
 `verification/output_manifest.txt` y `baseline_verified/` (registro de corrida).
 No sellados: este recibo, `README.md`, `verification/README.md`,
 `fase1_determinism_evidence.txt` y `fuji_gas_output.txt`. F-022 no tocado.
+
+### R-9 — Block time de Fuji C-Chain en el paper y F-022 (P10b): re-anclaje (2026-10-18)
+
+**Qué cierra.** LOT 2 / P10b: el block time de Fuji C-Chain entra en el paper
+como medición reproducible offline y se reescribe F-022
+(`docs/audit/numerical-verification.md`) para que su conversión de épocas a
+tiempo de pared use esa medición. No toca contratos; sí toca el registro de
+claims (fila F-022) y la sección §9.4 de `main.tex`.
+
+**La medición.** `verification/fuji/measure_block_time.py` lee el fixture
+pineado `verification/fuji/fixtures/block_times_59670000_59670099.json` (100
+bloques consecutivos, `59670000`–`59670099`, obtenidos una vez vía Alchemy) y
+valida `chain == 43113`, números consecutivos, timestamps no decrecientes y
+hashes no vacíos. No consulta ningún RPC en la corrida normal: el fixture es la
+fuente canónica offline. Una comprobación puntual de 40 bloques emparejados
+contra el RPC público `api.avax-test.network` coincidió en número, timestamp y
+hash; no forma parte del pipeline. La corrida mide 99 deltas: mediana 1.0 s,
+p95 11.0 s (rango más cercano, *nearest-rank*), mínimo 0.0 s, máximo 28.0 s,
+media 2.545 s; distribución `{0:3, 1:53, 2:28, 3:2, 4:6, 5:1, 8:1, 11:1, 13:1,
+23:1, 25:1, 28:1}`. El p84 es 2.0 s: el «2.0 s» del encargo no es la mediana.
+El p95 de 11.0 s no es el valor interpolado (8.3 s); se usa el rango más
+cercano porque es el criterio declarado en el script y en F-022.
+
+**F-022.** Se reescribió con la estructura Claim under test / Test / Verdict /
+Empirical anchor / Conclusion / Sample. La fórmula de disuasión es
+`q > G/(G+L)` con `G = k·ω·ΔS` (la versión anterior usaba una forma
+incorrecta). La medición fija el block time, no la duración de la época: el
+mapeo época↔bloque es un parámetro de diseño no fijado on-chain. F-022 declara
+`N_b` (bloques por época) y `B` (block time), de modo que `k` épocas abarcan
+`k·N_b·B`; con la mediana `B = 1.0 s` y con el p95 `B = 11.0 s` (máximo
+observado 28.0 s). La condición de disuasión se evalúa contra los percentiles
+altos, no contra la mediana; el ancla fija `B` y su cola, pero no fija `N_b`,
+así que por sí sola no convierte `k` épocas a segundos. Los valores de `q_min`
+no cambian: el block time sólo pone escala temporal a `k`. La latencia de
+Teleporter queda diferida a §9.4 y no se mezcla con esta medición. §9.4 de
+`main.tex` incorpora las mismas cifras (mediana 1.0 s, p95 11.0 s, mínimo
+0.0 s, máximo 28.0 s), declara el mapeo época↔bloque como parámetro de diseño y
+usa la cola alta (p95/máximo) como escala conservadora, no la mediana; no
+presenta la medición como benchmark del protocolo.
+
+**Evidencia de determinismo.** La corrida ejecutó los 38 scripts:
+`38/38 EXIT 0`, 0 `MISSING`; la finalización de la lista de salida se completó
+con `run_all.sh --resume` (38/38 ya completos, exit 0) y
+`verification/output_manifest.txt` quedó con 38 rutas. Los 37 outputs
+anteriores son byte-idénticos a `384008a` (sólo cambian `manifest.txt` por los
+runtimes y la fila nueva, `output_manifest.txt` +1 y aparece el output 38).
+`measure_block_time_output.txt` (anclado) y
+`baseline_verified/fuji_block_time_output.txt` (copia de conveniencia, no
+anclada) son byte-idénticos. `pdflatex` ×2: `errors=0`, `Undefined=0`.
+
+**El ancla.** `fase0_anchor.sh`: 38 outputs, sello UTC
+`2026-10-19T03:53:22Z`, HEAD `384008a`; root nuevo `e5c3333c…` (el anterior
+era `6715786f…`; el intermedio de la corrección P2/P3 fue `b01899db…`), con
+los 11 pares. `main.tex` pasa de `32fc7738…` a `e451bd1e…`;
+`numerical-verification.md` pasa de `4d484691…` a `3d35456e…`,
+`count_manifest.txt` en `460f2f69…` y `run_all.sh` en `0e6b5117…`. `audit-gate.sh` → **PASS=11
+FAIL=0 SKIP=0**, con `G2 EXIT 0 = 38/38 scripts (manifiesto)`, `G10 ... HEAD
+anclado 384008a -> actual 384008a` y `G11 ... exit 0`; `fase0_anchor.sh
+--check` → exit 0 (38 pares y 11 pares idénticos).
+
+**OTS.** `ots stamp` sella `e5c3333c…` con cuatro atestaciones pendientes
+(alice, bob, catallaxy, finney). La versión instalada (0.7.2) no acepta `-o`:
+escribe `verification/anchor_root.sha256.ots` por defecto, que es la ruta
+requerida. El `.ots` anterior (que sellaba `6715786f…`) se conserva fuera del
+repo en `~/p9/anchor_root.sha256.ots.6715786f_pre_R9`; los intermedios
+`8b5d8dd7…` (ordinal del *Sample* de F-022) y `b01899db…` (corrección P2/P3)
+en `~/p9/anchor_root.sha256.ots.8b5d8dd7_pre_R9_fix` y
+`~/p9/anchor_root.sha256.ots.b01899db_pre_P3_fix`, respectivamente. El root
+intermedio se conserva en `~/p9/anchor_root.sha256.b01899db_pre_P3_fix`.
+Ningún `.ots` figura entre los 11 pares.
+
+**Alcance.** Sellados tocados: `main.tex` (par 1), `output_manifest.txt`
+(par 2), `output_manifest.sha256` (par 3), `run_all.sh` (par 6),
+`numerical-verification.md` (par 9) y `count_manifest.txt` (par 11); además
+`anchor_root.sha256` (derivado) y su `.ots`, y `audit_manifest.sha256`
+(derivado). `baseline_verified/` cambia como registro de corrida (manifiesto,
+lista de salida y output 38). No sellados: este recibo,
+`verification/README.md`, `fase1_determinism_evidence.txt`,
+`fuji_block_time_output.txt`, el script nuevo y el fixture.

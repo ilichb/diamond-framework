@@ -15,7 +15,8 @@ claim in the Diamond Framework paper.
 - `data-layer/` — Fraud proof incentive equilibrium.
 - `bootstrap/` — Genesis transition and reputation models.
 - `fuji/` — Gas of the Fuji deployment (chain 43113), read from the pinned
-  broadcast receipts.
+  broadcast receipts, and C-Chain block time, read from the pinned 100-block
+  fixture.
 
 Three shell helpers orchestrate and check the suite; they are not part of the
 numbered claims: `run_all.sh` (harness), `audit-gate.sh` (guards G1..G11) and
@@ -24,7 +25,7 @@ into a temporary directory and diffs it against the committed one). A fourth
 helper, `verification/eip_cost_check.py`, is the script behind guard G7: it
 recomputes the EIP gas cost recorded as F-017 and exits 0. It is not a numbered
 entry either, and it is why `find verification -maxdepth 2 -name '*.py'` counts
-38 while the catalogue lists 37 — the extra `.py` writes no output (see
+39 while the catalogue lists 38 — the extra `.py` writes no output (see
 `docs/audit/post-closure-audit.md:136`).
 
 ## Running
@@ -67,12 +68,20 @@ entry either, and it is why `find verification -maxdepth 2 -name '*.py'` counts
     python3 bootstrap/simulate_bootstrap_net_gain.py
     python3 bootstrap/r_std_specification.py
     python3 fuji/read_fuji_gas.py
+    python3 fuji/measure_block_time.py
 
-`fuji/read_fuji_gas.py` is the Fuji-deployment gas reader. It is the only
-catalogued script that reads data files: the three pinned broadcast JSONs in
+`fuji/read_fuji_gas.py` is the Fuji-deployment gas reader. It is one of two
+catalogued scripts that read data files: the three pinned broadcast JSONs in
 `integrations/avalanche/scripts/fuji_20261018/`. It writes the same table to
 stdout (captured by the harness) and to
 `verification/baseline_verified/fuji_gas_output.txt`.
+
+`fuji/measure_block_time.py` reads the pinned 100-block fixture
+`fuji/fixtures/block_times_59670000_59670099.json` and writes the same
+statistics to stdout and to
+`verification/baseline_verified/fuji_block_time_output.txt`. With `--live` it
+can query Alchemy, falling back to the fixture; the harness never uses
+`--live`.
 
 ## Runtime
 
@@ -101,6 +110,7 @@ which parallelises as the table notes).
 | heavy_tail_n5000.py | ~15 min |
 | heavy_tail_scaled_clique.py | ~24 min single-core (~5 min on 6 cores) |
 | q99_standard_error.py | < 1 s |
+| measure_block_time.py | < 1 s |
 | sim_positivity.py | ~34 s |
 | calibration_modularity.py | ~400 s |
 | calibration_heavy_tail.py | ~60 s |
@@ -116,11 +126,15 @@ which parallelises as the table notes).
 | cr_ide_solver.py | < 1 s |
 | All others | < 5 s each |
 
-Scripts are CWD-independent. `fuji/read_fuji_gas.py` is the only catalogued
-script that reads data files (the three pinned Fuji broadcast JSONs) and the
-only one that writes one (`verification/baseline_verified/fuji_gas_output.txt`);
-the harness captures its stdout as `read_fuji_gas_output.txt`, so the anchored
-output carries the same table. The other 37 `.py` files under `verification/`
+Scripts are CWD-independent. `fuji/read_fuji_gas.py` and
+`fuji/measure_block_time.py` are the only catalogued scripts that read data
+files (the three pinned Fuji broadcast JSONs and the pinned 100-block fixture)
+and the only ones that write one
+(`verification/baseline_verified/fuji_gas_output.txt` and
+`verification/baseline_verified/fuji_block_time_output.txt`); the harness
+captures their stdout as `read_fuji_gas_output.txt` and
+`measure_block_time_output.txt`, so the anchored output carries the same
+tables. The other 37 `.py` files under `verification/`
 (`find verification -maxdepth 2 -name '*.py'`) neither read nor write data
 files — the `results/*.csv` rules in `.gitignore` are preventive, not a
 description of outputs that exist.

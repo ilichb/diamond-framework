@@ -1304,7 +1304,7 @@ Two benchmarks are not reported in this paper because they require a live networ
 
 Both benchmarks are declared as future work. The protocols for measuring them are defined in the repository.
 
-The gas of the Fuji deployment is measured and reported in Table~\ref{tab:fuji-gas}.
+The gas of the Fuji deployment is measured and reported in Table~\ref{tab:fuji-gas}. Fuji C-Chain block time was measured over $N=100$ blocks (median $1.0$~s, p95 (nearest-rank) $11.0$~s, min $0.0$~s, max $28.0$~s). This measures block time, not epoch duration: an epoch is the protocol's commitment interval, and its block count is a design parameter not fixed on-chain. The deterrence condition of Section~\ref{sec:datalayer} is expressed in epochs, so a wall-clock conversion requires fixing that parameter; once it is fixed, the conservative scale for $k$ epochs is $k$ times the epoch duration computed from the upper tail ($11.0$~s per block at p95, $28.0$~s at the observed maximum), not from the median. Teleporter cross-subnet latency remains deferred to Phase~4.
 
 \subsection{Summary of the Section}
 Table~\ref{tab:sec9-summary} lists the claims of this section with their status and their source.

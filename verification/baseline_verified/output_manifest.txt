@@ -35,3 +35,4 @@ verification/baseline_verified/sweep_net_gain_output.txt
 verification/baseline_verified/simulate_bootstrap_net_gain_output.txt
 verification/baseline_verified/r_std_specification_output.txt
 verification/baseline_verified/read_fuji_gas_output.txt
+verification/baseline_verified/measure_block_time_output.txt

@@ -404,7 +404,7 @@ claim that fails its test is corrected or removed, not quietly reworded.
   output in
   `verification/rmt/results/heavy_tail_scaled_clique_output.txt`.
 
-### F-022 — Deterrence is a function of detection latency, not a worksheet constant
+### F-022 — Deterrence vs detection latency
 
 - **Claim under test:** §7.5 states the attacker's profit with two constants
   of the simulation worksheet — `V_fraud = 1.0` and `S_slash = 10.0` — and
@@ -414,7 +414,9 @@ claim that fails its test is corrected or removed, not quietly reworded.
   validator's whole recorded stake (DEC-4), so `S_slash = 10.0` appears in
   no transferred amount. Rebuilt from the declared quantities, the gain is
   the stake the certified norm buys, and the binding variable is the
-  detection latency `k` in epochs — which §7.5 never states.
+  detection latency `k` in epochs — which §7.5 never states. The empirical
+  anchor below fixes the block-time component of that scale; the
+  epoch-to-block mapping remains a protocol design parameter.
 - **Test:** `verification/mechanism/m05_attack_model.py`, `N_REPLICATES =
   10 000`, `RNG_SEED = 42`. Declared model, per undetected epoch:
   `G(k, ω) = k·ω·ΔS` and `L = S_f*(r_fraud) + n·κ`, with
@@ -445,18 +447,48 @@ claim that fails its test is corrected or removed, not quietly reworded.
   epochs, and `k_be(q=0.10, ω=0.01) = 16.67` lies **beyond** it: for the
   low-capital type with slow detection the bound is vacuous, which is the
   precise sense in which freshness and detection are complementary.
+- **Empirical anchor (Fuji C-Chain, 2026-10-18):** the epoch-to-block
+  mapping is not fixed on-chain: an epoch is the protocol's commitment
+  interval, not a block. Let `N_b` be the design number of blocks per epoch
+  and `B` the block time; then `k` epochs span `k·N_b·B` seconds. The
+  inter-block timestamp deltas over `N = 100` consecutive blocks
+  (`59670000–59670099`) have median `1.0 s`, nearest-rank p95 `11.0 s`,
+  minimum `0.0 s` and maximum `28.0 s`; `53` of the `99` deltas are `1 s`,
+  `28` are `2 s`, `3` are `0 s`, and `15` are `3 s` or more. For any fixed
+  `N_b`, the median scale is `k·N_b·1.0 s`, the conservative p95 scale is
+  `k·N_b·11.0 s`, and the observed maximum is `k·N_b·28.0 s`: the
+  deterrence condition is read against the upper percentiles, not the
+  median. The fixture
+  (`verification/fuji/fixtures/block_times_59670000_59670099.json`) was
+  captured from Alchemy and 40 paired blocks agree on `number`, `timestamp`
+  and `hash` with an independent public RPC. The anchor fixes `B` and its
+  tail; it does not fix `N_b`, so it does not by itself convert `k` epochs
+  to seconds. It also does not change the per-epoch `q_min` values above,
+  which are conditional on `k`. This is block time, not Teleporter
+  cross-subnet latency; that measurement requires a live Subnet L1 (Phase
+  4) and remains deferred.
 - **Conclusion:** the worksheet's `V_fraud`/`S_slash` pair is not evidence of
   deterrence. §7.5 now evaluates (eq. deterrence) over `k` epochs from this
   script, and the detection window is declared a constraint of the model,
   not an enforced on-chain delay (DEC-3; no exit queue or unbonding delay
-  in the delivered manager). The worst-case type (`ω = 0.10`) requires
+  in the delivered manager). The block-time measurement gives that
+  constraint a measured per-block scale: `1.0 s` at the median and `11.0 s`
+  at p95. It does not fix the epoch duration; the epoch-to-block mapping
+  remains a design parameter, and the wall-clock conversion is `k·N_b·B`
+  once that parameter is chosen. The worst-case type (`ω = 0.10`) requires
   `q > 0.0625` at one epoch, `q > 0.25` at five and `q > 0.375` at the nine
   the freshness bound admits; the step convention holds the first with
   margin `L/G = 15`. The profit figures of the equilibrium table remain
   worksheet bookkeeping and are labelled as such.
 - **Sample:** `m05_attack_model.py`, deterministic (seed 42), output in
-  `verification/baseline_verified/m05_attack_model_output.txt`; the 36th
-  pair of `output_manifest.sha256`.
+  `verification/baseline_verified/m05_attack_model_output.txt` (sealed in
+  `output_manifest.sha256`). The block-time measurement is
+  `verification/fuji/measure_block_time.py`, deterministic (pinned fixture,
+  no RNG), output in
+  `verification/baseline_verified/measure_block_time_output.txt`; that output
+  is the sealed one in `output_manifest.sha256`, and
+  `verification/baseline_verified/fuji_block_time_output.txt` is the
+  byte-identical convenience copy, not sealed.
 
 ## Open items
 

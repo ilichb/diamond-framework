@@ -1,0 +1,10 @@
+n_blocks=100
+block_start=59670000
+block_end=59670099
+chain_id=43113
+median_s=1.0
+p95_s=11.0
+min_s=0.0
+max_s=28.0
+method=inter-block timestamp delta
+source=alchemy (fixture: verification/fuji/fixtures/block_times_59670000_59670099.json)
