@@ -45,11 +45,11 @@ The core insight is an opportunity-cost argument:
 ### Non-goals
 
 - **Not a finished protocol.** Sections 2 through 11 are written and verified; the open items are external audit, real-data calibration, and testnet benchmarks.
-- **Not audited.** No external security review has been performed and nothing here is deployed to mainnet.
+- **Not audited.** No external security review has been performed, and there is no mainnet deployment. Fuji phase 1 (chain 43113) is a testnet deployment only.
 - **Not formally verified.** All proofs are mathematical arguments, not machine-checked proofs.
 - **Not a production implementation.** The off-chain components under `src/` (`reputation/`,
   `rmt/`, `zk/`, `datalayer/`) are built and tested against their own design notes, but they
-  are research code: nothing is deployed, nothing has been audited, and the paper-literal
+  are research code: the protocol's Fuji phase 1 is deployed, nothing has been audited, and the paper-literal
   recursive SNARK is not implemented. What exists, what is missing and in what order it is
   being built is in
   [`docs/architecture/implementation-plan.md`](docs/architecture/implementation-plan.md).
@@ -71,7 +71,7 @@ The core insight is an opportunity-cost argument:
 | Data layer / fraud proofs | Equilibrium `n* = floor(B/B*)`; attacker profit `-502` | [`verification/data-layer/`](verification/data-layer) |
 | Bootstrap dynamics | Verified — μ/g sweep: the optimum is a band, μ/g ∈ [1, 2] (argmax R_std = 0.0424 at μ/g = 1.5) | [`verification/bootstrap/`](verification/bootstrap) |
 | Mechanism design (payment) | Fee rule specified: posted price F0* = π_val − ω̄·Θ, saturated at highest-cost type | [`verification/mechanism/`](verification/mechanism) |
-| Avalanche integration | **Partial** — gas benchmarks done (181,142); latency pending | [`integrations/avalanche/benchmarks/`](integrations/avalanche/benchmarks) |
+| Avalanche integration | **Partial** — Fuji phase 1 deployed (chain 43113; `verifier = address(0)`); gas benchmarks done (181,142); transport latency pending | [`integrations/avalanche/benchmarks/`](integrations/avalanche/benchmarks) |
 
 Rows without a **Partial**/**Pending** marker carry numerical backing in the paper's
 verification program; claims in the paper without numerical backing are marked
@@ -91,7 +91,7 @@ diamond-framework/
 │   └── avalanche/        # chain integration (Foundry, solc 0.8.33)
 │       ├── benchmarks/   # gas benchmarks (separate Foundry project)
 │       ├── contracts/    # on-chain code (registry, manager, verifiers, M7d transport)
-│       └── scripts/      # deployment scripts (dry runs only; nothing deployed)
+│       └── scripts/      # deployment scripts (offline dry run; Fuji phase 1 deployed)
 ├── src/                  # off-chain layers (Rust, built and tested offline)
 │   ├── datalayer/        # audit equilibrium + ingestion formula (M7b)
 │   ├── reputation/       # reputation dynamics
@@ -195,8 +195,9 @@ The protocol integrates with Avalanche through:
 - **EVM precompiles** — Groth16 verification for ZK threshold proofs.
 
 See [`docs/architecture/`](docs/architecture) for the design notes. The code under
-[`integrations/avalanche/`](integrations/avalanche) has **not** been deployed to mainnet and
-has **not** been audited.
+[`integrations/avalanche/`](integrations/avalanche) has **no mainnet deployment** and
+has **not** been audited. Fuji phase 1 (chain 43113) is a testnet deployment with
+`verifier = address(0)` and no transport.
 
 ---
 
@@ -207,10 +208,10 @@ has **not** been audited.
 | `mu` sweep over bootstrap dynamics | Bootstrap | **Done** (μ/g ∈ [1, 2]; F-005) |
 | Payment rule specification | Mechanism design | **Done** (posted price F0*, IR verified) |
 | Gas benchmarks | Avalanche integration | **Done** (Foundry, integrations/avalanche/benchmarks/) |
-| Deployment scripts | Avalanche integration | **Done** (M7a: `DeployRegistry`/`DeployValidatorManager`, dry run + tests; Fuji deployment done 2026-10-18, chain 43113) |
+| Deployment scripts | Avalanche integration | **Done** (M7a: `DeployRegistry`/`DeployValidatorManager`, dry run + tests; Fuji phase 1 deployed 2026-10-19T01:46:52Z UTC, chain 43113, `verifier = address(0)`) |
 | Data layer: audit equilibrium + `f_c` | Off-chain (Rust) | **Done** (M7b: the sealed table reproduced row by row on numpy's own stream, `eq:ingestion` as an interface plus the three-valued fraud proof; `src/datalayer/scripts/m7b_report.sh`. M7c: the Pedersen/Poseidon ↔ keccak Merkle bridge over M1's own fold, `src/zk/src/bridge.rs`, `src/zk/scripts/m7c_report.sh`) |
-| Teleporter / AWM transport | Avalanche integration | **Done** (M7d: the three message types of `avalanche-integration.md` §4 as a wire format plus one contract per type — per-kind origin allowlists, at-most-once delivery, the commitment recorded once per epoch, the alert flag that cannot be erased, and a slashing notification whose `reason` is derived from the envelope; `integrations/avalanche/scripts/m7d_report.sh`. Offline against a Teleporter double: **no deployment**) |
-| Teleporter latency | Avalanche integration | Pending (requires testnet) |
+| Teleporter / AWM transport | Avalanche integration | **Done** (M7d: the three message types of `avalanche-integration.md` §4 as a wire format plus one contract per type — per-kind origin allowlists, at-most-once delivery, the commitment recorded once per epoch, the alert flag that cannot be erased, and a slashing notification whose `reason` is derived from the envelope; `integrations/avalanche/scripts/m7d_report.sh`. Offline against a Teleporter double; **the transport is not deployed**) |
+| Teleporter latency | Avalanche integration | Pending (requires a deployed Subnet L1/transport; phase 1 is C-Chain only) |
 | Paper sections | Paper | **Done** — Sections 2–11 written and verified |
 | External security review | Whole protocol | Not started |
 

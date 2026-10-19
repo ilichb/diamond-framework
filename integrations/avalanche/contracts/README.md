@@ -12,7 +12,9 @@ constructor argument on `AVIPValidatorManager` — with `custody == address(0)` 
 manager is the original M2, unchanged.
 The only file here without an implementation is
 `interfaces/IZKThresholdVerifier.sol`: the interface is real and `Groth16Verifier`
-implements it, but nothing is deployed. See
+implements it, but no verifier is deployed (Fuji phase 1 installed `address(0)`).
+Fuji phase 1 deployed `AVIPRegistry`, `AVIPStakeVault` and `AVIPValidatorManager`
+(chain 43113, `2026-10-19T01:46:52Z` UTC); the transport is not deployed. See
 [`docs/architecture/implementation-plan.md`](../../../docs/architecture/implementation-plan.md)
 and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/avalanche-integration.md).
 
@@ -174,7 +176,8 @@ contracts below are what it was waiting for.
 The interface files exist to fix the **types** of the contract boundary before
 any logic is written. M1 and M2 have landed against them, so their signatures are
 now the real ones; the wording "provisional" only means a signature change is
-still not a breaking change while nothing is deployed. M7d's two Teleporter
+still not a breaking change while only Fuji phase 1 is deployed (`verifier =
+address(0)`, no production users). M7d's two Teleporter
 interfaces are provisional in a stronger sense: they are transcribed from an
 external project (`ava-labs/icm-contracts`) that this repository does not vendor,
 so nothing here compiles against the real `TeleporterMessenger` — the whole
@@ -220,7 +223,7 @@ more. M7d fixes what they are on the wire and what each one does on arrival:
 - **Not claimed:** no Teleporter latency, no BLS or source-chain quorum, no fee, no
   on-chain voting weight behind an alert (M2's manager carries none, §5.2), and no
   claim that what a channel carries is *true* — soundness lives in M7b's fraud
-  proof and in the data layer, not in the transport. Nothing is deployed.
+  proof and in the data layer, not in the transport. The transport is not deployed.
 
 
 ## What M8 fixes (custody of `financialStake`, §5.12)
@@ -264,7 +267,8 @@ Module". M8 supplies it and leaves the one undecided fact a deployment fact:
   (the token decides what `burn` means, and `BurnFailed` is reported when it
   cannot); and any on-chain execution of the paper's `S_slash = 10`, which stays a
   *model* parameter: what a slash moves is the whole record, and §12.1.2 (M9b) is
-  why no transported figure decides it. Nothing is deployed.
+  why no transported figure decides it. Fuji phase 1 deployed the custody
+  contracts; there is no mainnet deployment and no production funds at risk.
 
 
 ## Project layout

@@ -1,17 +1,21 @@
 # `integrations/avalanche/scripts/` — Deployment scripts and generators
 
-Status: **three deployment scripts (dry runs only), two reports and two
-generators**. `DeployRegistry.s.sol` and `DeployValidatorManager.s.sol` exist as of
-M7a (`docs/architecture/implementation-plan.md` §5.8) and build the frozen M1/M2
-contracts; `M7dReport.s.sol` plus `m7d_report.sh` exist as of M7d (§5.11) and drive
-the three Teleporter/AWM message types of `avalanche-integration.md` §4 end to end;
-`DeployStakeVault.s.sol`, `M8Report.s.sol` and `m8_report.sh` exist as of M8 (§5.12)
-and deploy the custody half of the handshake and audit the whole fund lifecycle.
-**Nothing is deployed anywhere**: not to mainnet, not to a testnet, and no line in
-this directory claims otherwise — the deployment itself belongs to M7/P5 (§12), and
-no script here has ever seen a real `TeleporterMessenger`. See
-`docs/architecture/avalanche-integration.md` §6 (Deployment Phases) and §3
-(statement that nothing here has been audited).
+Status: **six deployment scripts, two reports and the Fuji verifier**.
+`DeployRegistry.s.sol`, `DeployValidatorManager.s.sol` and `DeployStakeVault.s.sol`
+exist as of M7a/M8 (`docs/architecture/implementation-plan.md` §5.8, §5.12) and
+build the frozen M1/M2/M8 contracts; `M7dReport.s.sol` plus `m7d_report.sh` exist
+as of M7d (§5.11) and drive the three Teleporter/AWM message types of
+`avalanche-integration.md` §4 end to end; `M8Report.s.sol` and `m8_report.sh`
+audit the whole fund lifecycle; `DeployMockToken.s.sol` and
+`DeployBurnSink.s.sol` deploy the token/sink half of the Fuji runbook; and
+`DeployFujiPhase1.s.sol` drove the manual phase-1 deployment.
+**Fuji phase 1 is deployed** (chain 43113, `2026-10-19T01:46:52Z` UTC): registry,
+vault and manager, with the token and sink wired and `verifier = address(0)`.
+The transport, the Subnet L1 and M9's on-chain paths are not deployed. The
+transcripts and broadcast JSON are in `fuji_20261018/`, and `verify_fuji.sh`
+reads five wiring facts back from the chain. The dry runs and reports remain
+offline and use no key. See `docs/architecture/avalanche-integration.md` §6
+(Deployment Phases) and §3 (nothing here has been audited).
 
 ## `generate_groth16_fixtures.py` (milestone M3)
 
@@ -110,7 +114,7 @@ G to I M8's, J and K M9a's:
 | D | `REGISTRY` = the address case C printed | the manager chains onto it |
 | E | `SEQUENCER=0xnot-an-address` | a revert, not the default |
 | F | `--chain 43114` | `MainnetRefused(43114)` |
-| G | none, vault script | `MissingRole("TOKEN")`, and nothing is deployed before the inputs resolve |
+| G | none, vault script | `MissingRole("TOKEN")`, and no contract is created before the inputs resolve |
 | H | vault script: `TOKEN`, `SINK`, `WAD_PER_UNIT` | the custody half of §5.12, wired and left unbound (`check.manager=unbound`) |
 | I | manager script: `CUSTODY` = an address with no code | the handshake refuses: the deployment fails instead of producing a manager with no custody |
 | J | registry: `GUARDIAN` = `SEQUENCER` | `RolesCollapsed("GUARDIAN", "SEQUENCER")`, and nothing is created |
@@ -228,17 +232,22 @@ addresses.
 
 | Script | Purpose | Phase | State |
 |--------|---------|-------|-------|
-| `DeployRegistry.s.sol` | Deploy `AVIPRegistry` to a testnet C-Chain | 1 | **dry-run only** (M7a) |
-| `DeployValidatorManager.s.sol` | Deploy `AVIPValidatorManager`, with `CUSTODY` optional | 1 | **dry-run only** (M7a, amended by M8) |
-| `DeployStakeVault.s.sol` | Deploy `AVIPStakeVault`, the custody the manager binds | 1 | **dry-run only** (M8) |
-| `M7dReport.s.sol` | Drive the three §4 message types end to end; pinned by `m7d_report.sh` | 1 + transport | **offline only** (M7d) |
-| `M8Report.s.sol` | Audit the fund lifecycle end to end; pinned by `m8_report.sh` | 1 + custody | **offline only** (M8) |
+| `DeployRegistry.s.sol` | Deploy `AVIPRegistry` to a testnet C-Chain | 1 | dry run + tests (M7a); phase 1 uses `DeployFujiPhase1` |
+| `DeployValidatorManager.s.sol` | Deploy `AVIPValidatorManager`, with `CUSTODY` optional | 1 | dry run + tests (M7a, amended by M8); phase 1 uses `DeployFujiPhase1` |
+| `DeployStakeVault.s.sol` | Deploy `AVIPStakeVault`, the custody the manager binds | 1 | dry run + tests (M8); phase 1 uses `DeployFujiPhase1` |
+| `DeployMockToken.s.sol` | Deploy the burnable test token used by phase 1 | 1 | deployed on Fuji (mock token, 18 decimals) |
+| `DeployBurnSink.s.sol` | Deploy the reference `AVIPBurnSink` | 1 | deployed on Fuji (reference sink) |
+| `DeployFujiPhase1.s.sol` | Deploy registry, vault and manager in one broadcast session | 1 | **deployed on Fuji** (chain 43113, 2026-10-19T01:46:52Z UTC) |
+| `verify_fuji.sh` | Read five wiring facts back from Fuji and compare them with the transcript | 1 | available; reads phase 1 and writes `fuji_<date>_verify.txt` |
+| `M7dReport.s.sol` | Drive the three §4 message types end to end; pinned by `m7d_report.sh` | 1 + transport | offline only (M7d); transport not deployed |
+| `M8Report.s.sol` | Audit the fund lifecycle end to end; pinned by `m8_report.sh` | 1 + custody | offline only (M8) |
 | `RegisterSubnetL1.s.sol` | ACP-77 Subnet L1 registration on the P-Chain | 4 | intended |
 
 It is worth saying why M7d adds **no** deployment script for the transport: the
 origins and destinations of a channel are a per-network fact (chain ids and the
-address of a real `TeleporterMessenger`), which belongs with the Fuji deployment
-that A8 still owes, not with a dry run whose every address is a fresh-EVM artefact.
+address of a real `TeleporterMessenger`), which belongs with the transport and
+phase-4 deployment that remain open, not with a dry run whose every address is a
+fresh-EVM artefact.
 
 These are the four phases of `avalanche-integration.md` §6:
 registry + validator manager, off-chain prover, RMT detector, Subnet L1.
@@ -267,10 +276,18 @@ bash scripts/deploy_dryrun.sh                             # the eleven cases abo
 bash scripts/m8_report.sh                                 # M8's audit, offline
 ```
 
-Against Fuji (M7 — deliberately **not** automated by this milestone, and never
-against C-Chain mainnet, which the script refuses):
+Against Fuji (manual, funded run; the scripts never automate the broadcast and
+always refuse C-Chain mainnet). Phase 1 used `DeployMockToken`, `DeployBurnSink`
+and `DeployFujiPhase1`; the result is checked with `verify_fuji.sh`:
 
 ```shell
-forge script scripts/DeployRegistry.s.sol:DeployRegistry \
-    --rpc-url "$FUJI_RPC_URL" --broadcast
+# Set DEPLOYER, TOKEN, SINK, SEQUENCER, SLASH_AUTHORITY and WAD_PER_UNIT
+# as each script's header documents.
+forge script scripts/DeployMockToken.s.sol:DeployMockToken \
+    --rpc-url "$FUJI_RPC_URL" --broadcast --account deployer
+forge script scripts/DeployBurnSink.s.sol:DeployBurnSink \
+    --rpc-url "$FUJI_RPC_URL" --broadcast --account deployer
+forge script scripts/DeployFujiPhase1.s.sol:DeployFujiPhase1 \
+    --rpc-url "$FUJI_RPC_URL" --broadcast --account deployer
+bash scripts/verify_fuji.sh fuji_20261018/fuji_phase1.txt --rpc-url "$FUJI_RPC_URL"
 ```

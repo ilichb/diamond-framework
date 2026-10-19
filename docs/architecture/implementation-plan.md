@@ -32,8 +32,9 @@ are placeholders no longer: M1–M7 have filled them (§5.1–§5.11) —
 verifier pair `contracts/verifiers/{Bn254,Groth16Verifier}.sol` (M3, §5.4),
 the off-chain crates (M4–M6, §5.5–§5.7), M7a's deploy scripts (§5.8), the M7b
 data layer (§5.9), the M7c bridge (§5.10) and M7d's transport contracts
-(§5.11). §2.2 is therefore the gap-by-gap record of what closed what, and what
-is still missing is the deployment itself (Fuji, §12), not code.
+(§5.11). §2.2 is therefore the gap-by-gap record of what closed what. Fuji phase 1
+is deployed (chain 43113, 2026-10-19T01:46:52Z UTC); what is still missing is the
+phase-4 Subnet L1 and transport deployment, not the code.
 
 This plan closes that gap. It does not reopen what is already verified: the
 paper's claims, their scripts and their anchor are inputs, not work items.
@@ -187,7 +188,7 @@ claim they trace to; **no invented constants**.
 | M4 | Off-chain prover | A4, A11 | `src/zk/` (Rust) — **M4a, M4b and M4c done** (§5.5.8–§5.5.10) | Bulletproofs aggregated range proof over the 500-entry tensor (`512 × 64` padded, measured 1248 B against the paper's 0.72 KB, §5.5.8); the in-circuit commitment is **V3** — `D-M4-0` closed in M4c (§5.5.10); the derived key and proof are accepted by the frozen contracts (§5.5.9); reports local proving time (**3.9 s** against §5.5.4's 120 s gate); the *paper-literal* recursive SNARK stays open (§5.5.7) |
 | M5 | RMT detector | A5 | `src/rmt/` — **done** (§5.6) | Reproduces `q99 = 9.0542` (right tail) and `−λ_min > 9.1371` (left tail) from `verification/rmt/`, without editing it |
 | M6 | Reputation dynamics | A6 | `src/reputation/` — **done** (§5.7.1) | `C_R(r)` closed form, WAD parity with M2's deployed reader (`collateralFor(Θ_R)`/`requiredStakeFor(Θ_R)` pinned) + the epoch commitment in M1's convention; positivity under multiplicative jumps (paper §2) — F-001 reproduced: additive **40.2510%** against the sealed **40.5800%** (0.3290 pp, inside `3·SE`), multiplicative **0.000000%** by construction; the IDE solver reproduces `cr_ide_solver_output.txt` (14-point grid, two regimes, `r_0`, monotone, `π(r)/r → 0.799992`) |
-| M7 | Data layer, deploy, AWM | A7, A8, A9 | `src/datalayer/` + `src/zk/src/bridge.rs` + `contracts/AVIP*` + `scripts/` — **M7a, M7b, M7c and M7d done** (§5.8, §5.9, §5.10, §5.11) | Fraud-proof equilibrium `n*(B)=⌊B/B*⌋`, `S_slash=10` (Data Layer): the sealed table reproduced row by row on numpy's own stream (`scripts/m7b_output.txt`), with `eq:ingestion` delivered as an interface plus the three-valued fraud proof (§5.9); the Pedersen/Poseidon ↔ keccak bridge ties the statement's `root` to the registry's Merkle root **over M1's own fold**, off-chain and recomputable (`src/zk/src/bridge.rs`, `src/zk/scripts/m7c_output.txt`, §5.10); the three Teleporter/AWM message types of §4 exist as a wire format plus one contract per type, with per-kind origin allowlists, at-most-once delivery, the commitment recorded once per epoch, the alert flag that cannot be erased and the slashing notification whose `reason` is derived from the envelope (`contracts/AVIP*`, `scripts/m7d_output.txt`, `test/M7dTransport.t.sol`, §5.11) — all of it offline against a Teleporter double; the phase-1 `Deploy*.s.sol` exist and are verified offline, and a Fuji deployment is still open |
+| M7 | Data layer, deploy, AWM | A7, A8, A9 | `src/datalayer/` + `src/zk/src/bridge.rs` + `contracts/AVIP*` + `scripts/` — **M7a, M7b, M7c and M7d done** (§5.8, §5.9, §5.10, §5.11) | Fraud-proof equilibrium `n*(B)=⌊B/B*⌋`, `S_slash=10` (Data Layer): the sealed table reproduced row by row on numpy's own stream (`scripts/m7b_output.txt`), with `eq:ingestion` delivered as an interface plus the three-valued fraud proof (§5.9); the Pedersen/Poseidon ↔ keccak bridge ties the statement's `root` to the registry's Merkle root **over M1's own fold**, off-chain and recomputable (`src/zk/src/bridge.rs`, `src/zk/scripts/m7c_output.txt`, §5.10); the three Teleporter/AWM message types of §4 exist as a wire format plus one contract per type, with per-kind origin allowlists, at-most-once delivery, the commitment recorded once per epoch, the alert flag that cannot be erased and the slashing notification whose `reason` is derived from the envelope (`contracts/AVIP*`, `scripts/m7d_output.txt`, `test/M7dTransport.t.sol`, §5.11) — all of it offline against a Teleporter double; the phase-1 `Deploy*.s.sol` exist and are verified offline, and phase 1 is deployed on Fuji (chain 43113, 2026-10-19T01:46:52Z UTC, `verifier = address(0)`); the transport and the phase-4 L1 remain open |
 | M8 | Treasury / custody | A2 (deferred half) | `contracts/AVIPStakeVault.sol` + `contracts/AVIPBurnSink.sol` + the amended `contracts/AVIPValidatorManager.sol` + `scripts/DeployStakeVault.s.sol` — **done** (§5.12) | Token custody and fund movement: escrow of `financialStake` behind `IAVIPCustody`, a slash that moves it to an `IFundSink`, and collection of `F_0*` that never touches the vault's balance; the destination of the funds is a deployment fact (`D-M8-0`, reference sink = burn), because the paper names no recipient and no burn/retain decision (§5.12); `custody == address(0)` is the original M2 exactly |
 
 Ordering rationale: M1 → M2 → M3 are on-chain and unblock each other; M4 and M5
@@ -1478,15 +1479,17 @@ load-dependent) with the pinned file byte-identical across runs;
 
 ### 5.8 M7a as delivered (offline deployment scripts)
 
-Status: **done for the script half of A8**. `integrations/avalanche/scripts/`
-holds `DeployCommon.sol`, `DeployRegistry.s.sol` and
-`DeployValidatorManager.s.sol`, plus the dry-run harness `deploy_dryrun.sh` with
-its pinned transcript `deploy_dryrun_output.txt`, and
-`integrations/avalanche/test/DeployScripts.t.sol` is the 16-test suite. **A8
-stays open: nothing is deployed.** No script here has ever touched an RPC
-endpoint, and the addresses in the transcript are the ones a fresh EVM hands out
-— they are not Fuji addresses. §5's M7 row is the acceptance; what follows is
-what M7a delivered against it.
+Status: **done for the script half of A8; Fuji phase 1 is deployed.**
+`integrations/avalanche/scripts/` holds `DeployCommon.sol`,
+`DeployRegistry.s.sol` and `DeployValidatorManager.s.sol`, plus the dry-run
+harness `deploy_dryrun.sh` with its pinned transcript
+`deploy_dryrun_output.txt`, and `integrations/avalanche/test/DeployScripts.t.sol`
+is the 16-test suite. The M7a dry run never touched an RPC endpoint, and the
+addresses in its transcript are the ones a fresh EVM hands out — they are not
+Fuji addresses. The later manual phase-1 run is `DeployFujiPhase1.s.sol` and its
+artifacts are `fuji_20261018/phase1.json` and `fuji_phase1.txt` (chain 43113,
+`2026-10-19T01:46:52Z` UTC, `verifier = address(0)`). §5's M7 row is the
+acceptance; what follows is what M7a delivered against it.
 
 **The split, and why it is the deliverable.** `DeployCommon` fixes the two rules
 no individual script can forget: the chain guard (`MainnetRefused(chainId)` on
@@ -1545,9 +1548,10 @@ paper states; no new constant enters.
   testnet would present a development key as a deployment. `VERIFIER` defaults to
   `address(0)`, which `AVIPRegistry` accepts and then refuses to certify with
   (`VerifierNotSet`).
-- **No Fuji deployment** (`avalanche-integration.md` §6 phase 1 needs a funded key
-  and a live endpoint), and therefore **no gas or latency number**: the transcript
-  excludes both on purpose so it stays stable across machines.
+- **No network in the M7a transcript.** The dry run uses a fresh EVM and therefore
+  reports **no gas or latency number**; it excludes both on purpose so it stays
+  stable across machines. The phase-1 Fuji run is separate: its gas is in
+  `fuji_20261018/phase1.json` and its block time in the P10b measurement.
 - **No Subnet L1 registration.** `RegisterSubnetL1.s.sol` (phase 4, ACP-77) is
   listed as *intended* in `scripts/README.md`; the P-Chain work is M7's.
 
@@ -1864,9 +1868,9 @@ constant enters.
 **Deliberately not done**, each with its reason rather than as an omission: keccak
 is not proved in-circuit (that is what (c) chose over (a)); no AWM transport exists
 (A9); the `T → W` collaboration map stays **D-7** open (§10); V2′'s root remains a
-single `uint256`, so the point is not fully bound (§5.5.10); nothing is deployed
-(A8); and no security, liveness or economic claim is made about a registry that
-publishes such a link.
+single `uint256`, so the point is not fully bound (§5.5.10); the transport is not
+deployed (Fuji phase 1 covers only the registry, vault and manager); and no security,
+liveness or economic claim is made about a registry that publishes such a link.
 
 **Validated locally.** `cargo test --offline --release` → **42 passed, 0 failed, 1
 ignored** (9 of them `bridge.rs`'s, 4 in `tests/m7c_bridge.rs`, the ignored one
@@ -1885,9 +1889,10 @@ the wire format and the three message contracts of
 `integrations/avalanche/test/M7dTransport.t.sol` is the 48-test suite over them; and
 `scripts/M7dReport.s.sol`, `scripts/m7d_report.sh` and the pinned
 `scripts/m7d_output.txt` (63 rows, 13 of them refusals) are the transcript,
-reproduced by that one command. **A8 stays open: nothing is deployed** — a Fuji
-deployment needs a funded key, a live endpoint and the address of a real
-`TeleporterMessenger`, none of which an offline milestone can supply.
+reproduced by that one command. **A8's phase 1 is deployed; the transport is
+not** — it needs the address of a real `TeleporterMessenger` and per-network
+origin/destination configuration, neither of which an offline milestone or the
+phase-1 C-Chain run supplies.
 
 **The gap, stated exactly.** §4 names three messages — commitment propagation, a
 collusion alert, a slashing notification — and says the transport is "Teleporter over
@@ -2033,7 +2038,8 @@ constructor argument (`custody`), an admission check against it and a `debit` on
 `integrations/avalanche/test/M8StakeVault.t.sol` is the 62-test suite over them;
 `scripts/M8Report.s.sol`, `scripts/m8_report.sh` and the pinned `scripts/m8_output.txt`
 are the transcript, reproduced by that one command, and `scripts/DeployStakeVault.s.sol`
-is the deploy half of the wiring. **A8 stays open: nothing is deployed.**
+is the deploy half of the wiring. **A8's phase 1 is deployed on Fuji** (chain
+43113, `2026-10-19T01:46:52Z` UTC); the phase-4 L1 and the transport remain open.
 
 **The gap, stated exactly.** §5.2.3 closes with M2's own limit — it "does not implement
 token custody or transfer (ERC-20 or native); that is delegated to the M8 Treasury
@@ -2155,9 +2161,12 @@ must be broadcast in a single transaction**, one script performing both deployme
 inside one `startBroadcast`/`stopBroadcast` pair. `DeployStakeVault.s.sol` and
 `DeployValidatorManager.s.sol` are two separate scripts, and
 `scripts/deploy_dryrun.sh` chains them inside one run as two executions: that proves
-the wiring and *not* the atomicity, so it does not close the window. Until a
-combined script exists (a Fuji-runbook item, §12), the window is as long as the gap
-an operator leaves between the two deployments, and nothing on-chain bounds it.
+the wiring and *not* the atomicity, so it does not close the window.
+`DeployFujiPhase1.s.sol` now performs the three deployments in one broadcast
+session (the phase-1 run), which removes the operator gap between separate
+scripts but **does not** make the vault and manager creation atomic: they remain
+three transactions. Until a single-transaction deployer exists, a failure between
+them can still leave a vault unbound, and nothing on-chain bounds it.
 
 **The `S_slash = 10` reconciliation, and the `main.tex` amendments it queues.** M8 makes no
 economic claim, but the paper does, and the two now disagree. The disagreement is recorded
@@ -2279,12 +2288,15 @@ SKIP=0**); `git status --porcelain verification/` → 0 lines.
 ## 5.13 M9 as delivered (the contract batch, P8)
 
 All three milestones have landed — DEC-2's authority pair (M9a), DEC-4's slash
-amount (M9b) and DEC-5's ejection surcharge (M9c). Nothing is deployed.
+amount (M9b) and DEC-5's ejection surcharge (M9c). They are implemented and
+tested offline; Fuji phase 1 deployed the amended contracts, but M9's paths have
+not been exercised on-chain.
 
 ### M9a as delivered (registry authority, DEC-2)
 
-Status: **DEC-2 is closed in code, offline, and M9b and M9c with it; nothing is
-deployed** (A8 stays open). `integrations/avalanche/contracts/AVIPRegistry.sol`
+Status: **DEC-2 is closed in code and tested offline, and M9b and M9c with it;
+the amended contracts are deployed in Fuji phase 1 but their paths have not been
+exercised on-chain.** `integrations/avalanche/contracts/AVIPRegistry.sol`
 gains an immutable `guardian` and the propose/execute pair that replaces both
 setters, `IAVIPRegistry.sol` publishes it, `scripts/DeployCommon.sol` and
 `scripts/DeployRegistry.s.sol` take the new role and refuse a plan in which it is not
@@ -2471,13 +2483,13 @@ unchanged byte for byte (`40130315ec07f2f3fc469cf43d36e7f1` and
 FAIL=0 SKIP=0**; `bash verification/fase0_anchor.sh --check` → exit 0;
 `git status --porcelain verification/ docs/paper/` → 0 lines.
 
-**What P8 owes, now that all three landed.** The paper's `main.tex` understates and
+**What P8.x owes, now that all three landed.** The paper's `main.tex` understates and
 misstates in three places this batch closes: §7.4's «caller-supplied amount bounded
 by the validator's own escrowed stake» (false since M9b), §7.5's «the reputation of
 a slashed validator is reduced» (nothing writes a reputation reduction; what the
 code writes is the ejection count and the surcharge), and §10.2's description of
 what is deployed at seal time (the guardian pair of M9a). None of them is in this
-batch's files: §12.1's order puts M9 before P8, and P8 must land in the same
+batch's files: §12.1's order puts M9 before P8.x, and P8.x must land in the same
 release.
 
 ## 6. Interfaces and parameter provenance
@@ -2639,22 +2651,24 @@ stable — the same reason the protection phase is last.
 | **P6a (done — `094c41b`)** | The five data-layer amendments of §5.9/§5.12: §7.3's fraud-proof mechanism with the bounty/slash status, §7.3's unstated pool/coverage conventions plus the §10.2 free-rider sentence, the freshness instance with §7.7's `Verified` labels, `eq:revenue`'s missing `N_ATT` factor, and the §7.5/§7.7 non-executable deterrence — twelve lines 1:1, plus §7.4's `We verify` → `We evaluate` (`main.tex:1002`) | **re-anchored** `2026-10-11T21:48:40Z`, root `217d6d51…` (G10/G11 green) |
 | **P6b (done)** | C-gaps: paper apparatus (C1–C4) — `center` → `table[H]` with `\caption`, **1410 → 1566 lines** — plus the two amendments queued above, both applied (§5.12): §10.4's `-502` bounded by §7.5 (`main.tex:1266`) and `\|T\|_F` where the norm is meant (`main.tex:842`, `:882`). It carried the citation drift P6a did not introduce — `F-019`'s `:1215` (the sentence it cites lives at `:1183` on `aaaf460`, `:1268` now) and `C-14`'s `§8.7` pointer; the numbers this row used to quote (`:1297`, `C-48`) were mis-derived. Rather than correcting them, all cited tokens were **re-derived** before the root was regenerated: 316 tokens, 313 remapped, 23 files, 396 citations checked, **0 section changes** (`anchor-receipts.md` §R-3.1) | **re-anchored** `2026-10-12T00:54:19Z`, root `79ac6783…`, receipt **R-3** (G1..G11 PASS=11 FAIL=0 SKIP=0) |
 | **P7a (done)** | Protection (D-4 licences: MIT for the repository, **CC BY 4.0** for the paper), the PDF metadata the PDF did not have, `.zenodo.json`, a frozen 37-page snapshot | **re-anchored** `2026-10-12T03:28:48Z`, root `5d6002ba…`, receipt **R-4** (promoted to Bitcoin in `971035`–`971090`); of the ten pairs **one** moved — the paper's |
-| **P8 (next)** | **M9, the trust-amendment batch** — `M9a` registry authority (DEC-2), `M9b` full-stake slash (DEC-4), `M9c` ejection surcharge (DEC-5), specified in §12.1.2. Contracts, scripts and tests only | **none** — nothing under `integrations/` is in the sealed list |
-| **P9 (next)** | **Fase 4 + Fase 5 as one sealed batch** — the paper text under DEC-1/DEC-2/DEC-4/DEC-5 plus DEC-3 declared (§7.3, §7.4, §7.5, §9.4, §10.2, abstract, §1.2), `N-7` and the three remaining FASE 0 objectives, `F-022`/`M-05` with the **count manifest**, then **one** re-anchor. Detail in §12.1 | **re-anchored once**; `main.tex` is line 1 of the root |
+| **P8 (done — M9)** | **M9, the trust-amendment batch** — `M9a` registry authority (DEC-2), `M9b` full-stake slash (DEC-4), `M9c` ejection surcharge (DEC-5), delivered in §5.13. Contracts, scripts and tests only | **none** — nothing under `integrations/` is in the sealed list |
+| **P10 / P10b (done — F-022)** | Gas of the five Fuji phase-1 creations and Fuji C-Chain block time in the paper, with `F-022`; receipts **R-8** and **R-9**. Detail in `docs/audit/anchor-receipts.md` | **re-anchored** by R-8/R-9; no new anchor risk |
+| **A6-doc (done)** | Documentation consistency sweep after Fuji phase 1 (this commit): no document claims the tree is undeployed; phase 1 is recorded with `verifier = address(0)` and the transport/phase-4 L1 as pending. **A6 in §2.2 remains reputation dynamics (M6).** | **none** — README/architecture only |
+| **P9 (next)** | **Fase 4 + Fase 5 as one sealed batch** — the paper text under DEC-1/DEC-2/DEC-4/DEC-5 plus DEC-3 declared (§7.3, §7.4, §7.5, §9.4, §10.2, abstract, §1.2), `N-7` and the three remaining FASE 0 objectives, `M-05` with the **count manifest**, then **one** re-anchor. Detail in §12.1 | **re-anchored once**; `main.tex` is line 1 of the root |
 | P7b | *now blocked by P9* — the Zenodo deposit and the arXiv submission (both need an account, not code). Release `D-3` forbids submitting before the batch above lands | none |
 
-**Next step: P8, then P9** — first the trust-amendment batch (`M9`: DEC-2 +
-DEC-4 + DEC-5; contracts, scripts and tests only, zero anchor risk), then the
-paper batch (Fase 4 + Fase 5) that closes DEC-1…DEC-5 in
-§7.3/§7.4/§7.5/§9.4/§10.2, the abstract and §1.2, repairs `N-7`, adds
-`F-022`/`M-05` with the count manifest, and re-anchors **once**. Both are
-specified in §12.1 below.
+**Next step: P9** — P8 (`M9`: DEC-2 + DEC-4 + DEC-5; contracts, scripts and
+tests only) and P10/P10b (`F-022`) are done. P9 is the paper batch (Fase 4 +
+Fase 5) that closes DEC-1…DEC-5 in §7.3/§7.4/§7.5/§9.4/§10.2, the abstract and
+§1.2, repairs `N-7`, adds `M-05` with the count manifest, and re-anchors
+**once**. It is specified in §12.1 below.
 
 **P7b is blocked by P9**: the Zenodo deposit (`.zenodo.json` is written, so the
 upload is metadata and not a retyping) and the arXiv submission (`main.tex`
 alone) wait for that re-anchor, because release `D-3` forbids submitting before
-the batch lands. Unrelated to either, and still waiting on a funded key and an
-endpoint: the Fuji deployment the M7a and M8 scripts are ready for.
+the batch lands. Fuji phase 1 is already deployed (chain 43113,
+`2026-10-19T01:46:52Z` UTC); what remains outside P9 is the phase-4 Subnet L1
+and the transport deployment.
 
 ## 12.1 The one batch: M9 (system) → Fase 4 (text) → Fase 5 (sealed + re-anchor)
 
@@ -2670,7 +2684,7 @@ the committed one. Of the batch, `M9a`, `M9b` and `M9c` have landed, and only in
 | `DEC-1 … DEC-6` | **content** decisions — the audit triage's Part A | closed 2026-10-15 (§12.1.1) |
 | `D-1 … D-4` | the **release process** decisions — triage Part D | untouched; they are why §12.1.4 re-anchors once |
 | `P8.x` / `P9.x` | the execution units of this batch | below |
-| `M9a` / `M9b` / `M9c` | the contract milestones; specified in §12.1.2, and **§5.13** on delivery (the §5.x convention) | P8 |
+| `M9a` / `M9b` / `M9c` | the contract milestones; specified in §12.1.2, and **§5.13** on delivery (the §5.x convention) | P8 (done) |
 | `F-022`, `M-05`, `N-7` | the new numerical entry, its measurement, the dangling-refs finding | §12.1.3 / §12.1.4 |
 
 The four-item list maps as: alcance → **DEC-1**, secuenciador → **DEC-2**,
@@ -2678,8 +2692,8 @@ importe → **DEC-4**, reputación → **DEC-5**; plus **DEC-3** (time axis, dec
 a constraint) and **DEC-6** (`γ`, open and non-blocking).
 
 **The order is forced, not chosen.** §10.2 must describe what is deployed at seal
-time, so M9 (contracts) precedes P8 (text); and §9 allows exactly **one** re-anchor
-per batch, so P9 is a single step.
+time, so M9 (contracts, P8) precedes P8.x (text); and §9 allows exactly **one**
+re-anchor per batch, so P9 is a single step.
 
 ### 12.1.1 The decisions as closed
 
@@ -2757,7 +2771,7 @@ The specification it was closed against, kept as written: the amount was a
    and gains the rule, the transport suite is unchanged in number, and the vault
    suite gains the exact-escrow case.
 5. Consequence for the paper: `main.tex:1028`'s «caller-supplied amount» becomes
-   **false** the moment M9b ships, which is why P8 must land in the same release.
+   **false** the moment M9b ships, which is why P8.x must land in the same release.
 
 **M9c — DEC-5, the ejection surcharge. Delivered** (§5.13: 37 manager tests, 64
 vault tests, 262 in total, the dry-run transcript one row longer, the gate and the
@@ -2789,7 +2803,7 @@ that passed before the batch still passing plus the new ones (257 of them once
 therefore nothing sealed — modified. `git status` shows changes confined to
 `integrations/`, `docs/architecture/avalanche-integration.md` and this plan.
 
-### 12.1.3 Fase 4 (P8) — the paper text
+### 12.1.3 Fase 4 (P8.x) — the paper text
 
 P8.1 **§7.3 (`:974-980`) — DEC-1.** Keep «the delivered data layer … does not move
 funds»; add the two subjects it omits: the manager that adjudicates and debits, and
@@ -2808,7 +2822,7 @@ named, the scalar gain of `A-18` is replaced by the declared model (gain = the
 stake the norm buys, loss = the escrow actually debited), and the detection window
 enters as an explicit **constraint**. Whatever it costs is stated as a function of
 latency in epochs, so the numbers must come from P9.3's script: the paper cannot
-state a new quantity before that script exists, and that is the second reason P8
+state a new quantity before that script exists, and that is the second reason P8.x
 and P9 are one batch.
 
 P8.4 **§9.4 (`:1274`) — DEC-4.** «bounded by `Θ = 1.0` per validator» is the
@@ -2828,7 +2842,7 @@ substitutes» overstate what is executed; the term becomes reputation-weighted
 *access cost*. The **title survives**: «Reputation-Weighted Validator Selection»
 describes exactly the discount `collateralFor` applies.
 
-P8.7 **Gate discipline inside P8.** No line may contain `Estimate` **and**
+P8.7 **Gate discipline inside P8.x.** No line may contain `Estimate` **and**
 `Verified` (G8); `pdflatex` must end clean with `errors=0, Undefined=0` (G9), so
 any new table, equation or label needs its references to exist; the abstract's
 prose «twenty-one claims» is payload for G5 and must not be edited in isolation.
@@ -3074,7 +3088,7 @@ unchanged, which is the M4a acceptance re-run §5.5.6 asks for. The setup is a
 (§5.5.4) — and the measured outer proving time, `3.9 s` against a declared `120 s`
 threshold, is what closes the proving-time half of A11 (the Teleporter half still
 needs a live subnet, §11). What M4b did **not** deliver is V2′, and therefore the
-`D-M4-0` verdict is still open (§5.5.2).
+`D-M4-0` verdict remains open (§5.5.2).
 
 Delivered by M4c (§5.5.10): `src/zk/src/native.rs`'s `v2` module (the seeded
 Baby Jubjub parameters, the fixed-base gadget that takes the entries' bits, the
