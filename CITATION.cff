@@ -1,32 +1,38 @@
 cff-version: 1.2.0
 message: "If you use this framework, please cite it as below."
+type: software
+title: "Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation"
+version: 0.2.0
+date-released: "2026-10-19"
 authors:
   - family-names: "Blanco"
     given-names: "Ilich"
     affiliation: "Andromeda Computer"
-title: "Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation"
-version: 0.1.0
+    email: "gerencia@andromedacomputer.net"
+repository-code: "https://github.com/ilichb/diamond-framework"
+url: "https://github.com/ilichb/diamond-framework"
 license: MIT
-abstract: >-
-  Research in progress. Version 0.1.0 is the working-tree state: there is no
-  public release, no tag and no DOI yet, so no release date is declared here and
-  no repository URL is asserted. The canonical citation is the paper source at
-  docs/paper/main.tex, a separate artefact under a separate licence: the
-  manuscript and the frozen PDF snapshots in docs/paper/releases/ are CC BY 4.0
-  (legal code: docs/paper/LICENSE), while the `license` field above names the
-  licence of the repository's software and documentation.
-keywords:
-  - blockchain
-  - proof-of-stake
-  - reputation
-  - zero-knowledge-proofs
-  - cryptoeconomics
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.23268374"
+    description: "v0.1.0 (2026-10-12)"
+  - type: doi
+    value: "10.5281/zenodo.23268373"
+    description: "Concept DOI (all versions)"
 preferred-citation:
-  type: unpublished
-  status: in-preparation
+  type: article
   title: "Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation"
+  year: 2026
   authors:
     - family-names: "Blanco"
       given-names: "Ilich"
-      affiliation: "Andromeda Computer"
   license: CC-BY-4.0
+  status: preprint
+  version: 0.1.0
+  date-released: "2026-10-12"
+  identifiers:
+    - type: doi
+      value: "10.5281/zenodo.23268374"
+      description: "v0.1.0 (2026-10-12)"
+# v0.2.0 version DOI will be added in a follow-up commit after Zenodo deposit.
+# Until then, the published version is v0.1.0 (DOI 10.5281/zenodo.23268374).

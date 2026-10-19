@@ -7,6 +7,7 @@
 [![Status: research in progress](https://img.shields.io/badge/status-research%20in%20progress-yellow)](#status)
 [![Code license: MIT](https://img.shields.io/badge/code%20license-MIT-blue)](LICENSE)
 [![Paper license: CC BY 4.0](https://img.shields.io/badge/paper%20license-CC%20BY%204.0-lightgrey)](docs/paper/LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23268373.svg)](https://doi.org/10.5281/zenodo.23268373)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](verification)
 [![Solidity 0.8.33](https://img.shields.io/badge/solidity-0.8.33-blue)](integrations/avalanche)
 [![Paper: in revision](https://img.shields.io/badge/paper-in%20revision-orange)](docs/paper)
@@ -265,14 +266,14 @@ Two licenses, because the code and the paper are reused differently:
 
 ## Citation
 
-```bibtex
-@misc{blanco2026diamond,
-  title={Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation},
-  author={Blanco, Ilich},
-  year={2026},
-  howpublished={\url{https://github.com/ilichb/diamond-framework}}
-}
-```
+The latest published version is **v0.1.0** (2026-10-12). **v0.2.0**
+(2026-10-19) is being prepared; its version DOI will be assigned after the
+Zenodo deposit. Cite the version DOI when it exists, or the concept DOI that
+always resolves to the latest version:
+
+- Concept DOI (all versions): [10.5281/zenodo.23268373](https://doi.org/10.5281/zenodo.23268373)
+- v0.1.0 (2026-10-12): [10.5281/zenodo.23268374](https://doi.org/10.5281/zenodo.23268374)
+- v0.2.0 (2026-10-19): DOI pending Zenodo deposit
 
 Machine-readable metadata lives in [`CITATION.cff`](CITATION.cff).
 

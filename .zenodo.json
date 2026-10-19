@@ -1,10 +1,12 @@
 {
   "title": "Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation",
+  "description": "Paper and repository for the Diamond Framework, v0.2.0. Includes: the paper source and PDF (40 pp), a 38-script verification suite with byte-identical reruns, a falsification log (22 entries), an Avalanche Fuji phase-1 deployment with on-chain wiring verified, an 11-file anchor root, and OpenTimestamps receipts. Key updates since v0.1.0: R-7 (Fase 4: DEC-1 to DEC-5), R-8 (Fuji gas), R-9 (F-022 block time), R-10 (N-3, N-7, N-8 to N-15, M9 declared), R-11 (P0 pre-v0.2.0), plus session logs (SESSIONS.md + sessions/S-001 to S-012). Verification: 262 Foundry tests, 170 Rust tests (2 ignored), 11/11 audit gate. The anchor root covers eleven files; the recursion SNARK and Teleporter cross-subnet latency are declared deferred in Section 10. The repository code is MIT; the manuscript and frozen PDF are CC BY 4.0.",
   "upload_type": "publication",
   "publication_type": "article",
   "access_right": "open",
   "license": "cc-by-4.0",
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "publication_date": "2026-10-19",
   "language": "eng",
   "creators": [
     {
@@ -12,12 +14,26 @@
       "affiliation": "Andromeda Computer"
     }
   ],
-  "description": "<p>Proof-of-stake secures admission and deterrence with a single instrument, financial capital, and that is the source of its structural tension: high collateral requirements deter honest but capital-constrained validators, low requirements expose the network to Sybil attacks. The Diamond Framework replaces a fraction of the financial stake with verifiable, non-transferable reputation, so the admission barrier falls without lowering the Cost of Attack.</p><p>The deposit is the frozen PDF snapshot of the manuscript. Every quantitative claim in it is paired with a script that reproduces it, and the claim registry that binds claim to script is sealed by a ten-file anchor root which is timestamped externally with OpenTimestamps and therefore witnessed in Bitcoin. The protocol itself targets the Avalanche network; Bitcoin enters only as that external witness, because a receipt sealed inside the root it witnesses would be circular.</p>",
+  "related_identifiers": [
+    {
+      "identifier": "10.5281/zenodo.23268373",
+      "relation": "isVersionOf",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.5281/zenodo.23268374",
+      "relation": "references",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "https://github.com/ilichb/diamond-framework",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ],
   "keywords": [
     "proof-of-stake",
-    "validator selection",
     "reputation",
-    "non-transferable reputation",
     "zero-knowledge proofs",
     "cryptoeconomics",
     "Avalanche",
