@@ -297,7 +297,9 @@ Machine-readable metadata lives in [`CITATION.cff`](CITATION.cff).
 
 ## Contact
 
-Ilich Blanco — Andromeda Computer. Questions, issues and discussions: use
+Ilich Blanco — Andromeda Computer. Contact:
+[ilichblanco@andromedacomputer.net](mailto:ilichblanco@andromedacomputer.net).
+Questions, issues and discussions: use
 [GitHub Issues](https://github.com/ilichb/diamond-framework/issues).
 
 <div align="center"><sub>Research in progress — every measured number ships with its script; estimates are labelled.</sub></div>
