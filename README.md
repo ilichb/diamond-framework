@@ -10,7 +10,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23268373.svg)](https://doi.org/10.5281/zenodo.23268373)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](verification)
 [![Solidity 0.8.33](https://img.shields.io/badge/solidity-0.8.33-blue)](integrations/avalanche)
-[![Paper: in revision](https://img.shields.io/badge/paper-in%20revision-orange)](docs/paper)
+[![Paper: v0.2.1](https://img.shields.io/badge/paper-v0.2.1-orange)](docs/paper/releases/)
 
 [Overview](#overview) · [Status](#status) · [Repository layout](#repository-layout) ·
 [Reproducibility](#reproducibility) · [Falsification log](#falsification-log) ·
@@ -27,7 +27,7 @@ financial stake required to become a Proof-of-Stake validator with **verifiable,
 non-transferable reputation**. The goal is to lower the entry barrier for honest but
 capital-constrained validators by discounting the stake the rule requires. Whether this
 preserves the network's **Cost of Attack** is an open question in v0.2.1 (paper §6.3 and
-§10.2), not a claim of this release.
+§10), not a claim of this release.
 
 The core insight is an opportunity-cost argument:
 
@@ -69,12 +69,12 @@ The core insight is an opportunity-cost argument:
 |-----------|--------|-----------------------|
 | Reputation dynamics | Positive under multiplicative jumps (0% violations) | [`verification/stochastics/`](verification/stochastics) |
 | Tensor compression | Tucker reduces storage by 70.8%; **not** used in the security path | [`verification/`](verification) |
-| ZK threshold proof | **Measured** — V3/Groth16: 94,438 constraints, 3.9 s proving, 128 B proof; original circuit unsound; on-chain verifier not deployed | [`src/zk/`](src/zk), [`verification/zk/`](verification/zk) |
+| ZK threshold proof | **Measured** — V3/Groth16: 94,438 constraints, 3.9 s proving, 128 B compressed proof (256 B on-chain); original circuit unsound; on-chain verifier not deployed | [`src/zk/`](src/zk), [`verification/zk/`](verification/zk) |
 | RMT collusion detection | Modularity matrix; TPR characterized for cliques | [`verification/rmt/`](verification/rmt) |
-| Data layer / fraud proofs | Equilibrium `n* = floor(B/B*)`; attacker profit `-502` | [`verification/data-layer/`](verification/data-layer) |
-| Bootstrap dynamics | Verified — μ/g sweep: the optimum is a band, μ/g ∈ [1, 2] (argmax R_std = 0.0424 at μ/g = 1.5) | [`verification/bootstrap/`](verification/bootstrap) |
+| Data layer / fraud proofs | Equilibrium `n* = floor(B/B*)`; attacker profit `-502` (seed-42 mean with `S_slash = 10`; model bookkeeping, not an executable loss) | [`verification/data-layer/`](verification/data-layer) |
+| Bootstrap dynamics | Verified — δ/g sweep: R_std peaks at δ/g = 1.5 (0.0424, five seeds); 1.0–2.0 form a plateau | [`verification/bootstrap/`](verification/bootstrap) |
 | Mechanism design (payment) | Fee rule specified: posted price F0* = π_val − ω̄·Θ, saturated at highest-cost type | [`verification/mechanism/`](verification/mechanism) |
-| Avalanche integration | **Partial** — Fuji phase 1 deployed (chain 43113; `verifier = address(0)`); `AVIPRegistry`, `AVIPStakeVault`, `AVIPValidatorManager` and `AVIPBurnSink` deployed and wired (Table 4.4); gas benchmarks done (181,142); transport latency pending | [`integrations/avalanche/contracts/`](integrations/avalanche/contracts) |
+| Avalanche integration | **Partial** — Fuji phase 1 deployed (chain 43113; `verifier = address(0)`); `AVIPRegistry`, `AVIPStakeVault`, `AVIPValidatorManager` and `AVIPBurnSink` deployed and wired (Table 4.4); benchmarks done (ecPairing k=4: 181,142 gas; five creations: 7,787,000 gas total); transport latency pending | [`integrations/avalanche/contracts/`](integrations/avalanche/contracts) |
 
 Rows without a **Partial**/**Pending** marker carry numerical backing in the paper's
 verification program; claims in the paper without numerical backing are marked
@@ -145,7 +145,7 @@ python rmt/calibration_modularity.py
 python data-layer/simulate_data_layer_v3.py
 ```
 
-Outputs are written to `verification/*/results/`.
+The five scripts above write their outputs to `verification/*/results/`.
 
 ### Chain of custody
 
@@ -210,10 +210,10 @@ has **not** been audited. Fuji phase 1 (chain 43113) is a testnet deployment wit
 
 | Item | Component | Status |
 |------|-----------|--------|
-| `mu` sweep over bootstrap dynamics | Bootstrap | **Done** (μ/g ∈ [1, 2]; F-005) |
+| δ/g sweep over bootstrap dynamics | Bootstrap | **Done** (δ/g = 1.5 maximizes R_std; F-005) |
 | Payment rule specification | Mechanism design | **Done** (posted price F0*, IR verified) |
 | Gas benchmarks | Avalanche integration | **Done** (Foundry, integrations/avalanche/benchmarks/) |
-| Deployment scripts | Avalanche integration | **Done** (M7a: `DeployRegistry`/`DeployValidatorManager`, dry run + tests; Fuji phase 1 deployed 2026-10-19T01:46:52Z UTC, chain 43113, `verifier = address(0)`) |
+| Deployment scripts | Avalanche integration | **Done** (M7a: `DeployRegistry`/`DeployValidatorManager`, dry run + tests; Fuji phase 1 deployed 2026-10-18 local (2026-10-19T01:46:52Z UTC), chain 43113, `verifier = address(0)`) |
 | Data layer: audit equilibrium + `f_c` | Off-chain (Rust) | **Done** (M7b: the sealed table reproduced row by row on numpy's own stream, `eq:ingestion` as an interface plus the three-valued fraud proof; `src/datalayer/scripts/m7b_report.sh`. M7c: the Pedersen/Poseidon ↔ keccak Merkle bridge over M1's own fold, `src/zk/src/bridge.rs`, `src/zk/scripts/m7c_report.sh`) |
 | Teleporter / AWM transport | Avalanche integration | **Done** (M7d: the three message types of `avalanche-integration.md` §4 as a wire format plus one contract per type — per-kind origin allowlists, at-most-once delivery, the commitment recorded once per epoch, the alert flag that cannot be erased, and a slashing notification whose `reason` is derived from the envelope; `integrations/avalanche/scripts/m7d_report.sh`. Offline against a Teleporter double; **the transport is not deployed**) |
 | Teleporter latency | Avalanche integration | Pending (requires a deployed Subnet L1/transport; phase 1 is C-Chain only) |
@@ -288,8 +288,8 @@ Machine-readable metadata lives in [`CITATION.cff`](CITATION.cff).
   year    = {2026},
   version = {0.2.1},
   doi     = {10.5281/zenodo.23268373},
-  url     = {https://github.com/ilichb/diamond-framework},
-  note    = {Concept DOI; v0.2.1 version DOI pending}
+  url     = {https://github.com/ilichb/diamond-framework/releases/tag/v0.2.1},
+  note    = {Concept DOI; resolves to v0.1.0 until the v0.2.1 version DOI is assigned}
 }
 ```
 
