@@ -1275,5 +1275,9 @@ pendientes; `.ots` de 739 bytes, sha256
 `1bdfcbbfe42b062095a78ed6b09fd1be8b6bd818849ad0e8107c0e33b3ab5e81`.
 `ots upgrade` queda pendiente de confirmación Bitcoin.
 
-**Estado.** R-12 aplicado y anclado en `a785770`; tag `v0.2.1` pendiente.
-No se toca `integrations/` ni los contratos.
+**Estado.** R-12 aplicado y anclado en `a785770`; tag `v0.2.1`
+(`20735b2c…`) y GitHub Release publicados:
+<https://github.com/ilichb/diamond-framework/releases/tag/v0.2.1>.
+El asset descargado conserva 579260 bytes y sha256 `1aa1cb6c…4da5`.
+Zenodo New version y DOI de versión siguen pendientes. No se toca
+`integrations/` ni los contratos.

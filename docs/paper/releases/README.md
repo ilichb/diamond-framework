@@ -23,6 +23,19 @@ derivable, not memorized:
 
     ls docs/paper/releases/*.pdf | tail -1
 
+## Publication status (v0.2.1)
+
+- GitHub Release:
+  <https://github.com/ilichb/diamond-framework/releases/tag/v0.2.1>
+- Release asset `diamond-framework-2026-10-20.pdf`: 579260 bytes,
+  sha256 `1aa1cb6c52593203116a600eec11f980ab92a64945f480efd8e6cb856b864da5`
+  (downloaded and re-hashed).
+- Zenodo version DOI: pending the v0.2.1 deposit. Until then, cite the
+  published v0.1.0 DOI `10.5281/zenodo.23268374` or the concept DOI
+  `10.5281/zenodo.23268373`.
+- v0.2.0 has no GitHub Release and no Zenodo deposit; it is superseded
+  by v0.2.1 and must not be cited.
+
 ## Convention
 
 - Name: `diamond-framework-YYYY-MM-DD.pdf`. The date is the day the
