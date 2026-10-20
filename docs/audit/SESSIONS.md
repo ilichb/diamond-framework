@@ -24,4 +24,4 @@ hay `session-log.md` en este repositorio: no inventar uno.
 | S-011 | 2026-10-19 | R-10: N-3, N-7…N-15, M9 | b16f561 | 3138d321… | cerrada |
 | S-012 | 2026-10-19 | R-11: P0 pre-v0.2.0 y session logs | este commit | d8b63d29… | cerrada |
 | S-013 | 2026-10-19 | Release v0.2.0 | d99c73a | d8b63d29… | cerrada sin release; ver S-014 |
-| S-014 | 2026-10-20 | v0.2.1: correcciones P0/P1 | [pendiente] | adfd08d2… | en curso |
+| S-014 | 2026-10-20 | v0.2.1: correcciones P0/P1 | a785770 | adfd08d2… | cerrada; release pendiente |

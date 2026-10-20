@@ -1275,5 +1275,5 @@ pendientes; `.ots` de 739 bytes, sha256
 `1bdfcbbfe42b062095a78ed6b09fd1be8b6bd818849ad0e8107c0e33b3ab5e81`.
 `ots upgrade` queda pendiente de confirmación Bitcoin.
 
-**Estado.** R-12 aplicado y anclado; commit y tag `v0.2.1` pendientes.
+**Estado.** R-12 aplicado y anclado en `a785770`; tag `v0.2.1` pendiente.
 No se toca `integrations/` ni los contratos.
