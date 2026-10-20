@@ -46,7 +46,7 @@ The core insight is an opportunity-cost argument:
 
 ### Non-goals
 
-- **Not a finished protocol.** Sections 2 through 11 are written; each claim is labelled Verified, Measured, Estimated, Design, or Deferred. The open items are external audit, real-data calibration, testnet benchmarks, the on-chain verifier, and the deferred recursive option.
+- **Not a finished protocol.** Sections 2 through 11 are written; each closes with a summary table and each claim is labelled Verified, Measured, Estimated, Design, or Deferred. The remaining open items are consolidated in §10: external audit, real-data calibration, testnet benchmarks, the on-chain verifier, and the deferred recursive option.
 - **Not audited.** No external security review has been performed, and there is no mainnet deployment. Fuji phase 1 (chain 43113) is a testnet deployment only.
 - **Not formally verified.** All proofs are mathematical arguments, not machine-checked proofs.
 - **Not a production implementation.** The off-chain components under `src/` (`reputation/`,
@@ -74,7 +74,7 @@ The core insight is an opportunity-cost argument:
 | Data layer / fraud proofs | Equilibrium `n* = floor(B/B*)`; attacker profit `-502` | [`verification/data-layer/`](verification/data-layer) |
 | Bootstrap dynamics | Verified — μ/g sweep: the optimum is a band, μ/g ∈ [1, 2] (argmax R_std = 0.0424 at μ/g = 1.5) | [`verification/bootstrap/`](verification/bootstrap) |
 | Mechanism design (payment) | Fee rule specified: posted price F0* = π_val − ω̄·Θ, saturated at highest-cost type | [`verification/mechanism/`](verification/mechanism) |
-| Avalanche integration | **Partial** — Fuji phase 1 deployed (chain 43113; `verifier = address(0)`); gas benchmarks done (181,142); transport latency pending | [`integrations/avalanche/benchmarks/`](integrations/avalanche/benchmarks) |
+| Avalanche integration | **Partial** — Fuji phase 1 deployed (chain 43113; `verifier = address(0)`); `AVIPRegistry`, `AVIPStakeVault`, `AVIPValidatorManager` and `AVIPBurnSink` deployed and wired (Table 4.4); gas benchmarks done (181,142); transport latency pending | [`integrations/avalanche/contracts/`](integrations/avalanche/contracts) |
 
 Rows without a **Partial**/**Pending** marker carry numerical backing in the paper's
 verification program; claims in the paper without numerical backing are marked
@@ -182,9 +182,9 @@ corrections so far:
 | Original claim | Correction | Why it changed |
 |----------------|------------|----------------|
 | 4.7% of trajectories go negative | **40.58%** | The early simulation claim was fabricated: it was presented as the result of a simulation that was never run. With standard parameters the real figure is 40.58%. |
-| RMT collusion test on `A_sym` | **Modularity matrix** `B = W - dd^T/(2m)` | Normalized adjacency attenuates cliques: 97.2% vs 3.3% TPR for a single small clique. |
+| RMT collusion test on `A_sym` | **Modularity matrix** `B = W - dd^T/(2m)` | Normalized adjacency attenuates cliques: TPR **0.972 vs 0.033** (29.2×) for a single clique of size 20. |
 | Tracy–Widom threshold | **Empirically calibrated quantiles** | The theoretical TW threshold is not applicable to sparse heavy-tailed collaboration graphs. |
-| Myerson projection via Frobenius norm | **Applied to capital cost only** | F-004 (projection); F-006: allocation is independent of ω, IC is tautological |
+| Myerson optimal auction rule | **Misapplied; rejected** | F-006: the allocation is independent of the private cost ω, so there is no revelation game. The adopted rule is a saturated **uniform posted price** `F₀*`, not a Myerson auction. F-004 is only the Frobenius-norm projection test. |
 
 If you find a claim that is not reproducible, open an issue with the label `falsification`.
 We will correct the claim or remove it.
@@ -267,17 +267,31 @@ Two licenses, because the code and the paper are reused differently:
 
 ## Citation
 
-The latest published version is **v0.1.0** (2026-10-12). **v0.2.1**
-(2026-10-20) is being prepared; its version DOI will be assigned after the
-Zenodo deposit. **v0.2.0** was tagged but not deposited: it is superseded by
-v0.2.1 and must not be cited. Cite the version DOI when it exists, or the
-concept DOI that always resolves to the latest version:
+The latest **DOI-published** version is **v0.1.0** (2026-10-12).
+**v0.2.1** (2026-10-20) is published as a GitHub Release; its version DOI
+will be assigned after the Zenodo deposit. **v0.2.0** was tagged but not
+deposited: it is superseded by v0.2.1 and must not be cited. Cite the
+version DOI when it exists, or the concept DOI that always resolves to the
+latest version:
 
 - Concept DOI (all versions): [10.5281/zenodo.23268373](https://doi.org/10.5281/zenodo.23268373)
 - v0.1.0 (2026-10-12): [10.5281/zenodo.23268374](https://doi.org/10.5281/zenodo.23268374)
 - v0.2.1 (2026-10-20): DOI pending Zenodo deposit
+- v0.2.1 GitHub Release: [v0.2.1](https://github.com/ilichb/diamond-framework/releases/tag/v0.2.1)
 
 Machine-readable metadata lives in [`CITATION.cff`](CITATION.cff).
+
+```bibtex
+@software{blanco2026diamond,
+  author  = {Blanco, Ilich},
+  title   = {Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation},
+  year    = {2026},
+  version = {0.2.1},
+  doi     = {10.5281/zenodo.23268373},
+  url     = {https://github.com/ilichb/diamond-framework},
+  note    = {Concept DOI; v0.2.1 version DOI pending}
+}
+```
 
 ---
 
