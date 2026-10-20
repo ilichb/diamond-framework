@@ -51,7 +51,7 @@ derivable, not memorized:
 `diamond-framework-2026-10-20.pdf` is frozen from the v0.2.1 source: the
 revision that corrects the ZK paper↔code mismatch, the Cost of Attack
 claim, the audit-table interpretation, the tensor domain and the
-mean/median labels. Two `pdflatex` passes over that source produce it:
+mean/median labels. Three `pdflatex` passes over that source produce it:
 41 pages, 579260 bytes, 0 errors, 0 undefined references, and 0 overfull
 or underfull boxes.
 
