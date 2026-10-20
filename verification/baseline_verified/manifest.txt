@@ -12,7 +12,6 @@ fee_specification_net.py                    0       0.09          1693
 financial_floor_sensitivity.py              0       0.01          2384
 m05_attack_model.py                         0       0.11          4029
 constraint_count_check.py                   0       0.01           351
-soundness_zk_check.py                       0       0.09          3034
 threshold_quantization.py                   0       0.01          4244
 succinctness_comparison.py                  0       0.02          2952
 sim_laplacian.py                            0       0.20          1490
@@ -33,7 +32,8 @@ simulate_data_layer_v3.py                   0       0.11          2051
 attacker_profit_analytical.py               0       0.57          2543
 compare_reputation_models.py                0       0.18          3373
 sweep_net_gain.py                           0       0.81          2675
-simulate_bootstrap_net_gain.py              0       0.16          1794
 r_std_specification.py                      0       5.63          3189
 read_fuji_gas.py                            0       0.02           444
 measure_block_time.py                       0       0.05           236
+soundness_zk_check.py                       0       0.15          3034
+simulate_bootstrap_net_gain.py              0       0.21          1794

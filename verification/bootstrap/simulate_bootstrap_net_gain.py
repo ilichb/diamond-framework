@@ -130,7 +130,7 @@ def main():
     print("MÉTRICAS FINALES")
     print("=" * 90)
     print(f"{'Política':<20} {'t(α=1)':>8} {'Gini':>8} {'Top10':>8} "
-          f"{'N':>5} {'S_f med':>10} {'R med':>10} {'R max':>10}")
+          f"{'N':>5} {'S_f mean':>10} {'R mean':>10} {'R max':>10}")
     print("-" * 90)
     for policy in policies:
         r = results[policy]

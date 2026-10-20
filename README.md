@@ -25,8 +25,9 @@
 The **Diamond Framework** is a cryptoeconomic protocol that replaces a fraction of the
 financial stake required to become a Proof-of-Stake validator with **verifiable,
 non-transferable reputation**. The goal is to lower the entry barrier for honest but
-capital-constrained validators **without degrading the Cost of Attack** that secures the
-network.
+capital-constrained validators by discounting the stake the rule requires. Whether this
+preserves the network's **Cost of Attack** is an open question in v0.2.1 (paper §6.3 and
+§10.2), not a claim of this release.
 
 The core insight is an opportunity-cost argument:
 
@@ -39,19 +40,19 @@ The core insight is an opportunity-cost argument:
 | Principle | What it means in the protocol |
 |-----------|-------------------------------|
 | **Non-transferable** | Reputation cannot be bought, sold, or delegated. It accrues to a validator's own verifiable history, so it cannot be rented from the capital market. |
-| **Verifiable** | Possession is designed to be proven with ZK threshold proofs (Bulletproofs), not by trusting a committee or a centralized registry. |
-| **Partial** | Reputation never replaces stake entirely. A capital floor remains, so the Cost of Attack is bounded below by capital and not by history. |
+| **Verifiable** | Possession is designed to be proven with V3/Groth16 threshold proofs (measured circuit; the on-chain verifier is not deployed), not by trusting a committee or a centralized registry. |
+| **Partial** | Reputation never replaces stake entirely. A capital floor remains, so the financial component is bounded below by capital; the full Cost of Attack is not established in this version. |
 | **Out of the security path by default** | Research tooling that only reduces cost (e.g. tensor compression) never decides admission or slashing. |
 
 ### Non-goals
 
-- **Not a finished protocol.** Sections 2 through 11 are written; each claim is labelled Verified, Measured, Estimated, Design, or Deferred. The open items are external audit, real-data calibration, testnet benchmarks, and the paper-literal recursive SNARK.
+- **Not a finished protocol.** Sections 2 through 11 are written; each claim is labelled Verified, Measured, Estimated, Design, or Deferred. The open items are external audit, real-data calibration, testnet benchmarks, the on-chain verifier, and the deferred recursive option.
 - **Not audited.** No external security review has been performed, and there is no mainnet deployment. Fuji phase 1 (chain 43113) is a testnet deployment only.
 - **Not formally verified.** All proofs are mathematical arguments, not machine-checked proofs.
 - **Not a production implementation.** The off-chain components under `src/` (`reputation/`,
   `rmt/`, `zk/`, `datalayer/`) are built and tested against their own design notes, but they
-  are research code: the protocol's Fuji phase 1 is deployed, nothing has been audited, and the paper-literal
-  recursive SNARK is not implemented. What exists, what is missing and in what order it is
+  are research code: the protocol's Fuji phase 1 is deployed, nothing has been audited, and the V3 circuit is measured, the on-chain verifier is not deployed, and the
+  recursive option is deferred. What exists, what is missing and in what order it is
   being built is in
   [`docs/architecture/implementation-plan.md`](docs/architecture/implementation-plan.md).
 
@@ -68,7 +69,7 @@ The core insight is an opportunity-cost argument:
 |-----------|--------|-----------------------|
 | Reputation dynamics | Positive under multiplicative jumps (0% violations) | [`verification/stochastics/`](verification/stochastics) |
 | Tensor compression | Tucker reduces storage by 70.8%; **not** used in the security path | [`verification/`](verification) |
-| ZK threshold proof | **Estimate** — Bulletproofs: 0 R1CS constraints, 0.72 KB proof; the original circuit is unsound and the repair is specified, not implemented | [`verification/zk/`](verification/zk) |
+| ZK threshold proof | **Measured** — V3/Groth16: 94,438 constraints, 3.9 s proving, 128 B proof; original circuit unsound; on-chain verifier not deployed | [`src/zk/`](src/zk), [`verification/zk/`](verification/zk) |
 | RMT collusion detection | Modularity matrix; TPR characterized for cliques | [`verification/rmt/`](verification/rmt) |
 | Data layer / fraud proofs | Equilibrium `n* = floor(B/B*)`; attacker profit `-502` | [`verification/data-layer/`](verification/data-layer) |
 | Bootstrap dynamics | Verified — μ/g sweep: the optimum is a band, μ/g ∈ [1, 2] (argmax R_std = 0.0424 at μ/g = 1.5) | [`verification/bootstrap/`](verification/bootstrap) |
@@ -266,14 +267,15 @@ Two licenses, because the code and the paper are reused differently:
 
 ## Citation
 
-The latest published version is **v0.1.0** (2026-10-12). **v0.2.0**
-(2026-10-19) is being prepared; its version DOI will be assigned after the
-Zenodo deposit. Cite the version DOI when it exists, or the concept DOI that
-always resolves to the latest version:
+The latest published version is **v0.1.0** (2026-10-12). **v0.2.1**
+(2026-10-20) is being prepared; its version DOI will be assigned after the
+Zenodo deposit. **v0.2.0** was tagged but not deposited: it is superseded by
+v0.2.1 and must not be cited. Cite the version DOI when it exists, or the
+concept DOI that always resolves to the latest version:
 
 - Concept DOI (all versions): [10.5281/zenodo.23268373](https://doi.org/10.5281/zenodo.23268373)
 - v0.1.0 (2026-10-12): [10.5281/zenodo.23268374](https://doi.org/10.5281/zenodo.23268374)
-- v0.2.0 (2026-10-19): DOI pending Zenodo deposit
+- v0.2.1 (2026-10-20): DOI pending Zenodo deposit
 
 Machine-readable metadata lives in [`CITATION.cff`](CITATION.cff).
 

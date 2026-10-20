@@ -236,8 +236,8 @@ claim that fails its test is corrected or removed, not quietly reworded.
 - **Verdict:** **Refuted as the canonical model.** The paper selects
   net_gain (Delta_R = g*a*(1-R) - mu*R) because it is the only model
   with high correlation between activity and reputation (corr = 0.76).
-  With net_gain (g=0.01, mu=0.015), the median financial stake under
-  hybrid_no_decay is 0.7764, a 22.4% reduction.
+  With net_gain (g=0.01, mu=0.015), the mean financial stake under
+  hybrid_no_decay is 0.7764, a 22.4% reduction (median 0.7714, 22.86%).
 - **Resolution:** Section 8 uses net_gain. The saturating script is
   retained in the repository as a historical record; it is not cited
   in the paper.
@@ -250,12 +250,13 @@ claim that fails its test is corrected or removed, not quietly reworded.
 - **Test:** `integrations/avalanche/benchmarks/src/GasBenchmarks.sol`
 - **Verdict:** **Refuted.** The function passed 384 bytes to the
   precompile at 0x08, which corresponds to k=2 pairs, not k=4.
-  EIP-197 charges 45,000 + 34,000k; adding a constant harness
-  overhead of 142 gas yields exactly 113,142 (k=2) and 181,142
-  (k=4). The measured 113,142 was correct for k=2 but mislabeled.
+  EIP-1108 (the Istanbul revision of EIP-197) charges 45,000 +
+  34,000k; adding a constant harness overhead of 142 gas yields
+  exactly 113,142 (k=2) and 181,142 (k=4). The measured 113,142 was
+  correct for k=2 but mislabeled.
 - **Resolution:** v2 uses a parameterized function; k=4 for Groth16
   is 181,142 gas (measured). The linearity is verified exactly
-  against EIP-197 for k ∈ {1, 2, 4}.
+  against EIP-1108 for k ∈ {1, 2, 4}.
 
 ### F-018 — Right-tail statistic uses s[-2] instead of s[-1]
 

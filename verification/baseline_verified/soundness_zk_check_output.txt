@@ -16,26 +16,26 @@ COSTO REAL DE SOUNDNESS — DIAMOND FRAMEWORK ZK CIRCUIT
 ------------------------------------------------------------------------------
    Diseño                                     Sound              R1CS     Prueba
    ------------------------------------------ ------- --------------- ----------
-   Actual (Prover elige T̂)                   NO                  573     0.20 KB
+   Actual (Prover elige T̂)                   NO                3,621     0.20 KB
    Opción A (Merkle + apertura total)         sí            1,080,501     0.20 KB
    Opción A' (Poseidon del tensor completo)   sí              240,261     0.20 KB
-   Opción B (Pedersen + Bulletproofs)         sí                    0     0.72 KB
+   Opción B (Pedersen + Bulletproofs)         sí                    0     1.22 KB
 
 3. ANÁLISIS
 ------------------------------------------------------------------------------
    El '146 constraints' del paper es solo la parte de Tucker.
-   El circuito real (573 constraints) no es sound.
+   El circuito real (3,621 constraints) no es sound.
 
    Añadir soundness via Merkle (Opción A) cuesta
    1,080,501 constraints, un factor de
-   1886× sobre el diseño actual.
+   298× sobre el diseño actual.
 
    Añadir soundness via Poseidon (Opción A') cuesta
    240,261 constraints, un factor de
-   419× sobre el diseño actual.
+   66× sobre el diseño actual.
 
    Opción B (Bulletproofs) no usa R1CS. Prueba de
-   0.72 KB, verificación O(N) fuera de cadena.
+   1.22 KB, verificación O(N) fuera de cadena.
 
    Conclusión: el ahorro del 70.8% del paper es real como
    ahorro de almacenamiento del tensor, pero no como ahorro

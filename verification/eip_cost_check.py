@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
 eip_cost_check.py — Cierra la brecha aritmetica del gas de las precompilas
-EIP-196/197 (finding C-51; entrada F-017 de docs/audit/numerical-verification.md).
+EIP-1108 (que modifica EIP-196/197; finding C-51; entrada F-017 de
+docs/audit/numerical-verification.md).
 
 El paper mide con Foundry (Solc 0.8.33, OPTIMIZER OFF, igual que el resto de
 benchmarks; ver main.tex:499 y main.tex:1244-1253) el gas de las precompilas
-BN254 y lo compara con el esquema de EIP-196 (ecAdd, ecMul) y EIP-197
-(ecPairing):
+BN254 y lo compara con el esquema de EIP-1108 (la revision de Istanbul
+de EIP-196 para ecAdd/ecMul y de EIP-197 para ecPairing):
 
     ecAdd      = 150
     ecMul      = 6000
@@ -83,7 +84,7 @@ def main(argv):
         checks.append(("ecPairing k=%d" % k, base, base + HARNESS_OVERHEAD, meas["pairing%d" % k]))
 
     print("=" * 72)
-    print("eip_cost_check — EIP-196/197 base + overhead de harness vs medido")
+    print("eip_cost_check — EIP-1108 base + overhead de harness vs medido")
     print("=" * 72)
     print("benchmark: %s" % bench)
     print()

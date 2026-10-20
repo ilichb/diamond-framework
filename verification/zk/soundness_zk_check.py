@@ -47,17 +47,19 @@ def design_current():
     """
     Diseño actual del paper: el prover elige T̂ (factores Tucker) y prueba
     Σ T̂² ≥ Θ_r². No hay compromiso a los datos reales.
-    Constraints:
-      - R1R2R3 productos Tucker: R1R2R3
-      - Reconstrucción de T̂: R1R2R3 (una multiplicación por entrada)
-      - Cuadrados y suma: N
-      - Comparación: 1 (truco δ²)
+    Constraints (multiplicaciones R1CS reales de la reconstrucción):
+      - G x0 A0: C * R2 * R3 * R1
+      - x1 A1:   C * D  * R3 * R2
+      - x2 A2:   C * D  * H  * R3
+      - Cuadrados: N
+      - Comparación: 1
+    Con (C,D,H)=(20,5,5), (R1,R2,R3)=(4,3,3):
+      720 + 900 + 1,500 + 500 + 1 = 3,621.
     """
-    tucker = R1 * R2 * R3
-    reconstruction = R1 * R2 * R3
+    tucker = C * R2 * R3 * R1 + C * D * R3 * R2 + C * D * H * R3
     sum_squares = N
     comparison = 1
-    total = tucker + reconstruction + sum_squares + comparison
+    total = tucker + sum_squares + comparison
     return CircuitDesign(
         name="Actual (Prover elige T̂)",
         sound=False,
@@ -122,16 +124,15 @@ def design_option_b_bulletproofs():
     Constraints R1CS: 0 (es un protocolo interactivo/Fiat-Shamir, no un circuito).
     Tamaño de prueba: ~2·log2(N) + O(1) elementos de grupo ≈ 2·log2(N)·32 bytes.
     """
-    import math
-    log_n = math.ceil(math.log2(N))
-    proof_size_bytes = (2 * log_n + 5) * 32  # elementos de 32 bytes, aprox.
-    proof_size_kb = proof_size_bytes / 1024
+    # Measured by M4a (`src/zk/scripts/m4a_output.txt`): the aggregated
+    # 512 x 64-bit range proof is 1,248 bytes, not the 736-byte estimate.
+    proof_size_kb = 1248 / 1024
     return CircuitDesign(
         name="Opción B (Pedersen + Bulletproofs)",
         sound=True,
         constraints=0,
         proof_size_kb=proof_size_kb,
-        notes="Sin circuito R1CS. Prueba sub-lineal. Verificación O(N) fuera de cadena.",
+        notes="Sin circuito R1CS. Prueba de 1.22 KB medida (M4a). Verificación O(N) fuera de cadena.",
     )
 
 

@@ -1232,3 +1232,48 @@ por diseño. La corrección vive en el paper, el README, el handoff y este recib
 **Estado.** R-11 cerrado y anclado, pendiente de commit. El commit será
 descendiente de `b16f561` (regla D7-b); no se enmienda `b16f561`. No se tocan
 contratos ni `integrations/`.
+## R-12 — v0.2.1: correcciones P0/P1 de la revisión externa (2026-10-20)
+
+**Qué cierra.** El release v0.2.0 se detuvo antes de GitHub Release y
+Zenodo. La revisión externa de la ronda 3 dejó cinco P0 (ZK paper↔código,
+Cost of Attack, equilibrio de auditoría, publicador/slashed y binding
+Pedersen/Merkle) y varios P1 numéricos. v0.2.1 aplica el lote descrito en
+`docs/audit/triage-external-review-2026-10b.md` y en
+`docs/audit/sessions/S-014.md`.
+
+**Paper.** §4 se alinea con el circuito entregado: V3 Poseidon + norma,
+Groth16 directo, 94.438 constraints, 3,9 s, 128 B (256 B on-chain); la
+recursión queda como opción diferida. §1/§6 retiran el claim de Cost of
+Attack y lo declaran abierto. §7 etiqueta la tabla como statics
+comparativos con `p_fraud` exógeno; declara que el publicador es el
+sequencer en v1 y que la atribución al validador no está implementada;
+añade el peor caso `r_fraud → ∞` (`q > 0,2857` a `k=1`, `q > 0,7826` a
+`k=9`) y la cota de norma que la freshness no cubre. §3 corrige el dominio
+del tensor y la explicación blocky. §8/§9/§11 pasan mean/median a medias
+(0,7764/0,3936; medianas 0,7714/0,4000; 22,86% mediana) y corrigen
+573 → 3.621, EIP-1108 y el PDF a 41 páginas.
+
+**Evidencia.** `pdflatex` ×3 → 41 páginas, 579260 bytes, 0 errores,
+0 `Undefined`, 0 overfull/underfull. `bash verification/run_all.sh
+--resume` → 38/38, con `soundness_zk_check.py` y
+`simulate_bootstrap_net_gain.py` re-ejecutados. `bash
+verification/audit-gate.sh` → **PASS=11 FAIL=0 SKIP=0**. PDF congelado:
+`docs/paper/releases/diamond-framework-2026-10-20.pdf`, 41 páginas,
+579260 bytes, sha256
+`1aa1cb6c52593203116a600eec11f980ab92a64945f480efd8e6cb856b864da5`.
+
+**Pares.** `main.tex` `10721754…` → `37ebdc73…`; `output_manifest.sha256`
+`c97f1344…` → `79da1f64…`; `audit_manifest.sha256` `8b94c477…` →
+`774c8851…`; `anchor_root.sha256` `d8b63d29…` → `adfd08d2…`.
+
+**Ancla.** Sello UTC `2026-10-20T00:07:58Z`, HEAD `d99c73a`. Raíz nueva
+`adfd08d28a8b53ce3c217b64658dd754ec0d0b9d4c7de71588ddcf2bfce6c55b`.
+`fase0_anchor.sh --check` → exit 0 (38 pares y 11 pares idénticos).
+
+**OTS.** `ots stamp verification/anchor_root.sha256` → 4 atestaciones
+pendientes; `.ots` de 739 bytes, sha256
+`1bdfcbbfe42b062095a78ed6b09fd1be8b6bd818849ad0e8107c0e33b3ab5e81`.
+`ots upgrade` queda pendiente de confirmación Bitcoin.
+
+**Estado.** R-12 aplicado y anclado; commit y tag `v0.2.1` pendientes.
+No se toca `integrations/` ni los contratos.

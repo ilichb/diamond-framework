@@ -82,6 +82,14 @@ Option B never opens the tensor (`main.tex:442` forbids it), and
 linear/inner-product and range statements. How `C_R(T)` reaches the chain
 is unspecified.
 
+**v0.2.1 update.** The paper no longer adopts Option B. It adopts the
+measured V3/Groth16 circuit (94,438 constraints, 3.9 s, 128 B proof),
+which certifies the floor norm `floor(||T||)` and therefore closes the
+allocability layer as well as the binding layer. The Pedersen/Poseidon
+to keccak Merkle tie remains off-chain (`src/zk/src/bridge.rs`), and the
+paper now states that trust assumption (R3-03, R3-13 in
+`triage-external-review-2026-10b.md`).
+
 **Open question:** single threshold (accept the 83.3% over-collateralization),
 stepped proof with `k` thresholds (cost grows off-chain), or a new
 commitment scheme, or a linear `C_R` expressible over the commitment
@@ -698,7 +706,7 @@ reference values `[CONJECTURE]`:
 §6.2 asserts that the threshold proof binds the validator to a specific
 tensor: "the proof binds the validator to a specific tensor, and the
 verifier checks the binding" (`main.tex:797`). This claim holds only
-under the Option B repair of §4.3-4.4, because §4.2 had explicitly
+under the V3 repair of §4.3-4.4 (v0.2.1; formerly Option B), because §4.2 had explicitly
 refuted the binding property of the original design ("There is no
 commitment binding the prover to any specific tensor", `main.tex:469`).
 
@@ -733,8 +741,10 @@ declared; the paper never stated that `C_R` depends on `T` only through
 - §6.3: `C_R(T) ≡ C_R(||T||_F)`.
 - §8.1: the bootstrap uses a bounded score `R ∈ [0, 1)`, distinct
   from `r`, with `R = r/(1+r)`. The bootstrap form
-  `\tilde{C}_R(R) = 0.8 R/(1+R)` is the §2.5 form in the normalized
-  variable: with `r = R/(1-R)`, `C_R(r) = \tilde{C}_R(R)`.
+  `\tilde{C}_R(R) = 0.8 R/(1+R)` is a **separate model choice**, not
+  the §2.5 form under the map: with `r = R/(1-R)`,
+  `C_R(r) = 0.8 R`, not `\tilde{C}_R(R)`. The paper states this and
+  uses `\tilde{C}_R` only for the bootstrap.
 
 The executable forms become consistent with the declared map:
 `c_r(norm_T)` in `mechanism/fee_specification.py:41` and
@@ -1224,7 +1234,8 @@ does not produce those values.
 **Severity:** Minor.
 
 The "20--25\%" range is produced by no script. The derived reference
-value is 22.4\% (`simulate_bootstrap_net_gain.py`), cited in §8.4 and §11.
+value is 22.4\% mean (22.86\% median; `simulate_bootstrap_net_gain.py`),
+cited in §8.4 and §11.
 
 **Resolution.** The range is replaced by the derived value with a
 `\fref`. The robustness claim is preserved for the ranking of policies.

@@ -6,7 +6,9 @@ its bytes, once published, never change.
 
 ## Files
 
-- `diamond-framework-2026-10-19.pdf` — 40 pages, 569259 bytes.
+- `diamond-framework-2026-10-20.pdf` — 41 pages, 579260 bytes.
+  `sha256 1aa1cb6c52593203116a600eec11f980ab92a64945f480efd8e6cb856b864da5`
+- `diamond-framework-2026-10-19.pdf` — 40 pages, 569259 bytes (v0.2.0, historical).
   `sha256 1b5ac7ac844ca3dedf846356ffe2a0f1fb1e04df3c70411e3124069cfbf9e10d`
 - `diamond-framework-2026-10-11.pdf` — 37 pages, 545018 bytes.
   `sha256 13e85c757e2b6efbb717325e2a4e75062f5ad484e426b1c160e24ae7bfa5b56a`
@@ -31,7 +33,21 @@ derivable, not memorized:
 - These are the only PDFs git tracks: `.gitignore` carries `*.pdf` with
   the single negation `!docs/paper/releases/*.pdf`.
 
-## Provenance of the 2026-10-19 snapshot (the current one)
+## Provenance of the 2026-10-20 snapshot (the current one)
+
+`diamond-framework-2026-10-20.pdf` is frozen from the v0.2.1 source: the
+revision that corrects the ZK paper↔code mismatch, the Cost of Attack
+claim, the audit-table interpretation, the tensor domain and the
+mean/median labels. Two `pdflatex` passes over that source produce it:
+41 pages, 579260 bytes, 0 errors, 0 undefined references, and 0 overfull
+or underfull boxes.
+
+    git rev-parse --short HEAD                             # the commit that added this file
+    sha256sum docs/paper/main.tex                          # 37ebdc73…5a41, entry #1 of the root
+    head -1 verification/anchor_root.sha256                # the same hash
+    sha256sum releases/diamond-framework-2026-10-20.pdf    # 1aa1cb6c…4da5
+
+## Provenance of the 2026-10-19 snapshot (historical)
 
 `diamond-framework-2026-10-19.pdf` is frozen from the R-11 source: the
 revision that closes the pre-v0.2.0 consistency pass (F=22, 38 pinned
