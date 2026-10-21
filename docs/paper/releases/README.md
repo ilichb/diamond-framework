@@ -25,12 +25,18 @@ derivable, not memorized:
 
 ## Publication status (v0.2.1)
 
+- **Errata (2026-10-20):** the published PDF's §6.2 validator-binding sentence
+  and its `~206k` gas figure are corrected in
+  [`v0.2.1-notes.md`](v0.2.1-notes.md#errata-2026-10-20-after-publication).
+  The PDF bytes are unchanged; the audit findings are P-01 and P-25.
 - GitHub Release:
   <https://github.com/ilichb/diamond-framework/releases/tag/v0.2.1>
 - Release asset `diamond-framework-2026-10-20.pdf`: 579260 bytes,
   sha256 `1aa1cb6c52593203116a600eec11f980ab92a64945f480efd8e6cb856b864da5`
   (downloaded and re-hashed).
-- Zenodo version DOI: pending the v0.2.1 deposit. Until then, cite the
+- Zenodo version DOI: **no v0.2.1 deposit is planned.** The release is not
+  deposited because §6.2's validator binding is not implemented (P-01); a
+  corrected v0.2.2 can be deposited after P-01/P-16. Until then, cite the
   published v0.1.0 DOI `10.5281/zenodo.23268374` or the concept DOI
   `10.5281/zenodo.23268373`.
 - v0.2.0 has no GitHub Release and no Zenodo deposit; it is superseded
@@ -261,8 +267,10 @@ shipped in TeX Live as `cm-super`).
 
 ## Deposit
 
-Two destinations are pending, and neither needs a code change (plan §11, P7b).
-The licence both carry is the one the paper already has: **CC BY 4.0**
+For v0.2.1 neither destination is used: no Zenodo deposit (P-01) and no arXiv
+submission with the uncorrected statement/metrics. The notes below describe the
+eventual deposit of a corrected version; neither needs a code change (plan §11,
+P7b). The licence both carry is the one the paper already has: **CC BY 4.0**
 (`../LICENSE`, the same legal code the paper's `main.tex` sits next to).
 
 **Zenodo.** The metadata is written, in `.zenodo.json` at the repository root
