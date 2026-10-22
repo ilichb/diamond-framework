@@ -1263,7 +1263,13 @@ entries and cannot recompute either root. "Both roots came from one entry set" i
 therefore the sequencer's assertion — made atomic by writing both in one
 `postCommitment`, and auditable by anyone holding the epoch — not an on-chain
 tie. `test/M4dRootSeparation.t.sol` writes that boundary down as a test instead
-of leaving it implied. Closing it needs the commitment as a circuit input
+of leaving it implied. The epoch binding is of the same class: the leaf is
+`Poseidon(validator, norm)`, so the epoch enters through the public word and the
+`statementRootOf(epoch)` slot the registry reads, not through the hash. And
+nothing in the circuit or the registry imposes one leaf per address, so a
+sequencer can publish the same validator twice with different norms and the
+prover picks the favourable leaf — uniqueness is off-chain too (P-38; P-12 for
+the 501-leaf genesis). Closing it needs the commitment as a circuit input
 (§5.5.7's recursive construction) *and* a decision on what `T` is per validator:
 P-03 is the obstacle, not the cost. V3 already carried the 500-entry vector at
 94,438 constraints and 3.9 s (§5.5.9) — expensive, but payable.
@@ -1272,7 +1278,7 @@ P-03 is the obstacle, not the cost. V3 already carried the 500-entry vector at
 the witness is the leaf index plus nine siblings, both derivable by anyone holding
 the epoch, so the only secret is the **position**: the proof hides which slot the
 validator occupies, nothing else. It is not zero-knowledge about the norm — the
-circuit says so itself (`admission.rs:215`) — and it is not cheaper than a plain
+circuit says so itself (`admission.rs:247`) — and it is not cheaper than a plain
 inclusion check: `AVIPRegistry.verifyEntry` already folds a keccak path for a few
 thousand gas, against the 306,275 cold / 247,233 warm of `verifyThreshold` (a
 Poseidon path on EVM would land in Groth16's order of magnitude, not below it).
@@ -1283,7 +1289,7 @@ whole claim is "the gate accepts a validator whose norm is in the published tree
 and the paper should not call it a certified Frobenius norm.
 
 **The domain of `norm` is `[0, 1)`, and that is the floor (P-33).** The circuit
-enforces it in one line — `admission.rs:213`,
+enforces it in one line — `admission.rs:245`,
 `enforce_below_pow2(wad - norm - 1, ENTRY_BITS)` with `ENTRY_BITS = 60`. Read on
 canonical representatives that is `norm ≤ WAD - 1`, the domain `[0, 1e18 - 1]`,
 i.e. `r < 1`. (The difference from a `≤` form is a single value, `r = 1`; that is

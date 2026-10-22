@@ -114,8 +114,14 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
   certifiedNorm, proof)` rejects a caller-declared norm below `THETA_R` and then
   has `AVIPRegistry.verifyThreshold` certify that exact value against the current
   epoch's Poseidon root. The proof binds the tuple
-  `(root, epoch, validator, norm)`, and the circuit's leaf binds the validator to
-  its norm, so a proof cannot be replayed by another address (P-01).
+  `(root, epoch, validator, norm)`; the leaf itself is `Poseidon(validator,
+  norm)`, so the validator binding is committed and the epoch binding is the
+  pair `(public word, registry slot)` — the proof for epoch `e` fails at `e + 1`
+  because the word changes. A proof cannot be replayed by another address
+  (P-01). What the proof does not establish is that the epoch holds **one** leaf
+  per address: a sequencer can publish the same validator twice with different
+  norms and the prover picks the favourable one, so uniqueness is an off-chain
+  property of the epoch (P-38), like the tie between the two roots.
 - **Non-custodial** (plan §5.2.3): the manager declares `financialStake`, stores
   it and emits it; it never transfers or holds a token. There is no ERC-20 and no
   native-value path.

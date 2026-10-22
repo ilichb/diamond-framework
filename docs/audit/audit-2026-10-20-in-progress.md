@@ -81,7 +81,7 @@ allí.
 | P-35 | La frontera de detección no es Kesten–Stigum y el paper sólo probó densidad 10×: 40 coludidos a 3× pasan con TPR≈0,06; BBP sitúa el umbral en θ≈4,38 (m≈12,2 a 10×) y el 50 % en m≈15,4 | **Alta** (paper; resultado negativo) | Confirmado con réplica propia de 300 réplicas | Sí (tercera lectura) |
 | P-36 | Bibliografía: Bauer–Jost está mal citado (CPAM 2012 → *Comm. Anal. Geom.* 21(4):787–845, 2013) y faltan referencias para Kesten–Stigum, Feller y EIP-196/197 | Baja (paper) | Confirmado con Crossref/arXiv | Sí (tercera lectura) |
 | P-37 | La permutación Poseidon reproduce los vectores t=3 de circomlib; el digest usa `state[1]` (rate) y no el `state[0]` (capacidad) de circomlib. Es una convención de esponja válida, no un defecto del circuito; sólo limita la interoperabilidad con primitivas de 2 entradas | Baja (interoperabilidad; no soundness) | Confirmado con sonda: 2 vectores t=3, absorción 1–10/500 y ambigüedad de longitud documentada | Sí (sonda de cierre; nota de documentación) |
-| P-38 | La prueba de admisión tiene todo el statement público y su testigo es el camino de Merkle: sólo oculta la posición de la hoja. No aporta zero-knowledge sobre la norma ni ahorra gas frente a `verifyEntry` | Media (diseño y honestidad del artefacto; no soundness) | Confirmado por lectura (`admission.rs:180-235`) y por medición: 306,275 gas fríos frente a una inclusión keccak de pocos miles | Sí (adenda M4d) |
+| P-38 | La prueba de admisión tiene todo el statement público y su testigo es el camino de Merkle: sólo oculta la posición de la hoja. No aporta zero-knowledge sobre la norma ni ahorra gas frente a `verifyEntry` | Media (diseño y honestidad del artefacto; no soundness) | Confirmado por lectura (`admission.rs:212-276`) y por medición: 306,275 gas fríos frente a una inclusión keccak de pocos miles | Sí (adenda M4d) |
 
 **Remediación posterior a este worksheet.** M4d (plan §5.5.11) cierra **P-01** y
 **P-16** y añade al circuito de admisión la cota de **P-33**: el statement pasa a
@@ -102,7 +102,7 @@ comprometido: el `AVIPRegistry` ve raíces, no entradas. Es la ambigüedad de `T
 de **P-03**, y el `TENSOR_DIGEST` pineado la sostiene sólo *off-chain*
 (`test/M4dRootSeparation.t.sol` la escribe como prueba, incluida la ausencia de
 vínculo on-chain). (ii) El suelo real de `S_f` es **0.6** y lo fija el circuito,
-no la lectura de `T`: `admission.rs:213` impone `norm ≤ WAD-1` sobre
+no la lectura de `T`: `admission.rs:245` impone `norm ≤ WAD-1` sobre
 representantes canónicos, de modo que `r < 1` y
 `S_f = (1+0.2r)/(1+r)`, decreciente, tiene ínfimo 0.6 —no alcanzado, porque
 `r = 1` está excluido—; con `Θ_r = 0.5` la banda admitida es `(0.6, 0.7333]`. El
@@ -2262,7 +2262,7 @@ Consecuencias:
 ### Endurecimiento (2026-10-22): la cota es de una sola cara, y dónde se cierra
 
 M4d implementó la cota de P-33 en la ruta de admisión
-(`admission.rs:213`: `enforce_below_pow2(wad - norm - 1, ENTRY_BITS)`), pero esa
+(`admission.rs:245`: `enforce_below_pow2(wad - norm - 1, ENTRY_BITS)`), pero esa
 forma **sólo acota por arriba**. La resta ocurre en el cuerpo y lo que se exige
 es que el resultado esté por debajo de `2^60`; si `norm` es un elemento
 «negativo», la diferencia vuelve a caer en rango y la comprobación pasa. La banda
@@ -2811,19 +2811,19 @@ pendiente y no como una propiedad cubierta.
 
 **Severidad provisional:** Media (diseño y honestidad del artefacto; **no** es un
 fallo de soundness y no permite a nadie admitirse sin estar en el árbol).
-**Estado:** Confirmado por lectura (`admission.rs:180-235`) y por medición
+**Estado:** Confirmado por lectura (`admission.rs:212-276`) y por medición
 (`test/M4dRealKey.t.sol`).
-**Ubicación:** `src/zk/src/admission.rs:199-234`;
+**Ubicación:** `src/zk/src/admission.rs:212-276`;
 `integrations/avalanche/contracts/AVIPRegistry.sol:327` (`verifyEntry`);
 `AVIPValidatorManager.admit`; plan §5.5.11.
 
 ### Qué se comprobó
 
 Los cuatro elementos del statement —`statementRoot`, `epoch`, `validator`, `norm`—
-son entradas públicas (`admission.rs:199-202`), y el testigo es el índice de hoja
-más nueve hermanos (`admission.rs:190-192`, `219-231`), ambos derivables por
+son entradas públicas (`admission.rs:213-216`), y el testigo es el índice de hoja
+más nueve hermanos (`admission.rs:204-206`, `251-264`), ambos derivables por
 cualquiera que tenga la época. Lo único que el proof no revela es **la posición**
-de la hoja. El propio circuito lo dice (`admission.rs:215`: «the proof says "this
+de la hoja. El propio circuito lo dice (`admission.rs:247`: «the proof says "this
 (validator, norm) pair is in the committed tree", not "I know a secret score"»).
 
 El coste tampoco lo justifica. `AVIPRegistry.verifyEntry` ya verifica una inclusión
@@ -2848,6 +2848,14 @@ la ruta barata es keccak — y ya existe en el contrato.
   y `AVIPValidatorManager.sol:181` que es `r = T(i)`. El límite `< WAD` del
   circuito coincide con el segundo y excluye el primero para el fixture real
   (12.79). Cuál se corrige lo decide P-03.
+- **Nada impone una hoja por validador.** Ni el circuito ni el registry impiden
+  que el secuenciador publique la misma dirección dos veces con normas distintas
+  en el mismo epoch; el prover elige la hoja que le conviene y la prueba es
+  válida para esa hoja. La unicidad es otra propiedad del epoch off-chain, del
+  mismo tipo que la ligadura entre las dos raíces: `freshness_ok` cuenta entradas
+  cambiadas, no direcciones repetidas (P-12 lo registra en el génesis de 501
+  hojas). Queda escrito como propiedad off-chain en `admission.rs` y en
+  `contracts/README.md`, no como restricción.
 
 ### Remediación propuesta
 

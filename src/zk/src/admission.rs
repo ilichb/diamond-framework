@@ -17,6 +17,20 @@
 //! validator `v` cannot be replayed for `u`: the verifier's statement changes.
 //! The path and index are private, so the proving key is index-independent.
 //!
+//! The epoch is **not** in the leaf. It enters the statement twice, both times
+//! outside the hash: as the second public word, and as the slot the registry
+//! reads (`statementRootOf(epoch)`) to build that word. The leaf is
+//! `Poseidon(validator, norm)`, so the epoch binding is the pair
+//! `(public word, registry slot)`, not a committed field: a proof made for
+//! epoch `e` fails at `e + 1` because the word differs, and the same tree
+//! re-posted at `e + 1` is honestly provable at `e + 1`.
+//!
+//! Nothing here constrains the tree to hold one leaf per validator. A sequencer
+//! may publish the same address twice with different norms, and the prover then
+//! proves the leaf that favours it. The circuit establishes membership of *a*
+//! leaf binding `validator`; uniqueness is an off-chain property of the epoch
+//! (audit P-38), not a constraint.
+//!
 //! This tree is deliberately not M1's keccak tree: keccak inside BN254 is
 //! infeasible at this size. `AVIPRegistry` stores both roots per epoch — keccak
 //! for `verifyEntry`, Poseidon for this statement — and the off-chain bridge
@@ -219,12 +233,14 @@ impl ConstraintSynthesizer<Fr> for AdmissionCircuit {
         // with its own witness generator can. Nothing in this constraint stops
         // it, and nothing in the proof system can, because a public input *is*
         // a field element with no canonical representative. Two closures:
-        // `AVIPRegistry.verifyThreshold` refuses `certifiedNorm >= WAD` before
-        // the pairing (the only way the value reaches a state machine), and the
-        // in-circuit lower bound — one more `enforce_below_pow2(norm,
-        // ENTRY_BITS)`, which is the bit decomposition `to_bits_le` allocates —
-        // is owed to the key regeneration that P-03 forces, since it changes
-        // the `vk`, the fixture and the gas figures.
+        // `AVIPRegistry.verifyThreshold` refuses `certifiedNorm >= MAX_NORM`
+        // (`2^64`) before the pairing (the only way the value reaches a state
+        // machine), and the in-circuit lower bound — one more
+        // `enforce_below_pow2(norm, ENTRY_BITS)`, i.e. `norm < 2^60`, the bit
+        // decomposition `to_bits_le` allocates — which together with the upper
+        // check leaves exactly `[0, WAD)`. It is owed to the key regeneration
+        // that P-03 forces, since it changes the `vk`, the fixture and the gas
+        // figures.
         let wad = FpVar::constant(Fr::from(WAD));
         native::enforce_below_pow2(&(wad - norm.clone() - FpVar::one()), ENTRY_BITS)?;
 
@@ -247,6 +263,16 @@ impl ConstraintSynthesizer<Fr> for AdmissionCircuit {
         }
 
         node.enforce_equal(&root)?;
+
+        // P-38: `epoch` appears in **no other constraint**. A public input that
+        // no constraint touches is free in Groth16 — its column is empty, so the
+        // verification equation does not depend on its value — and this range
+        // check is the only thing that keeps it bound. Remove it and `epoch`
+        // silently becomes an arbitrary word that any proof satisfies; the
+        // symptom in the proof system is nothing at all. The guard against that
+        // regression is `admission_statement.rs`'s
+        // `binding == [true; STATEMENT_LEN]`, which perturbs every word and
+        // expects verification to fail; if this line goes, that test goes red.
         native::enforce_below_pow2(&epoch, EPOCH_BITS)
     }
 }
