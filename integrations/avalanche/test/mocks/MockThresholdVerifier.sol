@@ -12,9 +12,10 @@ import {IZKThresholdVerifier} from "../../contracts/interfaces/IZKThresholdVerif
 ///           1. `EXPECTED_A0` — the `bytes proof` blob is decoded and `(a, b, c)`
 ///              are forwarded **unchanged**;
 ///           2. `EXPECTED_STATEMENT` — the registry built the statement
-///              `[uint256(root), epoch, certifiedNorm]` from its **own** state
-///              (`commitmentOf(epoch)`), not from anything the caller passed
-///              (§5.2.1 of `docs/architecture/implementation-plan.md`).
+///              `[statementRoot, epoch, uint160(validator), certifiedNorm]` from
+///              its **own** state (`statementRootOf(epoch)`), not from anything
+///              the caller passed (§5.2.1 of
+///              `docs/architecture/implementation-plan.md`).
 ///
 /// @dev `verify` is `view` in `IZKThresholdVerifier`, so the double cannot
 ///      record what it saw; it compares the call against constructor

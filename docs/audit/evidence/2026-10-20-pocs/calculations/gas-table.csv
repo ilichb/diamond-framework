@@ -1,0 +1,7 @@
+gas,route,g_star_gwei,ratio_R_over_G
+206000,clave inline (paper),1085.4,3.32
+223403,"verify, caliente",1000.9,3.06
+233104,"verifyThreshold, caliente",959.2,2.93
+286144,"verifyThreshold, frío (harness nuevo)",781.4,2.39
+290854,"verifyThreshold, frío (harness previo)",768.8,2.35
+376588,manager.admit completo,593.8,1.82

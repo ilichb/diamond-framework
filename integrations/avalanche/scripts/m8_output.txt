@@ -8,9 +8,9 @@
   [m8] policy.F0_STAR=50000000000000000
   [m8] policy.requiredStakeAtThetaR=733333333333333334
   [m8] custody.feeInUnits=50000
-  [m8] admit.certifiedNorm=12793810215743475835
+  [m8] admit.certifiedNorm=665564939881284858
   [m8] admit.declared=1000000000000000000
-  [m8] admit.collateral=742002971804924125
+  [m8] admit.collateral=319682492802099351
   [m8] escrow.credited=1000000
   [m8] custody.escrowed=1000000000000000000
   [m8] custody.backed=true

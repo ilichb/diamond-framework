@@ -2,23 +2,26 @@
 pragma solidity ^0.8.24;
 
 /// @title IAVIPRegistry
-/// @notice Reputation registry on the C-Chain: stores one Merkle root per
-///         epoch over the reputation tensor `T` and validates the
-///         zero-knowledge threshold proof.
+/// @notice Reputation registry on the C-Chain: stores two roots per epoch over
+///         the reputation tensor `T` — the keccak Merkle root used by inclusion
+///         proofs and the Poseidon Merkle root used by the admission proof — and
+///         validates the zero-knowledge admission proof.
 ///
-/// @dev Implemented by `AVIPRegistry.sol` (milestone M1, amended by M2 §5.2 of
-///      `docs/architecture/implementation-plan.md`). The boundary below is
-///      derived from `docs/architecture/avalanche-integration.md` §1-§3 and
-///      from the paper:
+/// @dev Implemented by `AVIPRegistry.sol` (milestone M1, amended by M2 §5.2,
+///      M4d and audit finding P-16). The two roots are distinct values with
+///      distinct verifiers; neither slot is ever interpreted as the other.
+///      The boundary below is derived from
+///      `docs/architecture/avalanche-integration.md` §1-§3 and from the paper:
 ///
 ///        - admission rule      `CoA(i) = S_f(i) + C_R(T(i)) >= Theta(t)`
 ///                              (main.tex, section "Payment Rule"); enforced by
 ///                              `AVIPValidatorManager`, NOT by the registry.
-///        - certified norm      `||T||_F = certifiedNorm`
+///        - certified norm      `T(v) = certifiedNorm`
 ///                              (main.tex, section "Zero-Knowledge Threshold
-///                              Proof"). The registry certifies the exact norm;
-///                              the threshold `||T||_F >= Theta_r` is enforced
-///                              by `AVIPValidatorManager` (§5.2.2).
+///                              Proof"). The registry certifies one validator's
+///                              exact committed norm; the threshold
+///                              `T(v) >= Theta_r` is enforced by
+///                              `AVIPValidatorManager` (§5.2.2).
 ///
 ///      Reference parameters (design constants, not measured here):
 ///        - `Theta   = 1.0`            admission threshold, frozen at genesis
@@ -26,7 +29,7 @@ pragma solidity ^0.8.24;
 ///        - `gamma   = 0.10`           epoch freshness bound (Data Layer)
 ///
 ///      `Theta_r = 0.5` [CONJECTURE] is deliberately NOT a registry parameter:
-///      the circuit proves equality (`||T||_F = certifiedNorm`) and the economic
+///      the circuit proves equality (`T(v) = certifiedNorm`) and the economic
 ///      threshold lives in `AVIPValidatorManager`, so changing it does not
 ///      require a new trusted-setup ceremony (§5.2.2).
 ///
@@ -36,12 +39,22 @@ pragma solidity ^0.8.24;
 interface IAVIPRegistry {
     /// @notice Emitted when the epoch commitment is posted.
     /// @param epoch The epoch index.
-    /// @param root Merkle root over the reputation tensor of that epoch.
+    /// @param root Keccak Merkle root over the reputation tensor of that epoch,
+    ///        the root `verifyEntry` folds against.
+    /// @param statementRoot Poseidon Merkle root over the same entries, the root
+    ///        the admission circuit's public input names. A separate slot on
+    ///        purpose: keccak cannot be computed inside BN254 at this size, so
+    ///        the two trees are different objects even though they commit to the
+    ///        same leaves (audit P-16).
     /// @param changedEntries Entries that differ from the previous epoch, as
     ///        declared by the sequencer (genesis declares the whole tensor).
     /// @param timestamp Block timestamp of the posting.
     event CommitmentPosted(
-        uint256 indexed epoch, bytes32 root, uint32 changedEntries, uint64 timestamp
+        uint256 indexed epoch,
+        bytes32 root,
+        uint256 statementRoot,
+        uint32 changedEntries,
+        uint64 timestamp
     );
 
     /// @notice Emitted when the guardian proposes a new sequencer. The proposal
@@ -75,6 +88,7 @@ interface IAVIPRegistry {
     error GenesisDelta(uint32 changedEntries, uint32 tensorSize);
     error FreshnessViolation(uint32 changedEntries, uint32 maxDeltaEntries);
     error UnknownEpoch(uint256 epoch);
+    error ZeroStatementRoot();
     error VerifierNotSet();
     error NotGuardian(address caller);
     error ZeroGuardian();
@@ -100,8 +114,17 @@ interface IAVIPRegistry {
     ///         because admission, not verification, is the decision.
     error InvalidZKProof();
 
-    /// @notice Posts the Merkle root of the reputation tensor for `epoch`.
-    /// @dev Enforces the freshness constraint of the paper's Data Layer section
+    /// @notice Posts the two Merkle roots of the reputation tensor for `epoch`.
+    /// @dev `root` is the keccak tree `verifyEntry` verifies; `statementRoot` is
+    ///      the Poseidon tree the admission circuit commits to. They are
+    ///      different roots of the same leaves and are stored in different
+    ///      slots, so a caller cannot mistake one for the other (audit P-16).
+    ///      The off-chain bridge recomputes both from the same entries and links
+    ///      them for the data layer; the registry cannot recompute either and
+    ///      therefore trusts the sequencer for the pair exactly as it already
+    ///      trusts it for `changedEntries`.
+    ///
+    ///      Enforces the freshness constraint of the paper's Data Layer section
     ///      ("two consecutive epochs cannot differ in more than `gamma * N`
     ///      entries", `gamma = 0.10`, `N = C*D*H = 500`, so at most 50).
     ///      The registry does not hold the tensor: the bound is checked against
@@ -111,11 +134,22 @@ interface IAVIPRegistry {
     ///      honesty (main.tex, Data Layer).
     ///      Epochs are 0-based and strictly sequential; genesis (epoch 0) must
     ///      declare `changedEntries == tensorSize()`.
-    function postCommitment(uint256 epoch, bytes32 root, uint32 changedEntries) external;
+    function postCommitment(
+        uint256 epoch,
+        bytes32 root,
+        uint256 statementRoot,
+        uint32 changedEntries
+    ) external;
 
-    /// @notice Merkle root of the reputation tensor for `epoch`
-    ///         (`bytes32(0)` if the epoch was never committed).
+    /// @notice Keccak Merkle root of the reputation tensor for `epoch`
+    ///         (`bytes32(0)` if the epoch was never committed). This is the root
+    ///         `verifyEntry` takes and the one `AVIPMessageCodec` carries.
     function commitmentOf(uint256 epoch) external view returns (bytes32);
+
+    /// @notice Poseidon Merkle root of the reputation tensor for `epoch`
+    ///         (`0` if the epoch was never committed). This is the root the
+    ///         admission statement carries, never the keccak root.
+    function statementRootOf(uint256 epoch) external view returns (uint256);
 
     /// @notice Number of entries per epoch (`C*D*H`; 500 in the reference
     ///         configuration).
@@ -142,26 +176,34 @@ interface IAVIPRegistry {
         view
         returns (bool);
 
-    /// @notice Verifies that the reputation tensor committed for `epoch` has
-    ///         Frobenius norm exactly `certifiedNorm`.
+    /// @notice Verifies that `validator`'s committed entry for `epoch` has norm
+    ///         exactly `certifiedNorm`.
     /// @dev `proof` decodes to the Groth16 shape `(a, b, c)` only: there is no
     ///      caller-supplied public-input array. The registry reads
-    ///      `root = commitmentOf(epoch)` from its own state and builds the
+    ///      `root = statementRootOf(epoch)` from its own state and builds the
     ///      statement itself,
     ///
-    ///          statement = [uint256(root), epoch, certifiedNorm]
+    ///          statement = [root, epoch, uint256(uint160(validator)), certifiedNorm]
     ///
-    ///      so `certifiedNorm` is bound to the proof arithmetically in M3: it is
-    ///      a public input, a false value changes `vk_x` and the pairing fails.
+    ///      so all four values are bound arithmetically: a false value changes
+    ///      `vk_x` and the pairing fails. The leaf the circuit proves is
+    ///      `Poseidon(validator, certifiedNorm)`, so a proof is not a bearer
+    ///      token: it admits the address that appears in its statement and no
+    ///      other (audit P-01). The epoch is a public input as well, which is why
+    ///      a proof for one epoch cannot pass at another even if the root were
+    ///      re-posted.
+    ///
     ///      A `false` return means the verifier rejected the proof; the only
     ///      reverts are configuration errors (`UnknownEpoch`, `VerifierNotSet`).
     ///      `view` on purpose: the registry keeps no per-validator state, so no
     ///      caller can consume another validator's proof slot. Anti-replay lives
     ///      in `AVIPValidatorManager` (`!isAdmitted[validator]`), §5.2.4.
-    function verifyThreshold(uint256 epoch, uint256 certifiedNorm, bytes calldata proof)
-        external
-        view
-        returns (bool);
+    function verifyThreshold(
+        uint256 epoch,
+        address validator,
+        uint256 certifiedNorm,
+        bytes calldata proof
+    ) external view returns (bool);
 
     /// @notice Authority that may propose changes to `sequencer` and to
     ///         `verifier` (M9a, §12.1.2). Read-only here: the registry never

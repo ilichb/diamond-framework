@@ -25,9 +25,9 @@
 #       M7d's notification carried. The same provenance id must be in M8's fixture
 #       and in the M8 transcript. Since M9b the slash takes the whole record, so
 #       `slash.stakeAfter` is `0` (see the note at the check itself).
-#   (c) M4b, the proof: the norm M8 admits at must be the `certifiedNorm (WAD)` of
-#       the real key's transcript — the M8 report admits with the real proof, so
-#       the number is not free.
+#   (c) M4d, the proof: the norm M8 admits at must be `STATEMENT_NORM` of the
+#       admission fixture — the M8 report admits with the real proof, so the
+#       number is not free.
 #   (d) The policy at the worst admissible type: `requiredStakeFor(Theta_r)` must
 #       be the value M7a's transcript pins, so a manager redeployed with a
 #       different policy cannot slip through.
@@ -39,12 +39,11 @@ cd "$(dirname "$0")/.."
 SCRIPT=scripts/M8Report.s.sol:M8Report
 PINNED=scripts/m8_output.txt
 FIXTURE=test/fixtures/M8CustodyFixtures.sol
-M4B_FIXTURE=test/fixtures/M4bGroth16Fixtures.sol
+M4D_FIXTURE=test/fixtures/M4dGroth16Fixtures.sol
 DRYRUN=scripts/deploy_dryrun_output.txt
 M7D=scripts/m7d_output.txt
-M4B=../../src/zk/scripts/m4b_output.txt
 
-for upstream in "$DRYRUN" "$M7D" "$M4B"; do
+for upstream in "$DRYRUN" "$M7D" "$M4D_FIXTURE"; do
     [ -f "$upstream" ] || { echo "FAIL: the upstream transcript is missing: $upstream" >&2; exit 1; }
 done
 
@@ -142,12 +141,12 @@ else
     fail=1
 fi
 
-# ------------------------------------------------------------ (c) M4b: the norm
-# The norm is not copied into M8's fixture: it is *M4b's* fixture the report
+# ------------------------------------------------------------ (c) M4d: the norm
+# The norm is not copied into M8's fixture: it is *M4d's* fixture the report
 # imports, so that file is where the literal has to live. Both directions: the
 # fixture must carry it and the fresh run must print it.
-m4b_norm="$(grep -E 'certifiedNorm \(WAD\)' "$M4B" | grep -oE '[0-9]{20,}' | head -n1)"
-both m4b.certified_norm "$m4b_norm" "$M4B_FIXTURE"
+m4d_norm="$(sed -nE 's/.*STATEMENT_NORM = ([0-9]+);/\1/p' "$M4D_FIXTURE" | head -n1)"
+both m4d.certified_norm "$m4d_norm" "$M4D_FIXTURE"
 
 # ----------------------------------------- (d) M7a: the policy at Theta_r, again
 theta_r_stake="$(grep -E '\[m7a\] check\.requiredStakeFor\(THETA_R\)=' "$DRYRUN" | sed -E 's/.*=//' | head -n1)"
@@ -162,4 +161,4 @@ fi
 mv "$RUN" "$PINNED"
 chmod 644 "$PINNED"
 trap - EXIT
-echo "m8_report.sh: ${PINNED} updated; the numbers match M7a, M7d and M4b (both directions)" >&2
+echo "m8_report.sh: ${PINNED} updated; the numbers match M7a, M7d and M4d (both directions)" >&2

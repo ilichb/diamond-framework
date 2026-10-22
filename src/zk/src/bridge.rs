@@ -286,9 +286,10 @@ mod tests {
     use avip_datalayer::commitment::verify_entry;
     use sha3::{Digest, Keccak256};
 
-    /// The emitted Solidity fixture: the artifact `test/M4bRealKey.t.sol`
-    /// installs. Reading it is what ties the bridge to the deployed statement
-    /// rather than to this crate's own idea of it.
+    /// The emitted M4b Solidity fixture: the historical *global* statement the
+    /// M7c bridge reads. The M4b contract test has been retired in favour of M4d,
+    /// so this ties the bridge to the committed artifact and its pinned table,
+    /// not to an active admission path.
     fn emitted_fixture() -> String {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../integrations/avalanche/test/fixtures/M4bGroth16Fixtures.sol");
@@ -296,13 +297,16 @@ mod tests {
             .unwrap_or_else(|e| panic!("the M4b fixture is committed at {}: {e}", path.display()))
     }
 
-    /// The first alphanumeric token after `name` in a Solidity source: the value
-    /// of `NAME = …`, decimal or `0x…`, without a Solidity parser.
+    /// The first alphanumeric token after the `name` **declaration** in a
+    /// Solidity source: the value of `… constant NAME = …`, decimal or `0x…`,
+    /// without a Solidity parser. Matching the declaration and not the bare
+    /// name is what keeps a comment that mentions `NAME` from answering first.
     fn solidity_token(source: &str, name: &str) -> String {
+        let needle = format!("constant {name}");
         let at = source
-            .find(name)
-            .unwrap_or_else(|| panic!("{name} is in the emitted fixture"));
-        let token: String = source[at + name.len()..]
+            .find(&needle)
+            .unwrap_or_else(|| panic!("{name} is declared in the emitted fixture"));
+        let token: String = source[at + needle.len()..]
             .chars()
             .skip_while(|c| !c.is_ascii_alphanumeric())
             .take_while(char::is_ascii_alphanumeric)

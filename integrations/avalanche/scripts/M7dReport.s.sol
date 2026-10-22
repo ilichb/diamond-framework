@@ -14,7 +14,7 @@ import {AVIPValidatorManager} from "../contracts/AVIPValidatorManager.sol";
 import {IAVIPValidatorManager} from "../contracts/interfaces/IAVIPValidatorManager.sol";
 import {Groth16Verifier} from "../contracts/verifiers/Groth16Verifier.sol";
 import {MockTeleporterMessenger} from "../test/mocks/MockTeleporterMessenger.sol";
-import {M4bGroth16Fixtures as F4b} from "../test/fixtures/M4bGroth16Fixtures.sol";
+import {M4dGroth16Fixtures as F4d} from "../test/fixtures/M4dGroth16Fixtures.sol";
 import {M7cBridgeFixtures as F7c} from "../test/fixtures/M7cBridgeFixtures.sol";
 import {M7dProvenanceFixtures as F7d} from "../test/fixtures/M7dProvenanceFixtures.sol";
 
@@ -67,7 +67,7 @@ contract M7dReport is DeployCommon {
     address internal constant GUARDIAN = ANVIL_3;
     address internal constant ALERTER = ANVIL_1;
     address internal constant NOTIFIER = ANVIL_2;
-    address internal constant VALIDATOR = 0x90F79bf6EB2c4f870365E785982E1f101E93b906;
+    address internal constant VALIDATOR = address(uint160(F4d.STATEMENT_VALIDATOR));
 
     /// @dev The stake the validator declares: a choice of this *run* (the manager
     ///      takes that record in full), not a constant of the paper — M7b's
@@ -108,7 +108,7 @@ contract M7dReport is DeployCommon {
         address slashingDestinationAddress = _predictDeployment(deployer, 10);
 
         teleporter = new MockTeleporterMessenger();
-        verifier = new Groth16Verifier(F4b.verifyingKey());
+        verifier = new Groth16Verifier(F4d.verifyingKey());
         registryForAdmission = new AVIPRegistry(SEQUENCER, address(verifier), GUARDIAN);
         registryForCommitment = new AVIPRegistry(SEQUENCER, address(verifier), GUARDIAN);
         manager = new AVIPValidatorManager(
@@ -189,9 +189,9 @@ contract M7dReport is DeployCommon {
 
         // Genesis at M1's own fold over the fixture tensor (M7c's Merkle root), then one
         // more epoch so the report can show that arrival order does not decide what is
-        // recorded. The admission registry is separate on purpose: M4b's proof is bound
-        // to the statement's root, and only M7c's link ties that root to the fold — the
-        // gap §5.10 closed.
+        // recorded. The admission registry is separate on purpose: M4d's proof is bound
+        // to the per-epoch statement root, and only M7c's link ties that root to the
+        // fold — the gap §5.10 closed.
         _commit(0, F7c.MERKLE_ROOT, N);
         _commit(1, bytes32(uint256(F7c.MERKLE_ROOT) ^ 1), 7);
 
@@ -396,15 +396,15 @@ contract M7dReport is DeployCommon {
     // ------------------------------------- type 3: slashing notification (§4)
 
     function _slashingNotification() internal {
-        // M4b's real proof over V3, against the registry state it was made for: the same
-        // recipe `test/M4bRealKey.t.sol` uses, unchanged.
+        // M4d's real admission proof, against the registry state it was made for: the same
+        // recipe `test/M4dRealKey.t.sol` uses, unchanged.
         vm.prank(SEQUENCER);
-        registryForAdmission.postCommitment(0, bytes32(F4b.STATEMENT_ROOT), N);
+        registryForAdmission.postCommitment(0, keccak256("tensor"), F4d.STATEMENT_ROOT, N);
         vm.prank(VALIDATOR);
-        manager.admit(VALIDATOR, STAKE_WAD, F4b.STATEMENT_NORM, F4b.proof());
+        manager.admit(VALIDATOR, STAKE_WAD, F4d.STATEMENT_NORM, F4d.proof());
         _m7d("admit.validator", vm.toString(VALIDATOR));
         _m7d("admit.stake", vm.toString(manager.stakeOf(VALIDATOR)));
-        _m7d("admit.certifiedNorm", vm.toString(F4b.STATEMENT_NORM));
+        _m7d("admit.certifiedNorm", vm.toString(F4d.STATEMENT_NORM));
 
         AVIPMessageCodec.SlashingNotification memory notification = _m7bNotification();
 
@@ -491,7 +491,7 @@ contract M7dReport is DeployCommon {
 
     function _commit(uint256 epoch, bytes32 root, uint32 changedEntries) internal {
         vm.prank(SEQUENCER);
-        registryForCommitment.postCommitment(epoch, root, changedEntries);
+        registryForCommitment.postCommitment(epoch, root, uint256(root), changedEntries);
     }
 
     /// @dev M7c's commitment as a wire message, built exactly as

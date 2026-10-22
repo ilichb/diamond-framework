@@ -3,9 +3,9 @@
 
 WHAT THIS SCRIPT PRODUCES
 -------------------------
-A Groth16 verification key over BN254, a proof, and the three-element public
-statement `[root, epoch, certifiedNorm]` the registry builds, all consistent
-with the equation `Groth16Verifier` checks on-chain:
+A Groth16 verification key over BN254, a proof, and the four-element public
+statement `[root, epoch, validator, certifiedNorm]` the registry builds, all
+consistent with the equation `Groth16Verifier` checks on-chain:
 
     e(-A, B) * e(alpha1, beta2) * e(vk_x, gamma2) * e(C, delta2) == 1
 
@@ -82,6 +82,8 @@ XI = (9, 1)
 # Must match `AVIPRegistryTest.epoch0Root` and `AVIPValidatorManager.THETA_R`.
 STATEMENT_ROOT = 86442290903294350648273222779976636221758675587005340531248271500348333491074
 STATEMENT_EPOCH = 0
+# `address(0xA11CE)`: the validator the proof is bound to (audit P-01).
+STATEMENT_VALIDATOR = 0xA11CE
 STATEMENT_NORM = 500_000_000_000_000_000
 
 
@@ -264,15 +266,15 @@ def build() -> dict:
     delta = derive("delta")
     a = derive("a")
     b = derive("b")
-    s = [derive(f"ic/{i}") for i in range(4)]  # ic[0..3] -> 3 public inputs
+    s = [derive(f"ic/{i}") for i in range(5)]  # ic[0..4] -> 4 public inputs
 
-    inputs = [STATEMENT_ROOT, STATEMENT_EPOCH, STATEMENT_NORM]
+    inputs = [STATEMENT_ROOT, STATEMENT_EPOCH, STATEMENT_VALIDATOR, STATEMENT_NORM]
     # The group has order `r`, so a scalar above `r` selects the same multiple:
     # `k * P == (k mod r) * P` for every `P`. The scalar is solved modulo `r`
     # while the fixture keeps the public input as it is (a `bytes32` root), which
     # is what the registry actually passes in.
     reduced = [value % R for value in inputs]
-    vk_x_scalar = (s[0] + sum(s[i + 1] * reduced[i] for i in range(3))) % R
+    vk_x_scalar = (s[0] + sum(s[i + 1] * reduced[i] for i in range(4))) % R
     c = ((a * b - alpha * beta - vk_x_scalar * gamma) % R) * pow(delta, -1, R) % R
 
     residual = (-a * b + alpha * beta + vk_x_scalar * gamma + c * delta) % R
@@ -341,25 +343,29 @@ library Groth16Fixtures {
     uint256 internal constant STATEMENT_ROOT = %s;
     /// @notice Epoch the statement belongs to.
     uint256 internal constant STATEMENT_EPOCH = %s;
+    /// @notice `address(0xA11CE)`: the validator the statement admits.
+    uint256 internal constant STATEMENT_VALIDATOR = %s;
     /// @notice `Theta_r = 0.5e18` (0.5 in WAD).
     uint256 internal constant STATEMENT_NORM = %s;
 
-    /// @notice The installed key: 3 public inputs, so `ic.length == 4`.
+    /// @notice The installed key: 4 public inputs, so `ic.length == 5`.
     function verifyingKey() internal pure returns (Groth16Verifier.VerifyingKey memory vk) {
         vk.alpha1 = %s;
         vk.beta2 = %s;
         vk.gamma2 = %s;
         vk.delta2 = %s;
-        vk.ic = new uint256[2][](4);
+        vk.ic = new uint256[2][](5);
 %s
     }
 
-    /// @notice `[root, epoch, certifiedNorm]`, the statement the registry builds.
+    /// @notice `[root, epoch, validator, certifiedNorm]`, the statement the
+    ///         registry builds.
     function statement() internal pure returns (uint256[] memory inputs) {
-        inputs = new uint256[](3);
+        inputs = new uint256[](4);
         inputs[0] = STATEMENT_ROOT;
         inputs[1] = STATEMENT_EPOCH;
-        inputs[2] = STATEMENT_NORM;
+        inputs[2] = STATEMENT_VALIDATOR;
+        inputs[3] = STATEMENT_NORM;
     }
 
     function proofA() internal pure returns (uint256[2] memory) {
@@ -387,6 +393,7 @@ def render_solidity(instance: dict) -> str:
         instance["statement"][0],
         instance["statement"][1],
         instance["statement"][2],
+        instance["statement"][3],
         g1_literal(key["alpha1"]),
         g2_literal(key["beta2"]),
         g2_literal(key["gamma2"]),
@@ -423,7 +430,8 @@ def render_report(instance: dict, checks: list[str]) -> str:
         "STATEMENT",
         f"  root  = {statement[0]}",
         f"  epoch = {statement[1]}",
-        f"  norm  = {statement[2]}",
+        f"  validator = {statement[2]}",
+        f"  norm  = {statement[3]}",
         "",
         "SOLVED SCALARS (public, derived from SHA-256 of fixed labels)",
         f"  alpha = {scalars['alpha']}",

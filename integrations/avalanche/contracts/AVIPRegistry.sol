@@ -6,17 +6,21 @@ import {IZKThresholdVerifier} from "./interfaces/IZKThresholdVerifier.sol";
 import {Bn254} from "./verifiers/Bn254.sol";
 
 /// @title AVIPRegistry
-/// @notice Reputation registry of the Diamond Framework on the C-Chain: one
-///         Merkle root per epoch over the reputation tensor `T`
-///         (`N = C*D*H = 500` entries), plus verification of the succinct proof
-///         that the committed tensor has Frobenius norm `certifiedNorm`.
+/// @notice Reputation registry of the Diamond Framework on the C-Chain: two
+///         Merkle roots per epoch over the reputation tensor `T`
+///         (`N = C*D*H = 500` entries) — the keccak root `verifyEntry` folds
+///         and the Poseidon root the admission proof binds — plus verification
+///         of the succinct proof that one validator's committed entry has norm
+///         `certifiedNorm`.
 ///
 /// @dev Milestone M1 of `docs/architecture/implementation-plan.md`, amended by
-///      M2 §5.2, by M3 §5.4 and by M9a §12.1.2 (the authority pair described
-///      below). The registry certifies the *exact* norm and
-///      stays `view` (it keeps no per-validator state, so no caller can lock
-///      another validator out); the admission threshold `||T||_F >= Theta_r` is
-///      enforced by `AVIPValidatorManager` (§5.2.2).
+///      M2 §5.2, by M3 §5.4, by M9a §12.1.2 (the authority pair described
+///      below) and by M4d (P-01/P-16: the admission statement names the
+///      validator and reads its own Poseidon slot). The registry certifies the
+///      *exact* per-validator norm `T(v)` and stays `view` (it keeps no
+///      per-validator state, so no caller can lock another validator out); the
+///      admission threshold `T(v) >= Theta_r` is enforced by
+///      `AVIPValidatorManager` (§5.2.2).
 ///
 ///      Freshness (paper, Data Layer: "two consecutive epochs cannot differ in
 ///      more than `gamma * N` entries", `gamma = 0.10`, `N = 500`): the
@@ -31,6 +35,13 @@ import {Bn254} from "./verifiers/Bn254.sol";
 ///          sorted, so an inclusion proof needs no direction bits;
 ///        - the root of a single-leaf tree is that leaf's hash.
 ///
+///      That is the keccak tree `verifyEntry` uses. The admission proof does
+///      **not** reuse it: keccak is not computable inside BN254 at this size, so
+///      `statementRoot` is a separate Poseidon tree over leaves
+///      `Poseidon(validator, norm)` (audit P-16). The two roots are posted
+///      together and stored in different slots; neither is ever read as the
+///      other.
+///
 ///      Authority (M9a, §12.1.2). `sequencer` is the only writer of commitments;
 ///      `guardian` is the only proposer of changes to `sequencer` and to
 ///      `verifier`. The two roles are separate and neither acts alone on a
@@ -40,8 +51,8 @@ import {Bn254} from "./verifiers/Bn254.sol";
 ///      compromised guardian cannot install a key without the delay being
 ///      observable first. The verifier stays *mutable* on purpose: this registry
 ///      is also the commitment history `admit` depends on (`_roots`,
-///      `_changedEntries`), so freezing the verifier would turn a circuit bug
-///      into a redeploy that loses that history.
+///      `_statementRoots`, `_changedEntries`), so freezing the verifier would
+///      turn a circuit bug into a redeploy that loses that history.
 ///
 ///      Deliberately NOT implemented here:
 ///        - the data layer and its fraud proof (gap A7, milestone M7);
@@ -110,6 +121,7 @@ contract AVIPRegistry is IAVIPRegistry {
     uint64 public verifierChangeEta;
 
     mapping(uint256 => bytes32) private _roots;
+    mapping(uint256 => uint256) private _statementRoots;
     mapping(uint256 => uint32) private _changedEntries;
     uint256 private _latestEpoch;
     bool private _empty = true;
@@ -251,11 +263,17 @@ contract AVIPRegistry is IAVIPRegistry {
     }
 
     /// @inheritdoc IAVIPRegistry
-    function postCommitment(uint256 epoch, bytes32 root, uint32 changedEntries)
-        external
-        onlySequencer
-    {
+    function postCommitment(
+        uint256 epoch,
+        bytes32 root,
+        uint256 statementRoot,
+        uint32 changedEntries
+    ) external onlySequencer {
         if (root == bytes32(0)) revert ZeroRoot();
+        // A zero Poseidon root is not a valid tree root and would let an epoch
+        // exist that no admission proof can ever bind to. Reject it here rather
+        // than making `verifyThreshold` special-case it (audit P-16).
+        if (statementRoot == 0) revert ZeroStatementRoot();
 
         uint256 expected = _empty ? 0 : _latestEpoch + 1;
         if (epoch != expected) revert NonSequentialEpoch(expected, epoch);
@@ -267,16 +285,22 @@ contract AVIPRegistry is IAVIPRegistry {
         }
 
         _roots[epoch] = root;
+        _statementRoots[epoch] = statementRoot;
         _changedEntries[epoch] = changedEntries;
         _latestEpoch = epoch;
         _empty = false;
 
-        emit CommitmentPosted(epoch, root, changedEntries, uint64(block.timestamp));
+        emit CommitmentPosted(epoch, root, statementRoot, changedEntries, uint64(block.timestamp));
     }
 
     /// @inheritdoc IAVIPRegistry
     function commitmentOf(uint256 epoch) external view returns (bytes32) {
         return _roots[epoch];
+    }
+
+    /// @inheritdoc IAVIPRegistry
+    function statementRootOf(uint256 epoch) external view returns (uint256) {
+        return _statementRoots[epoch];
     }
 
     /// @inheritdoc IAVIPRegistry
@@ -318,13 +342,14 @@ contract AVIPRegistry is IAVIPRegistry {
     }
 
     /// @inheritdoc IAVIPRegistry
-    function verifyThreshold(uint256 epoch, uint256 certifiedNorm, bytes calldata proof)
-        external
-        view
-        returns (bool)
-    {
-        bytes32 root = _roots[epoch];
-        if (root == bytes32(0)) revert UnknownEpoch(epoch);
+    function verifyThreshold(
+        uint256 epoch,
+        address validator,
+        uint256 certifiedNorm,
+        bytes calldata proof
+    ) external view returns (bool) {
+        uint256 root = _statementRoots[epoch];
+        if (root == 0) revert UnknownEpoch(epoch);
 
         IZKThresholdVerifier currentVerifier = verifier;
         if (address(currentVerifier) == address(0)) revert VerifierNotSet();
@@ -337,12 +362,16 @@ contract AVIPRegistry is IAVIPRegistry {
             Bn254.decodeProof(proof);
 
         // The statement is built here, from this registry's own state: the
-        // caller cannot supply it, so the norm the manager uses for `C_R`
-        // cannot diverge from the norm the proof certifies (§5.2.1).
-        uint256[] memory statement = new uint256[](3);
-        statement[0] = uint256(root);
+        // caller cannot supply the root. `validator` is a public input of the
+        // leaf `Poseidon(validator, certifiedNorm)`, so the proof is bound to
+        // the address being admitted and cannot be replayed for another
+        // (audit P-01). The epoch is bound as well, and the root is the epoch's
+        // Poseidon root, never its keccak root (audit P-16).
+        uint256[] memory statement = new uint256[](4);
+        statement[0] = root;
         statement[1] = epoch;
-        statement[2] = certifiedNorm;
+        statement[2] = uint256(uint160(validator));
+        statement[3] = certifiedNorm;
 
         return currentVerifier.verify(a, b, c, statement);
     }

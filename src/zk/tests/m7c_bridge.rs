@@ -13,8 +13,9 @@ use avip_zk_prover::bridge::{
 };
 use avip_zk_prover::fixture;
 
-/// The emitted Solidity fixture: `test/M4bRealKey.t.sol` installs these
-/// constants, so they are the statement the deployment verifies against.
+/// The emitted M4b Solidity fixture: the historical global statement the M7c
+/// bridge pins its table against. Admission moved to M4d (P-01/P-16), so these
+/// constants are a frozen artifact, not a live contract input.
 fn emitted_fixture() -> String {
     read(&format!(
         "{}/../../integrations/avalanche/test/fixtures/M4bGroth16Fixtures.sol",
@@ -35,12 +36,15 @@ fn read(path: &str) -> String {
         .unwrap_or_else(|e| panic!("{path} is committed and readable: {e}"))
 }
 
-/// The first alphanumeric token after `name` in a Solidity source.
+/// The first alphanumeric token after the `name` **declaration** in a Solidity
+/// source. Matching `constant NAME` rather than the bare name keeps a comment
+/// that mentions the constant from answering first.
 fn solidity_token(source: &str, name: &str) -> String {
+    let needle = format!("constant {name}");
     let at = source
-        .find(name)
-        .unwrap_or_else(|| panic!("{name} is in the emitted fixture"));
-    let token: String = source[at + name.len()..]
+        .find(&needle)
+        .unwrap_or_else(|| panic!("{name} is declared in the emitted fixture"));
+    let token: String = source[at + needle.len()..]
         .chars()
         .skip_while(|c| !c.is_ascii_alphanumeric())
         .take_while(char::is_ascii_alphanumeric)

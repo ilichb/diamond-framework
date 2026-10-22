@@ -28,11 +28,15 @@ import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
 ///    valid proofs for a single-leaf tree, an 8-leaf tree and the full 500-leaf
 ///    tensor, and rejects a tampered leaf, a foreign proof, a foreign root and
 ///    root zero.
-/// 7. Norm certification (M1, amended by M2 §5.2 and M3): the registry reads the
-///    root from its own state, builds the statement `[root, epoch, certifiedNorm]`,
-///    decodes the blob with `Bn254.decodeProof` (exactly the first 256 bytes) and
-///    forwards `(a, b, c)` unchanged to the verifier, propagating its answer. A
-///    legacy proof that still carries a caller-supplied input array decodes (the
+/// 7. Norm certification (M1, amended by M2 §5.2, M3 and M4d): the registry
+///    reads `statementRootOf(epoch)` from its own state, builds the statement
+///    `[root, epoch, uint160(validator), certifiedNorm]`, decodes the blob with
+///    `Bn254.decodeProof` (exactly the first 256 bytes) and forwards `(a, b, c)`
+///    unchanged to the verifier, propagating its answer. Because the validator
+///    is a public input and the leaf is `Poseidon(validator, norm)`, a proof
+///    admits one address and is not a bearer token (audit P-01). The Poseidon
+///    root lives in its own slot, never in `commitmentOf` (audit P-16). A legacy
+///    proof that still carries a caller-supplied input array decodes (the
 ///    trailing bytes are ignored, never read) while a truncated one reverts with
 ///    `Bn254.MalformedProof`.
 ///    The call is `view` and idempotent: the same proof verifies any number of
@@ -51,7 +55,7 @@ import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
 ///   (gap A7, milestone M7).
 /// - No admission, slashing or reputation-weight logic: that is
 ///   `AVIPValidatorManager` (milestone M2, `test/AVIPValidatorManager.t.sol`).
-///   In particular the threshold `||T||_F >= Theta_r` is NOT enforced here
+///   In particular the threshold `T(v) >= Theta_r` is NOT enforced here
 ///   (§5.2.2).
 /// - No gas or latency claim: these tests assert behaviour only.
 contract AVIPRegistryTest is Test {
@@ -61,6 +65,9 @@ contract AVIPRegistryTest is Test {
     // 0.5 in WAD. Arbitrary as far as the registry is concerned: it certifies
     // the norm and enforces no threshold (§5.2.2).
     uint256 internal constant NORM = 500_000_000_000_000_000;
+    /// @dev Poseidon root of epoch 0. A plain field element in these tests: the
+    ///      mock reads only what the registry builds, and the pairing is M3.
+    uint256 internal constant STATEMENT_ROOT = 0x1234_5678;
 
     AVIPRegistry internal registry;
     address internal sequencer;
@@ -93,7 +100,7 @@ contract AVIPRegistryTest is Test {
         epoch0Proofs = proofs;
 
         vm.prank(sequencer);
-        registry.postCommitment(0, epoch0Root, N);
+        registry.postCommitment(0, epoch0Root, STATEMENT_ROOT, N);
     }
 
     // ---------------------------------------------------------------- reference
@@ -107,7 +114,7 @@ contract AVIPRegistryTest is Test {
 
     function test_postCommitment_acceptsTheFullGammaBound() public {
         vm.prank(sequencer);
-        registry.postCommitment(1, keccak256("epoch-1"), GAMMA_N);
+        registry.postCommitment(1, keccak256("epoch-1"), STATEMENT_ROOT + 1, GAMMA_N);
 
         assertEq(registry.changedEntriesOf(1), GAMMA_N);
         assertEq(registry.latestEpoch(), 1);
@@ -119,23 +126,23 @@ contract AVIPRegistryTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAVIPRegistry.FreshnessViolation.selector, GAMMA_N + 1, GAMMA_N)
         );
-        registry.postCommitment(1, keccak256("epoch-1"), GAMMA_N + 1);
+        registry.postCommitment(1, keccak256("epoch-1"), STATEMENT_ROOT + 1, GAMMA_N + 1);
     }
 
     function test_postCommitment_genesisRequiresTheWholeTensor() public {
         AVIPRegistry fresh = new AVIPRegistry(sequencer, address(0), guardian);
         vm.prank(sequencer);
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.GenesisDelta.selector, N - 1, N));
-        fresh.postCommitment(0, keccak256("genesis"), N - 1);
+        fresh.postCommitment(0, keccak256("genesis"), STATEMENT_ROOT, N - 1);
     }
 
     function test_postCommitment_emitsTheCommitment() public {
         vm.prank(sequencer);
         vm.expectEmit(true, false, false, true, address(registry));
         emit IAVIPRegistry.CommitmentPosted(
-            1, keccak256("epoch-1"), GAMMA_N, uint64(block.timestamp)
+            1, keccak256("epoch-1"), STATEMENT_ROOT + 1, GAMMA_N, uint64(block.timestamp)
         );
-        registry.postCommitment(1, keccak256("epoch-1"), GAMMA_N);
+        registry.postCommitment(1, keccak256("epoch-1"), STATEMENT_ROOT + 1, GAMMA_N);
     }
 
     // ------------------------------------------------------------ epoch order
@@ -143,13 +150,13 @@ contract AVIPRegistryTest is Test {
     function test_postCommitment_rejectsASkippedEpoch() public {
         vm.prank(sequencer);
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NonSequentialEpoch.selector, 1, 2));
-        registry.postCommitment(2, keccak256("epoch-2"), 1);
+        registry.postCommitment(2, keccak256("epoch-2"), STATEMENT_ROOT + 2, 1);
     }
 
     function test_postCommitment_rejectsRePostingAnEpoch() public {
         vm.prank(sequencer);
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NonSequentialEpoch.selector, 1, 0));
-        registry.postCommitment(0, epoch0Root, N);
+        registry.postCommitment(0, epoch0Root, STATEMENT_ROOT, N);
     }
 
     function test_unpostedEpochReadsAsEmpty() public view {
@@ -167,13 +174,25 @@ contract AVIPRegistryTest is Test {
     function test_postCommitment_rejectsAnUnauthorisedCaller() public {
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotSequencer.selector, stranger));
-        registry.postCommitment(1, keccak256("epoch-1"), 1);
+        registry.postCommitment(1, keccak256("epoch-1"), STATEMENT_ROOT + 1, 1);
     }
 
     function test_postCommitment_rejectsTheZeroRoot() public {
         vm.prank(sequencer);
         vm.expectRevert(IAVIPRegistry.ZeroRoot.selector);
-        registry.postCommitment(1, bytes32(0), 1);
+        registry.postCommitment(1, bytes32(0), STATEMENT_ROOT + 1, 1);
+    }
+
+    function test_postCommitment_rejectsTheZeroStatementRoot() public {
+        // audit P-16: the Poseidon root is not a second meaning for the keccak
+        // slot, so it is validated on its own. Zero is not a tree root.
+        vm.prank(sequencer);
+        vm.expectRevert(IAVIPRegistry.ZeroStatementRoot.selector);
+        registry.postCommitment(1, keccak256("epoch-1"), 0, 1);
+    }
+
+    function test_unpostedStatementRootReadsAsZero() public view {
+        assertEq(registry.statementRootOf(7), 0);
     }
 
     function test_constructor_rejectsTheZeroSequencer() public {
@@ -310,11 +329,11 @@ contract AVIPRegistryTest is Test {
         // The new sequencer posts; the old one is a stranger now, even though it
         // still holds the same private key it held before the change.
         vm.prank(stranger);
-        registry.postCommitment(1, keccak256("epoch-1"), 1);
+        registry.postCommitment(1, keccak256("epoch-1"), STATEMENT_ROOT + 1, 1);
 
         vm.prank(sequencer);
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotSequencer.selector, sequencer));
-        registry.postCommitment(2, keccak256("epoch-2"), 1);
+        registry.postCommitment(2, keccak256("epoch-2"), STATEMENT_ROOT + 2, 1);
     }
 
     function test_governance_reproposingRestartsTheDelay() public {
@@ -373,7 +392,7 @@ contract AVIPRegistryTest is Test {
     // -------- the verifier half of §12.1.2
 
     function test_governance_onlyTheGuardianProposesAVerifierChange() public {
-        MockThresholdVerifier mock = _mockVerifier(true, epoch0Root, 0, NORM);
+        MockThresholdVerifier mock = _mockVerifier(true, STATEMENT_ROOT, 0, NORM);
 
         vm.prank(sequencer);
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotGuardian.selector, sequencer));
@@ -397,7 +416,7 @@ contract AVIPRegistryTest is Test {
     }
 
     function test_governance_theVerifierChangeIsNotReadyBeforeItsDelay() public {
-        MockThresholdVerifier mock = _mockVerifier(true, epoch0Root, 0, NORM);
+        MockThresholdVerifier mock = _mockVerifier(true, STATEMENT_ROOT, 0, NORM);
         vm.prank(guardian);
         registry.proposeVerifier(address(mock));
 
@@ -416,38 +435,43 @@ contract AVIPRegistryTest is Test {
     function test_governance_anyoneCommitsTheVerifierChangeAndItTakesEffect() public {
         // The registry starts with certification off...
         vm.expectRevert(IAVIPRegistry.VerifierNotSet.selector);
-        registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0));
+        registry.verifyThreshold(0, validator, NORM, _encodeProof(PROOF_A0));
 
-        MockThresholdVerifier accepting = _mockVerifier(true, epoch0Root, 0, NORM);
+        MockThresholdVerifier accepting = _mockVerifier(true, STATEMENT_ROOT, 0, NORM);
         vm.prank(guardian);
         registry.proposeVerifier(address(accepting));
         vm.warp(block.timestamp + registry.CHANGE_DELAY());
         vm.prank(stranger);
         registry.executeVerifierChange();
-        assertTrue(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)), "certification on");
+        assertTrue(
+            registry.verifyThreshold(0, validator, NORM, _encodeProof(PROOF_A0)), "certification on"
+        );
 
         // ... and a circuit fix is a swap, not a redeploy: the same blob against
         // the same statement draws the new verifier's answer, while the commitment
         // history the manager reads is the one this registry already holds.
         bytes32 rootBefore = registry.commitmentOf(0);
-        MockThresholdVerifier rejecting = _mockVerifier(false, epoch0Root, 0, NORM);
+        MockThresholdVerifier rejecting = _mockVerifier(false, STATEMENT_ROOT, 0, NORM);
         vm.prank(guardian);
         registry.proposeVerifier(address(rejecting));
         vm.warp(block.timestamp + registry.CHANGE_DELAY());
         vm.prank(validator);
         registry.executeVerifierChange();
 
-        assertFalse(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)), "certification off");
+        assertFalse(
+            registry.verifyThreshold(0, validator, NORM, _encodeProof(PROOF_A0)),
+            "certification off"
+        );
         assertEq(registry.commitmentOf(0), rootBefore, "the history survived the swap");
         assertEq(registry.pendingVerifier(), address(0), "cleared");
         assertEq(registry.verifierChangeEta(), 0, "cleared");
     }
 
     function test_governance_cancellingAVerifierChangeKeepsTheVerifier() public {
-        _setVerifier(true, epoch0Root, 0, NORM);
+        _setVerifier(true, STATEMENT_ROOT, 0, NORM);
         address installed = address(registry.verifier());
 
-        MockThresholdVerifier other = _mockVerifier(false, epoch0Root, 0, NORM);
+        MockThresholdVerifier other = _mockVerifier(false, STATEMENT_ROOT, 0, NORM);
         vm.prank(guardian);
         registry.proposeVerifier(address(other));
         vm.warp(block.timestamp + registry.CHANGE_DELAY());
@@ -456,13 +480,15 @@ contract AVIPRegistryTest is Test {
         registry.cancelVerifierChange();
 
         assertEq(address(registry.verifier()), installed, "unchanged");
-        assertTrue(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)), "same verdict");
+        assertTrue(
+            registry.verifyThreshold(0, validator, NORM, _encodeProof(PROOF_A0)), "same verdict"
+        );
         vm.expectRevert(IAVIPRegistry.NoPendingVerifierChange.selector);
         registry.executeVerifierChange();
     }
 
     function test_governance_theTwoPendingChangesAreIndependent() public {
-        MockThresholdVerifier mock = _mockVerifier(true, epoch0Root, 0, NORM);
+        MockThresholdVerifier mock = _mockVerifier(true, STATEMENT_ROOT, 0, NORM);
         vm.prank(guardian);
         registry.proposeSequencer(stranger);
         vm.prank(guardian);
@@ -531,50 +557,78 @@ contract AVIPRegistryTest is Test {
     // ------------------------------------------------------ norm certification
 
     function test_verifyThreshold_buildsTheStatementFromItsOwnState() public {
-        _setVerifier(true, epoch0Root, 0, NORM);
+        _setVerifier(true, STATEMENT_ROOT, 0, NORM);
 
         // The mock reverts unless the statement it receives is exactly
-        // `[uint256(commitmentOf(0)), 0, NORM]` (§5.2.1).
-        assertTrue(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)));
+        // `[statementRootOf(0), 0, uint160(validator), NORM]` (§5.2.1, M4d).
+        assertTrue(registry.verifyThreshold(0, validator, NORM, _encodeProof(PROOF_A0)));
     }
 
     function test_verifyThreshold_bindsTheStatementToTheEpochRoot() public {
         vm.prank(sequencer);
-        registry.postCommitment(1, keccak256("epoch-1"), 1);
-        _setVerifier(true, keccak256("epoch-1"), 1, NORM);
+        registry.postCommitment(1, keccak256("epoch-1"), STATEMENT_ROOT + 1, 1);
+        _setVerifier(true, STATEMENT_ROOT + 1, 1, NORM);
 
-        // The root of epoch 1 is not the root of epoch 0: a statement built for
-        // the wrong epoch is rejected by the verifier.
+        // The statement root of epoch 1 is not the statement root of epoch 0: a
+        // statement built for the wrong epoch is rejected by the verifier.
         vm.expectRevert("mock: unexpected statement");
-        registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0));
+        registry.verifyThreshold(0, validator, NORM, _encodeProof(PROOF_A0));
 
         // The statement for epoch 1 carries epoch 1's root and is accepted.
-        assertTrue(registry.verifyThreshold(1, NORM, _encodeProof(PROOF_A0)));
+        assertTrue(registry.verifyThreshold(1, validator, NORM, _encodeProof(PROOF_A0)));
+    }
+
+    function test_verifyThreshold_bindsTheStatementToTheValidator() public {
+        _setVerifier(true, STATEMENT_ROOT, 0, NORM);
+
+        // audit P-01: the leaf is `Poseidon(validator, certifiedNorm)` and the
+        // validator is a public input, so the same blob for another address is a
+        // different statement. A proof is not a bearer token.
+        address other = makeAddr("other-validator");
+        vm.expectRevert("mock: unexpected statement");
+        registry.verifyThreshold(0, other, NORM, _encodeProof(PROOF_A0));
+    }
+
+    function test_verifyThreshold_usesTheStatementRootNotTheKeccakRoot() public {
+        // audit P-16: `commitmentOf` and `statementRootOf` are two slots. A verifier
+        // expecting the keccak root must reject the statement, because the
+        // registry builds it from the Poseidon root.
+        MockThresholdVerifier expectsKeccak =
+            new MockThresholdVerifier(true, PROOF_A0, _statement(uint256(epoch0Root), 0, NORM));
+        vm.prank(guardian);
+        registry.proposeVerifier(address(expectsKeccak));
+        vm.warp(block.timestamp + registry.CHANGE_DELAY());
+        registry.executeVerifierChange();
+
+        assertEq(registry.statementRootOf(0), STATEMENT_ROOT, "separate slot");
+        assertEq(registry.commitmentOf(0), epoch0Root, "keccak slot untouched");
+        vm.expectRevert("mock: unexpected statement");
+        registry.verifyThreshold(0, validator, NORM, _encodeProof(PROOF_A0));
     }
 
     function test_verifyThreshold_bindsTheStatementToTheCertifiedNorm() public {
-        _setVerifier(true, epoch0Root, 0, NORM);
+        _setVerifier(true, STATEMENT_ROOT, 0, NORM);
 
-        // The norm is publicInputs[2]: a different value is a different
+        // The norm is publicInputs[3]: a different value is a different
         // statement, so the verifier rejects it. This is the slot the manager
         // uses for `C_R`, and it cannot diverge from the proof (§5.2.1).
         vm.expectRevert("mock: unexpected statement");
-        registry.verifyThreshold(0, NORM + 1, _encodeProof(PROOF_A0));
+        registry.verifyThreshold(0, validator, NORM + 1, _encodeProof(PROOF_A0));
     }
 
     function test_verifyThreshold_forwardsTheProofUnchanged() public {
-        _setVerifier(true, epoch0Root, 0, NORM);
+        _setVerifier(true, STATEMENT_ROOT, 0, NORM);
 
         // The mock requires `a[0] == PROOF_A0`: a mutated blob is detected, so
         // the successful cases above really do forward the decoded elements.
         vm.expectRevert("mock: proof not forwarded unchanged");
-        registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0 + 1));
+        registry.verifyThreshold(0, validator, NORM, _encodeProof(PROOF_A0 + 1));
     }
 
     function test_verifyThreshold_propagatesARejection() public {
-        _setVerifier(false, epoch0Root, 0, NORM);
+        _setVerifier(false, STATEMENT_ROOT, 0, NORM);
 
-        assertFalse(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)));
+        assertFalse(registry.verifyThreshold(0, validator, NORM, _encodeProof(PROOF_A0)));
     }
 
     function test_verifyThreshold_enforcesNoThreshold() public {
@@ -582,21 +636,21 @@ contract AVIPRegistryTest is Test {
         // "is the norm high enough?". `certifiedNorm = 0` is a well-formed
         // statement and the admission bound lives in `AVIPValidatorManager`
         // (§5.2.2).
-        _setVerifier(true, epoch0Root, 0, 0);
+        _setVerifier(true, STATEMENT_ROOT, 0, 0);
 
-        assertTrue(registry.verifyThreshold(0, 0, _encodeProof(PROOF_A0)));
+        assertTrue(registry.verifyThreshold(0, validator, 0, _encodeProof(PROOF_A0)));
     }
 
     function test_verifyThreshold_isIdempotent() public {
-        _setVerifier(true, epoch0Root, 0, NORM);
+        _setVerifier(true, STATEMENT_ROOT, 0, NORM);
 
         // M1 consumed `thresholdProven[epoch][validator]` here. The function is
         // `view` now, so the same proof verifies again and again.
         uint256 epochBefore = registry.latestEpoch();
         bytes32 rootBefore = registry.commitmentOf(0);
 
-        assertTrue(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)));
-        assertTrue(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)));
+        assertTrue(registry.verifyThreshold(0, validator, NORM, _encodeProof(PROOF_A0)));
+        assertTrue(registry.verifyThreshold(0, validator, NORM, _encodeProof(PROOF_A0)));
 
         assertEq(registry.latestEpoch(), epochBefore);
         assertEq(registry.commitmentOf(0), rootBefore);
@@ -608,17 +662,17 @@ contract AVIPRegistryTest is Test {
     ///      the price of gas. There is no per-validator slot left to burn.
     function test_verifyThreshold_cannotLockAnotherValidatorOut() public {
         address victim = makeAddr("victim");
-        _setVerifier(true, epoch0Root, 0, NORM);
+        _setVerifier(true, STATEMENT_ROOT, 0, NORM);
 
         vm.prank(stranger);
-        assertTrue(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)));
+        assertTrue(registry.verifyThreshold(0, validator, NORM, _encodeProof(PROOF_A0)));
 
         vm.prank(victim);
-        assertTrue(registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0)));
+        assertTrue(registry.verifyThreshold(0, validator, NORM, _encodeProof(PROOF_A0)));
     }
 
     function test_verifyThreshold_ignoresTrailingBytesInTheProof() public {
-        _setVerifier(true, epoch0Root, 0, NORM);
+        _setVerifier(true, STATEMENT_ROOT, 0, NORM);
 
         // The M1 blob was `(a, b, c, publicInputs)`. `Bn254.decodeProof` reads
         // exactly `PROOF_LENGTH = 256` bytes and never the rest, so the three
@@ -626,35 +680,35 @@ contract AVIPRegistryTest is Test {
         // is harmless, because the public inputs are built by the registry and a
         // caller cannot inject one (§5.2.1); it is asserted here so the
         // tolerance is a documented property and not an accident.
-        assertTrue(registry.verifyThreshold(0, NORM, _encodeLegacyProof(PROOF_A0, 3)));
+        assertTrue(registry.verifyThreshold(0, validator, NORM, _encodeLegacyProof(PROOF_A0, 3)));
     }
 
     function test_verifyThreshold_rejectsATruncatedProof() public {
-        _setVerifier(true, epoch0Root, 0, NORM);
+        _setVerifier(true, STATEMENT_ROOT, 0, NORM);
 
         // Too few bytes is a decode failure: `(a, b, c)` is the whole blob and
         // the error names the length that arrived (64 + 128 = 192 bytes).
         vm.expectRevert(abi.encodeWithSelector(Bn254.MalformedProof.selector, 192));
-        registry.verifyThreshold(0, NORM, abi.encode(_a(PROOF_A0), _b()));
+        registry.verifyThreshold(0, validator, NORM, abi.encode(_a(PROOF_A0), _b()));
     }
 
     function test_verifyThreshold_revertsOnAnUnknownEpoch() public {
-        _setVerifier(true, epoch0Root, 0, NORM);
+        _setVerifier(true, STATEMENT_ROOT, 0, NORM);
 
         // `UnknownEpoch` is load-bearing in M2: it is the only way the registry
         // can report that `latestEpoch()` had nothing to read.
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.UnknownEpoch.selector, 9));
-        registry.verifyThreshold(9, NORM, _encodeProof(PROOF_A0));
+        registry.verifyThreshold(9, validator, NORM, _encodeProof(PROOF_A0));
     }
 
     function test_verifyThreshold_revertsWithoutAVerifier() public {
         vm.expectRevert(IAVIPRegistry.VerifierNotSet.selector);
-        registry.verifyThreshold(0, NORM, _encodeProof(PROOF_A0));
+        registry.verifyThreshold(0, validator, NORM, _encodeProof(PROOF_A0));
     }
 
     // ----------------------------------------------------------------- helpers
 
-    function _setVerifier(bool answer, bytes32 root, uint256 epoch, uint256 norm) internal {
+    function _setVerifier(bool answer, uint256 root, uint256 epoch, uint256 norm) internal {
         // The mock is deployed *before* the prank: `new` is itself a call, so it
         // would consume the prank and the proposal would then come from this test
         // contract instead of the guardian (`NotGuardian`).
@@ -667,23 +721,25 @@ contract AVIPRegistryTest is Test {
         registry.executeVerifierChange();
     }
 
-    function _mockVerifier(bool answer, bytes32 root, uint256 epoch, uint256 norm)
+    function _mockVerifier(bool answer, uint256 root, uint256 epoch, uint256 norm)
         internal
         returns (MockThresholdVerifier)
     {
         return new MockThresholdVerifier(answer, PROOF_A0, _statement(root, epoch, norm));
     }
 
-    /// @dev The statement the registry is expected to build itself, §5.2.1.
-    function _statement(bytes32 root, uint256 epoch, uint256 norm)
+    /// @dev The statement the registry is expected to build itself, §5.2.1 and
+    ///      M4d: `[statementRoot, epoch, uint160(validator), certifiedNorm]`.
+    function _statement(uint256 root, uint256 epoch, uint256 norm)
         internal
-        pure
+        view
         returns (bytes memory)
     {
-        uint256[] memory statement = new uint256[](3);
-        statement[0] = uint256(root);
+        uint256[] memory statement = new uint256[](4);
+        statement[0] = root;
         statement[1] = epoch;
-        statement[2] = norm;
+        statement[2] = uint256(uint160(validator));
+        statement[3] = norm;
         return abi.encode(statement);
     }
 

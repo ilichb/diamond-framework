@@ -1,0 +1,10 @@
+   Compiling avip_datalayer v0.1.0 (/home/ilich/Escritorio/diamond-framework/src/datalayer)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.20s
+     Running tests/tmp_epoch_shape.rs (target/debug/deps/tmp_epoch_shape-d1b0c9e7d75b90e7)
+
+running 2 tests
+test genesis_with_501_leaves_and_one_duplicate_is_fresh ... ok
+test a_thousand_duplicated_leaves_report_zero_changes ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+

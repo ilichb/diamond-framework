@@ -1,0 +1,16 @@
+Compiling 2 files with Solc 0.8.33
+Solc 0.8.33 finished in 848.05ms
+Compiler run successful!
+
+Ran 2 tests for test/TmpEvidenceRootConflict.t.sol:TmpRootConflictEvidenceTest
+[PASS] test_oneSlotCannotHoldThePoseidonRootAndTheMerkleRoot() (gas: 652513)
+[PASS] test_theRegistryCannotTellWhichRootAnEpochMeant() (gas: 119133)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 27.23ms (12.33ms CPU time)
+
+Ran 3 tests for test/TmpEvidenceP01Real.t.sol:TmpP01RealEvidenceTest
+[PASS] test_managerRejectsAProofForAnotherNorm() (gas: 317650)
+[PASS] test_sameRealProofAdmitsTwoDifferentValidators() (gas: 714210)
+[PASS] test_theStatementHasOnlyThreeBindings() (gas: 952369)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 30.51ms (20.29ms CPU time)
+
+Ran 2 test suites in 36.87ms (57.74ms CPU time): 5 tests passed, 0 failed, 0 skipped (5 total tests)

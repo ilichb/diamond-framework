@@ -13,9 +13,11 @@
 //!   contract documents, so `Groth16Verifier`'s constructor accepts it;
 //! * [`on_chain_vk_digest`], `keccak256(abi.encode(vk))` — the value
 //!   `Groth16Verifier.verifyingKeyDigest()` publishes — recomputed here from the
-//!   ABI layout, so `test/M4bRealKey.t.sol` compares two implementations of the
-//!   same encoding. ark's own canonical digest of the key stays in
-//!   `scripts/m4b_output.txt`, where it pins reproducibility.
+//!   ABI layout. The retired `test/M4bRealKey.t.sol` compared the two
+//!   implementations before P-01/P-16 replaced admission with M4d. ark's own
+//!   canonical digest of the key stays in `scripts/m4b_output.txt`, where it pins
+//!   reproducibility. The fixture itself is retained because M7c's bridge tests
+//!   read its global `STATEMENT_ROOT` and `TENSOR_DIGEST`.
 
 use std::fmt::Write as _;
 use std::fs::File;
@@ -61,8 +63,9 @@ fn word_usize(n: usize, out: &mut Vec<u8>) {
 }
 
 /// `keccak256(abi.encode(vk))`, the digest the frozen `Groth16Verifier`
-/// publishes (and which `test/M4bRealKey.t.sol` compares against the contract's
-/// own). A struct with a dynamic member is itself dynamic, so `abi.encode` heads
+/// publishes (and which the retired `test/M4bRealKey.t.sol` compared against
+/// the contract's own). A struct with a dynamic member is itself dynamic, so
+/// `abi.encode` heads
 /// it with the offset to its contents; those contents are the key's fourteen
 /// coordinates, the offset to `ic` (which is `15 * 32` bytes into them), and then
 /// `ic` as its length followed by four points. Twenty-five words, 800 bytes --
@@ -164,13 +167,18 @@ pragma solidity ^0.8.24;
 //
 // WHAT THIS IS
 // ------------
-// The real thing M3 waited for: a Groth16/BN254 verification key over the V3
-// circuit of `docs/architecture/implementation-plan.md` 5.5.2 (Poseidon
-// commitment + floor norm), and a real proof for the deterministic 500-entry
-// fixture of 5.5.6. `test/M4bRealKey.t.sol` installs the key in the frozen
-// `Groth16Verifier` and feeds the proof to `AVIPRegistry.verifyThreshold`, which
-// builds the statement `[root, epoch, certifiedNorm]` from its own state -- no
-// Solidity change anywhere.
+// The M4b artifact: a Groth16/BN254 verification key over the V3 circuit of
+// `docs/architecture/implementation-plan.md` 5.5.2 (Poseidon commitment + floor
+// norm), and a real proof for the deterministic 500-entry fixture of 5.5.6. The
+// retired `test/M4bRealKey.t.sol` installed the key in the frozen
+// `Groth16Verifier` and fed the proof to `AVIPRegistry.verifyThreshold`, which
+// built the statement `[root, epoch, certifiedNorm]` from its own state.
+//
+// Admission no longer uses this artifact: audit findings P-01 and P-16 replaced
+// it with M4d's per-validator inclusion proof (`M4dGroth16Fixtures.sol`). This
+// file stays committed because M7c's bridge tests read its global
+// `STATEMENT_ROOT` and `TENSOR_DIGEST`, and `scripts/m7c_output.txt` is pinned
+// against them.
 //
 // WHAT IT IS NOT
 // --------------
@@ -205,8 +213,9 @@ library M4bGroth16Fixtures {{
     uint256 internal constant STATEMENT_NORM = {norm};
 
     /// @notice `keccak256(abi.encode(vk))`, which `verifyingKeyDigest()`
-    ///         publishes. Computed off-chain from the ABI layout, so
-    ///         `test/M4bRealKey.t.sol` compares two implementations of it.
+    ///         publishes. Computed off-chain from the ABI layout, so the
+    ///         retired `test/M4bRealKey.t.sol` compared two implementations
+    ///         of it.
     bytes32 internal constant KEY_DIGEST = 0x{key_digest};
 
     /// @notice The real key over V3: 3 public inputs, `ic.length == 4`.

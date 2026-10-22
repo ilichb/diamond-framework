@@ -34,10 +34,11 @@ import {console2} from "forge-std/console2.sol";
 ///
 ///      What M7a deliberately does NOT do:
 ///        - it deploys no threshold verifier. `Groth16Verifier` takes a
-///          verification key, and the only key in the repository is M4b's
-///          *development* key over a circuit with no ceremony
-///          (`../test/fixtures/M4bGroth16Fixtures.sol`, §5.5): installing it on a
-///          shared testnet would present a development key as a deployment.
+///          verification key, and the keys in the repository — M4b's V3 key and
+///          M4d's admission key — are both *development* keys over circuits with
+///          no ceremony (`../test/fixtures/M4bGroth16Fixtures.sol`,
+///          `../test/fixtures/M4dGroth16Fixtures.sol`, §5.5): installing either
+///          on a shared testnet would present a development key as a deployment.
 ///          `VERIFIER` is therefore an explicit input, `address(0)` by default,
 ///          which `AVIPRegistry` accepts on purpose — with no verifier set,
 ///          `verifyThreshold` reverts (`VerifierNotSet`) instead of certifying;

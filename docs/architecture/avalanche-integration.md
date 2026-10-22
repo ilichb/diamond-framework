@@ -32,18 +32,22 @@ to a live network, and none of it had been audited.
 > §5.5 — **not recursive**: the paper-literal recursion remains open, §5.5.7),
 > the RMT detector (M5, §5.6), the data layer's fraud proof and its
 > `eq:ingestion` interface (M7b, §5.9), the Pedersen/Poseidon ↔ keccak bridge
-> that ties the statement's `root` to the registry's Merkle root (M7c, §5.10),
+> that ties the **tensor** statement's `root` to the registry's Merkle root (M7c,
+> §5.10; M4d later gave the *admission* statement a per-epoch root of its own,
+> §5.5.11, so the two roots are different numbers),
 > the transport of §4 (M7d, §5.11) and the treasury/custody of §5.12 (M8: the
 > stake the manager declares is escrowed by `AVIPStakeVault.sol`, a slash moves
 > real tokens into an `IFundSink` and `F_0*` is collected, while the destination
 > of those funds stays a deployment fact). The verifying key of M3 is no longer a
-> placeholder either: M4b installed a real key over the V3 circuit and the
-> unmodified `Groth16Verifier` accepts it (§5.4). M9 (M9a–M9c, §5.13) then
-> amended the two contracts this section describes: the registry's roles rotate
-> by guardian proposal and a delay rather than by the sitting key, a slash takes
-> the validator's **whole recorded stake** rather than a figure sent with the
-> decision, and a re-entry after an ejection costs `S_f* + n * kappa` as a
-> separate term. The audit sentence still holds: **nothing has been audited**.
+> placeholder either: M4b installed a real key over the V3 circuit, and M4d
+> replaced its global statement with the per-validator admission proof (audit
+> P-01/P-16, §5.5.11); the unmodified `Groth16Verifier` accepts it (§5.4). M9
+> (M9a–M9c, §5.13) then amended the two contracts this section describes: the
+> registry's roles rotate by guardian proposal and a delay rather than by the
+> sitting key, a slash takes the validator's **whole recorded stake** rather than
+> a figure sent with the decision, and a re-entry after an ejection costs
+> `S_f* + n * kappa` as a separate term. The audit sentence still holds:
+> **nothing has been audited**.
 > Phase 1 of §6 is deployed — registry, vault and manager, with the token and
 > sink as inputs and `verifier = address(0)`, so the registry refuses to certify
 > (`VerifierNotSet`). The Teleporter/AWM transport and the Subnet L1 (phase 4)

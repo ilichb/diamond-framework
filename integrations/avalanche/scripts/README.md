@@ -36,20 +36,24 @@ testable before the real circuit exists. The real circuit and ceremony are a
 parallel workstream; when they land, regenerate the fixture and the key — the
 verifier contract does not change.
 
-## `../../src/zk/scripts/m4b_fixture.sh` (milestone M4b)
+## `../../src/zk/scripts/m4d_fixture.sh` (milestone M4d)
 
-The M4b analogue, and the one that produces a *real* instance:
-`../test/fixtures/M4bGroth16Fixtures.sol` is emitted by the Rust crate that owns
+The admission analogue, and the one that produces a *real* instance:
+`../test/fixtures/M4dGroth16Fixtures.sol` is emitted by the Rust crate that owns
 the circuit (`src/zk`), so it is generated where the key is derived rather than by
-a script that imitates it. It writes the development key over V3, the fixture
-proof, the statement `[root, epoch, certifiedNorm]` and the on-chain
-`keccak256(abi.encode(vk))` digest; `test/M4bRealKey.t.sol` then verifies all of
-it against the frozen contracts, with no contract change. Read plan §5.5.9 before
-quoting a number: the setup is a *development* setup — one phase-2 contributor
-with the seeds committed — so the key carries no security claim.
+a script that imitates it. It writes the development key over the admission
+circuit, two inclusion proofs for two validators of the committed tree, the
+statement `[statementRoot, epoch, validator, certifiedNorm]` and the on-chain
+`keccak256(abi.encode(vk))` digest; `test/M4dRealKey.t.sol` then verifies all of
+it against the frozen contracts, with no contract change. The fixture is the
+P-01/P-16 remediation: the validator is a public input bound inside the leaf, and
+the Poseidon `statementRoot` lives in its own per-epoch slot next to the keccak
+`commitmentOf`. Read plan §5.5.9 before quoting a number: the setup is a
+*development* setup — one phase-2 contributor with the seeds committed — so the
+key carries no security claim.
 
 ```shell
-src/zk/scripts/m4b_fixture.sh
+src/zk/scripts/m4d_fixture.sh
 ```
 
 ## `DeployCommon.sol`, `DeployRegistry.s.sol`, `DeployValidatorManager.s.sol` (milestone M7a)
@@ -156,9 +160,10 @@ Three things about it are deliberate:
    are `anvil` account 0's own CREATEs, reproducible run to run and **not** Fuji
    addresses.
 2. **The transcript is byte-stable**: no gas, no timings, no block numbers, 62
-   rows, `md5 40130315ec07f2f3fc469cf43d36e7f1`. (M9b removed one row — the
+   rows, `md5 8a1dd78f824930144625441aed821797`. (M9b removed one row — the
    payload's `notify.amountWad`, which no longer travels — and the transcript was
-   regenerated and pinned again: §5.13.)
+   regenerated and pinned again: §5.13. M4d regenerated it once more when the
+   admission statement changed: §5.5.11.)
 3. **The numbers answer to the milestones they come from, in both directions.**
    `m7d_report.sh` reads each upstream value out of its committed transcript,
    requires it in the declared fixture *and* in the fresh run, and checks that the
@@ -207,7 +212,7 @@ bash scripts/m8_report.sh
 ```
 
 It builds the whole layer (six-decimal token, burn sink, vault, registry with the
-M4b development key, manager), and then walks a validator through the lifecycle —
+M4d admission key, manager), and then walks a validator through the lifecycle —
 escrow, admission bound to that escrow, the `F_0*` fee, and a slash that leaves
 custody for the sink — the whole of the record the manager holds, since M9b
 (§12.1.2) — printing one `[m8]` line per fact and **one per refusal**
@@ -216,17 +221,17 @@ custody, an unbacked admission, `debit` from a stranger, the fee from a
 non-admitted payer, and a fee-on-transfer token). Every line is reproducible, and
 the script's own `require`s plus the `status=ok` row are what fail the run when the
 custody stops behaving. The pinned transcript is 42 rows
-(`md5 2955c738f2c2a56cb0f6936c4b8e5ff8`), byte-identical across runs. The stake
+(`md5 55641a9f611c3ce64d35ffc7b8076a4f`), byte-identical across runs. The stake
 trajectory it replays is **M7d's own** (`admit.stake`, `slash.stakeAfter` — the
 latter `0` since M9b: the slash takes the whole record) and the reason it hands the
 sink is **the provenance id M7d derived**, so the wire milestone and the funds
 milestone are checked against the same numbers. The destination is not hidden: the
 report wires the reference sink and says so.
 
-**Nothing here is a deployment and no key is used**: the token and sink are the test
-doubles, the proof is real (M4b's key and fixture, through the frozen verifier), and
-the addresses are this script's own CREATEs — reproducible run to run and not Fuji
-addresses.
+**Nothing here is a deployment and no key is used**: the token and sink are the
+test doubles, the proof is real (M4d's admission key and fixture, through the
+frozen verifier), and the addresses are this script's own CREATEs — reproducible
+run to run and not Fuji addresses.
 
 ## Layout (deployment, M7)
 

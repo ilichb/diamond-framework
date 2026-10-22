@@ -19,10 +19,12 @@ library Groth16Fixtures {
         86442290903294350648273222779976636221758675587005340531248271500348333491074;
     /// @notice Epoch the statement belongs to.
     uint256 internal constant STATEMENT_EPOCH = 0;
+    /// @notice `address(0xA11CE)`: the validator the statement admits.
+    uint256 internal constant STATEMENT_VALIDATOR = 659918;
     /// @notice `Theta_r = 0.5e18` (0.5 in WAD).
     uint256 internal constant STATEMENT_NORM = 500000000000000000;
 
-    /// @notice The installed key: 3 public inputs, so `ic.length == 4`.
+    /// @notice The installed key: 4 public inputs, so `ic.length == 5`.
     function verifyingKey() internal pure returns (Groth16Verifier.VerifyingKey memory vk) {
         vk.alpha1 = [
             uint256(16417170671487590121473862373570533031806101446564967195958767047075526777038),
@@ -82,7 +84,7 @@ library Groth16Fixtures {
                 )
             ]
         ];
-        vk.ic = new uint256[2][](4);
+        vk.ic = new uint256[2][](5);
         vk.ic[0] = [
             uint256(15426086151966752780237975064210402928461939467965378936949161256041495377669),
             uint256(18357050465378466634175768375539539401699171822196778334465741296833759129712)
@@ -99,14 +101,20 @@ library Groth16Fixtures {
             uint256(4641462070004302322158165986505057327425143586572859358800893070129199209927),
             uint256(3163391584447695760125354721815207319138667465155597519213236343250795569753)
         ];
+        vk.ic[4] = [
+            uint256(2967827802596222133991065483876860449047124254460545278999073451350321794645),
+            uint256(13398916888164575406630686308816925504047064071598484426743755350360465022590)
+        ];
     }
 
-    /// @notice `[root, epoch, certifiedNorm]`, the statement the registry builds.
+    /// @notice `[root, epoch, validator, certifiedNorm]`, the statement the
+    ///         registry builds.
     function statement() internal pure returns (uint256[] memory inputs) {
-        inputs = new uint256[](3);
+        inputs = new uint256[](4);
         inputs[0] = STATEMENT_ROOT;
         inputs[1] = STATEMENT_EPOCH;
-        inputs[2] = STATEMENT_NORM;
+        inputs[2] = STATEMENT_VALIDATOR;
+        inputs[3] = STATEMENT_NORM;
     }
 
     function proofA() internal pure returns (uint256[2] memory) {
@@ -137,8 +145,8 @@ library Groth16Fixtures {
 
     function proofC() internal pure returns (uint256[2] memory) {
         return [
-            uint256(993569654374703530389695616486625202828189495970599947816956273926679916655),
-            uint256(15742592246318559827957745851494581741770830645449801626254266143086951236401)
+            uint256(1829885660214784271416683865887658415570954660638383354498016642059787512213),
+            uint256(21322277302108489807265090214934791668301162316124435927676854004505346615440)
         ];
     }
 }

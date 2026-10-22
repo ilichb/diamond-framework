@@ -1,0 +1,25 @@
+P-33 — entry upper bound probe
+Date: 2026-10-20
+Command (from src/zk):
+  cp ../../docs/audit/evidence/2026-10-20-pocs/pocs/new/TmpEntryUpperBound.rs \
+     tests/tmp_entry_upper_bound.rs
+  cargo test --offline --test tmp_entry_upper_bound -- --nocapture
+  rm tests/tmp_entry_upper_bound.rs
+
+Output:
+  running 1 test
+  test an_entry_above_one_wad_satisfies_the_norm_circuit ... ok
+
+  test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out;
+  finished in 0.06s
+
+  [stderr]
+     Compiling avip_zk_prover v0.1.0 (/home/ilich/Escritorio/diamond-framework/src/zk)
+      Finished `test` profile [unoptimized + debuginfo] target(s) in 1.72s
+       Running tests/tmp_entry_upper_bound.rs (target/debug/deps/tmp_entry_upper_bound-5aa8e17789cd57e1)
+
+Interpretation:
+  ENTRY_BITS = 60, so the largest representable entry is 2^60 - 1
+  = 1,152,921,504,606,846,975 = 1.152921504606846975 WAD.
+  NormCircuit is satisfied for that entry with certified_norm_wad = entry.
+  There is no in-circuit comparison against WAD = 1e18.

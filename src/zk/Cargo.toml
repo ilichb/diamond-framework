@@ -89,6 +89,14 @@ path = "src/m7c.rs"
 name = "m4b-fixture"
 path = "src/m4b_fixture.rs"
 
+# The admission fixture emitter (audit 2026-10-20, P-01/P-16): writes the real
+# key and inclusion proofs into
+# `integrations/avalanche/test/fixtures/M4dGroth16Fixtures.sol`. Run through
+# `scripts/m4d_fixture.sh`, which follows it with `forge fmt`.
+[[bin]]
+name = "m4d-fixture"
+path = "src/m4d_fixture.rs"
+
 [[bench]]
 name = "m4a"
 harness = false

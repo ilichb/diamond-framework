@@ -22,7 +22,7 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
 
 | Path | Status | Milestone |
 |------|--------|-----------|
-| `AVIPRegistry.sol` | **Implemented + tested** (`../test/AVIPRegistry.t.sol`, 48 tests) | M1, amended in M2 (decode), M3 (`Bn254.decodeProof`) and M9a (the authority pair) |
+| `AVIPRegistry.sol` | **Implemented + tested** (`../test/AVIPRegistry.t.sol`, 52 tests) | M1, amended in M2 (decode), M3 (`Bn254.decodeProof`), M9a (the authority pair) and M4d (P-01/P-16: validator-bound 4-input statement, separate Poseidon root slot) |
 | `AVIPValidatorManager.sol` | **Implemented + tested** (`../test/AVIPValidatorManager.t.sol`, 37 tests; amended in M8, whose custody path is covered by `../test/M8StakeVault.t.sol`) | M2, amended in M8 and M9b/M9c (the derived slash amount, the ejection surcharge) |
 | `interfaces/IAVIPRegistry.sol` | Implemented (provisional types, real signatures) | M1, amended in M2, M9a (`guardian`, `CHANGE_DELAY`, `propose*`/`execute*`/`cancel*` and the events they emit) |
 | `interfaces/IAVIPValidatorManager.sol` | Implemented (provisional types, real signatures) | M2, amended in M8 (`custody()`, `FinancialStakeNotBacked`, `CustodyNotBound`) and M9b (`slash(address,bytes32)`, `NothingToSlash` for `SlashExceedsStake`) |
@@ -54,13 +54,17 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
   checked against the delta the sequencer *declares*; the registry never stores
   the tensor.
 - **`verifyThreshold` certifies a norm, it does not compare it.** Since M2 it is
-  `view` and takes `(epoch, certifiedNorm, proof)`: it builds the statement
-  `[root, epoch, certifiedNorm]` from its own state (so a caller cannot inject a
-  public input) and returns whatever
-  `IZKThresholdVerifier.verify(a, b, c, input)` returns. Enforcing
-  `||T||_F >= Theta_r` is the manager's job (§5.2.2 of the plan), which keeps
-  economic parameters out of the circuit and the trusted setup. With no proof in
-  the blob the registry reverts with `InvalidZKProof`.
+  `view` and takes `(epoch, validator, certifiedNorm, proof)`: it builds the
+  statement `[statementRoot, epoch, uint160(validator), certifiedNorm]` from its
+  own state (so a caller cannot inject a root or a validator) and returns
+  whatever `IZKThresholdVerifier.verify(a, b, c, input)` returns. The Poseidon
+  root it reads is `statementRootOf(epoch)`, a slot separate from the keccak
+  `commitmentOf(epoch)` that `verifyEntry` folds (audit P-16). Because the
+  validator is a public input and the leaf is `Poseidon(validator, norm)`, a
+  proof admits exactly one address: it is not a bearer token (audit P-01).
+  Enforcing `T(v) >= Theta_r` is the manager's job (§5.2.2 of the plan), which
+  keeps economic parameters out of the circuit and the trusted setup. With no
+  proof in the blob the registry reverts with `InvalidZKProof`.
 - **A role cannot rotate itself (M9a, plan §12.1.2).** The constructor takes an
   immutable `guardian` and `setSequencer`/`setVerifier` are gone. Each role now
   changes in three steps: `propose*` is `onlyGuardian`, rejects `address(0)` and
@@ -87,9 +91,9 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
 
 ### What `AVIPValidatorManager` fixes
 
-- **Hybrid admission** `CoA = S_f + C_R(T) >= Theta`, with the paper's closed
+- **Hybrid admission** `CoA = S_f + C_R(T(i)) >= Theta`, with the paper's closed
   forms: `C_R(r) = 0.8 * r / (1 + r)` and
-  `S_f*(T) = max{0.2, 1.0 - C_R(||T||_F)}`. All arithmetic is WAD (`1e18`) and
+  `S_f*(r) = max{0.2, 1.0 - C_R(T(i))}`. All arithmetic is WAD (`1e18`) and
   integer-only; `THETA = 1e18` (Payment Rule, frozen at genesis), `CR_INF = 8e17`
   and `S_MIN = 2e17` (`verification/mechanism/financial_floor_sensitivity.py`),
   `THETA_R = 5e17` (ZK section, `[CONJECTURE]`, enforced **here** and not in the
@@ -98,7 +102,9 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
 - **The norm is certified, never trusted.** `admit(validator, financialStake,
   certifiedNorm, proof)` rejects a caller-declared norm below `THETA_R` and then
   has `AVIPRegistry.verifyThreshold` certify that exact value against the current
-  epoch's root. The proof binds the pair `(norm, epoch)`.
+  epoch's Poseidon root. The proof binds the tuple
+  `(root, epoch, validator, norm)`, and the circuit's leaf binds the validator to
+  its norm, so a proof cannot be replayed by another address (P-01).
 - **Non-custodial** (plan §5.2.3): the manager declares `financialStake`, stores
   it and emits it; it never transfers or holds a token. There is no ERC-20 and no
   native-value path.
@@ -162,14 +168,15 @@ contracts below are what it was waiting for.
   asymmetry documented in `Bn254`: `0x08` on a rejected input **consumes the
   whole gas budget**, so a caller must not treat "out of gas" as a `false`.
 - **The public inputs are the registry's, and the fixture is a placeholder.** The
-  statement is `[root, epoch, certifiedNorm]` built by `AVIPRegistry`; nothing
-  else is read from the caller. `../test/fixtures/Groth16Fixtures.sol` is a
-  **synthetic** BN254 instance produced by
-  `../scripts/generate_groth16_fixtures.py` (see its header for what that does and
-  does not prove): it exercises the verifier against the real precompiles, but it
-  is not a circuit, has no witness and makes no soundness claim. Replacing it with
-  a proof from the real circuit is a re-generation, not a rewrite: only the
-  Verifying Key and the fixture change.
+  statement is `[statementRoot, epoch, uint160(validator), certifiedNorm]`, built
+  by `AVIPRegistry`; nothing else is read from the caller. The fixture described
+  here is the legacy **synthetic** BN254 instance used to exercise the wrapper's
+  edge cases; the real admission key and proofs live in
+  `../test/fixtures/M4dGroth16Fixtures.sol` and are checked end to end by
+  `../test/M4dRealKey.t.sol`. `../test/fixtures/Groth16Fixtures.sol` is produced
+  by `../scripts/generate_groth16_fixtures.py` (see its header for what that does
+  and does not prove): it exercises the verifier against the real precompiles,
+  but it is not a circuit, has no witness and makes no soundness claim.
 
 ## Interfaces are provisional
 
@@ -208,7 +215,10 @@ more. M7d fixes what they are on the wire and what each one does on arrival:
 - **What each type records.** A commitment is recorded once per `(source, epoch)`
   — root, statement root, link and delta, with the epoch's root read from
   `AVIPRegistry` rather than from the caller, and the link re-derived from the
-  payload's own words on arrival. A collusion alert records the two tail decisions
+  payload's own words on arrival. (The statement root here is **M7c's**
+  tensor-commitment root, the one the link ties to the fold; the admission root
+  M4d proves against is a different number and never travels — plan §5.11 shows
+  both legs and why the numbers differ.) A collusion alert records the two tail decisions
   and the calibration they were decided against, once per epoch, so the flag set
   only grows. A slashing notification calls `AVIPValidatorManager.slash` with a
   `reason` **derived from the envelope** (`keccak256(sourceChain ‖ nonce)`), so no

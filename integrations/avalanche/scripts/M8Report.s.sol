@@ -10,7 +10,7 @@ import {AVIPValidatorManager} from "../contracts/AVIPValidatorManager.sol";
 import {Groth16Verifier} from "../contracts/verifiers/Groth16Verifier.sol";
 import {IAVIPValidatorManager} from "../contracts/interfaces/IAVIPValidatorManager.sol";
 import {MockBurnableERC20} from "../test/mocks/MockBurnableERC20.sol";
-import {M4bGroth16Fixtures as F4b} from "../test/fixtures/M4bGroth16Fixtures.sol";
+import {M4dGroth16Fixtures as F4d} from "../test/fixtures/M4dGroth16Fixtures.sol";
 import {M8CustodyFixtures as F8} from "../test/fixtures/M8CustodyFixtures.sol";
 
 /// @title M8Report
@@ -23,7 +23,7 @@ import {M8CustodyFixtures as F8} from "../test/fixtures/M8CustodyFixtures.sol";
 /// @dev `scripts/m8_report.sh` runs this script and pins its `[m8]` lines to
 ///      `scripts/m8_output.txt`, then checks the numbers against the transcripts
 ///      of the milestones they come from (M7a's policy read-back, M7d's stake
-///      trajectory and slashing reason, M4b's certified norm) in both directions.
+///      trajectory and slashing reason, M4d's certified norm) in both directions.
 ///
 ///      **Nothing is broadcast and nothing is live.** `forge script` without
 ///      `--broadcast` simulates locally; `--offline` keeps it hermetic. There is no
@@ -31,7 +31,7 @@ import {M8CustodyFixtures as F8} from "../test/fixtures/M8CustodyFixtures.sol";
 ///      doubles (`../test/mocks/MockBurnableERC20.sol`), because the subject here
 ///      is the custody boundary and its accounting, not a live ERC-20 — while the
 ///      **proof is real**: admission goes through the frozen `Groth16Verifier` with
-///      M4b's development key and fixture, exactly as `test/M4bRealKey.t.sol` and
+///      M4d's development key and fixture, exactly as `test/M4dRealKey.t.sol` and
 ///      M7d's report do.
 ///
 ///      **The addresses are this script's own CREATEs**, identical from run to run
@@ -57,8 +57,8 @@ contract M8Report is DeployCommon {
     ///      sequencer above, which is what §12.1.2 requires of the pair).
     address internal constant GUARDIAN = ANVIL_3;
     address internal constant SLASH_AUTHORITY = ANVIL_2;
-    address internal constant VALIDATOR = 0x90F79bf6EB2c4f870365E785982E1f101E93b906;
-    address internal constant STRANGER = 0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65;
+    address internal constant VALIDATOR = address(uint160(F4d.STATEMENT_VALIDATOR));
+    address internal constant STRANGER = address(uint160(F4d.STATEMENT_VALIDATOR_OTHER));
 
     MockBurnableERC20 internal token;
     AVIPBurnSink internal sink;
@@ -93,7 +93,7 @@ contract M8Report is DeployCommon {
         token = new MockBurnableERC20("Mock USD", 6);
         sink = new AVIPBurnSink(address(token));
         vault = new AVIPStakeVault(address(token), address(sink), F8.WAD_PER_UNIT);
-        verifier = new Groth16Verifier(F4b.verifyingKey());
+        verifier = new Groth16Verifier(F4d.verifyingKey());
         registry = new AVIPRegistry(SEQUENCER, address(verifier), GUARDIAN);
         manager = new AVIPValidatorManager(address(registry), SLASH_AUTHORITY, address(vault));
         vm.stopBroadcast();
@@ -131,7 +131,7 @@ contract M8Report is DeployCommon {
     ///      §12.1.2/M9b), which is what makes the two milestones commensurable.
     function _escrowAndAdmission() internal {
         vm.prank(SEQUENCER);
-        registry.postCommitment(0, bytes32(F4b.STATEMENT_ROOT), N);
+        registry.postCommitment(0, keccak256("tensor"), F4d.STATEMENT_ROOT, N);
 
         // Fund and approve the *whole* lifecycle in one go: the deposit (pulled
         // into escrow) and the fee (pulled straight to the sink). The reads happen
@@ -147,9 +147,9 @@ contract M8Report is DeployCommon {
         uint256 credited = vault.deposit(F8.ESCROW_UNITS);
 
         vm.prank(VALIDATOR);
-        manager.admit(VALIDATOR, F8.M7D_ADMIT_STAKE, F4b.STATEMENT_NORM, F4b.proof());
+        manager.admit(VALIDATOR, F8.M7D_ADMIT_STAKE, F4d.STATEMENT_NORM, F4d.proof());
 
-        _m8("admit.certifiedNorm", vm.toString(F4b.STATEMENT_NORM));
+        _m8("admit.certifiedNorm", vm.toString(F4d.STATEMENT_NORM));
         _m8("admit.declared", vm.toString(manager.stakeOf(VALIDATOR)));
         _m8("admit.collateral", vm.toString(manager.collateralOf(VALIDATOR)));
         _m8("escrow.credited", vm.toString(credited));
@@ -260,7 +260,9 @@ contract M8Report is DeployCommon {
         //    applies to the call inside `try` (a script must not call back into
         //    itself: `address(this)` is ephemeral by definition).
         vm.prank(STRANGER);
-        try manager.admit(STRANGER, F8.M7D_ADMIT_STAKE, F4b.STATEMENT_NORM, F4b.proof()) {
+        try manager.admit(
+            STRANGER, F8.M7D_ADMIT_STAKE, F4d.STATEMENT_NORM_OTHER, F4d.proofOther()
+        ) {
             revert("M8Report: an unbacked declaration was admitted");
         } catch (bytes memory reason) {
             _reject("unbackedAdmission", reason);

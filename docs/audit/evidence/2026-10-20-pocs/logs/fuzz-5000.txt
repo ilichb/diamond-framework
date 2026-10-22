@@ -1,0 +1,19 @@
+No files changed, compilation skipped
+
+Ran 3 tests for test/M7dTransport.t.sol:M7dTransportTest
+[PASS] testFuzz_anyUncommittedEpochIsRefused(uint256) (runs: 5000, μ: 21870, ~: 21870)
+[PASS] testFuzz_theEnvelopeIsInjectiveInItsNonce(uint256,uint256) (runs: 5000, μ: 6985, ~: 6985)
+[PASS] testFuzz_theProvenanceIdIsInjective(bytes32,bytes32,uint256,uint256) (runs: 5000, μ: 5094, ~: 5094)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 450.81ms (1.03s CPU time)
+
+Ran 2 tests for test/AVIPValidatorManager.t.sol:AVIPValidatorManagerTest
+[PASS] testFuzz_admissionInvariant(uint256,uint256) (runs: 5000, μ: 398683, ~: 365766)
+[PASS] testFuzz_policyIsBoundedAndComplementary(uint256) (runs: 5000, μ: 12894, ~: 12237)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 1.13s (1.38s CPU time)
+
+Ran 2 tests for test/M8StakeVault.t.sol:M8StakeVaultTest
+[PASS] testFuzz_conservation_theBalanceIsTheLedger(uint96,uint96) (runs: 5000, μ: 183181, ~: 186078)
+[PASS] testFuzz_slashTakesTheRecordAndKeepsTheInvariant(uint96,uint16) (runs: 5000, μ: 432166, ~: 432369)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 2.20s (3.27s CPU time)
+
+Ran 3 test suites in 2.21s (3.78s CPU time): 7 tests passed, 0 failed, 0 skipped (7 total tests)

@@ -14,8 +14,10 @@
 //!
 //! The script also checks the table against `M4bGroth16Fixtures.sol` (the
 //! `STATEMENT_ROOT` / `STATEMENT_EPOCH` / `TENSOR_DIGEST` it prints are the ones
-//! the contract test installs), which is what makes the bridge answer to the
-//! emitted artifact and not only to this crate's own idea of it.
+//! the M4b fixture declares), which is what makes the bridge answer to the
+//! emitted artifact and not only to this crate's own idea of it. The fixture is
+//! historical after M4d (P-01/P-16): it fixes the global statement this bridge
+//! was built for, and admission no longer consumes it.
 
 use std::fmt::Write as _;
 

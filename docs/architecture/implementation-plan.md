@@ -185,7 +185,7 @@ claim they trace to; **no invented constants**.
 | M1 | Reputation registry | A1 | `contracts/AVIPRegistry.sol` — **done** | Merkle root per epoch; inclusion proof; rejects a root violating `γ·N = 0.10·500` (Data Layer) |
 | M2 | Validator manager | A2 | `contracts/AVIPValidatorManager.sol` — **done** | `S_f*(T) = max{0.2, Θ − C_R(T)}` with `C_R(r)=0.8r/(1+r)`; admission and slashing events; vectors match `verification/mechanism/` |
 | M3 | ZK verifier | A3 | `contracts/verifiers/Groth16Verifier.sol` — **done** (§5.4) | Groth16 k=4 over BN254 via 0x06/0x07/0x08; gas ≈ 206k (cross-check `GasBenchmarks.sol`; 223,445 measured on the deployed shape, §5.4) |
-| M4 | Off-chain prover | A4, A11 | `src/zk/` (Rust) — **M4a, M4b and M4c done** (§5.5.8–§5.5.10) | Bulletproofs aggregated range proof over the 500-entry tensor (`512 × 64` padded, measured 1248 B against the paper's 0.72 KB, §5.5.8); the in-circuit commitment is **V3** — `D-M4-0` closed in M4c (§5.5.10); the derived key and proof are accepted by the frozen contracts (§5.5.9); reports local proving time (**3.9 s** against §5.5.4's 120 s gate); the *paper-literal* recursive SNARK stays open (§5.5.7) |
+| M4 | Off-chain prover | A4, A11 | `src/zk/` (Rust) — **M4a, M4b, M4c and M4d done** (§5.5.8–§5.5.11) | Bulletproofs aggregated range proof over the 500-entry tensor (`512 × 64` padded, measured 1248 B against the paper's 0.72 KB, §5.5.8); the in-circuit commitment is **V3** — `D-M4-0` closed in M4c (§5.5.10); the derived key and proof are accepted by the frozen contracts (§5.5.9); M4d binds the proof to one validator by leaf inclusion and separates the Poseidon statement root from the keccak commitment (audit P-01/P-16, §5.5.11); reports local proving time (**3.9 s** against §5.5.4's 120 s gate); the *paper-literal* recursive SNARK stays open (§5.5.7) |
 | M5 | RMT detector | A5 | `src/rmt/` — **done** (§5.6) | Reproduces `q99 = 9.0542` (right tail) and `−λ_min > 9.1371` (left tail) from `verification/rmt/`, without editing it |
 | M6 | Reputation dynamics | A6 | `src/reputation/` — **done** (§5.7.1) | `C_R(r)` closed form, WAD parity with M2's deployed reader (`collateralFor(Θ_R)`/`requiredStakeFor(Θ_R)` pinned) + the epoch commitment in M1's convention; positivity under multiplicative jumps (paper §2) — F-001 reproduced: additive **40.2510%** against the sealed **40.5800%** (0.3290 pp, inside `3·SE`), multiplicative **0.000000%** by construction; the IDE solver reproduces `cr_ide_solver_output.txt` (14-point grid, two regimes, `r_0`, monotone, `π(r)/r → 0.799992`) |
 | M7 | Data layer, deploy, AWM | A7, A8, A9 | `src/datalayer/` + `src/zk/src/bridge.rs` + `contracts/AVIP*` + `scripts/` — **M7a, M7b, M7c and M7d done** (§5.8, §5.9, §5.10, §5.11) | Fraud-proof equilibrium `n*(B)=⌊B/B*⌋`, `S_slash=10` (Data Layer): the sealed table reproduced row by row on numpy's own stream (`scripts/m7b_output.txt`), with `eq:ingestion` delivered as an interface plus the three-valued fraud proof (§5.9); the Pedersen/Poseidon ↔ keccak bridge ties the statement's `root` to the registry's Merkle root **over M1's own fold**, off-chain and recomputable (`src/zk/src/bridge.rs`, `src/zk/scripts/m7c_output.txt`, §5.10); the three Teleporter/AWM message types of §4 exist as a wire format plus one contract per type, with per-kind origin allowlists, at-most-once delivery, the commitment recorded once per epoch, the alert flag that cannot be erased and the slashing notification whose `reason` is derived from the envelope (`contracts/AVIP*`, `scripts/m7d_output.txt`, `test/M7dTransport.t.sol`, §5.11) — all of it offline against a Teleporter double; the phase-1 `Deploy*.s.sol` exist and are verified offline, and phase 1 is deployed on Fuji (chain 43113, 2026-10-19T01:46:52Z UTC, `verifier = address(0)`); the transport and the phase-4 L1 remain open |
@@ -268,6 +268,14 @@ so this is now a tested property: `test/Groth16Verifier.t.sol` passes a genuine
 proof for `Θ_r` together with a declared `Θ_r + 1` and gets `InvalidZKProof`. The
 *norm itself* is still only as sound as the circuit and the Pedersen ↔ Merkle
 bridge, which do not exist yet (M4, §5.4).
+
+> **Superseded by M4d (§5.5.11).** Audit findings P-01 and P-16 showed that this
+> three-word statement admits a proof for any validator, and that storing the
+> Poseidon root in `commitmentOf(epoch)` gave one slot two meanings. The
+> registry now keeps `statementRootOf(epoch)` beside `commitmentOf(epoch)` and
+> `verifyThreshold(epoch, validator, certifiedNorm, proof)` builds
+> `[statementRoot, epoch, validator, certifiedNorm]`. The M2 text above is the
+> recorded history of that milestone; the current interface is §5.5.11.
 
 #### 5.2.2 Circuit semantics and the M3 bridge
 
@@ -1019,7 +1027,8 @@ end-to-end prover, the binding checks), the two drivers `src/zk/src/m4b.rs` and
 `src/zk/scripts/{m4b_report.sh,m4b_fixture.sh}` with the pinned
 `src/zk/scripts/m4b_output.txt`. On the contract side it added
 `integrations/avalanche/test/fixtures/M4bGroth16Fixtures.sol` (emitted by
-`src/zk`) and `integrations/avalanche/test/M4bRealKey.t.sol`, and edited no
+`src/zk`) and `integrations/avalanche/test/M4bRealKey.t.sol` (retired by M4d,
+§5.5.11), and edited no
 contract: nothing under `integrations/avalanche/contracts/` changed.
 
 Measured over the §5.5.6 fixture, on this machine:
@@ -1057,9 +1066,10 @@ equation for `c` with no witness; M4b's has one. The fixture is the deterministi
 500-entry tensor of §5.5.6, the circuit is V3 (`Σ T_i²` and its floor predicate,
 plus the Poseidon commitment of the same entries), and the statement is the vector
 `AVIPRegistry.verifyThreshold` builds from its own storage:
-`[commitmentOf(epoch), epoch, certifiedNorm]`. `test/M4bRealKey.t.sol` installs
-the real key in the frozen `Groth16Verifier` and gets `true` back, then posts the
-certifying root as the sequencer and gets `true` from `verifyThreshold` itself.
+`[commitmentOf(epoch), epoch, certifiedNorm]`. `test/M4bRealKey.t.sol` (retired
+by M4d, §5.5.11) installed the real key in the frozen `Groth16Verifier` and got
+`true` back, then posted the certifying root as the sequencer and got `true`
+from `verifyThreshold` itself.
 
 **The epoch is bound, and the test that says so is the interesting one.** An
 *unused* public input keeps the identity as its `gamma_abc_g1` entry, so the
@@ -1195,6 +1205,136 @@ Still open, and unchanged by M4c: the *paper-literal* recursive construction
 (§5.5.5, §5.5.7); the Pedersen ↔ Merkle bridge (M7); a multi-party ceremony and an
 audit (§11). `D-M4-0` is closed as **V3** (§10 D-6), which is the variant M4b had
 already installed, so no artefact on either side of the boundary changes.
+
+#### 5.5.11 M4d — admission binding and the two roots (audit P-01/P-16)
+
+M4b proved a *global* norm over the 500-entry tensor and said nothing about the
+validator. The verifier therefore accepted a **bearer token**: one valid proof
+could be presented by any address. That is audit finding **P-01**, and M4d
+replaces the statement rather than adding a check around it.
+
+The admission circuit proves inclusion of one leaf:
+
+```text
+leaf_i  = Poseidon(validator_i, norm_i)
+root    = Poseidon Merkle root over 2^9 leaves (500 real, zero-padded)
+public  = [statementRoot, epoch, validator, norm]
+witness = (Merkle path, leaf index)
+```
+
+`validator` and `norm` are constrained *inside* the leaf, so a proof for one
+validator cannot admit another; the path and index are private, so one key
+serves every index. The circuit also constrains `validator < 2^160`, a non-zero
+address, `epoch < 2^64` and `norm < 1e18` (P-33). The norm bound is **strict**:
+`norm == 1e18` (one entry at `1.0`, the rest zero) has no witness, so the
+admitted domain is the paper's `[0, 1]` without its upper edge. That is a
+completeness edge, not a soundness one — an over-`1.0` norm cannot be proved,
+and `tests/admission_statement.rs` pins both sides of the edge (`WAD` and
+`WAD + 1` must fail).
+
+**P-16 — one slot, one meaning.** The Poseidon root no longer overwrites the
+keccak commitment. `AVIPRegistry` stores them in separate per-epoch slots:
+`commitmentOf(epoch)` remains M1's keccak fold used by `verifyEntry`, and
+`statementRootOf(epoch)` is the Poseidon root the threshold proof consumes.
+Both are written in one post:
+
+```solidity
+function postCommitment(uint256 epoch, bytes32 commitment, uint256 statementRoot,
+                        uint32 changedEntries) external;
+function verifyThreshold(uint256 epoch, uint256 validator, uint256 certifiedNorm,
+                         bytes calldata proof) external view returns (bool);
+```
+
+`verifyThreshold` builds `[statementRootOf(epoch), epoch, validator,
+certifiedNorm]` from its own storage, so the caller still supplies only the norm
+and the proof.
+
+**Where the leaf's norm comes from — and what the chain does not check (P-03).**
+The number in the leaf is `Entry.norm_wad`, the data layer's per-validator
+scalar, and it is the same field M1's keccak leaf hashes
+(`abi.encodePacked(address, uint256)`, `commitment.rs`): the two trees of one
+epoch commit to one `(validator, norm)` pair when both are built from the same
+entries. M4d's fixture builds both from `fixture::tensor()`, and its
+`TENSOR_DIGEST` is pinned to `c2309377…`, so the committed proof *is* over the
+tensor the other fixtures digest. What `verifyThreshold` establishes is
+membership, plus the validator and epoch bindings; it does **not** establish that
+the statement root came from that tensor, because the registry never sees the
+entries and cannot recompute either root. "Both roots came from one entry set" is
+therefore the sequencer's assertion — made atomic by writing both in one
+`postCommitment`, and auditable by anyone holding the epoch — not an on-chain
+tie. `test/M4dRootSeparation.t.sol` writes that boundary down as a test instead
+of leaving it implied; closing it needs the commitment as a circuit input, which
+is §5.5.7's recursive construction and costs the prover the whole vector.
+
+**The domain of `norm` has a price (P-03, P-33).** `norm < 1e18` is the domain of
+`Entry.norm_wad`, not the paper's `‖T‖_F ∈ [0, √500]` for a 20×5×5 block. With
+`C_R(r) = 0.8r/(1+r)`, `C_R(1) = 0.4`, so the per-validator reading caps the
+discount at 40% and keeps `S_f` in `(0.6, 1]`; with the manager's `Θ_r = 0.5` the
+admitted band is `(0.6, 0.7333]`. The fixture's `0.665564…` gives
+`S_f = 0.680317507197900649` (the number §5.11's M8 report prints); the global
+reading M4b certifies (`12.793810…`) gives `0.257997028195075875`. `S_min = 0.2`
+is the `r → ∞` limit and is unreachable in either. The strict bound itself
+removes only `r = 1` — a completeness edge — so the 40% cap is P-03's
+per-validator semantics, not P-33's bound. The paper has to say which `r` it
+prices before v0.2.2 repeats `C_R` and `S_min`.
+
+**What M4d costs, measured.** The admission circuit is **4,827 constraints**
+(§5.5.9's 94,438 is V3, the commitment circuit admission no longer runs), with
+**≈0.45 s** setup and **≈0.33 s** prove in `--release` on this machine, dev key
+(two runs: 452.9/331.4 ms and 457.8/336.9 ms — the shape is reproducible, the
+clock is not). On chain, `Groth16Verifier.verify` with five `ic` points is
+**234,284 gas**; `AVIPRegistry.verifyThreshold` is **306,252** on the cold path
+(the convention the v0.2.1 note uses for V3's 286,144) and **247,210** warm
+(`test/M4dRealKey.t.sol` logs and bounds all three). A v0.2.2 that describes M4d
+has to use these figures: the paper's 94,438 constraints and 3.9 s, and the
+note's 286,144 gas, describe V3. The note's **2.39×** and **1.82×** ratios also
+move with them, and the full `manager.admit` path (376,588 gas for V3) is **not**
+re-measured here, so neither ratio can be restated until that path is measured
+again.
+
+**Artefacts.** `src/zk/scripts/m4d_fixture.sh` emits
+`integrations/avalanche/test/fixtures/M4dGroth16Fixtures.sol` with the admission
+key, two inclusion proofs (for `STATEMENT_VALIDATOR` and
+`STATEMENT_VALIDATOR_OTHER`), the four-word statement and the on-chain
+`keccak256(abi.encode(vk))` digest. `test/M4dRealKey.t.sol` installs the key in
+the frozen verifier, accepts the proof through `AVIPRegistry.verifyThreshold`,
+and rejects a replay for another validator, the same roots at the next epoch,
+any changed statement word and a tampered norm. The M4b proof is no longer
+admitted by the manager; the M4b fixture stays only because §5.10's bridge tests
+read its historical global statement.
+
+| Quantity | M4d |
+|---|---|
+| Public inputs | **4** — `[statementRoot, epoch, validator, norm]` |
+| `ic` | **5** points → 27 ABI words / 864 bytes on-chain |
+| Tree | Poseidon, depth 9, 512 leaves (500 real), private path and index |
+| Proof | **256 B on-chain** |
+| Circuit | **4,827 constraints** (V3's 94,438 is the commitment circuit) |
+| Proving (dev, `--release`) | **0.33 s** prove, **0.45 s** setup, one run |
+| Gas | **234,284** `Groth16Verifier.verify`; **306,252** cold / **247,210** warm `verifyThreshold` |
+| Key | *development* key; one contributor, seeds committed, no security claim (§11) |
+
+Validated locally: `cargo test` → **47 passed, 0 failed, 1 ignored**;
+`forge test --offline` → **274 passed, 0 failed, 0 skipped** over ten suites
+(`AVIPRegistry.t.sol` is 52, `M4dRootSeparation.t.sol` is 6); `bash
+src/zk/scripts/m4d_fixture.sh` → byte-identical across runs
+(`md5 efe3ba62ee6daa1fc62f958704344579`); `forge fmt --check` → 0 diffs;
+`scripts/m7d_report.sh` → **62 rows**, md5
+`8a1dd78f824930144625441aed821797`; `scripts/m8_report.sh` → **42 rows**, md5
+`55641a9f611c3ce64d35ffc7b8076a4f`. Both report guards pass: `m7d` still ties
+M5's, M7b's and M7c's numbers to the wire — the relay leg keeps M7c's tensor-commitment
+root and link, while the admission leg now runs on this fixture's root, and §5.11 spells
+out why those are two different numbers — and `m8` reads this fixture's
+`STATEMENT_NORM` out of the file (rather than copying it into M8's own fixture) and
+requires the norm the report admitted to be that value, then still reproduces the
+admission before the fee, slash and conservation sections.
+
+Still open: the ceremony and an external audit (§11), and the paper-literal
+recursive construction (§5.5.7). P-01's *off-chain* half — whether the certified
+norm tracks events rather than the tensor — remains §7's problem, as the audit
+triage records; and P-03's semantic choice is now **made in code** (one scalar per
+validator) without the paper saying so, which the two paragraphs above record as
+the decision a v0.2.2 must narrate or reverse.
 
 ### 5.6 M5 as delivered (off-chain RMT detector)
 
@@ -1543,11 +1683,11 @@ paper states; no new constant enters.
 
 **Deliberately not done**, each with its reason rather than as an omission:
 
-- **No threshold verifier is deployed.** The only key in the repository is M4b's
-  *development* key over a ceremony-less circuit, so installing it on a shared
-  testnet would present a development key as a deployment. `VERIFIER` defaults to
-  `address(0)`, which `AVIPRegistry` accepts and then refuses to certify with
-  (`VerifierNotSet`).
+- **No threshold verifier is deployed.** The only keys in the repository are M4b's
+  and M4d's *development* keys over ceremony-less circuits, so installing one on
+  a shared testnet would present a development key as a deployment. `VERIFIER`
+  defaults to `address(0)`, which `AVIPRegistry` accepts and then refuses to
+  certify with (`VerifierNotSet`).
 - **No network in the M7a transcript.** The dry run uses a fresh EVM and therefore
   reports **no gas or latency number**; it excludes both on purpose so it stays
   stable across machines. The phase-1 Fuji run is separate: its gas is in
@@ -1818,6 +1958,17 @@ implementation written from the contract's rule (ordered pair, odd node promoted
 rather than against the crate it borrows, and `root_bytes`/`uint256_decimal` are
 what make the statement root comparable to `STATEMENT_ROOT` as Solidity prints it.
 
+**Scope note added after M4d (§5.5.11).** The `root` this link ties to the fold is
+V3's **tensor commitment** — the M4b statement. M4d replaced the *admission*
+statement with a per-epoch Poseidon Merkle root over `(validator, norm)` leaves, so
+the link no longer names the root a live admission proof consumes: the registry
+stores that root in `statementRootOf(epoch)` and the fold in `commitmentOf(epoch)`,
+both written by one `postCommitment`. Nothing in this section changes — the tie is
+still recomputable and it is still what M7c's table pins, and M7c's guard still
+checks it in both directions against `M4bGroth16Fixtures` — but a reader should not
+conflate it with the admission root. M7d's report keeps the two legs in separate
+registry instances and §5.11 says why the numbers differ.
+
 **What it does not do**, printed as §4 of the table so it cannot be missed: keccak
 is **not** proved inside the circuit (the proof certifies the norm; the tie is
 off-chain and recomputable by any peer — that is what option (c) means); a verifier
@@ -1888,7 +2039,7 @@ the wire format and the three message contracts of
 `docs/architecture/avalanche-integration.md` §4;
 `integrations/avalanche/test/M7dTransport.t.sol` is the 48-test suite over them; and
 `scripts/M7dReport.s.sol`, `scripts/m7d_report.sh` and the pinned
-`scripts/m7d_output.txt` (63 rows, 13 of them refusals) are the transcript,
+`scripts/m7d_output.txt` (62 rows, 13 of them refusals) are the transcript,
 reproduced by that one command. **A8's phase 1 is deployed; the transport is
 not** — it needs the address of a real `TeleporterMessenger` and per-network
 origin/destination configuration, neither of which an offline milestone or the
@@ -1983,21 +2134,43 @@ constant enters.
    than discarded, so a fresher message cannot erase an older one and an older one cannot
    overwrite a fresher one; an alert arrives with both decisions and its calibration and
    cannot be rewritten; a slashing notification reaches the manager, **ejects** the
-   validator (stake `1.0 → 0.1` against `S_f* = 257997028195075875`, so `isAdmitted` goes
-   false), and the `reason` the manager's own `ValidatorSlashed` event carries is the one
+   validator (the whole record leaves, so `slash.stakeAfter = 0` — §5.13, M9b — while
+   `slash.requiredStake` keeps the `S_f*(r) = 680317507197900649` the admission was
+   priced from, for the certified norm `665564939881284858` M4d's proof binds; a
+   re-entry adds the ejection surcharge, §12.1.2; `isAdmitted` goes false), and the
+   `reason` the manager's own `ValidatorSlashed` event carries is the one
    the destination recorded — checked in the suite and again in the transcript.
 4. **The numbers are the other milestones'.** M5's sealed `q99 = 9.0542`/`9.1371`
    (scaled to the 4 decimals the alert carries), M7b's `f_c` genesis digest and
    adjudicated `Verdict::Fraud` pair (`138673557278208441`/`138673557278208440`), and
-   M7c's root, statement root and link must each appear in the upstream transcript, in
-   the declared fixture and in the fresh run; and the link the *contract* recomputes must
-   be the link M7c published. The guard was exercised **negatively**: with M7c's link
-   perturbed in `src/zk/scripts/m7c_output.txt` the script printed three `FAIL` lines,
-   exited 1 and left the pinned transcript byte-identical.
-5. **The report states its own mode and its own gaps.** It runs offline, prints 63 rows
+   M7c's root, its tensor statement root and the link must each appear in the upstream
+   transcript, in the declared fixture and in the fresh run; and the link the *contract*
+   recomputes must be the link M7c published. The guard was exercised **negatively**:
+   with M7c's link perturbed in `src/zk/scripts/m7c_output.txt` the script printed three
+   `FAIL` lines, exited 1 and left the pinned transcript byte-identical.
+5. **The report states its own mode and its own gaps.** It runs offline, prints 62 rows
    with no gas, no timing and no network address, is byte-identical across runs
-   (`md5 2bf8d16bfa20c1d47fa65690e240f0bd`), and its addresses are `anvil` account 0's
-   CREATEs — so a reader cannot mistake the file for evidence about a chain.
+   (`md5 8a1dd78f824930144625441aed821797` — the bytes M4d regenerated, §5.5.11), and
+   its addresses are `anvil` account 0's CREATEs — so a reader cannot mistake the file
+   for evidence about a chain.
+
+**After M4d, "the statement's root" is two different numbers, and the report shows both.**
+The root the relay announces is M7c's committed Poseidon commitment over the tensor
+(`14881564148789680950073164612164838307833922018127128489011700125541095929892`), the
+one §5.10's link ties to M1's fold. The root the admission proof consumes is M4d's
+per-epoch Merkle root over `(validator, norm)` leaves
+(`6105938163859590773966593243891138936289191320889329618475491144456189011390`,
+§5.5.11), written by `postCommitment` into its own slot of the same registry. The report
+therefore runs two registry instances, one per leg — the relay's root and link are M7c's,
+`admit` is bound to M4d's — and neither number is a restatement of the other. Those two
+deployments are a *reporting* convenience, not a contract constraint: `AVIPRegistry` keeps
+both roots in two slots and one `postCommitment` writes both, and
+`test/M4dRootSeparation.t.sol` exercises the two real roots in a single instance, with the
+two negative directions (M7c's statement root cannot admit, and the admission root cannot
+stand in for M1's fold). The legs stay apart in the transcript because each has to
+reproduce its own pinned numbers, and M7c's link names the V3 statement root, not M4d's.
+The wire format carries the first; the second never travels, because the registry the
+proof is verified against reads it from its own storage.
 
 **Deliberately not done**, each with its reason rather than as an omission: **no
 deployment and no real Teleporter address** (A8's remaining half — a funded key and a
@@ -2024,10 +2197,11 @@ are excluded from `mixed-case-variable` by path, with the reason in `foundry.tom
 that their parameter names stay diffable against upstream); `bash
 scripts/m7d_report.sh` → **13 refusals and `status=ok`**, with
 `scripts/m7d_output.txt` byte-identical across runs
-(`md5 2bf8d16bfa20c1d47fa65690e240f0bd`) and the upstream guards passing in both
-directions, plus the negative run described above; `bash verification/audit-gate.sh` →
-**PASS=11, FAIL=0, SKIP=0**; `git status --porcelain verification/` → 0 lines, so the
-sealed tree is untouched.
+(`md5 2bf8d16bfa20c1d47fa65690e240f0bd` at M7d's delivery; M9b and M4d regenerated it,
+and §5.5.11 pins the current `8a1dd78f824930144625441aed821797`) and the upstream
+guards passing in both directions, plus the negative run described above; `bash
+verification/audit-gate.sh` → **PASS=11, FAIL=0, SKIP=0**; `git status
+--porcelain verification/` → 0 lines, so the sealed tree is untouched.
 
 ## 5.12 M8 as delivered (treasury / custody, gap A2's second half)
 
@@ -2275,11 +2449,11 @@ over 9 suites (of which `test/M8StakeVault.t.sol` is 62, and the amended M2 suit
 34 and M7d's 48 run **unchanged**, which is the compatibility evidence for
 `custody == address(0)`); `forge fmt --check` → 0 diffs; `forge build --offline` → OK;
 `forge lint` → **4 notes, no warning** (the same four `setEnv` calls as before);
-`bash scripts/m8_report.sh` → **6 refusals and `status=ok`** (41 rows), with
+`bash scripts/m8_report.sh` → **6 refusals and `status=ok`** (42 rows), with
 `scripts/m8_output.txt` byte-identical across runs
-(`md5 147064b25244913b7398330f8730baf4`), the fee derived from M7a's `F_0*` and the
+(`md5 55641a9f611c3ce64d35ffc7b8076a4f`), the fee derived from M7a's `F_0*` and the
 deployed scale, the stake trajectory and the slashing reason checked against M7d's
-transcript, and the certified norm against M4b's;
+transcript, and the certified norm against M4d's;
 `bash scripts/deploy_dryrun.sh` → **9 cases**, the three new ones being M8's (the vault
 script with no inputs, the vault script with them, and the manager script handed a custody
 that cannot bind); `bash verification/audit-gate.sh` → unchanged (**PASS=11, FAIL=0,
@@ -2479,7 +2653,9 @@ over 9 suites (257 before M9c; the two M9b expectations stand unchanged);
 one row longer and byte-identical across two runs
 (`md5 d68537cdb33ba64c33f45129c0538646`); `m7d_output.txt` and `m8_output.txt`
 unchanged byte for byte (`40130315ec07f2f3fc469cf43d36e7f1` and
-`2955c738f2c2a56cb0f6936c4b8e5ff8`); `bash verification/audit-gate.sh` → **PASS=11
+`2955c738f2c2a56cb0f6936c4b8e5ff8`) *at M9c's delivery* — M4d later regenerated
+both when the admission statement changed, and §5.5.11 pins the current bytes;
+`bash verification/audit-gate.sh` → **PASS=11
 FAIL=0 SKIP=0**; `bash verification/fase0_anchor.sh --check` → exit 0;
 `git status --porcelain verification/ docs/paper/` → 0 lines.
 
@@ -2499,7 +2675,7 @@ M1 and M2 now implement two of them, and M8 adds the custody pair):
 
 | File | Key surface |
 |------|-------------|
-| `contracts/interfaces/IAVIPRegistry.sol` | `postCommitment(epoch, root, changedEntries)`, `commitmentOf(epoch)`, `changedEntriesOf(epoch)`, `tensorSize()`, `maxDeltaEntries()`, `latestEpoch()`, `verifyEntry(root, leaf, proof)`, `verifyThreshold(epoch, certifiedNorm, proof)` (view) |
+| `contracts/interfaces/IAVIPRegistry.sol` | `postCommitment(epoch, commitment, statementRoot, changedEntries)`, `commitmentOf(epoch)`, `statementRootOf(epoch)`, `changedEntriesOf(epoch)`, `tensorSize()`, `maxDeltaEntries()`, `latestEpoch()`, `verifyEntry(root, leaf, proof)`, `verifyThreshold(epoch, validator, certifiedNorm, proof)` (view) |
 | `contracts/interfaces/IAVIPValidatorManager.sol` | `stakeOf`, `collateralOf`, `requiredStake`, `isAdmitted`, `custody()`, `F0_STAR()`, `admit(validator, financialStake, certifiedNorm, proof)`, `slash(validator, amount, reason)`; events `ValidatorAdmitted(validator, stake, collateral)`, `AdmissionEvaluated(validator, epoch, certifiedNorm, collateral, requiredStake)`, `ValidatorEjected(validator, stake, requiredStake)`, `ValidatorSlashed(validator, amount, reason)`; errors `FinancialStakeNotBacked(financialStake, escrowed)` and `CustodyNotBound(custody)` (§5.12) |
 | `contracts/interfaces/IAVIPCustody.sol` | `escrowed(validator)` (WAD), `manager()`, `bindManager()` (one-shot, called by the manager's constructor), `debit(validator, amount, reason)` (manager-only) — the whole boundary between the manager's record and the funds (§5.12) |
 | `contracts/interfaces/IFundSink.sol` | `receiveFunds(amount, reason)`: the vault transfers first and then *tells* the sink, so the sink needs no allowance and cannot half-accept (§5.12, `D-M8-0`) |
@@ -2521,7 +2697,12 @@ declared epoch delta, because the freshness rule of the Data Layer needs it —
 and added the readers that rule implies. M2 changes `verifyThreshold` (§5.2):
 it becomes `view`, drops the `validator` argument, builds the statement
 `[root, epoch, certifiedNorm]` internally, and moves threshold enforcement to
-the manager. M7d adds the two Teleporter files and they are provisional in a
+the manager. **M4d changes both signatures again** (§5.5.11): `postCommitment`
+takes the keccak `commitment` and the Poseidon `statementRoot` separately (P-16),
+and `verifyThreshold(epoch, validator, certifiedNorm, proof)` restores the
+validator as a *bound* public input, so the statement is
+`[statementRoot, epoch, validator, certifiedNorm]` (P-01). M7d adds the two
+Teleporter files and they are provisional in a
 stronger sense than the rest: they are transcribed from an external project that
 this repository does not vendor, so **nothing here compiles against the real
 messenger** and the transport is validated offline against a double whose limits
@@ -2540,7 +2721,7 @@ are written at the top of `integrations/avalanche/test/mocks/MockTeleporterMesse
 | `q99` (right tail) | `9.0542` | Collusion; `calibration_modularity.py` |
 | left-tail boundary | `−λ_min > 9.1371` | Collusion; `bipartite_power.py` |
 | `F0_STAR` (uniform posted price) | `5e16` (0.05) | Payment Rule (main.tex §6.4); enforced in `AVIPValidatorManager`; IR-safe lower bound on the admissible domain, whose true optimum is 0.07666... (§5.2.3) |
-| Groth16 public inputs `k` | `3` (`[root, epoch, certifiedNorm]`) | §5.2.1; fixed by `AVIPRegistry.verifyThreshold` and `Groth16Verifier` (§5.4) |
+| Groth16 public inputs `k` | `4` (`[statementRoot, epoch, validator, norm]`) | §5.5.11 (M4d; supersedes §5.2.1's `k = 3`); fixed by `AVIPRegistry.verifyThreshold` and `Groth16Verifier` (§5.4) |
 | pairings per verification | `4` | Groth16: `e(−A,B)·e(α,β)·e(vk_x,γ)·e(C,δ)` (§5.4) |
 | `CHANGE_DELAY` (M9a role changes) | `2 days` | **No paper provenance, deliberately**: it appears in no equation of `main.tex` and in no `verification/` script, so it is a deployment constant and not a model parameter (§5.13). `DeployRegistry.s.sol` re-declares it and the dry-run transcript pins it, so §10.2 quotes a value a deployment actually installs |
 | `EJECTION_SURCHARGE` (M9c re-entry, κ) | `1e17` (`0.1` WAD) | **No paper value, deliberately**: the paper names the term symbolically and claims no magnitude for it, so the deployment is where the number lives — `DeployValidatorManager.s.sol` asserts and reports it (`deploy_dryrun_output.txt`, `check.EJECTION_SURCHARGE`) and §9's code→paper rule opens no `verification/` script and no `F-` entry for it. What the paper's rule buys does not depend on the value: `C_R` is untouched by ejections because the term is separate (§5.13) |
@@ -2980,8 +3161,8 @@ solver, §5.7) — all three crates build offline, pass `cargo clippy --all-targ
 -- -D warnings` and `cargo fmt --check`, and publish a byte-stable report artefact
 reproduced by one command each; the sealed tree is untouched (`PASS=11, FAIL=0`).
 
-M4a, M4b and M4c are delivered
-(§5.5.8, §5.5.9, §5.5.10): the crate under
+M4a, M4b, M4c and M4d are delivered
+(§5.5.8, §5.5.9, §5.5.10, §5.5.11): the crate under
 `src/zk/` measures the inner layer, derives the real key, and decides `D-M4-0` on
 both variants through one statement wrapper, and every number
 either note quotes is in `src/zk/scripts/{m4a,m4b}_output.txt`, reproduced by one
@@ -2990,7 +3171,11 @@ deterministic fixture end to end, and got it accepted by the unmodified
 `Groth16Verifier` and `AVIPRegistry.verifyThreshold` — the fixture is a real proof
 now, not a solved equation. M4c then built **V2′** and measured it against V3
 through that same wrapper, which is what closed `D-M4-0` as **V3** (§5.5.10) — the
-variant M4b had already installed, so the decision cost no artefact. **M5 is
+variant M4b had already installed, so the decision cost no artefact. M4d then
+closed audit **P-01** and **P-16** (§5.5.11): the admission proof is a Poseidon
+leaf inclusion over `(validator, norm)`, so it is no longer a bearer token, and
+the registry keeps the Poseidon `statementRootOf(epoch)` in a slot separate from
+the keccak `commitmentOf(epoch)` that `verifyEntry` folds. **M5 is
 delivered too** (§5.6): `src/rmt/` reproduces the sealed RMT calibration
 *exactly* — `q99 = 9.0542` right and `9.1371` left, plus both power tables and the
 single-draw `W`/`A_sym`/`B` table — by resuming numpy's own PCG64 stream, and it
@@ -3076,7 +3261,8 @@ Delivered by M4b (§5.5.9): `src/zk/src/{groth16,m4b,m4b_fixture}.rs`,
 `src/zk/tests/groth16_statement_shape.rs`, `src/zk/scripts/{m4b_report.sh,m4b_fixture.sh}`
 with the pinned `src/zk/scripts/m4b_output.txt`, and on the contract side
 `integrations/avalanche/test/fixtures/M4bGroth16Fixtures.sol` (emitted by
-`src/zk`) plus `integrations/avalanche/test/M4bRealKey.t.sol`. No file under
+`src/zk`) plus `integrations/avalanche/test/M4bRealKey.t.sol` (retired by M4d,
+§5.5.11). No file under
 `integrations/avalanche/contracts/` was edited: the real key and the real proof
 are accepted by the contracts exactly as M3 froze them. Validated locally:
 `cargo test` → *19 passed, 0 failed, 1 ignored*; `cargo clippy --all-targets -- -D
@@ -3108,3 +3294,19 @@ report scripts re-run → their committed outputs byte identical;
 `bash verification/audit-gate.sh` → *PASS=11, FAIL=0*. What M4c delivered,
 measured rather than argued, is the verdict M4a and M4b could not: **V3**. What it
 did **not** deliver is the paper-literal recursive construction (§5.5.7).
+
+Delivered by M4d (§5.5.11): `src/zk/src/admission.rs` (the Poseidon leaf, the
+2^9-leaf tree, the in-circuit path and index, the four-word statement),
+`src/zk/src/m4d_fixture.rs` and `src/zk/scripts/m4d_fixture.sh`, the pinned
+`src/zk/scripts/m4d_output.txt`, and on the contract side
+`integrations/avalanche/test/fixtures/M4dGroth16Fixtures.sol`,
+`integrations/avalanche/test/M4dRealKey.t.sol` and
+`integrations/avalanche/test/M4dRootSeparation.t.sol`. The contracts gained the second
+per-epoch root (`statementRootOf`) and the 4-argument `postCommitment` /
+`verifyThreshold`; `M4bRealKey.t.sol` was retired while the M4b fixture stayed
+for §5.10's bridge tests. Validated locally: `cargo test` → *47 passed, 0 failed,
+1 ignored*; `forge test --offline` → *274 passed, 0 failed, 0 skipped* over ten
+suites;
+`forge fmt --check` clean; `m7d_report.sh` → *62 rows*, `m8_report.sh` → *42
+rows*, both byte-stable and guard-clean. The keys remain **development** keys
+(§11); what M4d closes is the statement's semantics, not its ceremony.

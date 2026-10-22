@@ -11,9 +11,9 @@ import {IAVIPValidatorManager} from "./interfaces/IAVIPValidatorManager.sol";
 /// @dev Milestone M2 of `docs/architecture/implementation-plan.md` (§5.2). The
 ///      rule is the paper's payment rule, in WAD:
 ///
-///        `CoA(i)  = S_f(i) + C_R(||T||_F) >= Theta`
+///        `CoA(i)  = S_f(i) + C_R(T(i)) >= Theta`
 ///        `S_f*(r) = max{ S_min, Theta - C_R(r) }`
-///        `C_R(r)  = C_R^inf * r / (1 + r)`, `C_R^inf = 0.8`, `r = ||T||_F`
+///        `C_R(r)  = C_R^inf * r / (1 + r)`, `C_R^inf = 0.8`, `r = T(i)`
 ///
 ///      With `Theta = 1.0` and `C_R^inf = 0.8`, `Theta - C_R(r) =
 ///      0.2 + 0.2/(1 + r) > S_min = 0.2` for every finite `r`: the floor is
@@ -29,10 +29,10 @@ import {IAVIPValidatorManager} from "./interfaces/IAVIPValidatorManager.sol";
 ///      history and go negative for a serial ejectee.
 ///
 ///      Division of labour with the registry (§5.2.1, §5.2.2):
-///        - the registry certifies the **exact** norm (`||T||_F =
-///          certifiedNorm`) from its own committed root, and is `view`: it holds
-///          no per-validator state, so nobody can consume a proof slot that is
-///          not theirs;
+///        - the registry certifies the **exact** per-validator norm
+///          (`T(v) = certifiedNorm`) from its own committed Poseidon root, and
+///          is `view`: it holds no per-validator state, so nobody can consume a
+///          proof slot that is not theirs;
 ///        - this contract enforces the admission threshold
 ///          (`certifiedNorm >= Theta_r`), the stake rule and the anti-replay
 ///          rule (`!isAdmitted[validator]`).
@@ -81,7 +81,7 @@ contract AVIPValidatorManager is IAVIPValidatorManager {
     /// @dev Exposed here and *collected* only by the custody contract, which reads
     ///      this value so the policy has one source of truth (§5.12): M2 itself
     ///      moves no token. On the
-    ///      admissible domain `||T||_F >= Theta_r` the optimum is
+    ///      admissible domain `T(i) >= Theta_r` the optimum is
     ///      `0.07666...` (`76666666666666667`); `0.05` is kept because it is the
     ///      paper's value, it is individually rational (a lower fee only relaxes
     ///      `U >= 0`) and it is a safe lower bound (§5.2.3).
@@ -104,7 +104,8 @@ contract AVIPValidatorManager is IAVIPValidatorManager {
     ///      collateral negative long before its requirement became unpayable.
     uint256 public constant EJECTION_SURCHARGE = 1e17;
 
-    /// @notice Registry that certifies `||T||_F` (M1, amended by M2 §5.2).
+    /// @notice Registry that certifies one validator's `T(v)` (M1, amended by
+    ///         M2 §5.2 and M4d).
     /// @dev Storage rather than `immutable`, to keep the same shape as
     ///      `AVIPRegistry.sol`. There is no setter: the constructor fixes it.
     IAVIPRegistry public registry;
@@ -171,13 +172,13 @@ contract AVIPValidatorManager is IAVIPValidatorManager {
     // ------------------------------------------------------------ the policy
 
     /// @notice Reputational collateral `C_R(r) = C_R^inf * r / (1 + r)`, in WAD.
-    /// @param norm The Frobenius norm `r = ||T||_F`, in WAD.
+    /// @param norm The validator's committed norm `r = T(i)`, in WAD.
     function collateralFor(uint256 norm) public pure returns (uint256) {
         return (CR_INF * norm) / (ONE + norm);
     }
 
     /// @notice Minimum stake `S_f*(r) = max{ S_min, Theta - C_R(r) }`, in WAD.
-    /// @param norm The Frobenius norm `r = ||T||_F`, in WAD.
+    /// @param norm The validator's committed norm `r = T(i)`, in WAD.
     function requiredStakeFor(uint256 norm) public pure returns (uint256) {
         uint256 stake = THETA - collateralFor(norm);
         return stake > S_MIN ? stake : S_MIN;
@@ -236,7 +237,7 @@ contract AVIPValidatorManager is IAVIPValidatorManager {
 
         // The registry certifies the exact norm and enforces no threshold: that
         // is this contract's job (§5.2.2). `Theta_r` sits outside the circuit on
-        // purpose, so the admissible domain starts at `||T||_F = Theta_r` and
+        // purpose, so the admissible domain starts at `T(i) = Theta_r` and
         // `T = 0` is no longer an admissible type (§5.2.3).
         if (certifiedNorm < THETA_R) revert NormBelowThreshold(certifiedNorm, THETA_R);
 
@@ -262,14 +263,14 @@ contract AVIPValidatorManager is IAVIPValidatorManager {
             }
         }
 
-        // The registry reads `commitmentOf(epoch)` itself and builds
-        // `[uint256(root), epoch, certifiedNorm]`, so a proof for another epoch,
-        // another root or another norm cannot pass (§5.2.1). The latest epoch
-        // keeps the admission bound to the freshest tensor; with no commitment
-        // posted `latestEpoch()` is `type(uint256).max` and the registry reverts
-        // with `UnknownEpoch`.
+        // The registry reads `statementRootOf(epoch)` itself and builds
+        // `[root, epoch, uint160(validator), certifiedNorm]`, so a proof for
+        // another epoch, another validator, another root or another norm cannot
+        // pass (§5.2.1, M4d). The latest epoch keeps the admission bound to the
+        // freshest tensor; with no commitment posted `latestEpoch()` is
+        // `type(uint256).max` and the registry reverts with `UnknownEpoch`.
         uint256 epoch = registry.latestEpoch();
-        if (!registry.verifyThreshold(epoch, certifiedNorm, proof)) {
+        if (!registry.verifyThreshold(epoch, validator, certifiedNorm, proof)) {
             revert IAVIPRegistry.InvalidZKProof();
         }
 

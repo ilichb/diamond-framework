@@ -16,15 +16,14 @@ import {Bn254} from "./Bn254.sol";
 ///      is `k = 4`, the figure the paper measures (`181,142 gas` for the pairing
 ///      step in `GasBenchmarks.sol`, ~206k for a full verification).
 ///
-///      **The verification key is installed, not hardcoded.** The paper's
-///      circuit (Pedersen commitment + Bulletproofs IPA, recursively attested)
-///      is a parallel cryptography workstream: its R1CS, its trusted setup and
-///      its own verification key do not exist yet. So this contract takes the
+///      **The verification key is installed, not hardcoded.** The repository
+///      ships development keys for M4b's global statement and M4d's admission
+///      statement (P-01/P-16); neither has a trusted-setup ceremony, so neither
+///      carries a security claim. This contract therefore takes the
 ///      `VerifyingKey` in the constructor and exposes `verifyingKeyDigest()`, the
-///      digest of exactly what it was installed with. When the circuit is
-///      compiled, the deployment swaps in the real key and *nothing else in this
-///      contract changes*; the digest is what an off-chain prover compares
-///      against to know which key is live.
+///      digest of exactly what it was installed with. A ceremony replaces the
+///      key at deployment and *nothing else in this contract changes*; the digest
+///      is what an off-chain prover compares against to know which key is live.
 ///
 ///      The key lives in storage rather than in the bytecode, which is where a
 ///      frozen key would end up: the snarkjs generator hardcodes it as literal
@@ -37,13 +36,13 @@ import {Bn254} from "./Bn254.sol";
 ///
 ///      Deliberately NOT claimed:
 ///        - **No soundness claim about the statement.** This contract checks a
-///          Groth16 equation correctly; whether the (future) circuit ties
-///          `[root, epoch, certifiedNorm]` to the committed tensor is a property
-///          of the circuit, not of this wrapper.
+///          Groth16 equation correctly; whether the circuit ties
+///          `[statementRoot, epoch, validator, certifiedNorm]` to the committed
+///          tensor is a property of the circuit, not of this wrapper.
 ///        - **No circuit size independence claim of its own.** The paper's
 ///          "constant in circuit size" holds for the verification key's public
-///          input count (3 here: root, epoch, certifiedNorm), not for the
-///          witness the circuit constrains.
+///          input count (4 here: statement root, epoch, validator, certified
+///          norm), not for the witness the circuit constrains.
 contract Groth16Verifier is IZKThresholdVerifier {
     /// @notice Groth16 verification key over BN254.
     /// @param alpha1 `alpha` in G1.

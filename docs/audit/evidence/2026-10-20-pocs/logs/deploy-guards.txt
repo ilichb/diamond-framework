@@ -1,0 +1,43 @@
+Compiling 2 files with Solc 0.8.33
+Solc 0.8.33 finished in 867.55ms
+Compiler run successful!
+
+Ran 2 tests for test/TmpEvidenceDeployGuards.t.sol:TmpDeployGuardsTest
+[PASS] test_phase1AcceptsEOATokenAndSinkAndReportsOk() (gas: 5356969)
+Logs:
+  [fuji] chain.id=43113
+  [fuji] chain.name=fuji
+  [fuji] sender=0x0000000000000000000000000000000000001001
+  [fuji] deployer=0x0000000000000000000000000000000000001001
+  [fuji] registry=0x3817e247023B4f489352758397040b1fd33b300a
+  [fuji] vault=0x7c661d3291474375653344732FC67eA90908A9C0
+  [fuji] manager=0x320BBEDF9C19c83eA38F86DC510f5c00414B3ff2
+  [fuji] sink=0x0000000000000000000000000000000000006006
+  [fuji] token=0x0000000000000000000000000000000000005005
+  [fuji] guardian=0x0000000000000000000000000000000000004004
+  [fuji] sequencer=0x0000000000000000000000000000000000002002
+  [fuji] slash_authority=0x0000000000000000000000000000000000003003
+  [fuji] verifier=0x0000000000000000000000000000000000000000
+  [fuji] TENSOR_SIZE=500
+  [fuji] MAX_DELTA_ENTRIES=50
+  [fuji] wad_per_unit=1000000000000
+  [fuji] status=ok
+
+[PASS] test_registryScriptAcceptsNonAvalancheLiveChain() (gas: 2090423)
+Logs:
+  [m7a] script=DeployRegistry
+  [m7a] chain=1
+  [m7a] chain.name=unknown
+  [m7a] sender=0x0000000000000000000000000000000000001001
+  [m7a] AVIPRegistry=0x3817e247023B4f489352758397040b1fd33b300a
+  [m7a] role.sequencer=0x0000000000000000000000000000000000002002
+  [m7a] role.verifier=0x0000000000000000000000000000000000000000
+  [m7a] role.guardian=0x0000000000000000000000000000000000003003
+  [m7a] check.TENSOR_SIZE=500
+  [m7a] check.MAX_DELTA_ENTRIES=50
+  [m7a] check.CHANGE_DELAY=172800
+  [m7a] status=ok
+
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 11.98ms (9.07ms CPU time)
+
+Ran 1 test suite in 18.23ms (11.98ms CPU time): 2 tests passed, 0 failed, 0 skipped (2 total tests)

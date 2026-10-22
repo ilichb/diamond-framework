@@ -13,6 +13,7 @@
 //! | [`groth16`] | M4b: the real Groth16 key over V3, the contract's statement, the end-to-end prover (§5.5.4) |
 //! | [`bridge`] | M7c: the tie between the statement's root and the registry's `keccak256` Merkle root (§5.4 item 4 (c), §5.5.7; delivered in §5.10) |
 
+pub mod admission;
 pub mod bridge;
 pub mod fixture;
 pub mod groth16;

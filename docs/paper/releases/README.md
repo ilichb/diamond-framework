@@ -29,6 +29,9 @@ derivable, not memorized:
   and its `~206k` gas figure are corrected in
   [`v0.2.1-notes.md`](v0.2.1-notes.md#errata-2026-10-20-after-publication).
   The PDF bytes are unchanged; the audit findings are P-01 and P-25.
+- **Documentation errata (2026-10-21):** the OTS pending count in the same notes
+  is **3**, not 4; the receipt and anchor are unchanged. See
+  [`v0.2.1-notes.md`](v0.2.1-notes.md#errata-in-these-notes-2026-10-21).
 - GitHub Release:
   <https://github.com/ilichb/diamond-framework/releases/tag/v0.2.1>
 - Release asset `diamond-framework-2026-10-20.pdf`: 579260 bytes,

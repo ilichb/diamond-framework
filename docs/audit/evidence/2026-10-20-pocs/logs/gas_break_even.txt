@@ -1,0 +1,23 @@
+# P-25 — gas y break-even
+
+| G (gas) | Ruta | g* (gwei) | R/G |
+|---:|---|---:|---:|
+| 206000 | clave inline (paper) | 1085.4 | 3.32× |
+| 223403 | verify, caliente | 1000.9 | 3.06× |
+| 233104 | verifyThreshold, caliente | 959.2 | 2.93× |
+| 286144 | verifyThreshold, frío (harness nuevo) | 781.4 | 2.39× |
+| 290854 | verifyThreshold, frío (harness previo) | 768.8 | 2.35× |
+| 376588 | manager.admit completo | 593.8 | 1.82× |
+
+Lectura: el 3,32× del paper sólo se reproduce con 206k. La ruta fría
+desplegada da ≈2,39× y el break-even cae a ≈781 gwei; con el harness
+previo (290.854) da ≈769 gwei. El cociente 455.430/286.144 ≈ 1,59× no
+se incluye porque mezcla ingest optimizado con verificación sin optimizar.
+
+Decisión: G canónico = 286144 (verifyThreshold frío, sólo verificación):
+2,39× y 781,4 gwei. Si se reporta manager.admit completo, G = 376588:
+1,82× y 593,8 gwei; ambos lados deben usar el mismo alcance y compilador.
+
+A 25 gwei, el margen de la ruta fría es 781/25 ≈ 31,2×, no 43×.
+
+escrito: /home/ilich/Escritorio/diamond-framework/docs/audit/evidence/2026-10-20-pocs/calculations/gas-table.csv

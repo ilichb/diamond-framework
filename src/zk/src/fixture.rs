@@ -19,6 +19,19 @@ pub const WAD: u64 = 1_000_000_000_000_000_000;
 /// here and the fixture digest is asserted in this module's tests.
 pub const SEED: u64 = 0x4D34_4156_4950_0001; // "M4AVIP" + 0x0001
 
+/// Domain separator for the deterministic validator addresses. There is no
+/// private key behind these addresses: they exist so the fixture has N distinct
+/// leaves, which is what the admission statement commits to.
+pub const VALIDATOR_DOMAIN: &[u8] = b"AVIP-M4d-validator";
+/// The entry the committed Solidity fixture proves. It is the first fixture
+/// entry whose norm reaches the manager's threshold (`Theta_r = 0.5e18`), so the
+/// on-chain admission test is not rejected before the proof is checked. It is
+/// deliberately not the first leaf: the fixture binds the *validator*, not a
+/// position, and the path is private.
+pub const ADMISSION_INDEX: usize = 4;
+/// The epoch the committed fixture proves.
+pub const ADMISSION_EPOCH: u64 = 0;
+
 /// The fixture: `N` WAD entries, each in `[0, WAD)`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Tensor {
@@ -92,6 +105,30 @@ pub fn tensor_from_seed(seed: u64) -> Tensor {
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
     let entries = (0..N).map(|_| next_below(&mut rng, WAD)).collect();
     Tensor { entries }
+}
+
+/// The `N` deterministic validator addresses paired with [`tensor`]'s entries.
+///
+/// `keccak256(VALIDATOR_DOMAIN ‖ u32_le(i))`, last 20 bytes. They are labels,
+/// not keys; their only job is to make every leaf distinct and reproducible.
+#[must_use]
+pub fn validators() -> Vec<[u8; 20]> {
+    (0..N)
+        .map(|i| {
+            let mut hasher = Keccak256::new();
+            hasher.update(VALIDATOR_DOMAIN);
+            hasher.update((i as u32).to_le_bytes());
+            let digest: [u8; 32] = hasher.finalize().into();
+            let mut address = [0_u8; 20];
+            address.copy_from_slice(&digest[12..]);
+            // The chance of a zero address is 2^-160, but the contract rejects
+            // it; make the fixture total rather than astronomically lucky.
+            if address == [0_u8; 20] {
+                address[19] = 1;
+            }
+            address
+        })
+        .collect()
 }
 
 /// Unbiased draw in `[0, bound)`: rejection over the largest multiple of

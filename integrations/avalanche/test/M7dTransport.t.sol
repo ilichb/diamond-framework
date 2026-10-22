@@ -12,7 +12,7 @@ import {AVIPValidatorManager} from "../contracts/AVIPValidatorManager.sol";
 import {IAVIPValidatorManager} from "../contracts/interfaces/IAVIPValidatorManager.sol";
 import {Groth16Verifier} from "../contracts/verifiers/Groth16Verifier.sol";
 import {MockTeleporterMessenger} from "./mocks/MockTeleporterMessenger.sol";
-import {M4bGroth16Fixtures as F4b} from "./fixtures/M4bGroth16Fixtures.sol";
+import {M4dGroth16Fixtures as F4d} from "./fixtures/M4dGroth16Fixtures.sol";
 import {M7cBridgeFixtures as F7c} from "./fixtures/M7cBridgeFixtures.sol";
 import {M7dProvenanceFixtures} from "./fixtures/M7dProvenanceFixtures.sol";
 
@@ -123,16 +123,19 @@ contract M7dTransportTest is Test {
     AVIPMessageCodecHarness internal codec;
 
     Groth16Verifier internal verifier;
-    /// @dev The registry the *manager* reads: M4b's recipe, i.e. epoch 0 committed
-    ///      with the statement's own root, which is what its proof verifies against
-    ///      (`test/M4bRealKey.t.sol`; M7c's table says exactly that this root is the
-    ///      *statement's*, not M1's fold).
+    /// @dev The registry the *manager* reads: M4d's recipe, i.e. epoch 0 committed
+    ///      with the admission root, which is what its proof verifies against
+    ///      (`test/M4dRealKey.t.sol`; M7c's table says exactly that its root is
+    ///      the *statement's*, not M1's fold).
     AVIPRegistry internal registryForAdmission;
-    /// @dev The registry the *relay* reads: the same tensor as M1 commits it, so
-    ///      epoch 0 holds `F7c.MERKLE_ROOT`. The two registries are two deployment
-    ///      scenarios of one chain, and the reason they cannot be a single instance
-    ///      is the gap M7c closed: M4b's proof is bound to the statement's root and
-    ///      M1's fold produces the Merkle root, and only the *link* ties them.
+    /// @dev The registry the *relay* reads: epoch 0 holds `F7c.MERKLE_ROOT`, the
+    ///      tensor as M1 commits it, so an announcement reproduces M7c's pinned
+    ///      link. Two deployments are a *reporting* convenience, not a constraint:
+    ///      `AVIPRegistry` keeps the two roots in two slots and one
+    ///      `postCommitment` writes both, which `test/M4dRootSeparation.t.sol`
+    ///      exercises with both real roots in one instance. They stay apart here
+    ///      because each leg must reproduce its own pinned numbers, and M7c's link
+    ///      names the V3 statement root, not M4d's.
     AVIPRegistry internal registryForCommitment;
 
     AVIPValidatorManager internal manager;
@@ -172,11 +175,11 @@ contract M7dTransportTest is Test {
 
         teleporter = new MockTeleporterMessenger();
 
-        verifier = new Groth16Verifier(F4b.verifyingKey());
+        verifier = new Groth16Verifier(F4d.verifyingKey());
         sequencer = makeAddr("sequencer");
         alerter = makeAddr("alerter");
         notifier = makeAddr("notifier");
-        validator = makeAddr("validator");
+        validator = address(uint160(F4d.STATEMENT_VALIDATOR));
         guardian = makeAddr("guardian");
 
         registryForAdmission = new AVIPRegistry(sequencer, address(verifier), guardian);
@@ -307,17 +310,20 @@ contract M7dTransportTest is Test {
     /// @dev Commits an epoch in the relay's registry, as the sequencer.
     function _commit(uint256 epoch, bytes32 root, uint32 changedEntries) internal {
         vm.prank(sequencer);
-        registryForCommitment.postCommitment(epoch, root, changedEntries);
+        registryForCommitment.postCommitment(epoch, root, uint256(root), changedEntries);
     }
 
-    /// @dev Admits `validator` with M4b's real key over V3 and its proof, so the
-    ///      slashing leg ends in a real `AVIPValidatorManager.slash` against a real
-    ///      stake. The recipe is `test/M4bRealKey.t.sol`'s, unchanged.
+    /// @dev Admits `validator` with the M4d admission key and the inclusion proof
+    ///      that names it, so the slashing leg ends in a real
+    ///      `AVIPValidatorManager.slash` against a real stake. The recipe is
+    ///      `test/M4dRealKey.t.sol`'s, unchanged.
     function _admitValidator() internal {
-        vm.prank(sequencer);
-        registryForAdmission.postCommitment(0, bytes32(F4b.STATEMENT_ROOT), N);
+        if (registryForAdmission.commitmentOf(0) == bytes32(0)) {
+            vm.prank(sequencer);
+            registryForAdmission.postCommitment(0, keccak256("tensor"), F4d.STATEMENT_ROOT, N);
+        }
         vm.prank(validator);
-        manager.admit(validator, STAKE_WAD, F4b.STATEMENT_NORM, F4b.proof());
+        manager.admit(validator, STAKE_WAD, F4d.STATEMENT_NORM, F4d.proof());
     }
 
     /// @dev Delivers `message` to `endpoint` as the messenger would, with an
@@ -993,7 +999,7 @@ contract M7dTransportTest is Test {
 
     // ===================================== type 3: slashing notification (§4)
 
-    /// @notice The deepest end-to-end in the milestone: M4b's real proof admits a
+    /// @notice The deepest end-to-end in the milestone: M4d's real admission proof admits a
     ///         validator, M7b's adjudicated fraud travels as a §4 message, and the
     ///         manager slashes with a `reason` derived from the envelope — the same
     ///         value the destination recorded.
@@ -1031,10 +1037,10 @@ contract M7dTransportTest is Test {
     ///         notification takes its validator's whole record and a second one about
     ///         the same validator would have nothing left to take (`NothingToSlash`).
     function test_theReasonIsNotSomethingTheNotifierChooses() public {
-        address other = makeAddr("otherValidator");
+        address other = address(uint160(F4d.STATEMENT_VALIDATOR_OTHER));
         _admitValidator();
         vm.prank(other);
-        manager.admit(other, STAKE_WAD, F4b.STATEMENT_NORM, F4b.proof());
+        manager.admit(other, STAKE_WAD, F4d.STATEMENT_NORM_OTHER, F4d.proofOther());
 
         vm.startPrank(notifier);
         slashingSource.notify(_m7bNotification(validator));

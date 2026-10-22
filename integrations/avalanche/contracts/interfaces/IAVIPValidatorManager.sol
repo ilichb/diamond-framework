@@ -13,16 +13,18 @@ import {IAVIPCustody} from "./IAVIPCustody.sol";
 ///
 ///        required stake   `S_f*(T) = max{ S_min, Theta(t) - C_R(T) }`
 ///        admission        `CoA(i) = S_f(i) + C_R(T(i)) >= Theta(t)`
-///        collateral       `C_R(r) = 0.8 * r / (1 + r)`, `r = ||T||_F`
+///        collateral       `C_R(r) = 0.8 * r / (1 + r)`, `r = T(i)`
 ///        saturation       `C_R^inf = 0.8`, hence `S_min = Theta - C_R^inf = 0.2`
 ///
 ///      `Theta(t)` is frozen at genesis for the reference implementation.
 ///      The manager holds no tensor and no Merkle root: the norm comes from
-///      `IAVIPRegistry.verifyThreshold(epoch, certifiedNorm, proof)`, the single
-///      source of truth for it (§5.2.1).
+///      `IAVIPRegistry.verifyThreshold(epoch, validator, certifiedNorm, proof)`,
+///      the single source of truth for it (§5.2.1). `validator` is part of the
+///      statement because the leaf is `Poseidon(validator, certifiedNorm)`:
+///      a proof is bound to one address and is not a bearer token (audit P-01).
 ///
 ///      Two limits of M2, stated here because this interface is the boundary:
-///        - **the threshold `||T||_F >= Theta_r` is enforced here**, not in the
+///        - **the threshold `r >= Theta_r` is enforced here**, not in the
 ///          registry, so the economic parameter stays out of the trusted-setup
 ///          ceremony (§5.2.2);
 ///        - **no custody of its own.** M2 moves no token: it exposes the
@@ -50,7 +52,7 @@ interface IAVIPValidatorManager {
     ///         the certified norm and of the amounts derived from it.
     /// @param validator The admitted validator.
     /// @param epoch The epoch whose commitment certified the norm.
-    /// @param certifiedNorm The exact `||T||_F` the registry certified.
+    /// @param certifiedNorm The exact `T(v)` the registry certified.
     /// @param collateral `C_R(certifiedNorm)`, unchanged by ejections (§12.1.2,
     ///        M9c): the surcharge is a separate term precisely so the credit the
     ///        norm earns is not rewritten by the validator's history.
@@ -162,7 +164,7 @@ interface IAVIPValidatorManager {
     /// @param validator The validator to admit; must be `msg.sender`.
     /// @param financialStake The declared stake: escrowed when custody is set,
     ///        merely declared when it is not.
-    /// @param certifiedNorm `||T||_F`, certified by the registry.
+    /// @param certifiedNorm `T(v)`, certified by the registry.
     /// @param proof Groth16-shaped proof for `certifiedNorm`.
     function admit(
         address validator,

@@ -126,7 +126,7 @@ contract M8StakeVaultTest is Test {
         registry = new AVIPRegistry(sequencer, address(0), guardian);
         epoch0Root = keccak256("tensor");
         vm.prank(sequencer);
-        registry.postCommitment(0, epoch0Root, N);
+        registry.postCommitment(0, epoch0Root, uint256(epoch0Root), N);
 
         // The order is the handshake's: custody first, manager second.
         vault = new AVIPStakeVault(address(token), address(sink), WAD_PER_UNIT_6);
@@ -158,22 +158,23 @@ contract M8StakeVaultTest is Test {
         internal
         returns (MockThresholdVerifier)
     {
-        return new MockThresholdVerifier(answer, PROOF_A0, _statement(root, epoch, norm));
+        return new MockThresholdVerifier(answer, PROOF_A0, _statement(root, epoch, validator, norm));
     }
 
     function _setVerifierAtEpoch0(bool answer, uint256 norm) internal {
         _setVerifier(answer, epoch0Root, 0, norm);
     }
 
-    function _statement(bytes32 root, uint256 epoch, uint256 norm)
+    function _statement(bytes32 root, uint256 epoch, address who, uint256 norm)
         internal
         pure
         returns (bytes memory)
     {
-        uint256[] memory statement = new uint256[](3);
+        uint256[] memory statement = new uint256[](4);
         statement[0] = uint256(root);
         statement[1] = epoch;
-        statement[2] = norm;
+        statement[2] = uint256(uint160(who));
+        statement[3] = norm;
         return abi.encode(statement);
     }
 

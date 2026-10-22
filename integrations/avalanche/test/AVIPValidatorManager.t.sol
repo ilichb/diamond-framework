@@ -7,6 +7,7 @@ import {AVIPValidatorManager} from "../contracts/AVIPValidatorManager.sol";
 import {IAVIPRegistry} from "../contracts/interfaces/IAVIPRegistry.sol";
 import {IAVIPValidatorManager} from "../contracts/interfaces/IAVIPValidatorManager.sol";
 import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
+import {M4dGroth16Fixtures as F4d} from "./fixtures/M4dGroth16Fixtures.sol";
 
 /// WHAT IS TESTED
 /// --------------
@@ -66,6 +67,9 @@ contract AVIPValidatorManagerTest is Test {
     uint256 internal constant SF_AT_THETA_R = 733_333_333_333_333_334;
 
     uint256 internal constant PROOF_A0 = 42;
+    /// @dev Poseidon root of epoch 0 (M4d). Arbitrary here: the mock only
+    ///      compares the statement the manager causes the registry to build.
+    uint256 internal constant STATEMENT_ROOT = 0x1234_5678;
     uint32 internal constant N = 500; // C*D*H, paper "Tensor Compression"
 
     /// @dev Slash reasons. Declared as `bytes32` constants so the literal is
@@ -99,7 +103,7 @@ contract AVIPValidatorManagerTest is Test {
         registry = new AVIPRegistry(sequencer, address(0), guardian);
         epoch0Root = keccak256("tensor");
         vm.prank(sequencer);
-        registry.postCommitment(0, epoch0Root, N);
+        registry.postCommitment(0, epoch0Root, STATEMENT_ROOT, N);
 
         manager = new AVIPValidatorManager(address(registry), slashAuthority, address(0));
     }
@@ -107,43 +111,53 @@ contract AVIPValidatorManagerTest is Test {
     // ----------------------------------------------------------------- helpers
 
     /// @dev Installs a verifier that accepts exactly one statement and returns
-    ///      `answer`. The registry builds `[root, epoch, norm]` itself, so the
+    ///      `answer`. The registry builds `[statementRoot, epoch, validator, norm]`
+    ///      itself, so the
     ///      double has to be told which statement to expect (§5.2.1).
-    function _setVerifier(bool answer, bytes32 root, uint256 epoch, uint256 norm) internal {
+    function _setVerifier(bool answer, uint256 root, uint256 epoch, uint256 norm) internal {
+        _setVerifierFor(answer, root, epoch, norm, validator);
+    }
+
+    /// @dev The same, for a verifier statement that binds another validator:
+    ///      the mock is exact, so a second validator needs its own statement.
+    function _setVerifierFor(bool answer, uint256 root, uint256 epoch, uint256 norm, address who)
+        internal
+    {
         // M9a: a verifier is installed by a propose/execute pair now. The mock is
         // deployed *before* the prank (`new` is itself a call, so an inline
         // `_mockVerifier(...)` would consume the prank and the proposal would come
         // from this test contract), the guardian proposes, the delay elapses, and
         // this test — not the guardian — commits the change, which is the
         // permissionless path §12.1.2 describes.
-        MockThresholdVerifier mock = _mockVerifier(answer, root, epoch, norm);
+        MockThresholdVerifier mock = _mockVerifier(answer, root, epoch, norm, who);
         vm.prank(guardian);
         registry.proposeVerifier(address(mock));
         vm.warp(block.timestamp + registry.CHANGE_DELAY());
         registry.executeVerifierChange();
     }
 
-    function _mockVerifier(bool answer, bytes32 root, uint256 epoch, uint256 norm)
+    function _mockVerifier(bool answer, uint256 root, uint256 epoch, uint256 norm, address who)
         internal
         returns (MockThresholdVerifier)
     {
-        return new MockThresholdVerifier(answer, PROOF_A0, _statement(root, epoch, norm));
+        return new MockThresholdVerifier(answer, PROOF_A0, _statement(root, epoch, who, norm));
     }
 
     /// @dev The verifier for the statement the manager builds at epoch 0.
     function _setVerifierAtEpoch0(bool answer, uint256 norm) internal {
-        _setVerifier(answer, epoch0Root, 0, norm);
+        _setVerifier(answer, STATEMENT_ROOT, 0, norm);
     }
 
-    function _statement(bytes32 root, uint256 epoch, uint256 norm)
+    function _statement(uint256 root, uint256 epoch, address who, uint256 norm)
         internal
-        pure
+        view
         returns (bytes memory)
     {
-        uint256[] memory statement = new uint256[](3);
-        statement[0] = uint256(root);
+        uint256[] memory statement = new uint256[](4);
+        statement[0] = root;
         statement[1] = epoch;
-        statement[2] = norm;
+        statement[2] = uint256(uint160(who));
+        statement[3] = norm;
         return abi.encode(statement);
     }
 
@@ -276,8 +290,8 @@ contract AVIPValidatorManagerTest is Test {
     function test_admit_usesTheLatestEpoch() public {
         bytes32 epoch1Root = keccak256("tensor-epoch-1");
         vm.prank(sequencer);
-        registry.postCommitment(1, epoch1Root, 1);
-        _setVerifier(true, epoch1Root, 1, THETA_R);
+        registry.postCommitment(1, epoch1Root, STATEMENT_ROOT + 1, 1);
+        _setVerifier(true, STATEMENT_ROOT + 1, 1, THETA_R);
 
         vm.expectEmit(true, false, false, true, address(manager));
         emit IAVIPValidatorManager.AdmissionEvaluated(
@@ -292,10 +306,10 @@ contract AVIPValidatorManagerTest is Test {
     function test_admit_rejectsAProofForAnOlderEpoch() public {
         bytes32 epoch1Root = keccak256("tensor-epoch-1");
         vm.prank(sequencer);
-        registry.postCommitment(1, epoch1Root, 1);
+        registry.postCommitment(1, epoch1Root, STATEMENT_ROOT + 1, 1);
         // The verifier knows the epoch 0 statement, but the manager asks the
         // registry for its latest epoch, which is 1: different statement.
-        _setVerifier(true, epoch0Root, 0, THETA_R);
+        _setVerifier(true, STATEMENT_ROOT, 0, THETA_R);
 
         vm.prank(validator);
         vm.expectRevert("mock: unexpected statement");
@@ -531,8 +545,9 @@ contract AVIPValidatorManagerTest is Test {
     ///      validator, and the whole-record rule is about *which* number is taken,
     ///      not about who else is admitted.
     function test_slash_doesNotTouchAnotherValidatorsRecord() public {
-        address other = makeAddr("otherValidator");
+        address other = address(uint160(F4d.STATEMENT_VALIDATOR_OTHER));
         _admitAt(THETA_R);
+        _setVerifierFor(true, STATEMENT_ROOT, 0, THETA_R, other);
         vm.prank(other);
         manager.admit(other, SF_AT_THETA_R, THETA_R, _encodeProof(PROOF_A0));
 
@@ -638,8 +653,9 @@ contract AVIPValidatorManagerTest is Test {
     }
 
     function test_ejection_theCounterIsPerValidatorAndSurvivesReAdmission() public {
-        address other = makeAddr("otherValidator");
+        address other = address(uint160(F4d.STATEMENT_VALIDATOR_OTHER));
         _admitAt(THETA_R);
+        _setVerifierFor(true, STATEMENT_ROOT, 0, THETA_R, other);
         vm.prank(other);
         manager.admit(other, SF_AT_THETA_R, THETA_R, _encodeProof(PROOF_A0));
 

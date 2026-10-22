@@ -90,6 +90,7 @@ contract DeployScriptsTest is Test {
 
     uint256 internal constant THETA_R = 5e17; // 0.5, the worst admissible type
     uint256 internal constant PROOF_A0 = 42; // arbitrary; the double only checks it is forwarded
+    uint256 internal constant STATEMENT_ROOT = 0x1234_5678;
 
     DeployRegistry internal registryScript;
     DeployStakeVault internal vaultScript;
@@ -184,13 +185,13 @@ contract DeployScriptsTest is Test {
 
         AVIPRegistry registry = AVIPRegistry(d.registry);
         vm.prank(d.sequencer);
-        registry.postCommitment(0, keccak256("epoch-0"), 500);
+        registry.postCommitment(0, keccak256("epoch-0"), STATEMENT_ROOT, 500);
 
         // That is not a hole: `verifyThreshold` reverts instead of returning a
         // verdict nobody checked.
         assertEq(address(registry.verifier()), address(0), "no verifier installed");
         vm.expectRevert(IAVIPRegistry.VerifierNotSet.selector);
-        registry.verifyThreshold(0, THETA_R, _proof(PROOF_A0));
+        registry.verifyThreshold(0, ANVIL_2, THETA_R, _proof(PROOF_A0));
     }
 
     function test_registryScript_pinsTheFrozenConstants() public {
@@ -252,10 +253,10 @@ contract DeployScriptsTest is Test {
         assertEq(registry.sequencer(), ANVIL_2, "rotated");
         vm.prank(ANVIL_1);
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotSequencer.selector, ANVIL_1));
-        registry.postCommitment(0, keccak256("tensor"), 500);
+        registry.postCommitment(0, keccak256("tensor"), STATEMENT_ROOT, 500);
 
         vm.prank(ANVIL_2);
-        registry.postCommitment(0, keccak256("tensor"), 500);
+        registry.postCommitment(0, keccak256("tensor"), STATEMENT_ROOT, 500);
         assertEq(registry.latestEpoch(), 0, "the new sequencer posts");
     }
 
@@ -430,7 +431,7 @@ contract DeployScriptsTest is Test {
         //    the whole tensor, delta = N = 500.
         bytes32 root = keccak256("epoch-0");
         vm.prank(r.sequencer);
-        registry.postCommitment(0, root, 500);
+        registry.postCommitment(0, root, STATEMENT_ROOT, 500);
         assertEq(registry.latestEpoch(), 0, "genesis epoch");
 
         // 4. ... and installs the threshold verifier. M7a deploys no verifier, so
@@ -444,8 +445,10 @@ contract DeployScriptsTest is Test {
         //    performed here, because the pair the scripts deploy must remain
         //    governable after the deployment ends — that is what the delay is for.
         bytes memory proof = _proof(PROOF_A0);
-        MockThresholdVerifier verifier =
-            new MockThresholdVerifier(true, PROOF_A0, _statement(root, 0, THETA_R));
+        address validator = makeAddr("validator");
+        MockThresholdVerifier verifier = new MockThresholdVerifier(
+            true, PROOF_A0, _statement(STATEMENT_ROOT, 0, validator, THETA_R)
+        );
         assertEq(address(registry.verifier()), address(0), "no verifier while unset");
         vm.prank(r.guardian);
         registry.proposeVerifier(address(verifier));
@@ -454,7 +457,6 @@ contract DeployScriptsTest is Test {
         assertEq(address(registry.verifier()), address(verifier), "verifier installed");
 
         // 5. A validator admits itself against the pair the scripts deployed.
-        address validator = makeAddr("validator");
         uint256 stake = manager.requiredStakeFor(THETA_R);
         vm.prank(validator);
         manager.admit(validator, stake, THETA_R, proof);
@@ -532,17 +534,19 @@ contract DeployScriptsTest is Test {
     }
 
     /// @dev The statement the registry is expected to build itself from its own
-    ///      state: `[uint256(root), epoch, certifiedNorm]` (§5.2.1). Mirrors
-    ///      `AVIPRegistry.t.sol`, so the double asserts the same binding here.
-    function _statement(bytes32 root, uint256 epoch, uint256 norm)
+    ///      state: `[statementRoot, epoch, validator, certifiedNorm]` (§5.2.1,
+    ///      M4d). Mirrors `AVIPRegistry.t.sol`, so the double asserts the same
+    ///      binding here.
+    function _statement(uint256 root, uint256 epoch, address validator, uint256 norm)
         internal
         pure
         returns (bytes memory)
     {
-        uint256[] memory statement = new uint256[](3);
-        statement[0] = uint256(root);
+        uint256[] memory statement = new uint256[](4);
+        statement[0] = root;
         statement[1] = epoch;
-        statement[2] = norm;
+        statement[2] = uint256(uint160(validator));
+        statement[3] = norm;
         return abi.encode(statement);
     }
 
