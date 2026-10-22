@@ -209,6 +209,22 @@ impl ConstraintSynthesizer<Fr> for AdmissionCircuit {
 
         // P-33: the score is a WAD value strictly below 1.0. The old circuit
         // accepted up to 2^60, i.e. more than 1.0 WAD.
+        //
+        // The remaining bound is one-sided. `WAD - norm - 1` is computed in the
+        // field and required to be below `2^60`, so a `norm` within `2^60` of
+        // the modulus — `[-2^60 + WAD, -1]`, i.e. `[p - 152_921_504_606_846_977,
+        // p - 1]` — wraps that difference back into range and satisfies the
+        // check. This crate cannot express such a witness (`norm_wad` is a
+        // `u64`), but the circuit description and the key are public: a prover
+        // with its own witness generator can. Nothing in this constraint stops
+        // it, and nothing in the proof system can, because a public input *is*
+        // a field element with no canonical representative. Two closures:
+        // `AVIPRegistry.verifyThreshold` refuses `certifiedNorm >= WAD` before
+        // the pairing (the only way the value reaches a state machine), and the
+        // in-circuit lower bound — one more `enforce_below_pow2(norm,
+        // ENTRY_BITS)`, which is the bit decomposition `to_bits_le` allocates —
+        // is owed to the key regeneration that P-03 forces, since it changes
+        // the `vk`, the fixture and the gas figures.
         let wad = FpVar::constant(Fr::from(WAD));
         native::enforce_below_pow2(&(wad - norm.clone() - FpVar::one()), ENTRY_BITS)?;
 

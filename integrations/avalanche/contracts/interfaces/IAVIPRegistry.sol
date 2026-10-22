@@ -105,6 +105,20 @@ interface IAVIPRegistry {
     ///         block timestamp that tried).
     error ChangeNotReady(uint256 eta, uint256 now);
 
+    /// @notice `certifiedNorm` is not a norm this framework can encode
+    ///         (`MAX_NORM = 2^64`, `CERTIFIED_BOUND_BITS`). Distinct from a
+    ///         failed pairing: the statement is not one the contract can price,
+    ///         so the registry refuses it before decoding the proof.
+    /// @dev Two families fall here, and both are the same defect: the word is a
+    ///      `uint256` that `Bn254.ecMul` reduces modulo the group order, so
+    ///      `c + k * r` (P-13) and the field-negative `norm` that the admission
+    ///      circuit's one-sided `WAD - norm - 1 < 2^60` accepts (P-33) would
+    ///      otherwise reach the pairing as a valid statement. Every such value is
+    ///      above `2^64`; no norm the framework certifies is. The circuit's own
+    ///      `< WAD` is deliberately *not* enforced here — the domain belongs to
+    ///      the circuit whose key is installed.
+    error NormOutOfDomain(uint256 certifiedNorm);
+
     /// @notice A proof that fails the pairing check is a *verdict*, not a
     ///         registry error: `verifyThreshold` returns `false` for it, the
     ///         same shape as `verifyEntry`. This error is how the admission

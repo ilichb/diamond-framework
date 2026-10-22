@@ -75,6 +75,12 @@ contract AVIPRegistry is IAVIPRegistry {
     /// @notice `gamma * N = 0.10 * 500 = 50` entries.
     uint32 public constant MAX_DELTA_ENTRIES = (TENSOR_SIZE * GAMMA_BPS) / BPS_DENOMINATOR;
 
+    /// @notice Largest norm the framework encodes: `CERTIFIED_BOUND_BITS = 64`
+    ///         (`src/zk/src/native.rs`, P-04). Also the anti-malleability bound
+    ///         of P-13: the scalar field's order is `~2^254`, so every
+    ///         `norm + k * r` is far above this.
+    uint256 internal constant MAX_NORM = 1 << 64;
+
     /// @notice Address allowed to post epoch commitments: the data layer's
     ///         sequencer role.
     address public sequencer;
@@ -353,6 +359,18 @@ contract AVIPRegistry is IAVIPRegistry {
 
         IZKThresholdVerifier currentVerifier = verifier;
         if (address(currentVerifier) == address(0)) revert VerifierNotSet();
+
+        // The norm's encoding, restated where the caller is (P-13, and the
+        // one-sided bound of P-33). `admission.rs` enforces `WAD - norm - 1 <
+        // 2^60`, which also admits a norm within `2^60` of the modulus — `-1`,
+        // for one — and `certifiedNorm` is a `uint256` that `Bn254.ecMul`
+        // reduces modulo the group order, so `c` and `c + k * r` would otherwise
+        // reach the pairing as the same statement. Neither value is a norm this
+        // framework can encode (`CERTIFIED_BOUND_BITS = 64`), so both are
+        // refused before the blob is even decoded. The circuit's tighter
+        // `< WAD` stays the circuit's: `WAD` is forwarded and the pairing
+        // returns the verdict.
+        if (certifiedNorm >= MAX_NORM) revert NormOutOfDomain(certifiedNorm);
 
         // M3 moved the decoding into `Bn254`: the blob must carry at least the
         // eight canonical field elements of `(a, b, c)` (`MalformedProof`

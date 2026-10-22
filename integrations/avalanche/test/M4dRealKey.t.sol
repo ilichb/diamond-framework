@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 import {AVIPRegistry} from "../contracts/AVIPRegistry.sol";
+import {IAVIPRegistry} from "../contracts/interfaces/IAVIPRegistry.sol";
 import {Groth16Verifier} from "../contracts/verifiers/Groth16Verifier.sol";
 import {M4dGroth16Fixtures as F} from "./fixtures/M4dGroth16Fixtures.sol";
 
@@ -40,6 +41,17 @@ import {M4dGroth16Fixtures as F} from "./fixtures/M4dGroth16Fixtures.sol";
 ///   the negative directions it implies.
 contract M4dRealKeyTest is Test {
     uint32 internal constant N = 500;
+
+    /// @dev `1.0` in WAD: the circuit's upper bound on a norm is `WAD - 1`.
+    uint256 internal constant WAD = 1e18;
+
+    /// @dev Largest norm the framework encodes (`CERTIFIED_BOUND_BITS = 64`).
+    uint256 internal constant MAX_NORM = 1 << 64;
+
+    /// @dev Order of the BN254 scalar field `r`, the field the circuit lives in.
+    ///      `r - 1` is `-1` there: the norm the one-sided bound lets through.
+    uint256 internal constant BN254_R =
+        21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
     Groth16Verifier internal verifier;
     AVIPRegistry internal registry;
@@ -124,7 +136,33 @@ contract M4dRealKeyTest is Test {
         assertTrue(registry.verifyThreshold(0, validator, F.STATEMENT_NORM, proof()));
     }
 
-    // ---------------------------------------------------- the binding
+    /// @notice The norm's encoding, restated at the registry (P-13, P-33).
+    ///         `admission.rs` bounds `norm` from above only — `WAD - norm - 1 <
+    ///         2^60` also admits a norm within `2^60` of the modulus — and
+    ///         `certifiedNorm` is a `uint256` that `Bn254.ecMul` reduces modulo
+    ///         the group order. Both families are refused before the blob is
+    ///         decoded; the circuit's own `< WAD` is left to the pairing.
+    function test_aNormTheFrameworkCannotEncodeIsRejected() public {
+        // P-13: `c + k * r` is the same scalar as `c`, so the pairing would
+        // accept a proof for `c` with this word.
+        uint256 malleated = BN254_R;
+        vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NormOutOfDomain.selector, malleated));
+        registry.verifyThreshold(0, validator, malleated, proof());
+
+        // P-33: `-1` in the scalar field, the value the one-sided circuit check
+        // lets through.
+        uint256 minusOne = BN254_R - 1;
+        vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NormOutOfDomain.selector, minusOne));
+        registry.verifyThreshold(0, validator, minusOne, proof());
+
+        // The encoding bound, exactly: `2^64` is out (`CERTIFIED_BOUND_BITS`).
+        vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NormOutOfDomain.selector, MAX_NORM));
+        registry.verifyThreshold(0, validator, MAX_NORM, proof());
+
+        // `WAD` is in range: `< WAD` belongs to the circuit, not to the registry,
+        // so the word reaches the pairing and fails as a verdict.
+        assertFalse(registry.verifyThreshold(0, validator, WAD, proof()));
+    }
 
     /// @notice Each component of the statement, changed *alone*, flips the
     ///         answer: the proof is bound to all four, not to some of them.
