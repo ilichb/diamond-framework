@@ -36,6 +36,14 @@ C_R(r_fraud) of capital. omega is the private cost of capital of Section 5.3 and
 kappa = 0.1 is the delivered EJECTION_SURCHARGE of the validator manager (M9c),
 the price of the n-th re-entry.
 
+Domain (P-03, decided 2026-10-22): the certified norm is per validator and the
+circuit bounds it below 1 (P-33), so r_fraud < 1. The r -> infinity limit the
+grid carries (r = 2 and r = 4, and the "value at r = 1e9" line) is therefore not
+reachable in the deployed system: it belongs to the unconstrained model. The
+worst case over the certified domain is r_fraud -> 1, the reference inflation,
+so the values at r = 1 are the ones that bound the attacker, and the paper quotes
+those (q > 0.0625 at k = 1, q > 0.375 at k = 9) as the worst case.
+
 Scope: this script computes and prints only; it writes to stdout and touches no
 other file. It does not replace simulate_data_layer_v3.py: that script measures
 the audit equilibrium n*(B) of Section 7.4, and its constants stay where they

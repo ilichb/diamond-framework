@@ -24,6 +24,15 @@ Parametros:
   - Theta = 1.0 (stake base)
   - C_R(T) = 0.8 * ||T||/(1 + ||T||)  (agregador concavo)
   - N_VALIDATORS = 1000 (para Monte Carlo)
+
+Dominio (P-03, decidido 2026-10-22): el circuito certifica r = T(i) con r < 1 y
+el manager solo admite r >= Theta_r = 0.5, asi que el dominio real es [0.5, 1).
+El Monte Carlo de abajo sortea r ~ U[0, 3], el dominio sin restringir: se
+conserva para que la tabla del paper sea reproducible, y el paper declara que
+U_max y U_mean cotizan una region que el circuito no puede certificar y U_min una
+que el manager no admite. IR se cumple ademas en el peor punto del dominio real
+(r = 0.5, omega = 0.10: U = 0.026667). Recalcular con r ~ U[0.5, 1) es trabajo de
+v0.2.2.
 """
 
 import numpy as np

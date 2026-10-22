@@ -46,7 +46,7 @@ allí.
 |---|---|---|---|---|
 | P-01 | El proof de admisión es global; no está atado al validador | **Crítica** | Confirmado con proof real | Sí |
 | P-02 | `f_c` no ata el score a un validador ni a la procedencia de eventos | **Alta** | Confirmado por lectura | Sí |
-| P-03 | Tres semánticas incompatibles de `T` (paper, data layer, bridge) | **Alta** | Confirmado por lectura | Sí |
+| P-03 | Tres semánticas incompatibles de `T` (paper, data layer, bridge) | **Alta** | **Resuelto por decisión (2026-10-22): `r = T(i)` per-validator** | Sí |
 | P-04 | `certifiedNorm` del prover está limitado a `< 2^64` (18.4467 WAD); el máximo práctico del protocolo es 22.36 y el teórico del circuito 25.78 | Media/baja | Confirmado por lectura | Sí |
 | P-05 | `bindManager` del vault es una carrera de despliegue | Media (operacional) | Confirmado on-chain: Fuji OK, sin fondos; código vulnerable | No |
 | P-06 | El fee por época no se enforcea on-chain | Baja/media | Ya documentado | No |
@@ -343,6 +343,55 @@ compatible con el tamaño, pero no con la semántica per-validator.
 validador, el compromiso debe ser por validador (o de dos niveles). Si `T` es
 global, hay que dejar de presentar la regla como per-validator y asumir el club
 de reputación; pero eso no arregla el Sybil.
+
+### Decisión (2026-10-22): `r = T(i)`, y quién lo calcula
+
+Se elige la lectura del data layer y del manager: `r = T(i)`, el escalar
+per-validator, `0 < r < WAD`. Tres razones, en orden de peso.
+
+1. **Es lo único que el circuito desplegado certifica.** M4d tiene una entrada
+   pública `norm` y un testigo `norm_wad: u64`, y su hoja es
+   `Poseidon(validator, norm)`. No hay testigo de 500 entradas, así que la norma
+   global no es expresable en la ruta de admisión: `‖T‖_F` exigiría el testigo de
+   V3/M4b, que el manager ya no admite porque no nombra validador (P-01).
+2. **Las constantes sólo cierran con `r < 1`.** `Θ_r = 0.5` es una puerta de
+   entrada y `C_R(r) = 0.8 r/(1+r)`: con `r ∈ [0.5, 1)` el colateral vive en
+   `[0.267, 0.4)` y el stake exigido en `(0.6, 0.733]`. Con `r = ‖T‖_F = 12.79`
+   el mismo `C_R` da `0.742` y el stake `0.258`: desaparece tanto el suelo de
+   `0.6` que el dominio del circuito impone como la razón por la que
+   `S_min = 0.2` es inactivo. El paper afirmaba las dos cosas a la vez.
+3. **La alternativa no arregla P-38, la desplaza.** Con `r = ‖T‖_F` el
+   secuenciador seguiría eligiendo el tensor; la atribución quedaría igual de
+   off-chain.
+
+**Quién calcula `T(i)`.** Nadie en la ruta on-chain. El escalar lo escribe el
+secuenciador en el delta del epoch (`Entry.norm_wad`, ≤ γ·N = 50 entradas por
+epoch, `commitment.rs`), y el circuito prueba pertenencia y rango, no que el
+valor provenga de los eventos de consenso. El mapa eventos → `T(i)` es la
+ingesta del data layer: off-chain y no probado. La consecuencia que el revisor
+señaló es exacta — con `r = T(i)` la estructura de tensor de 500 celdas sale de
+la ruta de admisión y queda en el relay y en la auditoría —, y el paper lo dice
+ahora en esos términos (contribución, §tensor, §zk, §payment y limitaciones), así
+que P-38 gana un párrafo en lugar de perderlo.
+
+**Efecto sobre cifras del paper**, que no son cosméticas:
+
+- El peor caso de la condición de disuasión deja de ser `r_fraud → ∞` (valores
+  `0.2857` y `0.7826`, inalcanzables) y pasa a ser `r_fraud → 1`, que es la
+  columna de referencia ya publicada: `q > 0.0625` a un epoch y `q > 0.375` a
+  nueve. La cota del circuito **mejora** el número, no lo empeora.
+- El suelo efectivo es `Θ − C_R(1) = 0.6`, no `Θ − C_R^∞ = 0.2`; `S_min = 0.2`
+  no llega a morder. Está en el NatSpec de `requiredStakeFor` y en §payment.
+- El Monte Carlo de `fee_specification.py` sortea `r ~ U[0,3]`, el dominio sin
+  restringir; la tabla de utilidades no se recalcula aquí y el paper lo declara
+  (los valores de `r > 1` no son certificables y los de `r < Θ_r` no son
+  admitidos). Recalcularla con `r ~ U[Θ_r, 1)` es trabajo de v0.2.2, no de este
+  commit.
+
+**Lo que la decisión no cierra**, y queda escrito: `‖T‖_F` sigue siendo la
+magnitud de auditoría del epoch y ninguna cantidad on-chain la mide; la unicidad
+de la hoja por validador es off-chain (P-38); y la ligadura entre
+`commitmentOf` y `statementRootOf` sigue siendo del secuenciador hasta §5.5.7.
 
 **Relación con P-16:** además de la semántica, el registry sólo tiene una ranura
 `_roots[epoch]`; no puede guardar a la vez la raíz Poseidon de la norma y la
@@ -2843,11 +2892,12 @@ la ruta barata es keccak — y ya existe en el contrato.
   confianza en el secuenciador queda como en un sistema sin ZK.
 - Presentar la admisión como «norma de Frobenius certificada por prueba» es
   incorrecto en HEAD.
-- El conflicto ya está escrito en el código, en dos comentarios que no pueden ser
-  ciertos a la vez: `commitment.rs:52` dice que `Entry.norm_wad` es `r = ‖T‖_F`
-  y `AVIPValidatorManager.sol:181` que es `r = T(i)`. El límite `< WAD` del
-  circuito coincide con el segundo y excluye el primero para el fixture real
-  (12.79). Cuál se corrige lo decide P-03.
+- El conflicto de comentarios está cerrado por la decisión de P-03 (2026-10-22):
+  `commitment.rs` dice ahora `r = T(i)` y nombra `‖T‖_F` como magnitud de
+  auditoría; `AVIPValidatorManager.sol:181` dice lo mismo y añade que el suelo
+  efectivo sobre el dominio admitido es `Θ − C_R(1) = 0.6`, no `S_min = 0.2`.
+  El límite `< WAD` del circuito coincide con esa lectura y excluye la global
+  para el fixture real (12.79).
 - **Nada impone una hoja por validador.** Ni el circuito ni el registry impiden
   que el secuenciador publique la misma dirección dos veces con normas distintas
   en el mismo epoch; el prover elige la hoja que le conviene y la prueba es

@@ -45,7 +45,11 @@ pub const MAX_DELTA_ENTRIES: u32 = (TENSOR_SIZE * GAMMA_BPS) / BPS_DENOMINATOR;
 pub struct Entry {
     /// The validator address, as `AVIPValidatorManager` keys it.
     pub validator: [u8; 20],
-    /// `r = ‖T‖_F` in WAD — the same quantity `collateralFor` takes.
+    /// `r = T(i)` in WAD: the per-validator scalar the admission circuit
+    /// certifies for this address (`Poseidon(validator, norm)` is the leaf), and
+    /// the same quantity `collateralFor` takes. Not `‖T‖_F` over the 500
+    /// entries: that is the audit quantity of the epoch, computed off the
+    /// admission path. P-03, decided 2026-10-22.
     pub norm_wad: u128,
 }
 

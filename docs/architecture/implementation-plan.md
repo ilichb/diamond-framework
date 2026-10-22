@@ -348,7 +348,9 @@ bridge, which do not exist yet (M4, §5.4).
   saturation `C_R^inf = 0.8` and `S_min = Θ - C_R^inf = 0.2` guarantee
   `Θ - C_R(r) >= S_min` for every finite `r`, so `requiredStake` is `Θ - C_R` and
   never the floor standing alone. It would only fail if `S_min` were raised above
-  `Θ - C_R^inf`.
+  `Θ - C_R^inf`. Over the domain the circuit admits (`r < WAD`) the gap is
+  wider — `Θ - C_R(r) >= 0.6` — so `S_MIN` is inactive there too and `0.6` is
+  the floor an admitted validator actually faces (P-33, P-03).
 - **Events.** `ValidatorAdmitted(address indexed validator, uint256 stake, uint256
   collateral)` unchanged, exactly as `IAVIPValidatorManager` declares it, plus
   `AdmissionEvaluated(address indexed validator, uint256 epoch, uint256
@@ -1274,6 +1276,21 @@ the 501-leaf genesis). Closing it needs the commitment as a circuit input
 P-03 is the obstacle, not the cost. V3 already carried the 500-entry vector at
 94,438 constraints and 3.9 s (§5.5.9) — expensive, but payable.
 
+**P-03, decided (2026-10-22): `r = T(i)`.** The leaf commits a per-validator
+scalar, `0 < r < WAD`, and nothing on-chain computes it: the sequencer writes it
+into the epoch delta and the circuit proves membership and range, not provenance
+from consensus events. The 500-cell tensor structure therefore leaves the
+admission path and stays in the relay and the audit — which is the honest reading
+of what the deployed pair can certify, and it does not weaken P-38, it names it.
+Three consequences that are not cosmetic: the effective floor over the admitted
+domain is `Θ − C_R(1) = 0.6`, so `S_MIN = 0.2` never binds (NatSpec of
+`requiredStakeFor`, §5.2.3); the deterrence worst case becomes `r_fraud → 1` —
+the `0.0625`/`0.375` column the paper already publishes — instead of the
+unreachable `r → ∞` (`0.2857`/`0.7826`); and `fee_specification.py` still draws
+`r ~ U[0,3]`, labelled in the paper as the unconstrained domain, with the
+`r ~ U[Θ_r, 1)` re-run owed to v0.2.2. §5.2.3, the paper's §tensor/§zk/§payment
+and the P-03 ficha state the same decision.
+
 **What the proof buys, and what it does not.** Every statement word is public and
 the witness is the leaf index plus nine siblings, both derivable by anyone holding
 the epoch, so the only secret is the **position**: the proof hides which slot the
@@ -1302,8 +1319,11 @@ admitted band is `(0.6, 0.7333]`. The fixture's `0.665564…` gives
 `12.793810…` gives `0.257997028195075875`, *below* that floor — the proof that the
 two readings cannot share one `C_R`. P-33 fixes the floor and P-03 fixes what the
 number means: a `‖T‖_F` of 12.79 cannot be certified as `< 1`, so it is the circuit
-that decides `T` is one scalar per validator. The paper has to state the floor and
-the meaning before v0.2.2 repeats `C_R` and `S_min`.
+that decides `T` is one scalar per validator. The paper states the floor and the
+meaning as of 2026-10-22 (§tensor, §zk, §payment, limitations); what v0.2.2 still
+owes is the `fee_specification.py` re-run with `r ~ U[Θ_r, 1)`, since the utility
+table is still drawn from `U[0,3]` and the paper labels it as the unconstrained
+domain.
 
 **The bound is one-sided; the closure is in the registry, not in the key.** The
 check is a field subtraction whose result must be below `2^60`, so a `norm`

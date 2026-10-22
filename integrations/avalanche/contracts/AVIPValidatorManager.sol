@@ -172,13 +172,20 @@ contract AVIPValidatorManager is IAVIPValidatorManager {
     // ------------------------------------------------------------ the policy
 
     /// @notice Reputational collateral `C_R(r) = C_R^inf * r / (1 + r)`, in WAD.
-    /// @param norm The validator's committed norm `r = T(i)`, in WAD.
+    /// @param norm The validator's committed norm `r = T(i)`, in WAD: the
+    ///        per-validator scalar the admission circuit certifies, `0 < r <
+    ///        WAD`. Not the Frobenius norm of the epoch's tensor — that quantity
+    ///        is computed off-chain and is not what admission prices (P-03).
     function collateralFor(uint256 norm) public pure returns (uint256) {
         return (CR_INF * norm) / (ONE + norm);
     }
 
     /// @notice Minimum stake `S_f*(r) = max{ S_min, Theta - C_R(r) }`, in WAD.
     /// @param norm The validator's committed norm `r = T(i)`, in WAD.
+    /// @dev Over the range the circuit admits (`r >= THETA_R`, `r < WAD`) the
+    ///      unfloored stake `Theta - C_R(r)` is at least
+    ///      `Theta - C_R(WAD) = 0.6`, so `S_MIN = 0.2` never binds here: 0.6 is
+    ///      the floor this function actually applies to an admitted validator.
     function requiredStakeFor(uint256 norm) public pure returns (uint256) {
         uint256 stake = THETA - collateralFor(norm);
         return stake > S_MIN ? stake : S_MIN;
