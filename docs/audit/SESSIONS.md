@@ -26,3 +26,14 @@ hay `session-log.md` en este repositorio: no inventar uno.
 | S-013 | 2026-10-19 | Release v0.2.0 | d99c73a | d8b63d29… | cerrada sin release; ver S-014 |
 | S-014 | 2026-10-20 | v0.2.1: correcciones P0/P1 | a785770 | adfd08d2… | cerrada; release pendiente |
 | S-015 | 2026-10-20 | Release v0.2.1, README/email y Zenodo | fa78fff | adfd08d2… | abierta; DOI pendiente |
+| S-016 | 2026-10-22 | Validación de la matriz externa y triaje del mapa | este commit | adfd08d2… | cerrada; G10/G11 ya rojo en `ea75594` (T-5) |
+
+S-016 cubre `triage-mapa-2026-10-22.md`, el acta
+`checklist-matriz-evidencia-2026-10-22.md` y la v2
+`matriz-evidencia-2026-10-22.md`. El `Root` no se mueve porque el cambio no
+toca ningún fichero del ancla; se re-deriva con el comando de arriba sobre este
+commit. La matriz y el mapa recibidos se conservan sin editar como evidencia de
+lo que se auditó: no son documentos normativos y no se citan como si lo fueran.
+El gate de auditoría sigue en 9 PASS / 2 FAIL **igual que antes** de este
+commit: G10/G11 discrepan porque `docs/paper/main.tex` cambió en `ea75594` sin
+re-sellar. Es T-5, no un efecto de S-016.

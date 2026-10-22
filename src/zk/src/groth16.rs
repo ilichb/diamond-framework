@@ -1,5 +1,6 @@
-//! M4b — the outer layer: a real Groth16 key over V3, and the statement the
-//! frozen contract actually builds (plan §5.5.4, §5.5.6, §5.5.9).
+//! M4b — the outer layer: a real Groth16 key over V3, and the three-word
+//! statement the frozen contract built in M4b (superseded by M4d's per-validator
+//! admission statement; kept as the historical measurement).
 //!
 //! Three things this module is, and one it is not:
 //!
@@ -12,12 +13,15 @@
 //!   `gamma`, `delta`) is derivable by anyone and **forgeries are free**. The key
 //!   is an instrument for measuring the pipeline, not a key that carries a claim;
 //!   §11 keeps the ceremony that would carry one out of scope for M4.
-//! * **The contract's statement.** `AVIPRegistry.verifyThreshold` is frozen since
-//!   M3 and builds `statement = [uint256(root), epoch, certifiedNorm]` from its
-//!   own state, with the installed key required to have `ic.length == 4`
+//! * **The contract's statement, as M4b saw it.** `AVIPRegistry.verifyThreshold`
+//!   built `statement = [uint256(root), epoch, certifiedNorm]` from its own
+//!   state, with the installed key required to have `ic.length == 4`
 //!   (`Groth16Verifier` checks it in its constructor). [`StatementCircuit`]
-//!   allocates its public inputs in exactly that order and number, so M4b needs
-//!   **no Solidity change**.
+//!   allocates its public inputs in exactly that order and number, so M4b needed
+//!   **no Solidity change**. M4d replaced that statement with the per-validator
+//!   four-word statement `[statementRoot, epoch, uint160(validator), norm]`
+//!   (`ic.length == 5`, `AVIPRegistry.sol:386-394`); this module measures the
+//!   historical wrapper, and `crate::admission` is the admission path.
 //! * **A bound epoch.** An *unused* public input is not bound: the R1CS-to-QAP
 //!   reduction gives it the zero polynomial, so its `gamma_abc_g1` entry is the
 //!   identity and verification ignores its value entirely. `epoch` is therefore
@@ -53,8 +57,10 @@ use sha3::{Digest, Keccak256};
 
 use crate::native;
 
-/// The statement `AVIPRegistry.verifyThreshold` builds, in its own order:
-/// `[root, epoch, certifiedNorm]`.
+/// The statement M4b's `AVIPRegistry.verifyThreshold` built, in its own order:
+/// `[root, epoch, certifiedNorm]`. It is the historical global statement, not
+/// the admission path: M4d's statement has four words, with the validator as a
+/// public input (`admission::STATEMENT_LEN`).
 pub const STATEMENT_LEN: usize = 3;
 
 /// `Groth16Verifier` requires `ic.length == publicInputs + 1`, and

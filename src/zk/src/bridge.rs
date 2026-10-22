@@ -2,7 +2,9 @@
 //! §5.5.7 and §5.5.10, delivered in §5.10 (gap **A7**).
 //!
 //! **The gap, in one paragraph.** The statement `AVIPRegistry.verifyThreshold`
-//! builds is `[uint256(root), epoch, certifiedNorm]`, and in M4b the `root` it
+//! builds today is four words — `[statementRoot, epoch, uint160(validator),
+//! certifiedNorm]` since M4d (`AVIPRegistry.sol:386-394`); in M4b it was the
+//! three-word global statement `[root, epoch, certifiedNorm]` — and the root it
 //! carries is the **Poseidon** commitment of the tensor (V3, §5.5.2) — a field
 //! element of `Fr_BN254`, written by the circuit. The root the *registry* stores
 //! for an epoch is a **`keccak256` Merkle root** over leaves, the one
@@ -21,9 +23,10 @@
 //! ```
 //!
 //! Anyone holding the tensor performs three cheap computations — fold the
-//! leaves, digest with Poseidon, hash three words — and either the `root` in an
-//! accepted proof is the digest of *that* tensor, at *that* epoch, behind *that*
-//! Merkle root, or it is not. The link is a commitment, not a proof.
+//! leaves, digest with Poseidon, hash three words — and either the
+//! `statementRoot` in an accepted proof is the digest of *that* tensor, at
+//! *that* epoch, behind *that* Merkle root, or it is not. The link is a
+//! commitment, not a proof.
 //!
 //! **The tree is M1's tree, not a copy of it.** [`open`] builds an
 //! `avip_datalayer::commitment::Epoch`, i.e. the very structure
