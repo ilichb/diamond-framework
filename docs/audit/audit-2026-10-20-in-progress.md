@@ -81,7 +81,7 @@ allí.
 | P-35 | La frontera de detección no es Kesten–Stigum y el paper sólo probó densidad 10×: 40 coludidos a 3× pasan con TPR≈0,06; BBP sitúa el umbral en θ≈4,38 (m≈12,2 a 10×) y el 50 % en m≈15,4 | **Alta** (paper; resultado negativo) | Confirmado con réplica propia de 300 réplicas | Sí (tercera lectura) |
 | P-36 | Bibliografía: Bauer–Jost está mal citado (CPAM 2012 → *Comm. Anal. Geom.* 21(4):787–845, 2013) y faltan referencias para Kesten–Stigum, Feller y EIP-196/197 | Baja (paper) | Confirmado con Crossref/arXiv | Sí (tercera lectura) |
 | P-37 | La permutación Poseidon reproduce los vectores t=3 de circomlib; el digest usa `state[1]` (rate) y no el `state[0]` (capacidad) de circomlib. Es una convención de esponja válida, no un defecto del circuito; sólo limita la interoperabilidad con primitivas de 2 entradas | Baja (interoperabilidad; no soundness) | Confirmado con sonda: 2 vectores t=3, absorción 1–10/500 y ambigüedad de longitud documentada | Sí (sonda de cierre; nota de documentación) |
-| P-38 | La prueba de admisión tiene todo el statement público y su testigo es el camino de Merkle: sólo oculta la posición de la hoja. No aporta zero-knowledge sobre la norma ni ahorra gas frente a `verifyEntry` | Media (diseño y honestidad del artefacto; no soundness) | Confirmado por lectura (`admission.rs:180-235`) y por medición: 306,252 gas fríos frente a una inclusión keccak de pocos miles | Sí (adenda M4d) |
+| P-38 | La prueba de admisión tiene todo el statement público y su testigo es el camino de Merkle: sólo oculta la posición de la hoja. No aporta zero-knowledge sobre la norma ni ahorra gas frente a `verifyEntry` | Media (diseño y honestidad del artefacto; no soundness) | Confirmado por lectura (`admission.rs:180-235`) y por medición: 306,275 gas fríos frente a una inclusión keccak de pocos miles | Sí (adenda M4d) |
 
 **Remediación posterior a este worksheet.** M4d (plan §5.5.11) cierra **P-01** y
 **P-16** y añade al circuito de admisión la cota de **P-33**: el statement pasa a
@@ -102,16 +102,20 @@ comprometido: el `AVIPRegistry` ve raíces, no entradas. Es la ambigüedad de `T
 de **P-03**, y el `TENSOR_DIGEST` pineado la sostiene sólo *off-chain*
 (`test/M4dRootSeparation.t.sol` la escribe como prueba, incluida la ausencia de
 vínculo on-chain). (ii) El suelo real de `S_f` es **0.6** y lo fija el circuito,
-no la lectura de `T`: `admission.rs:213` impone `norm ≤ WAD-1` (una diferencia
-negativa se envuelve en el campo y falla), de modo que `r < 1` y
+no la lectura de `T`: `admission.rs:213` impone `norm ≤ WAD-1` sobre
+representantes canónicos, de modo que `r < 1` y
 `S_f = (1+0.2r)/(1+r)`, decreciente, tiene ínfimo 0.6 —no alcanzado, porque
 `r = 1` está excluido—; con `Θ_r = 0.5` la banda admitida es `(0.6, 0.7333]`. El
 0.2 del paper es el límite `r→∞`, y la lectura global de M4b (12.79 → 0.258) cae
 *por debajo* del suelo, luego las dos lecturas no pueden compartir `C_R`. P-33
-fija el suelo; P-03, qué significa `r`. (iii)
+fija el suelo; P-03, qué significa `r`. La cota de P-33 es de **una sola cara**
+—también satisface el chequeo la banda `[p−2^60+WAD, p−1]`, que es `norm`
+negativa en el campo—, y eso se cierra ahora en `AVIPRegistry.verifyThreshold`
+con `NormOutOfDomain`, no en la clave; el porqué y lo que queda pendiente están
+en la nota de endurecimiento de la ficha P-33. (iii)
 Las cifras del paper (94,438 restricciones, 3.9 s, 286,144 gas) son de V3; el
 circuito de admisión mide **4,827** restricciones, **0.33 s** de prueba y
-**234,284** gas de `verify` (**306,252** en frío y **247,210** en caliente por
+**234,284** gas de `verify` (**306,275** en frío y **247,233** en caliente por
 `verifyThreshold`, ver `test/M4dRealKey.t.sol`); los ratios 2.39× y 1.82× de la
 nota de v0.2.1 dependen del camino completo de `manager.admit`, que no se ha
 vuelto a medir, así que no se pueden repetir sin medirlo.
@@ -940,6 +944,19 @@ presenta como “el root exacto”. La remediación de P-13 debe incluir:
 
 `Bn254.decodeProof` sí comprueba las coordenadas `< p`; eso no cubre los
 escalares. El test de `c + r` debe ampliarse a `root + r` y a `epoch + r`.
+
+### Addendum (2026-10-22): el punto 2 está implementado para `certifiedNorm`
+
+`AVIPRegistry.verifyThreshold` rechaza `certifiedNorm >= 2^64` con
+`NormOutOfDomain(uint256)` antes de decodificar el blob
+(`AVIPRegistry.sol`, constante `MAX_NORM = 1 << 64`). El bound no es `< r`: es el
+de `CERTIFIED_BOUND_BITS = 64` (P-04), porque lo que se defiende es que la
+palabra sea *una norma codificable* y no un representante cualquiera del mismo
+escalar. Con eso caen `c + k·r` y también la banda negativa que la cota de una
+sola cara de P-33 admitía. Test:
+`test/M4dRealKey.t.sol::test_aNormTheFrameworkCannotEncodeIsRejected` (los puntos
+1 y 4 del listado siguen pendientes: el manager aún no acota por política, y
+`root`/`epoch` no tienen guard).
 
 ---
 
@@ -2242,6 +2259,51 @@ Consecuencias:
    del data layer, no una propiedad demostrada por el circuito, hasta que (1)
    esté implementado.
 
+### Endurecimiento (2026-10-22): la cota es de una sola cara, y dónde se cierra
+
+M4d implementó la cota de P-33 en la ruta de admisión
+(`admission.rs:213`: `enforce_below_pow2(wad - norm - 1, ENTRY_BITS)`), pero esa
+forma **sólo acota por arriba**. La resta ocurre en el cuerpo y lo que se exige
+es que el resultado esté por debajo de `2^60`; si `norm` es un elemento
+«negativo», la diferencia vuelve a caer en rango y la comprobación pasa. La banda
+aceptada fuera de `[0, WAD-1]` es
+
+```text
+norm ∈ [p − 2^60 + WAD, p − 1] = [p − 152.921.504.606.846.977, p − 1]
+```
+
+que en valores con signo es `[-2^60 + WAD, -1]`. `[0, WAD)` es el dominio de los
+representantes **canónicos**, no de todos los que el circuito admite. No hay
+ninguna otra restricción que acote `norm` por abajo: la descomposición de la
+diferencia es la única que la toca.
+
+Alcanzabilidad. `AdmissionCircuit::norm_wad` es un `u64`, así que este crate no
+puede construir ese testigo; la descripción del circuito y la clave son públicas,
+así que un prover con su propio generador de witness sí. Además la hoja tiene que
+estar en el árbol, y el árbol lo escribe el secuenciador. Y hoy
+`admit` revertiría igualmente, porque `collateralFor` calcula `CR_INF * norm` y
+con `norm ≈ 2.19e76` ese producto desborda `uint256` antes de comparar el stake
+—el mismo accidente que P-13 documenta—. Ninguna de las tres razones es una
+comprobación.
+
+Cierre implementado (barato, sin tocar la clave). `AVIPRegistry.verifyThreshold`
+rechaza `certifiedNorm >= 2^64` con `NormOutOfDomain` **antes** de decodificar el
+blob. El bound es el de `CERTIFIED_BOUND_BITS = 64` (P-04), no `< WAD`: el
+registry certifica la codificación de una norma, no la política de un circuito
+concreto, y así sigue sirviendo a un statement histórico con norma `> 1` (M4b,
+`12.79`). La banda negativa cae entera por encima de `2^64`, y con ella la
+maleabilidad módulo `r` de P-13 (`c` y `c + k·r` llegan al pairing como el mismo
+escalar porque `Bn254.ecMul` reduce). Test permanente:
+`test/M4dRealKey.t.sol::test_aNormTheFrameworkCannotEncodeIsRejected` — `r`,
+`r−1` y `2^64` revierten; `WAD` pasa el guard y falla como veredicto del pairing,
+que es donde vive P-33.
+
+Queda pendiente, y se debe a la regeneración de clave que P-03 ya obliga: la cota
+inferior **en el circuito**, `enforce_below_pow2(norm, ENTRY_BITS)` —una
+descomposición de bits más—, que cambia `vk`, fixture y las cifras de gas. Hasta
+entonces el circuito no es canónico por sí mismo y la canonicalidad la pone el
+llamador.
+
 ---
 
 ## Contraste con la revisión externa
@@ -2766,7 +2828,7 @@ de la hoja. El propio circuito lo dice (`admission.rs:215`: «the proof says "th
 
 El coste tampoco lo justifica. `AVIPRegistry.verifyEntry` ya verifica una inclusión
 keccak, `public pure`, para un número arbitrario de niveles: nueve hashes de 64
-bytes cuestan unos pocos miles de gas, frente a los **306,252** fríos y **247,210**
+bytes cuestan unos pocos miles de gas, frente a los **306,275** fríos y **247,233**
 calientes que mide `verifyThreshold` con la clave real (**234,284** en `verify`).
 Un árbol Poseidon en EVM quedaría en el orden de Groth16, no por debajo, así que
 la ruta barata es keccak — y ya existe en el contrato.

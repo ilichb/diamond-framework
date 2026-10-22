@@ -1274,7 +1274,7 @@ the epoch, so the only secret is the **position**: the proof hides which slot th
 validator occupies, nothing else. It is not zero-knowledge about the norm — the
 circuit says so itself (`admission.rs:215`) — and it is not cheaper than a plain
 inclusion check: `AVIPRegistry.verifyEntry` already folds a keccak path for a few
-thousand gas, against the 306,252 cold / 247,210 warm of `verifyThreshold` (a
+thousand gas, against the 306,275 cold / 247,233 warm of `verifyThreshold` (a
 Poseidon path on EVM would land in Groth16's order of magnitude, not below it).
 M4d uses the proof anyway for uniformity — one verifier, one 256-byte blob, no
 Merkle code in the registry — and because it keeps §5.5.7's recursive binding
@@ -1284,10 +1284,10 @@ and the paper should not call it a certified Frobenius norm.
 
 **The domain of `norm` is `[0, 1)`, and that is the floor (P-33).** The circuit
 enforces it in one line — `admission.rs:213`,
-`enforce_below_pow2(wad - norm - 1, ENTRY_BITS)` with `ENTRY_BITS = 60`: a
-*negative* difference wraps into a field element whose high bits are set, so every
-`norm ≥ WAD` fails and the domain is `[0, 1e18 - 1]`, i.e. `r < 1`. (The
-difference from a `≤` form is a single value, `r = 1`; that is not the point — the
+`enforce_below_pow2(wad - norm - 1, ENTRY_BITS)` with `ENTRY_BITS = 60`. Read on
+canonical representatives that is `norm ≤ WAD - 1`, the domain `[0, 1e18 - 1]`,
+i.e. `r < 1`. (The difference from a `≤` form is a single value, `r = 1`; that is
+not the point — the
 domain excludes the whole half-line `r ≥ 1`.) `S_f(r) = (1 + 0.2r)/(1 + r)`
 decreases, so the circuit's real floor is **0.6**, approached but not attained;
 the paper's `S_min = 0.2` is only the `r → ∞` asymptote. With `Θ_r = 0.5` the
@@ -1298,6 +1298,25 @@ two readings cannot share one `C_R`. P-33 fixes the floor and P-03 fixes what th
 number means: a `‖T‖_F` of 12.79 cannot be certified as `< 1`, so it is the circuit
 that decides `T` is one scalar per validator. The paper has to state the floor and
 the meaning before v0.2.2 repeats `C_R` and `S_min`.
+
+**The bound is one-sided; the closure is in the registry, not in the key.** The
+check is a field subtraction whose result must be below `2^60`, so a `norm`
+within `2^60` *below* the modulus — `[p - 152_921_504_606_846_977, p - 1]`, or
+`[-2^60 + WAD, -1]` in signed terms — wraps the difference back into range and
+satisfies it. `[0, WAD)` is the domain of *canonical* representatives only.
+`AdmissionCircuit::norm_wad` is a `u64`, so this crate cannot build such a
+witness; the circuit description and the key are public, so a prover writing its
+own witness generator can, and no constraint or verifier rule stops it (a public
+input *is* a field element). `AVIPRegistry.verifyThreshold` is where the value
+would reach a state machine, and it now reverts `NormOutOfDomain` for
+`certifiedNorm >= WAD` before decoding the blob — `certifiedNorm` is a `uint256`
+that `Bn254.ecMul` reduces modulo the group order, so the guard has to be
+explicit. Two other accident-shaped reasons make the band unreachable today — the
+leaf has to be one the sequencer planted, and `admit` reverts because
+`collateralFor` overflows `uint256` for a norm that large — and neither is a
+check. The in-circuit lower bound, one more `enforce_below_pow2(norm,
+ENTRY_BITS)`, is owed to the key regeneration that P-03 forces, because it
+changes the `vk`, the fixture and every figure below.
 
 **The same decision is written down twice in the code, and the two disagree.**
 `commitment.rs:52` documents `Entry.norm_wad` as "`r = ‖T‖_F` in WAD — the same
@@ -1312,8 +1331,8 @@ P-03; the answer has to land in both places and in `main.tex` at once.
 **≈0.45 s** setup and **≈0.33 s** prove in `--release` on this machine, dev key
 (two runs: 452.9/331.4 ms and 457.8/336.9 ms — the shape is reproducible, the
 clock is not). On chain, `Groth16Verifier.verify` with five `ic` points is
-**234,284 gas**; `AVIPRegistry.verifyThreshold` is **306,252** on the cold path
-(the convention the v0.2.1 note uses for V3's 286,144) and **247,210** warm
+**234,284 gas**; `AVIPRegistry.verifyThreshold` is **306,275** on the cold path
+(the convention the v0.2.1 note uses for V3's 286,144) and **247,233** warm
 (`test/M4dRealKey.t.sol` logs and bounds all three). A v0.2.2 that describes M4d
 has to use these figures: the paper's 94,438 constraints and 3.9 s, and the
 note's 286,144 gas, describe V3. The note's **2.39×** and **1.82×** ratios also
@@ -1328,7 +1347,9 @@ key, two inclusion proofs (for `STATEMENT_VALIDATOR` and
 `keccak256(abi.encode(vk))` digest. `test/M4dRealKey.t.sol` installs the key in
 the frozen verifier, accepts the proof through `AVIPRegistry.verifyThreshold`,
 and rejects a replay for another validator, the same roots at the next epoch,
-any changed statement word and a tampered norm. The M4b proof is no longer
+any changed statement word, a tampered norm, and any word the framework cannot
+encode as a norm (`2^64`, and `-1` in the scalar field — `NormOutOfDomain`). The
+M4b proof is no longer
 admitted by the manager; the M4b fixture stays only because §5.10's bridge tests
 read its historical global statement.
 
@@ -1340,11 +1361,11 @@ read its historical global statement.
 | Proof | **256 B on-chain** |
 | Circuit | **4,827 constraints** (V3's 94,438 is the commitment circuit) |
 | Proving (dev, `--release`) | **0.33 s** prove, **0.45 s** setup, one run |
-| Gas | **234,284** `Groth16Verifier.verify`; **306,252** cold / **247,210** warm `verifyThreshold` |
+| Gas | **234,284** `Groth16Verifier.verify`; **306,275** cold / **247,233** warm `verifyThreshold` |
 | Key | *development* key; one contributor, seeds committed, no security claim (§11) |
 
 Validated locally: `cargo test` → **47 passed, 0 failed, 1 ignored**;
-`forge test --offline` → **274 passed, 0 failed, 0 skipped** over ten suites
+`forge test --offline` → **275 passed, 0 failed, 0 skipped** over ten suites
 (`AVIPRegistry.t.sol` is 52, `M4dRootSeparation.t.sol` is 6); `bash
 src/zk/scripts/m4d_fixture.sh` → byte-identical across runs
 (`md5 efe3ba62ee6daa1fc62f958704344579`); `forge fmt --check` → 0 diffs;

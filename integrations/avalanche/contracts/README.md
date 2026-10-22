@@ -57,7 +57,12 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
   `view` and takes `(epoch, validator, certifiedNorm, proof)`: it builds the
   statement `[statementRoot, epoch, uint160(validator), certifiedNorm]` from its
   own state (so a caller cannot inject a root or a validator) and returns
-  whatever `IZKThresholdVerifier.verify(a, b, c, input)` returns. The Poseidon
+  whatever `IZKThresholdVerifier.verify(a, b, c, input)` returns — with one
+  exception that is the caller's, not the proof's: a `certifiedNorm >= 2^64`
+  (`CERTIFIED_BOUND_BITS`, P-04) reverts `NormOutOfDomain` before the blob is
+  decoded, because `Bn254.ecMul` reduces the word modulo the group order and
+  `c + k·r` (P-13), like the field-negative norm the circuit's one-sided bound
+  admits (P-33), is not a norm this framework can encode. The Poseidon
   root it reads is `statementRootOf(epoch)`, a slot separate from the keccak
   `commitmentOf(epoch)` that `verifyEntry` folds (audit P-16). Because the
   validator is a public input and the leaf is `Poseidon(validator, norm)`, a
