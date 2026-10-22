@@ -26,7 +26,8 @@ hay `session-log.md` en este repositorio: no inventar uno.
 | S-013 | 2026-10-19 | Release v0.2.0 | d99c73a | d8b63d29… | cerrada sin release; ver S-014 |
 | S-014 | 2026-10-20 | v0.2.1: correcciones P0/P1 | a785770 | adfd08d2… | cerrada; release pendiente |
 | S-015 | 2026-10-20 | Release v0.2.1, README/email y Zenodo | fa78fff | adfd08d2… | abierta; DOI pendiente |
-| S-016 | 2026-10-22 | Validación de la matriz externa y triaje del mapa | este commit | adfd08d2… | cerrada; G10/G11 ya rojo en `ea75594` (T-5) |
+| S-016 | 2026-10-22 | Validación de la matriz externa y triaje del mapa | 84e6837 | adfd08d2… | cerrada; G10/G11 roto en `ea75594`, cerrado en S-017 |
+| S-017 | 2026-10-22 | T-5: re-sello del ancla tras P-03/M4d | este commit | 5ff84501… | cerrada; OTS pendiente de upgrade; PDF anterior (T-6) |
 
 S-016 cubre `triage-mapa-2026-10-22.md`, el acta
 `checklist-matriz-evidencia-2026-10-22.md` y la v2

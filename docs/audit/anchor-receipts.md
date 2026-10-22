@@ -1281,3 +1281,64 @@ pendientes; `.ots` de 739 bytes, sha256
 El asset descargado conserva 579260 bytes y sha256 `1aa1cb6c…4da5`.
 Zenodo New version y DOI de versión siguen pendientes. No se toca
 `integrations/` ni los contratos.
+
+## R-13 — T-5: el ancla vuelve a verificar contra su árbol (2026-10-22)
+
+**Qué cierra.** T-5 (§4 de `triage-mapa-2026-10-22.md`) y K-5 (§5 del acta
+`checklist-matriz-evidencia-2026-10-22.md`). `ea75594` («fix(P-03): r = T(i),
+per validator, and the floor that follows») cambió `docs/paper/main.tex` para
+pasar de la norma global del tensor a la entrada por validador y **no re-selló**
+el ancla: desde ese commit `bash verification/audit-gate.sh` daba 9 PASS / 2
+FAIL (G10, G11), reproducible en un worktree detachado en `ea75594` sin cambios
+locales. No era deuda de S-016.
+
+**Diagnóstico.** Sólo el par 1 del root difería: `main.tex` `37ebdc73…` en el
+sello frente a `2a3605ee…` en el árbol. Los otros diez pares —los dos
+`output_manifest.*`, `audit-gate.sh`, `fase0_anchor.sh`, `run_all.sh`, el
+workflow, `claim-registry.csv`, `numerical-verification.md`,
+`content-audit-pending.md` y `count_manifest.txt`— coincidían byte a byte, y
+`output_manifest.sha256` se re-derivó **idéntico** con sus 38 pares: el harness
+no cambió, sólo el paper.
+
+**Decisión: re-sellar, no revertir el paper.** El diff `fa78fff..ea75594` no es
+cosmético: sustituye `‖T‖_F ≥ Θ_r` por `T(i) ≥ Θ_r`, describe el circuito M4d
+(hoja `Poseidon(i, T(i))`, `certifiedNorm` en WAD, `0 ≤ T(i) < 1`) y declara la
+V3 como bearer token que el manager ya no admite. Revertir `main.tex` a
+`37ebdc73…` reintroduciría en el paper la afirmación que P-01/M4d retiraron y
+que el contrato desplegado contradice. El sello era lo caduco, no el paper.
+
+**Pares.** `main.tex` `37ebdc73…` → `2a3605ee…`; `audit_manifest.sha256`
+`774c8851…` → `ee99d631…`; `output_manifest.sha256` `79da1f64…` sin cambios;
+`anchor_root.sha256` `adfd08d2…` → `5ff84501…`.
+
+**Ancla.** Sello UTC `2026-10-22T23:24:52Z`, HEAD `84e6837`. Raíz nueva
+`5ff845019af46f31f55bc6869e3bde61cccfbe046b8b4776c4e7c05e25018aae`.
+`bash verification/fase0_anchor.sh --check` → exit 0 (38 pares, 11 pares y HEAD
+idénticos); `bash verification/audit-gate.sh` → **PASS=11 FAIL=0 SKIP=0**.
+
+**Preservación.** El root y el `.ots` anteriores quedan fuera del repositorio y
+fuera del root nuevo: `~/p9/anchor_root.sha256.adfd08d2_pre_R13` (sha256
+`adfd08d2…`) y `~/p9/anchor_root.sha256.ots.adfd08d2_pre_R13` (sha256
+`1bdfcbbf…`, el recibo promovido de R-12).
+
+**OTS.** `ots stamp verification/anchor_root.sha256` → 4 envíos
+(`a.pool.opentimestamps.org`, `b.pool.opentimestamps.org`,
+`a.pool.eternitywall.com`, `ots.btc.catallaxy.com`), 4 `PendingAttestation` y 0
+`BitcoinBlockHeaderAttestation`. `.ots` de **840 bytes**, sha256
+`0696e024…`. `ots verify` → exit 0 con las cuatro en «Pending confirmation in
+Bitcoin blockchain». `ots upgrade` queda pendiente de confirmación.
+
+**PDF.** El artefacto de registro sigue siendo
+`docs/paper/releases/diamond-framework-2026-10-20.pdf` (579 260 bytes, sha256
+`1aa1cb6c…`), generado de `main.tex 37ebdc73…`: **no** contiene la corrección
+`T(i)` ni M4d. No se re-exporta aquí, porque el PDF es un snapshot fechado y el
+release decide cuándo se emite el siguiente; queda como T-6.
+
+**Alcance.** Sellados tocados: `main.tex` (contenido, ya en `ea75594`),
+`audit_manifest.sha256` y `anchor_root.sha256` (derivados) y el `.ots`.
+`output_manifest.txt` y `output_manifest.sha256` no cambian. No sellados:
+`SESSIONS.md`, `triage-mapa-2026-10-22.md`,
+`checklist-matriz-evidencia-2026-10-22.md` y este recibo.
+
+**Estado.** R-13 se commitea como descendiente de `84e6837` (regla D7-b); no se
+enmienda `84e6837`. No se toca `integrations/` ni los contratos.

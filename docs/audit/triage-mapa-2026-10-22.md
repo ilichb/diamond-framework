@@ -260,11 +260,26 @@ forma, y tres de ellas son baratas.
   DISCREPAN») también en un worktree detachado de `ea75594`, así que es deuda
   previa a esta sesión. Exige una decisión de gobernanza: re-emitir el sello
   (nuevo `Root` y nuevo anclaje) o revertir el paper a lo sellado. Mientras
-  tanto, ningún `Root` prueba el contenido actual del paper.
+  tanto, ningún `Root` probaba el contenido del paper.
   *Criterio:* 11/11 PASS en un worktree limpio de HEAD.
   *Nota operativa:* sin `--check`, `fase0_anchor.sh` **re-sella** en vez de
   verificar; el gate siempre lo invoca con `--check` (`audit-gate.sh:239`).
   Ejecutarlo a mano en el árbol de trabajo mueve el ancla.
+  **Cerrado (2026-10-22, R-13).** Re-sellado: `main.tex` `2a3605ee…`, `Root`
+  `5ff84501…`, gate 11/11, `.ots` con 4 atestaciones pendientes. Se re-selló en
+  vez de revertir el paper porque el diff es la corrección `T(i)`/M4d y revertir
+  reintroduciría la norma global que el paper declara bearer token. El PDF de
+  release sigue siendo anterior a esa corrección: **T-6**.
+- **T-6 — Snapshot PDF del paper que describe M4d.** El artefacto de registro
+  (`diamond-framework-2026-10-20.pdf`, 579 260 bytes) se generó de `main.tex`
+  `37ebdc73…` y no contiene `T(i)` ni el circuito M4d; el `main.tex` actual
+  (`2a3605ee…`) compila limpio (G9) pero no tiene PDF fechado. Decidir si se
+  emite `diamond-framework-2026-10-22.pdf` y se actualiza
+  `docs/paper/releases/README.md`, o si el release espera. No toca código ni
+  ancla.
+  *Criterio:* `ls docs/paper/releases/*.pdf | tail -1` apunta a un PDF generado
+  de `2a3605ee…`, con sus bytes y sha256 citados en R-13 o en un recibo
+  posterior.
 
 ## 5. Plan, en el orden en que conviene hacerlo
 
