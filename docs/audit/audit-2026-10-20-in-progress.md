@@ -81,15 +81,17 @@ allí.
 | P-35 | La frontera de detección no es Kesten–Stigum y el paper sólo probó densidad 10×: 40 coludidos a 3× pasan con TPR≈0,06; BBP sitúa el umbral en θ≈4,38 (m≈12,2 a 10×) y el 50 % en m≈15,4 | **Alta** (paper; resultado negativo) | Confirmado con réplica propia de 300 réplicas | Sí (tercera lectura) |
 | P-36 | Bibliografía: Bauer–Jost está mal citado (CPAM 2012 → *Comm. Anal. Geom.* 21(4):787–845, 2013) y faltan referencias para Kesten–Stigum, Feller y EIP-196/197 | Baja (paper) | Confirmado con Crossref/arXiv | Sí (tercera lectura) |
 | P-37 | La permutación Poseidon reproduce los vectores t=3 de circomlib; el digest usa `state[1]` (rate) y no el `state[0]` (capacidad) de circomlib. Es una convención de esponja válida, no un defecto del circuito; sólo limita la interoperabilidad con primitivas de 2 entradas | Baja (interoperabilidad; no soundness) | Confirmado con sonda: 2 vectores t=3, absorción 1–10/500 y ambigüedad de longitud documentada | Sí (sonda de cierre; nota de documentación) |
+| P-38 | La prueba de admisión tiene todo el statement público y su testigo es el camino de Merkle: sólo oculta la posición de la hoja. No aporta zero-knowledge sobre la norma ni ahorra gas frente a `verifyEntry` | Media (diseño y honestidad del artefacto; no soundness) | Confirmado por lectura (`admission.rs:180-235`) y por medición: 306,252 gas fríos frente a una inclusión keccak de pocos miles | Sí (adenda M4d) |
 
 **Remediación posterior a este worksheet.** M4d (plan §5.5.11) cierra **P-01** y
 **P-16** y añade al circuito de admisión la cota de **P-33**: el statement pasa a
 `[statementRoot, epoch, validator, certifiedNorm]` sobre una inclusión Merkle de la
 hoja `Poseidon(validator, norm)`; `AVIPRegistry` guarda `statementRootOf(epoch)` en
 una ranura separada de `commitmentOf(epoch)` (una sola `postCommitment` escribe
-ambas); y el circuito impone `norm < WAD`, así que el dominio admitido es `[0, 1)`
-—el papel pide `[0,1]` y falta el borde superior, un límite de completitud y no de
-soundness—. Las secciones de abajo conservan el texto, los números de línea y los
+ambas); y el circuito impone `norm < WAD`, así que el dominio admitido es
+`[0, 1)`: el papel pide `[0,1]` y el circuito excluye el punto `r = 1`, un borde
+de completitud (no de soundness) que además es el ínfimo de `S_f` — ver (ii).
+Las secciones de abajo conservan el texto, los números de línea y los
 medidores del árbol auditado (`70f225c`), que es lo que las PoCs midieron; la
 columna «Estado» no se reescribe.
 
@@ -99,10 +101,14 @@ ata validador y época, pero no que la raíz de admisión provenga del tensor
 comprometido: el `AVIPRegistry` ve raíces, no entradas. Es la ambigüedad de `T`
 de **P-03**, y el `TENSOR_DIGEST` pineado la sostiene sólo *off-chain*
 (`test/M4dRootSeparation.t.sol` la escribe como prueba, incluida la ausencia de
-vínculo on-chain). (ii) `norm < WAD` es el dominio del escalar por validador, no
-el `‖T‖_F ∈ [0, √500]` del paper: como `C_R(1) = 0.4`, el descuento máximo es del
-40% y `S_f ∈ (0.6, 1]` (`(0.6, 0.7333]` con `Θ_r = 0.5`), así que `S_min = 0.2` es
-un límite inalcanzable — el borde que P-33 describe no es el tope económico. (iii)
+vínculo on-chain). (ii) El suelo real de `S_f` es **0.6** y lo fija el circuito,
+no la lectura de `T`: `admission.rs:213` impone `norm ≤ WAD-1` (una diferencia
+negativa se envuelve en el campo y falla), de modo que `r < 1` y
+`S_f = (1+0.2r)/(1+r)`, decreciente, tiene ínfimo 0.6 —no alcanzado, porque
+`r = 1` está excluido—; con `Θ_r = 0.5` la banda admitida es `(0.6, 0.7333]`. El
+0.2 del paper es el límite `r→∞`, y la lectura global de M4b (12.79 → 0.258) cae
+*por debajo* del suelo, luego las dos lecturas no pueden compartir `C_R`. P-33
+fija el suelo; P-03, qué significa `r`. (iii)
 Las cifras del paper (94,438 restricciones, 3.9 s, 286,144 gas) son de V3; el
 circuito de admisión mide **4,827** restricciones, **0.33 s** de prueba y
 **234,284** gas de `verify` (**306,252** en frío y **247,210** en caliente por
@@ -2736,6 +2742,64 @@ pendiente y no como una propiedad cubierta.
   checklist de Zenodo; no se reexporta el PDF, no se mueve el ancla ni el
   recibo. La fuente inmediata es `S-014`, no el `.bak`; `S-014` y
   `anchor-receipts.md` conservan el 4 histórico.
+
+---
+
+## P-38 — La prueba de admisión oculta la posición de la hoja y nada más
+
+**Severidad provisional:** Media (diseño y honestidad del artefacto; **no** es un
+fallo de soundness y no permite a nadie admitirse sin estar en el árbol).
+**Estado:** Confirmado por lectura (`admission.rs:180-235`) y por medición
+(`test/M4dRealKey.t.sol`).
+**Ubicación:** `src/zk/src/admission.rs:199-234`;
+`integrations/avalanche/contracts/AVIPRegistry.sol:327` (`verifyEntry`);
+`AVIPValidatorManager.admit`; plan §5.5.11.
+
+### Qué se comprobó
+
+Los cuatro elementos del statement —`statementRoot`, `epoch`, `validator`, `norm`—
+son entradas públicas (`admission.rs:199-202`), y el testigo es el índice de hoja
+más nueve hermanos (`admission.rs:190-192`, `219-231`), ambos derivables por
+cualquiera que tenga la época. Lo único que el proof no revela es **la posición**
+de la hoja. El propio circuito lo dice (`admission.rs:215`: «the proof says "this
+(validator, norm) pair is in the committed tree", not "I know a secret score"»).
+
+El coste tampoco lo justifica. `AVIPRegistry.verifyEntry` ya verifica una inclusión
+keccak, `public pure`, para un número arbitrario de niveles: nueve hashes de 64
+bytes cuestan unos pocos miles de gas, frente a los **306,252** fríos y **247,210**
+calientes que mide `verifyThreshold` con la clave real (**234,284** en `verify`).
+Un árbol Poseidon en EVM quedaría en el orden de Groth16, no por debajo, así que
+la ruta barata es keccak — y ya existe en el contrato.
+
+### Consecuencia
+
+- M4d **cierra P-01**: el proof deja de ser un bearer token, admite exactamente una
+  dirección y la ata a la época (`M4dRootSeparation.t.sol`).
+- Pero no compra lo que el paper vende: la norma sigue siendo la que el
+  secuenciador escribió en las entradas y **ninguna parte on-chain la liga al
+  tensor** (P-03; `M4dRootSeparation.t.sol` fija esa ausencia como prueba). La
+  confianza en el secuenciador queda como en un sistema sin ZK.
+- Presentar la admisión como «norma de Frobenius certificada por prueba» es
+  incorrecto en HEAD.
+- El conflicto ya está escrito en el código, en dos comentarios que no pueden ser
+  ciertos a la vez: `commitment.rs:52` dice que `Entry.norm_wad` es `r = ‖T‖_F`
+  y `AVIPValidatorManager.sol:181` que es `r = T(i)`. El límite `< WAD` del
+  circuito coincide con el segundo y excluye el primero para el fixture real
+  (12.79). Cuál se corrige lo decide P-03.
+
+### Remediación propuesta
+
+1. Decirlo en §5.5.11 y en el paper: la prueba aporta **pertenencia con posición
+   privada**, más los atados de validador y época; no confidencialidad de la norma
+   ni ahorro de gas.
+2. Si el criterio es coste, admitir con `verifyEntry` sobre
+   `commitmentOf(epoch)` y la hoja `keccak256(abi.encodePacked(validator, norm))`
+   —sin código nuevo— y reservar Groth16 para el statement del tensor.
+3. Si el criterio es confidencialidad, la norma tiene que dejar de ser un input
+   público; hoy la prueba no la oculta porque no hay nada oculto.
+4. El vínculo real es §5.5.7 (el compromiso como input del circuito). Allí el
+   obstáculo es P-03 —qué es `T` por validador—, no el coste: V3 ya plegó 500
+   entradas con 94,438 restricciones y 3.9 s.
 
 ---
 

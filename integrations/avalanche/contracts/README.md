@@ -62,6 +62,12 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
   `commitmentOf(epoch)` that `verifyEntry` folds (audit P-16). Because the
   validator is a public input and the leaf is `Poseidon(validator, norm)`, a
   proof admits exactly one address: it is not a bearer token (audit P-01).
+  What it does **not** establish is that this root and the keccak
+  `commitmentOf(epoch)` describe the same entries — the registry sees roots, not
+  entries, so `postCommitment` is the sequencer asserting it for both at once
+  (audit P-03). And because every statement word is public, the proof hides only
+  the leaf's position; a `verifyEntry` inclusion binds the same address for a few
+  thousand gas (audit P-38).
   Enforcing `T(v) >= Theta_r` is the manager's job (§5.2.2 of the plan), which
   keeps economic parameters out of the circuit and the trusted setup. With no
   proof in the blob the registry reverts with `InvalidZKProof`.

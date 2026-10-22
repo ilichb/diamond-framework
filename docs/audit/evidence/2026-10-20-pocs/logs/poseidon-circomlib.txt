@@ -31,4 +31,3 @@ len 500: manual state[1] = 14881564148789680950073164612164838307833922018127128
 test manual_absorption_matches_sponge_for_multiple_lengths ... ok
 
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
-

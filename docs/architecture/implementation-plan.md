@@ -1263,20 +1263,49 @@ entries and cannot recompute either root. "Both roots came from one entry set" i
 therefore the sequencer's assertion — made atomic by writing both in one
 `postCommitment`, and auditable by anyone holding the epoch — not an on-chain
 tie. `test/M4dRootSeparation.t.sol` writes that boundary down as a test instead
-of leaving it implied; closing it needs the commitment as a circuit input, which
-is §5.5.7's recursive construction and costs the prover the whole vector.
+of leaving it implied. Closing it needs the commitment as a circuit input
+(§5.5.7's recursive construction) *and* a decision on what `T` is per validator:
+P-03 is the obstacle, not the cost. V3 already carried the 500-entry vector at
+94,438 constraints and 3.9 s (§5.5.9) — expensive, but payable.
 
-**The domain of `norm` has a price (P-03, P-33).** `norm < 1e18` is the domain of
-`Entry.norm_wad`, not the paper's `‖T‖_F ∈ [0, √500]` for a 20×5×5 block. With
-`C_R(r) = 0.8r/(1+r)`, `C_R(1) = 0.4`, so the per-validator reading caps the
-discount at 40% and keeps `S_f` in `(0.6, 1]`; with the manager's `Θ_r = 0.5` the
+**What the proof buys, and what it does not.** Every statement word is public and
+the witness is the leaf index plus nine siblings, both derivable by anyone holding
+the epoch, so the only secret is the **position**: the proof hides which slot the
+validator occupies, nothing else. It is not zero-knowledge about the norm — the
+circuit says so itself (`admission.rs:215`) — and it is not cheaper than a plain
+inclusion check: `AVIPRegistry.verifyEntry` already folds a keccak path for a few
+thousand gas, against the 306,252 cold / 247,210 warm of `verifyThreshold` (a
+Poseidon path on EVM would land in Groth16's order of magnitude, not below it).
+M4d uses the proof anyway for uniformity — one verifier, one 256-byte blob, no
+Merkle code in the registry — and because it keeps §5.5.7's recursive binding
+reachable; not for cost and not for confidentiality. Until that binding exists the
+whole claim is "the gate accepts a validator whose norm is in the published tree",
+and the paper should not call it a certified Frobenius norm.
+
+**The domain of `norm` is `[0, 1)`, and that is the floor (P-33).** The circuit
+enforces it in one line — `admission.rs:213`,
+`enforce_below_pow2(wad - norm - 1, ENTRY_BITS)` with `ENTRY_BITS = 60`: a
+*negative* difference wraps into a field element whose high bits are set, so every
+`norm ≥ WAD` fails and the domain is `[0, 1e18 - 1]`, i.e. `r < 1`. (The
+difference from a `≤` form is a single value, `r = 1`; that is not the point — the
+domain excludes the whole half-line `r ≥ 1`.) `S_f(r) = (1 + 0.2r)/(1 + r)`
+decreases, so the circuit's real floor is **0.6**, approached but not attained;
+the paper's `S_min = 0.2` is only the `r → ∞` asymptote. With `Θ_r = 0.5` the
 admitted band is `(0.6, 0.7333]`. The fixture's `0.665564…` gives
-`S_f = 0.680317507197900649` (the number §5.11's M8 report prints); the global
-reading M4b certifies (`12.793810…`) gives `0.257997028195075875`. `S_min = 0.2`
-is the `r → ∞` limit and is unreachable in either. The strict bound itself
-removes only `r = 1` — a completeness edge — so the 40% cap is P-03's
-per-validator semantics, not P-33's bound. The paper has to say which `r` it
-prices before v0.2.2 repeats `C_R` and `S_min`.
+`S_f = 0.680317507197900649` (the number §5.11's M8 report prints); M4b's global
+`12.793810…` gives `0.257997028195075875`, *below* that floor — the proof that the
+two readings cannot share one `C_R`. P-33 fixes the floor and P-03 fixes what the
+number means: a `‖T‖_F` of 12.79 cannot be certified as `< 1`, so it is the circuit
+that decides `T` is one scalar per validator. The paper has to state the floor and
+the meaning before v0.2.2 repeats `C_R` and `S_min`.
+
+**The same decision is written down twice in the code, and the two disagree.**
+`commitment.rs:52` documents `Entry.norm_wad` as "`r = ‖T‖_F` in WAD — the same
+quantity `collateralFor` takes", while `AVIPValidatorManager.sol:181` documents
+`requiredStakeFor`'s argument as "the validator's committed norm `r = T(i)`". The
+circuit's `< WAD` agrees with the second and rules the first out for M4b's real
+fixture (`12.793810…`), so one of those comments is false today. Which one is
+P-03; the answer has to land in both places and in `main.tex` at once.
 
 **What M4d costs, measured.** The admission circuit is **4,827 constraints**
 (§5.5.9's 94,438 is V3, the commitment circuit admission no longer runs), with

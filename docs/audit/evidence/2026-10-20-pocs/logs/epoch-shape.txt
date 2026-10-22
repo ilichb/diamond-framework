@@ -7,4 +7,3 @@ test genesis_with_501_leaves_and_one_duplicate_is_fresh ... ok
 test a_thousand_duplicated_leaves_report_zero_changes ... ok
 
 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
-
