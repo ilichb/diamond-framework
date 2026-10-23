@@ -189,6 +189,34 @@ O. DeployTransport, source side
   [m7d] AVIPSlashingChannel=0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
   [m7d] status=ok
 
+P. DeployFujiPhase1, end to end
+  expects: registry + vault + manager in one run, with the origin rows verify_fuji.sh compares against the chain
+  $ DEPLOYER=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 SEQUENCER=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 SLASH_AUTHORITY=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC TOKEN=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC SINK=0x90F79bf6EB2c4f870365E785982E1f101E93b906 WAD_PER_UNIT=1000000000000 GUARDIAN=0x90F79bf6EB2c4f870365E785982E1f101E93b906 forge script scripts/DeployFujiPhase1.s.sol:DeployFujiPhase1 --offline
+  [fuji] chain.id=31337
+  [fuji] chain.name=anvil-or-dry-run
+  [fuji] sender=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  [fuji] deployer=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  [fuji] registry=0x5FbDB2315678afecb367f032d93F642f64180aa3
+  [fuji] vault=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+  [fuji] manager=0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+  [fuji] sink=0x90F79bf6EB2c4f870365E785982E1f101E93b906
+  [fuji] token=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+  [fuji] guardian=0x90F79bf6EB2c4f870365E785982E1f101E93b906
+  [fuji] sequencer=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+  [fuji] slash_authority=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+  [fuji] verifier=0x0000000000000000000000000000000000000000
+  [fuji] TENSOR_SIZE=500
+  [fuji] MAX_DELTA_ENTRIES=50
+  [fuji] origin.sourceChainId=0xce12864578eb11634416932021724652c9a481fbf6a42ba77cde799fad091bc1
+  [fuji] origin.formulaDigest=0x403af787fee703ec18c440a91e8405b72dc55ea700ec557263baaab0e24a4cfc
+  [fuji] wad_per_unit=1000000000000
+  [fuji] status=ok
+
+Q. preflight_fase2.sh --offline
+  expects: the artifact about to be deployed is the post-M-15 one: the check P-40 was missing
+  $ bash scripts/preflight_fase2.sh --offline
+  <the script stopped before it logged anything>
+
 WHAT THIS IS NOT
   A deployment. Nothing here touches an RPC endpoint, and the addresses are the
   ones a fresh EVM hands out: they are not, and must not be presented as, Fuji

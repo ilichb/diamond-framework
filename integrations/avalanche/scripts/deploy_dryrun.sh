@@ -31,6 +31,8 @@
 #   M  registry, origin pinned                 the environment wins
 #   N  registry, FORMULA_DIGEST = 0x0          ZeroFormulaDigest
 #   O  transport, source side                  three endpoints, one routing table each
+#   P  phase 1, end to end                     registry + vault + manager, origin.* logged
+#   Q  preflight_fase2.sh --offline            the artifact is the post-M-15 one
 #
 # Nothing is broadcast: without `--rpc-url ... --broadcast`, `forge script`
 # simulates locally. No RPC endpoint, no keys, no funds, no network (`--offline`),
@@ -62,6 +64,13 @@ MANAGER_SCRIPT=scripts/DeployValidatorManager.s.sol:DeployValidatorManager
 # it. The vault script logs `[m8]`, so `run_case` keeps both tags.
 VAULT_SCRIPT=scripts/DeployStakeVault.s.sol:DeployStakeVault
 TRANSPORT_SCRIPT=scripts/DeployTransport.s.sol:DeployTransport
+# Phase 1 end to end: the only script that deploys registry + vault + manager in
+# one run, and therefore the one phase 2 re-runs with a Safe as SLASH_AUTHORITY.
+FUJI_SCRIPT=scripts/DeployFujiPhase1.s.sol:DeployFujiPhase1
+# The origin pair the registry pins at construction (T-2/M-15) and the phase-1
+# script must log. Same values as case A: the defaults of `DeployCommon`.
+ORIGIN_CHAIN=0xce12864578eb11634416932021724652c9a481fbf6a42ba77cde799fad091bc1
+ORIGIN_FORMULA=0x403af787fee703ec18c440a91e8405b72dc55ea700ec557263baaab0e24a4cfc
 
 FAILURES=0
 fail() {
@@ -94,7 +103,7 @@ run_case() {
     echo $? >"$TMP_DIR/$tag.status"
     set -e
 
-    grep -E '^  \[(m7a|m8|m7d)\] ' "$out" >"$TMP_DIR/$tag.log" || true
+    grep -E '^  \[(m7a|m8|m7d|fuji)\] ' "$out" >"$TMP_DIR/$tag.log" || true
 }
 
 expect_ok() {
@@ -298,6 +307,38 @@ expect_line O "  [m7d] teleporter=$FIRST_CREATE"
 expect_line O "  [m7d] peerBlockchainId=$PEER_CHAIN"
 expect_line O "  [m7d] status=ok"
 
+# ---------------------------------------------------------------- case P
+# Phase 1 end to end on the local chain: this is the script phase 2 re-runs with
+# a Safe as SLASH_AUTHORITY. The `origin.*` rows are the half P-40 was missing —
+# without them `verify_fuji.sh` cannot verify the deployment it just made, so a
+# correct phase-2 registry would still fail verification.
+ENV_P=(
+    DEPLOYER=$ANVIL_0
+    SEQUENCER=$ANVIL_1
+    SLASH_AUTHORITY=$ANVIL_2
+    TOKEN=$ANVIL_2
+    SINK=$ANVIL_3
+    WAD_PER_UNIT=1000000000000
+    GUARDIAN=$ANVIL_3
+)
+run_case P ${ENV_P[@]+"${ENV_P[@]}"} -- forge script "$FUJI_SCRIPT" --offline
+expect_ok P
+expect_line P "  [fuji] chain.id=31337"
+expect_line P "  [fuji] manager=0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+expect_line P "  [fuji] slash_authority=$ANVIL_2"
+expect_line P "  [fuji] origin.sourceChainId=$ORIGIN_CHAIN"
+expect_line P "  [fuji] origin.formulaDigest=$ORIGIN_FORMULA"
+expect_line P "  [fuji] status=ok"
+
+# ---------------------------------------------------------------- case Q
+# The phase-2 preflight, offline: the artifacts must already be the post-M-15
+# ones, because a stale build is what P-40 is made of and it is invisible in the
+# source. The on-chain half needs a Safe and an RPC, so it is not exercised here.
+run_case Q -- bash scripts/preflight_fase2.sh --offline
+expect_ok Q
+expect_error Q "preflight: PASS="
+expect_error Q " FAIL=0 "
+
 # ------------------------------------------------------------- transcript
 
 if [ "$FAILURES" -ne 0 ]; then
@@ -402,6 +443,12 @@ HEADER
     section O "DeployTransport, source side" \
         "three endpoints on one chain, each with one routing entry; the local mock messenger makes it runnable offline" \
         "${ENV_O[*]} forge script $TRANSPORT_SCRIPT --offline"
+    section P "DeployFujiPhase1, end to end" \
+        "registry + vault + manager in one run, with the origin rows verify_fuji.sh compares against the chain" \
+        "${ENV_P[*]} forge script $FUJI_SCRIPT --offline"
+    section Q "preflight_fase2.sh --offline" \
+        "the artifact about to be deployed is the post-M-15 one: the check P-40 was missing" \
+        "bash scripts/preflight_fase2.sh --offline"
 
     cat <<'FOOTER'
 
@@ -413,5 +460,5 @@ WHAT THIS IS NOT
 FOOTER
 } >"$OUT"
 
-echo "deploy_dryrun: 15 cases ok; wrote $OUT"
+echo "deploy_dryrun: 17 cases ok; wrote $OUT"
 

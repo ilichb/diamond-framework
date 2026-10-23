@@ -268,6 +268,8 @@ contract DeployFujiPhase1 is DeployCommon {
         _logAddress("verifier", d.verifier);
         _logUint("TENSOR_SIZE", N);
         _logUint("MAX_DELTA_ENTRIES", GAMMA_N);
+        _logBytes32("origin.sourceChainId", d.sourceChainId);
+        _logBytes32("origin.formulaDigest", d.formulaDigest);
         _logUint("wad_per_unit", d.wadPerUnit);
         _log("status", "ok");
     }

@@ -31,6 +31,7 @@ hay `session-log.md` en este repositorio: no inventar uno.
 | S-018 | 2026-10-22 | T-2 y T-1: origen del epoch y custodia obligatoria | este commit | 5ff84501… | cerrada; 283 tests Foundry, 14 casos de dry run, ancla intacta |
 | S-019 | 2026-10-22 | P-10: la pareja de autoridad no puede colapsar | este commit | 5ff84501… | cerrada; 286 tests, ancla intacta; queda el follow-up de `proposeVerifier` |
 | S-020 | 2026-10-22 | P-39/P-40 y el despliegue del transporte M7d | este commit | 5ff84501… | cerrada; 294 tests, 15 casos de dry run, ancla intacta |
+| S-021 | 2026-10-22 | Fase 2: preflight, y el transcript de fase 1 que no verificaba | este commit | 5ff84501… | cerrada; 17 casos de dry run, ancla intacta; el despliegue espera al Safe |
 
 S-016 cubre `triage-mapa-2026-10-22.md`, el acta
 `checklist-matriz-evidencia-2026-10-22.md` y la v2
@@ -126,3 +127,46 @@ Ninguno de los 11 ficheros del ancla cambia: `fase0_anchor.sh --check` sale 0 y 
 gate sigue en PASS=11 FAIL=0 SKIP=0 sobre `5ff84501…`. La suite pasa de 286 a 294
 tests y el dry run de 14 a 15 casos (`md5 ec094c9127dd9d9813a7919d80e9d774`),
 byte-idéntico entre dos ejecuciones.
+
+S-021 empieza la fase 2 —el redespliegue que P-39 y P-40 exigen— y encuentra que
+el agujero era mayor de lo documentado. `DeployFujiPhase1._report` **no emitía**
+`origin.sourceChainId` ni `origin.formulaDigest`, aunque `DeployRegistry` sí y
+`verify_fuji.sh` los exige desde T-2; y el verificador sólo comprobaba que esas
+dos claves *existieran* en el transcript, nunca que coincidieran con
+`registry.sourceChainId()`/`formulaDigest()`. Los dos lados del contrato de
+verificación estaban rotos: un redespliegue con el registry correcto habría
+producido un transcript que el propio verificador rechaza, y un transcript con
+valores inventados habría pasado. Corregidos ambos: el script emite las dos filas
+(caso P del dry run, fase 1 completa en local) y el verificador las coteja contra
+la cadena, nombrando la causa cuando los getters revierten
+(`the deployed build predates M-15 (P-40)`) en lugar de morir con un
+`cast call failed` genérico.
+
+El otro entregable es `preflight_fase2.sh`, porque `DeployFujiPhase1` ya *es* el
+script de fase 2 —despliega el registry con el origen, exige código en el slasher—
+pero no puede comprobar su propia entrada. Diez comprobaciones de sólo lectura:
+artefacto post-M-15, `bindManager`/`slashAuthority` presentes, `origin.*` en el
+script; cadena 43113, slasher con código y distinto de la EOA de fase 1 y de
+`SEQUENCER`/`DEPLOYER` (aviso si es el `GUARDIAN`), 0.05 AVAX en el deployer,
+Teleporter presente, y confirmación de que el registry vigente sigue sin los
+getters. Verificado en tres modos: `--offline` (`PASS=3 FAIL=0`), contra el estado
+real (`FAIL=2`, habría bloqueado el despliegue original) y con una dirección con
+código (`PASS=10 FAIL=0`).
+
+**Estado operativo, comprobado hoy:** el deployer `0x1245…35bb` tiene 0.5 AVAX, el
+Teleporter existe en Fuji en `0x253b2784…5fcf`, y **no hay Safe**. La fase 2 está
+bloqueada por una decisión de gobernanza —owners y umbral—, no por el código: en
+cuanto exista la dirección, el orden está escrito y el preflight lo valida. El
+transporte sigue igual: el script existe, los peers de la otra cadena no.
+
+Suite sin cambios en Solidity (294): lo añadido es shell, y su prueba es el dry
+run, que pasa de 15 a 17 casos con md5 nuevo
+(`bf274cdbc9ebeae61e0daafa00c6ee56`, estable entre dos ejecuciones). Ancla y gate
+intactos: PASS=11.
+
+Nota de medición, porque afecta a cómo se cita la evidencia: la primera corrida de
+esta sesión reportó **260** tests y `--match-path test/DeployScripts.t.sol` decía
+"No tests found in project!" con los 34 tests presentes en el artefacto. No faltaba
+nada: `out/` estaba desincronizado tras editar el script, y `forge clean &&
+forge test` devuelve los 294 (10 suites, `DeployScriptsTest` incluida). Un conteo
+leído de una corrida incremental no es evidencia; se limpia antes de citarlo.

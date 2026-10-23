@@ -126,17 +126,63 @@ older than M-15 (P-40), so the registry is part of that redeployment too.
 its kind (`manager.slashAuthority.kind=eoa|contract`) and takes
 `--require-multisig` to fail on an EOA.
 
+### Phase 2: the redeployment a live deployment needs (P-39/P-40)
+
+The phase-1 Fuji deployment has two properties that cannot be changed in place:
+`slashAuthority` is `0xcdFB…2ec7`, an EOA with no code, in a role that has no
+setter and no proposal pair (P-39); and its registry predates M-15, so it has no
+`sourceChainId()`/`formulaDigest()` and its transcript has no `origin.*` rows
+(P-40). The vault is bound to that manager and `bindManager` is one-shot, so the
+fix is a redeployment — registry, vault and manager — with a Safe as the slasher.
+
+`DeployFujiPhase1.s.sol` is that script: it deploys the current registry (origin
+included), the vault and the manager, and `_requireSlasher` refuses a slasher
+without code. What it cannot check is its own input, so `preflight_fase2.sh`
+checks it first:
+
+```shell
+# artifacts only: no RPC, no keys
+bash scripts/preflight_fase2.sh --offline
+
+# the real thing: needs a deployed Safe and the three roles
+DEPLOYER=0x... SEQUENCER=0x... SLASH_AUTHORITY=<safe> GUARDIAN=<safe> \
+    bash scripts/preflight_fase2.sh
+```
+
+It refuses a slasher with no code, the phase-1 EOA itself, and a slasher equal to
+`SEQUENCER` or `DEPLOYER`; it warns when the slasher is also the guardian (a Safe
+holding both powers is a policy decision, not an accident, so it is reported
+rather than refused); it requires 0.05 AVAX on the deployer; it confirms the
+Teleporter messenger the transport will need; and it confirms that the phase-1
+registry still lacks the M-15 getters, so the redeployment is still the right
+move. Against the live deployment it prints `PASS=10 FAIL=0` with a Safe, and
+`FAIL=2` with the phase-1 EOA.
+
+The order, once the preflight is green:
+
+1. Create the Safe. Owners and threshold are a governance decision; the scripts
+   only require that the address has code.
+2. Run the preflight with that Safe as `SLASH_AUTHORITY`; `FAIL=0` or stop.
+3. `DeployFujiPhase1` with `--rpc-url … --broadcast`, from
+   `~/.config/avip/deployer.json` (0.5 AVAX at the time of writing, roughly 6M
+   gas for the three contracts).
+4. `verify_fuji.sh <transcript> --require-multisig`. This is the first run that
+   can check `origin.*` and the slasher's *kind* against the chain; the phase-1
+   transcript cannot pass it, by design.
+5. Only then the transport: `DeployTransport.s.sol` needs the peer endpoints of
+   the other chain, which do not exist yet (`I-1.4`).
+
 ### The dry run
 
 ```shell
 bash scripts/deploy_dryrun.sh
 ```
 
-Fifteen cases, **one fresh `forge script` process each** (the environment is
+Seventeen cases, **one fresh `forge script` process each** (the environment is
 process-wide, so two cases sharing a process could not prove how either was
 read), and each case asserts what its transcript must contain. A to F are M7a's,
 G to I M8's, J and K M9a's, L to N M-15's (the registry's origin), O M7d's (the
-transport's source half):
+transport's source half), P the whole of phase 1 and Q the phase-2 preflight:
 
 | Case | Environment | Expects |
 |------|-------------|---------|
@@ -155,12 +201,15 @@ transport's source half):
 | M | registry: `SOURCE_CHAIN_ID`, `FORMULA_DIGEST` pinned | the environment wins, and the transcript carries the origin every epoch must declare |
 | N | registry: `FORMULA_DIGEST=0x0` | `ZeroFormulaDigest()` — a tensor with no defined meaning is refused |
 | O | transport: `TRANSPORT_SIDE=source`, both chain ids, the three peer addresses, the four roles | three endpoints on one chain, one routing entry each, and the local mock messenger |
+| P | phase 1: `DEPLOYER`, `SEQUENCER`, `SLASH_AUTHORITY`, `TOKEN`, `SINK`, `WAD_PER_UNIT`, `GUARDIAN` | registry + vault + manager in one run, `manager` predicted and checked, and the `origin.*` rows `verify_fuji.sh` compares |
+| Q | `preflight_fase2.sh --offline` | the artifact about to be deployed is the post-M-15 one |
 
 It writes `deploy_dryrun_output.txt` (committed) and, if any expectation fails,
 exits non-zero **without rewriting it**. The transcript keeps only the `[m7a]`,
-`[m8]` and `[m7d]` lines the scripts log — no gas, no timings — so it is
-byte-stable: two runs diff clean (`md5 ec094c9127dd9d9813a7919d80e9d774` after
-M7d's transport case; the previous pin was `41fb72a8…` with fourteen cases). It is not a deployment, and the addresses in it are the
+`[m8]`, `[m7d]` and `[fuji]` lines the scripts log — no gas, no timings — so it
+is byte-stable: two runs diff clean (`md5 bf274cdbc9ebeae61e0daafa00c6ee56` after
+cases P and Q; the previous pins were `ec094c91…` with fifteen cases and
+`41fb72a8…` with fourteen). It is not a deployment, and the addresses in it are the
 ones a fresh EVM hands out, not Fuji addresses.
 
 ## `DeployTransport.s.sol` (milestone M7d)

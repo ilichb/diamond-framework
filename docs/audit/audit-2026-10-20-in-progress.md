@@ -82,8 +82,8 @@ allí.
 | P-36 | Bibliografía: Bauer–Jost está mal citado (CPAM 2012 → *Comm. Anal. Geom.* 21(4):787–845, 2013) y faltan referencias para Kesten–Stigum, Feller y EIP-196/197 | Baja (paper) | Confirmado con Crossref/arXiv | Sí (tercera lectura) |
 | P-37 | La permutación Poseidon reproduce los vectores t=3 de circomlib; el digest usa `state[1]` (rate) y no el `state[0]` (capacidad) de circomlib. Es una convención de esponja válida, no un defecto del circuito; sólo limita la interoperabilidad con primitivas de 2 entradas | Baja (interoperabilidad; no soundness) | Confirmado con sonda: 2 vectores t=3, absorción 1–10/500 y ambigüedad de longitud documentada | Sí (sonda de cierre; nota de documentación) |
 | P-38 | La prueba de admisión tiene todo el statement público y su testigo es el camino de Merkle: sólo oculta la posición de la hoja. No aporta zero-knowledge sobre la norma ni ahorra gas frente a `verifyEntry` | Media (diseño y honestidad del artefacto; no soundness) | Confirmado por lectura (`admission.rs:212-276`) y por medición: 306,275 gas fríos frente a una inclusión keccak de pocos miles | Sí (adenda M4d) |
-| P-39 | El `slashAuthority` del despliegue de Fuji es una EOA y el rol es inmutable: una sola clave decide todo slash del stake registrado | **Alta** (custodia/operacional) | Confirmado on-chain: `cast code` = `0x` (2026-10-22); los scripts de despliegue ahora lo rechazan | Sí (S-020) |
-| P-40 | El despliegue de Fuji es de un build anterior a M-15: `sourceChainId()` y `formulaDigest()` revierten en el registry desplegado, y su transcript no tiene las claves `origin.*` que `verify_fuji.sh` exige | Media (trazabilidad; operacional) | Confirmado on-chain: ambos getters revierten; `sequencer()` y `TENSOR_SIZE()` responden | Sí (S-020) |
+| P-39 | El `slashAuthority` del despliegue de Fuji es una EOA y el rol es inmutable: una sola clave decide todo slash del stake registrado | **Alta** (custodia/operacional) | Confirmado on-chain: `cast code` = `0x` (2026-10-22); los scripts de despliegue ahora lo rechazan | Sí (S-020, S-021) |
+| P-40 | El despliegue de Fuji es de un build anterior a M-15: `sourceChainId()` y `formulaDigest()` revierten en el registry desplegado, y su transcript no tiene las claves `origin.*` que `verify_fuji.sh` exige | Media (trazabilidad; operacional) | Confirmado on-chain: ambos getters revierten; `sequencer()` y `TENSOR_SIZE()` responden | Sí (S-020, S-021) |
 
 **Remediación posterior a este worksheet.** M4d (plan §5.5.11) cierra **P-01** y
 **P-16** y añade al circuito de admisión la cota de **P-33**: el statement pasa a
@@ -2963,6 +2963,13 @@ exige un vault nuevo; el registry entra en el redespliegue por P-40.
 3. Fase 2: desplegar un Safe N-de-M y pasarlo como `SLASH_AUTHORITY` en el
    redespliegue (registry + vault + manager). El Safe es un parámetro del
    constructor, no un cambio de contrato.
+4. Hecho en S-021: `scripts/preflight_fase2.sh` comprueba el *input* antes de
+   firmar —que el Safe tenga código, que no sea la EOA de fase 1, que no sea el
+   `SEQUENCER` ni el `DEPLOYER` (avisa si es el `GUARDIAN`), que el deployer
+   tenga 0.05 AVAX y que el artefacto a desplegar sea el post-M-15—. Contra el
+   despliegue actual y el slasher de fase 1 sale `FAIL=2` (`P5`, `P6`); con una
+   dirección con código, `PASS=10 FAIL=0`. El preflight habría bloqueado el
+   despliegue original.
 
 **Lo que sigue sin poder afirmarse.** Que la address sea un contrato no prueba un
 umbral: ningún call on-chain puede mirar dentro de un Safe. La comprobación separa
@@ -2988,6 +2995,26 @@ el build actual y el transcript nuevo emite `origin.sourceChainId` y
 un transcript completo; contra el sellado de fase 1 no lo es, y eso queda escrito
 en `scripts/README.md` y en S-020. El ancla no se re-sella: el transcript es
 evidencia histórica, no un documento normativo.
+
+**Ampliación (S-021): los dos lados del contrato de verificación estaban rotos.**
+Al preparar la fase 2 apareció que el problema no era sólo el bytecode desplegado:
+
+- `DeployFujiPhase1._report` **no emitía** `origin.sourceChainId` ni
+  `origin.formulaDigest`, aunque `DeployRegistry._report` sí y `/verify_fuji.sh`
+  los exige. Un redespliegue con el registry correcto habría producido un
+  transcript irrecuperable, y la fase 2 habría vuelto a fallar la verificación
+  por una línea que faltaba en un `console2.log`.
+- `verify_fuji.sh` comprobaba la **presencia** de esas dos claves y nunca las
+  comparaba con la cadena: un valor inventado en el transcript habría pasado.
+
+Corregido en S-021: el script emite ambas filas (caso P del dry run las fija, y
+verifica `manager`, `slashAuthority` y `status`), y el verificador lee
+`registry.sourceChainId()`/`formulaDigest()` y las coteja; cuando los getters
+revierten nombra la causa (`the deployed build predates M-15 (P-40)`) en vez de
+morir con un `cast call failed` genérico. Con eso, el transcript de fase 1 sigue
+sin verificar —es correcto: no hay nada que verificar— y un redespliegue sí
+verificará. `preflight_fase2.sh` cierra el círculo desde el otro lado: falla si el
+artefacto a desplegar no expone los getters o si el script no los registra.
 
 ---
 

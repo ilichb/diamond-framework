@@ -8,7 +8,7 @@
 #   bash scripts/verify_fuji.sh transcript.txt --out-dir scripts
 #
 # On mismatch it prints one explicit diff per fact and exits 1. On success it
-# writes `fuji_<date>_verify.txt` with the five on-chain reads and `OK`.
+# writes `fuji_<date>_verify.txt` with the on-chain reads and `OK`.
 # `manager.slashAuthority()` is read too when the transcript names it: the value
 # is compared like the other five, and its *kind* (contract or EOA) is recorded.
 # `--require-multisig` makes an EOA a failure — the shape phase 2 replaces; the
@@ -123,7 +123,8 @@ value_for() {
 }
 
 for key in chain.id chain.name registry vault manager sequencer verifier origin.sourceChainId origin.formulaDigest TENSOR_SIZE status; do
-    value_for "$key" >/dev/null || die "transcript has no [fuji] $key=..."
+    value_for "$key" >/dev/null ||
+        die "transcript has no [fuji] $key=... (a transcript without origin.* predates the M-15 verifier: see P-40)"
 done
 
 [ "$(value_for status)" = "ok" ] || die "transcript status is not ok"
@@ -162,7 +163,8 @@ check_eq() {
     fi
 }
 
-# The five reads A2 requires. `cast call` is the only network access here.
+# The reads A2 requires, plus the origin pair M-15 added. `cast call` is the only
+# network access here.
 ONCHAIN_SEQUENCER="$(cast call --rpc-url "$RPC_URL" "$REGISTRY" "sequencer()(address)")" ||
     die "registry.sequencer() failed"
 ONCHAIN_TENSOR="$(cast call --rpc-url "$RPC_URL" "$REGISTRY" "TENSOR_SIZE()(uint32)")" ||
@@ -184,6 +186,27 @@ check_eq "vault.manager()" \
     "$(normalize_addr "$ONCHAIN_MANAGER")" "$(normalize_addr "$MANAGER")"
 check_eq "registry.verifier()" \
     "$(normalize_addr "$ONCHAIN_VERIFIER")" "$(normalize_addr "$VERIFIER")"
+
+# T-2/M-15. The registry pins the origin — the source chain and the formula
+# digest — in its constructor. The transcript says what the deployment intended;
+# the chain says what it stored. A build older than M-15 has no getter at all,
+# which is a different failure from a stored value that differs, and it is named
+# as such instead of surfacing as a generic `cast call failed` (P-40).
+ORIGIN_CHAIN_TRANSCRIPT="$(value_for origin.sourceChainId)"
+ORIGIN_FORMULA_TRANSCRIPT="$(value_for origin.formulaDigest)"
+ONCHAIN_ORIGIN_CHAIN="$(cast call --rpc-url "$RPC_URL" "$REGISTRY" "sourceChainId()(bytes32)" 2>/dev/null)" ||
+    ONCHAIN_ORIGIN_CHAIN=""
+ONCHAIN_ORIGIN_FORMULA="$(cast call --rpc-url "$RPC_URL" "$REGISTRY" "formulaDigest()(bytes32)" 2>/dev/null)" ||
+    ONCHAIN_ORIGIN_FORMULA=""
+if [ -z "$ONCHAIN_ORIGIN_CHAIN" ] || [ -z "$ONCHAIN_ORIGIN_FORMULA" ]; then
+    printf 'MISMATCH registry.sourceChainId()/formulaDigest() reverted: the deployed build predates M-15 (P-40)\n' >&2
+    MISMATCHES=$((MISMATCHES + 1))
+else
+    check_eq "registry.sourceChainId()" \
+        "$(normalize_addr "$ONCHAIN_ORIGIN_CHAIN")" "$(normalize_addr "$ORIGIN_CHAIN_TRANSCRIPT")"
+    check_eq "registry.formulaDigest()" \
+        "$(normalize_addr "$ONCHAIN_ORIGIN_FORMULA")" "$(normalize_addr "$ORIGIN_FORMULA_TRANSCRIPT")"
+fi
 
 # Not one of the five, but free and useful: the delta cap is a constant the
 # contract exposes alongside TENSOR_SIZE. Check it when the transcript has it.
@@ -243,6 +266,8 @@ OUT_FILE="$OUT_DIR/fuji_$(date +%Y%m%d_%H%M%S)_verify.txt"
     printf 'manager.custody=%s\n' "$ONCHAIN_CUSTODY"
     printf 'vault.manager=%s\n' "$ONCHAIN_MANAGER"
     printf 'registry.verifier=%s\n' "$ONCHAIN_VERIFIER"
+    printf 'registry.sourceChainId=%s\n' "${ONCHAIN_ORIGIN_CHAIN:-<reverted>}"
+    printf 'registry.formulaDigest=%s\n' "${ONCHAIN_ORIGIN_FORMULA:-<reverted>}"
     if [ -n "$ONCHAIN_SLASH_AUTHORITY" ]; then
         printf 'manager.slashAuthority=%s\n' "$ONCHAIN_SLASH_AUTHORITY"
         printf 'manager.slashAuthority.kind=%s\n' "$SLASH_KIND"
