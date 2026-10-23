@@ -171,6 +171,15 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
   `../scripts/DeployValidatorManager.s.sol` asserts and reports it rather than any
   `verification/` script doing so.
 
+- **The slasher is one immutable address, so a deployment must make it a policy
+  (M9b/P-39).** `slashAuthority` has no setter and no proposal pair: whoever holds
+  it decides every slash the manager will ever execute. The contract cannot check
+  a threshold, and no on-chain call can look inside a multisig, so the deployment
+  scripts refuse an address without code on any chain other than 31337
+  (`DeployCommon.SlashAuthorityIsEOA`). The phase-1 Fuji deployment predates that
+  guard: `cast code` returns `0x` for its `0xcdFB…2ec7`. Because both the role and
+  the vault's `bindManager` are one-shot, replacing it is a redeployment (phase 2),
+  not a setter call.
 - **Not covered here**: token custody/transfer and fund movement (M8, the Treasury
   Module), removal from the validator set, weight recomputation and reward
   distribution (M6/M7).

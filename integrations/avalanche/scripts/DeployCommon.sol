@@ -89,6 +89,18 @@ abstract contract DeployCommon is Script {
     ///         authority is a configuration error, not a harmless default.
     error AnvilDefaultOnLiveNetwork(string role, address account, uint256 chainId);
 
+    /// @notice `SLASH_AUTHORITY` resolved to an address with no code on a chain
+    ///         other than the local one.
+    /// @dev `AVIPValidatorManager.slashAuthority` is a single immutable address
+    ///      with no proposal pair: whoever holds it decides every slash the
+    ///      manager will ever execute, for the whole stake on record (M9b,
+    ///      §12.1.2). A script cannot check a threshold — no on-chain call can
+    ///      look inside a multisig — but it *can* refuse the case the threshold
+    ///      is meant to rule out: one externally owned key. A contract is not
+    ///      proof of an N-of-M policy; it is the difference between "one key" and
+    ///      "a policy somebody had to deploy".
+    error SlashAuthorityIsEOA(address authority, uint256 chainId);
+
     /// @dev Fail closed on the one chain where a mistake costs money.
     function _refuseMainnet() internal view {
         if (block.chainid == C_CHAIN_MAINNET) revert MainnetRefused(block.chainid);
@@ -159,7 +171,18 @@ abstract contract DeployCommon is Script {
     }
 
     function _slashAuthority() internal view returns (address) {
-        return _roleOr("SLASH_AUTHORITY", ANVIL_2);
+        return _requireSlasher(_roleOr("SLASH_AUTHORITY", ANVIL_2));
+    }
+
+    /// @dev M9b: on every chain other than the local one, the slashing authority
+    ///      must be a contract. The manager's role is immutable and has no
+    ///      proposal pair, so this is the last point at which a deployment can
+    ///      refuse a single key deciding the whole stake. The local chain keeps
+    ///      the `anvil` EOA, which is what the dry run and the reports use.
+    function _requireSlasher(address authority) internal view returns (address) {
+        if (block.chainid == LOCAL_CHAIN) return authority;
+        if (authority.code.length == 0) revert SlashAuthorityIsEOA(authority, block.chainid);
+        return authority;
     }
 
     /// @dev `address(0)` by default and deliberately: M7a deploys no verifier,

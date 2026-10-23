@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fuji phase-1 verifier: read the five wiring facts back from the chain and
+# Fuji phase-1 verifier: read the wiring facts back from the chain and
 # compare them with the `[fuji] key=value` transcript emitted by
 # DeployFujiPhase1.s.sol.
 #
@@ -9,13 +9,17 @@
 #
 # On mismatch it prints one explicit diff per fact and exits 1. On success it
 # writes `fuji_<date>_verify.txt` with the five on-chain reads and `OK`.
+# `manager.slashAuthority()` is read too when the transcript names it: the value
+# is compared like the other five, and its *kind* (contract or EOA) is recorded.
+# `--require-multisig` makes an EOA a failure — the shape phase 2 replaces; the
+# phase-1 deployment (2026-10-18) has an EOA and is reported, not hidden (M9b).
 # The default output directory is /tmp: a verification run must not dirty the
 # repository. `--out-dir` is restricted to /tmp or a path ending in `scripts/`.
 set -euo pipefail
 
 usage() {
     cat <<'EOF'
-Usage: verify_fuji.sh <transcript> [--rpc-url URL] [--out-dir DIR]
+Usage: verify_fuji.sh <transcript> [--rpc-url URL] [--out-dir DIR] [--require-multisig]
 
   <transcript>       file containing the `[fuji] key=value` lines printed by
                      DeployFujiPhase1.s.sol
@@ -23,6 +27,9 @@ Usage: verify_fuji.sh <transcript> [--rpc-url URL] [--out-dir DIR]
                      ~/.config/avip/fuji_rpc.txt)
   --out-dir DIR      where to write fuji_<date>_verify.txt; must be /tmp or a
                      directory named scripts (default: /tmp)
+  --require-multisig fail when manager.slashAuthority() is an EOA (M9b); the
+                     phase-1 deployment predates the check and is reported
+                     without it
 EOF
 }
 
@@ -43,8 +50,13 @@ shift || true
 RPC_URL="${FUJI_RPC_URL:-}"
 OUT_DIR="${OUT_DIR:-/tmp}"
 
+REQUIRE_MULTISIG=0
 while [ "$#" -gt 0 ]; do
     case "$1" in
+        --require-multisig)
+            REQUIRE_MULTISIG=1
+            shift
+            ;;
         --rpc-url)
             [ "$#" -ge 2 ] || { echo "verify_fuji: --rpc-url needs a value" >&2; exit 2; }
             RPC_URL=$2
@@ -183,6 +195,38 @@ if [ -n "$MAX_DELTA_TRANSCRIPT" ]; then
         "$(to_dec "$ONCHAIN_MAX_DELTA")" "$(to_dec "$MAX_DELTA_TRANSCRIPT")"
 fi
 
+# M9b. The slasher decides every slash the manager will ever execute, and the
+# role is immutable. The transcript names the address; the chain says whether it
+# is a contract. The value is compared like the other five facts, the *kind* is
+# reported, and `--require-multisig` turns an EOA into a failure. A contract is
+# not proof of N-of-M (nothing on-chain can look inside a multisig), so the flag
+# is a policy check, not a proof; the phase-1 deployment predates it.
+ONCHAIN_SLASH_AUTHORITY=""
+SLASH_KIND="unchecked"
+SLASH_AUTHORITY_TRANSCRIPT="$(value_for slash_authority || true)"
+if [ -n "$SLASH_AUTHORITY_TRANSCRIPT" ]; then
+    ONCHAIN_SLASH_AUTHORITY="$(cast call --rpc-url "$RPC_URL" "$MANAGER" "slashAuthority()(address)")" ||
+        die "manager.slashAuthority() failed"
+    check_eq "manager.slashAuthority()" \
+        "$(normalize_addr "$ONCHAIN_SLASH_AUTHORITY")" \
+        "$(normalize_addr "$SLASH_AUTHORITY_TRANSCRIPT")"
+
+    SLASH_CODE="$(cast code --rpc-url "$RPC_URL" "$ONCHAIN_SLASH_AUTHORITY")" ||
+        die "cast code failed for manager.slashAuthority()"
+    if [ "$SLASH_CODE" = "0x" ]; then
+        SLASH_KIND=eoa
+        printf 'WARN manager.slashAuthority()=%s has no code: one key decides every slash (M9b)\n' \
+            "$ONCHAIN_SLASH_AUTHORITY" >&2
+        if [ "$REQUIRE_MULTISIG" -eq 1 ]; then
+            printf 'MISMATCH manager.slashAuthority() --require-multisig: %s is an EOA\n' \
+                "$ONCHAIN_SLASH_AUTHORITY" >&2
+            MISMATCHES=$((MISMATCHES + 1))
+        fi
+    else
+        SLASH_KIND=contract
+    fi
+fi
+
 if [ "$MISMATCHES" -ne 0 ]; then
     printf 'verify_fuji: %s mismatch(es); no verification file written\n' "$MISMATCHES" >&2
     exit 1
@@ -199,6 +243,10 @@ OUT_FILE="$OUT_DIR/fuji_$(date +%Y%m%d_%H%M%S)_verify.txt"
     printf 'manager.custody=%s\n' "$ONCHAIN_CUSTODY"
     printf 'vault.manager=%s\n' "$ONCHAIN_MANAGER"
     printf 'registry.verifier=%s\n' "$ONCHAIN_VERIFIER"
+    if [ -n "$ONCHAIN_SLASH_AUTHORITY" ]; then
+        printf 'manager.slashAuthority=%s\n' "$ONCHAIN_SLASH_AUTHORITY"
+        printf 'manager.slashAuthority.kind=%s\n' "$SLASH_KIND"
+    fi
     printf 'status=OK\n'
 } >"$OUT_FILE"
 

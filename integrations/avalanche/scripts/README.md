@@ -1,19 +1,23 @@
 # `integrations/avalanche/scripts/` — Deployment scripts and generators
 
-Status: **six deployment scripts, two reports and the Fuji verifier**.
+Status: **seven deployment scripts, two reports and the Fuji verifier**.
 `DeployRegistry.s.sol`, `DeployValidatorManager.s.sol` and `DeployStakeVault.s.sol`
 exist as of M7a/M8 (`docs/architecture/implementation-plan.md` §5.8, §5.12) and
-build the frozen M1/M2/M8 contracts; `M7dReport.s.sol` plus `m7d_report.sh` exist
-as of M7d (§5.11) and drive the three Teleporter/AWM message types of
-`avalanche-integration.md` §4 end to end; `M8Report.s.sol` and `m8_report.sh`
+build the frozen M1/M2/M8 contracts; `DeployTransport.s.sol` exists as of M7d
+(§5.11) and deploys the three Teleporter/AWM endpoints of
+`avalanche-integration.md` §4 on one chain, one side per run;
+`M7dReport.s.sol` plus `m7d_report.sh` drive those three message types end to
+end; `M8Report.s.sol` and `m8_report.sh`
 audit the whole fund lifecycle; `DeployMockToken.s.sol` and
 `DeployBurnSink.s.sol` deploy the token/sink half of the Fuji runbook; and
 `DeployFujiPhase1.s.sol` drove the manual phase-1 deployment.
 **Fuji phase 1 is deployed** (chain 43113, `2026-10-19T01:46:52Z` UTC): registry,
 vault and manager, with the token and sink wired and `verifier = address(0)`.
-The transport, the Subnet L1 and M9's on-chain paths are not deployed. The
+That deployment predates M-15 (its registry does not expose `sourceChainId()`)
+and wired `slashAuthority` to an EOA; both are recorded as P-39/P-40. The
+transport, the Subnet L1 and M9's on-chain paths are not deployed. The
 transcripts and broadcast JSON are in `fuji_20261018/`, and `verify_fuji.sh`
-reads five wiring facts back from the chain. The dry runs and reports remain
+reads the wiring facts back from the chain. The dry runs and reports remain
 offline and use no key. See `docs/architecture/avalanche-integration.md` §6
 (Deployment Phases) and §3 (nothing here has been audited).
 
@@ -102,16 +106,37 @@ that quotes it) plus both closed forms at
 `r = Theta_r` — so a wrong argument fails the script instead of the first
 validator.
 
+### The slashing authority must be a contract (M9b)
+
+`SLASH_AUTHORITY` is the manager's only slasher, and the role is **immutable**
+(no setter, no proposal pair): whoever holds it decides every slash the manager
+will ever execute. `AVIPValidatorManager` cannot check a threshold, and no
+on-chain call can look inside a multisig, but a deployment script can refuse the
+case the threshold exists to rule out. `DeployCommon._requireSlasher` rejects an
+address without code on every chain other than 31337 (`SlashAuthorityIsEOA`), in
+`plan()` **and** in `deploy()`, so a hand-built `Plan` cannot skip it. The local
+chain keeps the `anvil` EOA the dry run uses.
+
+The phase-1 Fuji deployment predates this guard and its `slashAuthority`
+(`0xcdFB…2ec7`) has no code — verified with `cast code` on 2026-10-22. Because the
+role is immutable and the vault is already bound to that manager, the fix is a
+phase-2 redeployment with a Safe as `SLASH_AUTHORITY`; the Fuji registry is also
+older than M-15 (P-40), so the registry is part of that redeployment too.
+`verify_fuji.sh` compares `manager.slashAuthority()` with the transcript, records
+its kind (`manager.slashAuthority.kind=eoa|contract`) and takes
+`--require-multisig` to fail on an EOA.
+
 ### The dry run
 
 ```shell
 bash scripts/deploy_dryrun.sh
 ```
 
-Fourteen cases, **one fresh `forge script` process each** (the environment is
+Fifteen cases, **one fresh `forge script` process each** (the environment is
 process-wide, so two cases sharing a process could not prove how either was
 read), and each case asserts what its transcript must contain. A to F are M7a's,
-G to I M8's, J and K M9a's, L to N M-15's (the registry's origin):
+G to I M8's, J and K M9a's, L to N M-15's (the registry's origin), O M7d's (the
+transport's source half):
 
 | Case | Environment | Expects |
 |------|-------------|---------|
@@ -129,12 +154,43 @@ G to I M8's, J and K M9a's, L to N M-15's (the registry's origin):
 | L | registry: `SOURCE_CHAIN_ID=0xnot-a-bytes32` | a revert: the origin is parsed as strictly as a role, never defaulted |
 | M | registry: `SOURCE_CHAIN_ID`, `FORMULA_DIGEST` pinned | the environment wins, and the transcript carries the origin every epoch must declare |
 | N | registry: `FORMULA_DIGEST=0x0` | `ZeroFormulaDigest()` — a tensor with no defined meaning is refused |
+| O | transport: `TRANSPORT_SIDE=source`, both chain ids, the three peer addresses, the four roles | three endpoints on one chain, one routing entry each, and the local mock messenger |
 
 It writes `deploy_dryrun_output.txt` (committed) and, if any expectation fails,
-exits non-zero **without rewriting it**. The transcript keeps only the `[m7a]` and
-`[m8]` lines the scripts log — no gas, no timings — so it is byte-stable: two runs
-diff clean (`md5 41fb72a858a4180fb31b3a2d4ceb4b32` after M-15 added the origin rows). It is not a deployment, and the addresses in it are the
+exits non-zero **without rewriting it**. The transcript keeps only the `[m7a]`,
+`[m8]` and `[m7d]` lines the scripts log — no gas, no timings — so it is
+byte-stable: two runs diff clean (`md5 ec094c9127dd9d9813a7919d80e9d774` after
+M7d's transport case; the previous pin was `41fb72a8…` with fourteen cases). It is not a deployment, and the addresses in it are the
 ones a fresh EVM hands out, not Fuji addresses.
+
+## `DeployTransport.s.sol` (milestone M7d)
+
+Deploys the three endpoints of `avalanche-integration.md` §4 on **one** chain,
+one side per run (`implementation-plan.md` §5.11, gap A9):
+
+```shell
+TRANSPORT_SIDE=source TELEPORTER=0x... LOCAL_BLOCKCHAIN_ID=0x... \
+PEER_BLOCKCHAIN_ID=0x... PEER_RELAY=0x... PEER_COLLUSION=0x... \
+PEER_SLASHING=0x... REGISTRY=0x... SEQUENCER=0x... ALERTER=0x... NOTIFIER=0x... \
+    forge script scripts/DeployTransport.s.sol:DeployTransport --offline
+```
+
+`TRANSPORT_SIDE=source` wires the relay to `REGISTRY`/`SEQUENCER`, the alert
+channel to `ALERTER`, the slashing channel to `NOTIFIER`, and gives each one a
+routing entry (`PEER_RELAY`, `PEER_COLLUSION`, `PEER_SLASHING` on
+`PEER_BLOCKCHAIN_ID`); the source slashing channel has **no manager**, because a
+source chain announces and does not execute. `TRANSPORT_SIDE=destination` is the
+reverse: three receive-only endpoints (`destinationCount() == 0`), one origin
+each, and the slashing channel wired to `MANAGER`.
+
+The script does not predict peer addresses — a deployment is told them, which is
+what makes the two sides independent — and it does not broadcast. `TELEPORTER` is
+mandatory and must have code on a live chain; on 31337 an absent value deploys
+`MockTeleporterMessenger` inside the run, so the dry run stays hermetic. Mainnet
+is refused. `test/DeployScripts.t.sol` covers both sides and three refusals
+(missing messenger, EOA messenger, same chain as peer), and case O of the dry run
+exercises the CLI. **The transport is still not deployed on Fuji**: the script
+exists, the deployment does not (`I-1.4`).
 
 ## `M7dReport.s.sol` and `m7d_report.sh` (milestone M7d)
 

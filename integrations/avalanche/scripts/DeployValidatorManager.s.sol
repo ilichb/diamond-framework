@@ -24,6 +24,10 @@ import {DeployCommon} from "./DeployCommon.sol";
 ///          (`avalanche-integration.md` §4); in M7 it is the sequencer's
 ///          monitor, and in M8 the Treasury Module takes over custody. M2 holds
 ///          no funds, so this role decides *who may decide*, not who may seize;
+///          on any chain other than the local one it must be a **contract**
+///          (`SlashAuthorityIsEOA`): the role is immutable and has no proposal
+///          pair, so a deployment is the last chance to refuse one key deciding
+///          the whole stake (M9b);
 ///        - `CUSTODY` is read from the environment and defaults to `address(0)`,
 ///          which is the M2 mode: stake declared, not backed (§5.2.3). M8 passes
 ///          the **already deployed** `AVIPStakeVault`, whose `bindManager` hole
@@ -113,6 +117,13 @@ contract DeployValidatorManager is DeployCommon {
         // from the chain: `manager.custody()` must be the vault the transcript
         // names, and the vault is what makes `slash` possible at all.
         if (p.custody == address(0) && block.chainid != LOCAL_CHAIN) revert MissingRole("CUSTODY");
+
+        // M9b. `slashAuthority` is immutable and has no proposal pair, so a
+        // deployment is the only moment at which the protocol can refuse a
+        // single key deciding the whole stake. Refused here as well as in
+        // `plan()`, for the same reason the custody check lives here: a caller
+        // that already holds a `Plan` must not be able to skip it.
+        _requireSlasher(p.slashAuthority);
 
         vm.startBroadcast(p.deployer);
         AVIPValidatorManager manager =

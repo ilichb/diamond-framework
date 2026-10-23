@@ -31,7 +31,10 @@ import {DeployCommon} from "./DeployCommon.sol";
 ///          certify (`VerifierNotSet`) instead of certifying a development key;
 ///        - **`DEPLOYER`, `SEQUENCER` and `SLASH_AUTHORITY` are mandatory.**
 ///          They cannot fall back to the public `anvil` accounts; `DeployCommon`
-///          refuses those on every chain other than 31337. `GUARDIAN` is
+///          refuses those on every chain other than 31337. `SLASH_AUTHORITY` must
+///          also have code there (`SlashAuthorityIsEOA`): the role is immutable
+///          and has no proposal pair, so this deployment is the last point at
+///          which a single key can be refused (M9b/P-39). `GUARDIAN` is
 ///          optional and defaults to `DEPLOYER` (a distinct `GUARDIAN` is
 ///          accepted, but it may not equal `SEQUENCER`);
 ///        - **mainnet and unknown chains are refused.** Only Fuji (43113) and a
@@ -146,6 +149,13 @@ contract DeployFujiPhase1 is DeployCommon {
         if (p.wadPerUnit == 0) revert MissingRole("WAD_PER_UNIT");
         if (p.guardian == p.sequencer) revert RolesCollapsed("GUARDIAN", "SEQUENCER");
 
+        // M9b. The slasher is immutable and has no proposal pair, so a phase-1
+        // deployment on Fuji with an EOA here hands the whole stake on record to
+        // one key for the life of the manager. `MissingRole` above keeps the
+        // zero address on its own error; this refuses everything else without
+        // code.
+        _requireSlasher(p.slashAuthority);
+
         uint64 startNonce = vm.getNonce(p.deployer);
         address predictedManager =
             vm.computeCreateAddress(p.deployer, uint256(startNonce) + MANAGER_NONCE_OFFSET);
@@ -190,7 +200,7 @@ contract DeployFujiPhase1 is DeployCommon {
     function plan() public view returns (Plan memory p) {
         p.deployer = _requiredRole("DEPLOYER");
         p.sequencer = _requiredRole("SEQUENCER");
-        p.slashAuthority = _requiredRole("SLASH_AUTHORITY");
+        p.slashAuthority = _requireSlasher(_requiredRole("SLASH_AUTHORITY"));
         p.guardian = _roleOr("GUARDIAN", p.deployer);
         p.token = _requiredRole("TOKEN");
         p.sink = _requiredRole("SINK");

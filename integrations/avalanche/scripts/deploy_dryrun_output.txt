@@ -173,6 +173,22 @@ N. DeployRegistry, FORMULA_DIGEST pinned to zero
   <the script stopped before it logged anything>
   Error: script failed: ZeroFormulaDigest()
 
+O. DeployTransport, source side
+  expects: three endpoints on one chain, each with one routing entry; the local mock messenger makes it runnable offline
+  $ TRANSPORT_SIDE=source LOCAL_BLOCKCHAIN_ID=0xce12864578eb11634416932021724652c9a481fbf6a42ba77cde799fad091bc1 PEER_BLOCKCHAIN_ID=0x0000000000000000000000000000000000000000000000000000000000000b0b PEER_RELAY=0x000000000000000000000000000000000000b0b1 PEER_COLLUSION=0x000000000000000000000000000000000000b0b2 PEER_SLASHING=0x000000000000000000000000000000000000b0b3 REGISTRY=0x5FbDB2315678afecb367f032d93F642f64180aa3 SEQUENCER=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 ALERTER=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC NOTIFIER=0x90F79bf6EB2c4f870365E785982E1f101E93b906 forge script scripts/DeployTransport.s.sol:DeployTransport --offline
+  [m7d] script=DeployTransport
+  [m7d] chain=31337
+  [m7d] chain.name=anvil-or-dry-run
+  [m7d] sender=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  [m7d] side=source
+  [m7d] teleporter=0x5FbDB2315678afecb367f032d93F642f64180aa3
+  [m7d] localBlockchainId=0xce12864578eb11634416932021724652c9a481fbf6a42ba77cde799fad091bc1
+  [m7d] peerBlockchainId=0x0000000000000000000000000000000000000000000000000000000000000b0b
+  [m7d] AVIPCommitmentRelay=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+  [m7d] AVIPCollusionAlertChannel=0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+  [m7d] AVIPSlashingChannel=0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
+  [m7d] status=ok
+
 WHAT THIS IS NOT
   A deployment. Nothing here touches an RPC endpoint, and the addresses are the
   ones a fresh EVM hands out: they are not, and must not be presented as, Fuji

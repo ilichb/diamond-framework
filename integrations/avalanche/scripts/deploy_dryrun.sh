@@ -27,6 +27,10 @@
 #   I  manager, CUSTODY that cannot bind       the handshake fails the deployment
 #   J  registry, GUARDIAN == SEQUENCER         RolesCollapsed, nothing deployed
 #   K  registry, GUARDIAN = 0x0                MissingRole("GUARDIAN")
+#   L  registry, malformed SOURCE_CHAIN_ID     a revert, never the silent default
+#   M  registry, origin pinned                 the environment wins
+#   N  registry, FORMULA_DIGEST = 0x0          ZeroFormulaDigest
+#   O  transport, source side                  three endpoints, one routing table each
 #
 # Nothing is broadcast: without `--rpc-url ... --broadcast`, `forge script`
 # simulates locally. No RPC endpoint, no keys, no funds, no network (`--offline`),
@@ -57,6 +61,7 @@ MANAGER_SCRIPT=scripts/DeployValidatorManager.s.sol:DeployValidatorManager
 # M8 (§5.12): the custody half of the handshake, plus the manager that completes
 # it. The vault script logs `[m8]`, so `run_case` keeps both tags.
 VAULT_SCRIPT=scripts/DeployStakeVault.s.sol:DeployStakeVault
+TRANSPORT_SCRIPT=scripts/DeployTransport.s.sol:DeployTransport
 
 FAILURES=0
 fail() {
@@ -83,11 +88,13 @@ run_case() {
     env -u DEPLOYER -u SEQUENCER -u GUARDIAN -u SLASH_AUTHORITY -u VERIFIER -u REGISTRY \
         -u CUSTODY -u TOKEN -u SINK -u WAD_PER_UNIT \
         -u SOURCE_CHAIN_ID -u FORMULA_DIGEST \
+        -u TRANSPORT_SIDE -u TELEPORTER -u LOCAL_BLOCKCHAIN_ID -u PEER_BLOCKCHAIN_ID \
+        -u PEER_RELAY -u PEER_COLLUSION -u PEER_SLASHING -u ALERTER -u NOTIFIER -u MANAGER \
         ${env_args[@]+"${env_args[@]}"} "$@" >"$out" 2>&1
     echo $? >"$TMP_DIR/$tag.status"
     set -e
 
-    grep -E '^  \[(m7a|m8)\] ' "$out" >"$TMP_DIR/$tag.log" || true
+    grep -E '^  \[(m7a|m8|m7d)\] ' "$out" >"$TMP_DIR/$tag.log" || true
 }
 
 expect_ok() {
@@ -267,6 +274,30 @@ expect_error N 'Error: script failed: ZeroFormulaDigest()'
 grep -q 'AVIPRegistry=' "$TMP_DIR/N.log" &&
     fail "N: a zero formula must be refused before anything is deployed"
 
+# ---------------------------------------------------------------- case O
+# The transport's source half: three endpoints, one routing entry each. The peer
+# addresses are inputs (a deployment is told them, §4), and the registry is a
+# wiring target only — a dry run publishes nothing.
+PEER_CHAIN=0x$(printf '%064x' 2827)
+ENV_O=(
+    TRANSPORT_SIDE=source
+    LOCAL_BLOCKCHAIN_ID=0xce12864578eb11634416932021724652c9a481fbf6a42ba77cde799fad091bc1
+    PEER_BLOCKCHAIN_ID=$PEER_CHAIN
+    PEER_RELAY=0x000000000000000000000000000000000000b0b1
+    PEER_COLLUSION=0x000000000000000000000000000000000000b0b2
+    PEER_SLASHING=0x000000000000000000000000000000000000b0b3
+    REGISTRY=$FIRST_CREATE
+    SEQUENCER=$ANVIL_1
+    ALERTER=$ANVIL_2
+    NOTIFIER=$ANVIL_3
+)
+run_case O ${ENV_O[@]+"${ENV_O[@]}"} -- forge script "$TRANSPORT_SCRIPT" --offline
+expect_ok O
+expect_line O "  [m7d] side=source"
+expect_line O "  [m7d] teleporter=$FIRST_CREATE"
+expect_line O "  [m7d] peerBlockchainId=$PEER_CHAIN"
+expect_line O "  [m7d] status=ok"
+
 # ------------------------------------------------------------- transcript
 
 if [ "$FAILURES" -ne 0 ]; then
@@ -368,6 +399,9 @@ HEADER
     section N "DeployRegistry, FORMULA_DIGEST pinned to zero" \
         "ZeroFormulaDigest: a registry whose tensor has no defined meaning is refused" \
         "${ENV_N[*]} forge script $REGISTRY_SCRIPT --offline"
+    section O "DeployTransport, source side" \
+        "three endpoints on one chain, each with one routing entry; the local mock messenger makes it runnable offline" \
+        "${ENV_O[*]} forge script $TRANSPORT_SCRIPT --offline"
 
     cat <<'FOOTER'
 
@@ -379,5 +413,5 @@ WHAT THIS IS NOT
 FOOTER
 } >"$OUT"
 
-echo "deploy_dryrun: 14 cases ok; wrote $OUT"
+echo "deploy_dryrun: 15 cases ok; wrote $OUT"
 

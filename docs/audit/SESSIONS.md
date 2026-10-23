@@ -30,6 +30,7 @@ hay `session-log.md` en este repositorio: no inventar uno.
 | S-017 | 2026-10-22 | T-5: re-sello del ancla tras P-03/M4d | a9488dc | 5ff84501… | cerrada; OTS pendiente de upgrade; PDF anterior (T-6) |
 | S-018 | 2026-10-22 | T-2 y T-1: origen del epoch y custodia obligatoria | este commit | 5ff84501… | cerrada; 283 tests Foundry, 14 casos de dry run, ancla intacta |
 | S-019 | 2026-10-22 | P-10: la pareja de autoridad no puede colapsar | este commit | 5ff84501… | cerrada; 286 tests, ancla intacta; queda el follow-up de `proposeVerifier` |
+| S-020 | 2026-10-22 | P-39/P-40 y el despliegue del transporte M7d | este commit | 5ff84501… | cerrada; 294 tests, 15 casos de dry run, ancla intacta |
 
 S-016 cubre `triage-mapa-2026-10-22.md`, el acta
 `checklist-matriz-evidencia-2026-10-22.md` y la v2
@@ -83,3 +84,45 @@ falla antes de transmitir), y el gate permanece en PASS=11.
 Queda abierto el follow-up de `proposeVerifier` —acepta una EOA o un contrato con
 otra aridad—: es liveness, no captura, y el chequeo natural (`numPublicInputs()`)
 depende de la aridad del circuito, así que va con la ceremonia (§11).
+
+S-020 cierra la mitad ejecutable de **P-39** y documenta **P-40**. El punto de
+partida era el `slashAuthority` del despliegue de fase 1: `0xcdFBb0c0…2ec7`. Una
+lectura contra Fuji (`cast code`) devuelve `0x`, así que el manager desplegado el
+2026-10-18 tiene una sola clave decidiendo el 100 % del stake registrado, para
+siempre: el rol es inmutable y no tiene pareja de propuesta. No hay fondos en
+juego todavía, pero el arreglo no es un setter —el vault ya está bound a ese
+manager y `bindManager` es one-shot—, así que P-39 se cierra en fase 2 con un Safe
+como `SLASH_AUTHORITY` y un redespliegue de registry, vault y manager.
+
+Lo que sí se podía cerrar hoy es el guard de despliegue.
+`DeployCommon._requireSlasher` rechaza una address sin código en toda cadena que
+no sea 31337, y se aplica en `plan()` y en `deploy()` de los dos scripts que
+eligen slasher, para que un `Plan` construido a mano no lo salte. Tres tests lo
+fijan; la cadena local conserva el EOA de `anvil` que usan el dry run y los
+reportes, y el guard no toca el contrato: un Safe es un parámetro del
+constructor. `verify_fuji.sh` gana la comparación de `manager.slashAuthority()`
+con el transcript, escribe `manager.slashAuthority.kind=eoa|contract` y acepta
+`--require-multisig` para fallar en EOA. Contra el despliegue real reporta `eoa`
+y, con el flag, sale 1.
+
+La misma sesión encontró **P-40** al intentar validar ese bloque: `sourceChainId()`
+y `formulaDigest()` revierten en el registry de Fuji, mientras `sequencer()` y
+`TENSOR_SIZE()` responden. El bytecode desplegado es anterior a M-15, y por eso su
+transcript sellado no tiene las filas `origin.*` que `verify_fuji.sh` exige desde
+T-2: el verificador endurecido no puede verificar ese despliegue. Se arregla en el
+mismo redespliegue de fase 2; el ancla no se toca porque el transcript es
+evidencia histórica.
+
+El otro frente es **I-1.4**: `M7dReport` probó el transporte, pero no había script
+que lo desplegara. `DeployTransport.s.sol` despliega los tres endpoints de §4 en
+una cadena, un lado por ejecución (`TRANSPORT_SIDE=source|destination`), con las
+direcciones peer como entradas —no predichas— y el messenger obligatorio con
+código en cadena viva; en 31337 sin `TELEPORTER` despliega el mock para que el dry
+run siga siendo hermético. Cinco tests cubren los dos lados y tres rechazos. **El
+transporte sigue sin desplegarse en Fuji**: el script existe, el despliegue no, y
+por eso I-1.4 sigue abierto.
+
+Ninguno de los 11 ficheros del ancla cambia: `fase0_anchor.sh --check` sale 0 y el
+gate sigue en PASS=11 FAIL=0 SKIP=0 sobre `5ff84501…`. La suite pasa de 286 a 294
+tests y el dry run de 14 a 15 casos (`md5 ec094c9127dd9d9813a7919d80e9d774`),
+byte-idéntico entre dos ejecuciones.

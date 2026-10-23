@@ -82,6 +82,8 @@ allí.
 | P-36 | Bibliografía: Bauer–Jost está mal citado (CPAM 2012 → *Comm. Anal. Geom.* 21(4):787–845, 2013) y faltan referencias para Kesten–Stigum, Feller y EIP-196/197 | Baja (paper) | Confirmado con Crossref/arXiv | Sí (tercera lectura) |
 | P-37 | La permutación Poseidon reproduce los vectores t=3 de circomlib; el digest usa `state[1]` (rate) y no el `state[0]` (capacidad) de circomlib. Es una convención de esponja válida, no un defecto del circuito; sólo limita la interoperabilidad con primitivas de 2 entradas | Baja (interoperabilidad; no soundness) | Confirmado con sonda: 2 vectores t=3, absorción 1–10/500 y ambigüedad de longitud documentada | Sí (sonda de cierre; nota de documentación) |
 | P-38 | La prueba de admisión tiene todo el statement público y su testigo es el camino de Merkle: sólo oculta la posición de la hoja. No aporta zero-knowledge sobre la norma ni ahorra gas frente a `verifyEntry` | Media (diseño y honestidad del artefacto; no soundness) | Confirmado por lectura (`admission.rs:212-276`) y por medición: 306,275 gas fríos frente a una inclusión keccak de pocos miles | Sí (adenda M4d) |
+| P-39 | El `slashAuthority` del despliegue de Fuji es una EOA y el rol es inmutable: una sola clave decide todo slash del stake registrado | **Alta** (custodia/operacional) | Confirmado on-chain: `cast code` = `0x` (2026-10-22); los scripts de despliegue ahora lo rechazan | Sí (S-020) |
+| P-40 | El despliegue de Fuji es de un build anterior a M-15: `sourceChainId()` y `formulaDigest()` revierten en el registry desplegado, y su transcript no tiene las claves `origin.*` que `verify_fuji.sh` exige | Media (trazabilidad; operacional) | Confirmado on-chain: ambos getters revierten; `sequencer()` y `TENSOR_SIZE()` responden | Sí (S-020) |
 
 **Remediación posterior a este worksheet.** M4d (plan §5.5.11) cierra **P-01** y
 **P-16** y añade al circuito de admisión la cota de **P-33**: el statement pasa a
@@ -2931,6 +2933,61 @@ la ruta barata es keccak — y ya existe en el contrato.
 4. El vínculo real es §5.5.7 (el compromiso como input del circuito). Allí el
    obstáculo es P-03 —qué es `T` por validador—, no el coste: V3 ya plegó 500
    entradas con 94,438 restricciones y 3.9 s.
+
+---
+
+## P-39 — El `slashAuthority` de Fuji es una EOA y el rol es inmutable
+
+**Qué se comprobó (2026-10-22, sólo lecturas contra Fuji).** El manager de fase 1
+(`0x7C92D08B…b100`) declara `slashAuthority = 0xcdFBb0c0…2ec7`, y `cast code`
+sobre esa dirección devuelve `0x`: es una cuenta externa. El rol no tiene setter
+ni pareja de propuesta (`AVIPValidatorManager.slashAuthority` es inmutable), así
+que **una sola clave decide el 100 % del stake registrado en ese manager**, para
+siempre. Hoy no hay nada que robar —fase 1 no tiene validadores ni custodia con
+fondos—, pero el manager es la base sobre la que se pretendía seguir.
+
+**Por qué no se arregla con un setter.** El manager no lo tiene, y añadirlo sería
+introducir la superficie de gobernanza que M9b evita. Además el vault de fase 1 ya
+está bound a ese manager (`bindManager` es one-shot), así que un manager nuevo
+exige un vault nuevo; el registry entra en el redespliegue por P-40.
+
+**Remediación.**
+1. Hecho en S-020: `DeployCommon._requireSlasher` rechaza una address sin código
+   en cualquier cadena que no sea 31337 (`SlashAuthorityIsEOA`), en `plan()` y en
+   `deploy()`; `DeployFujiPhase1` y `DeployValidatorManager` lo aplican, y tres
+   tests lo fijan (EOA rechazada, contrato aceptado, fase 1 rechazada).
+2. `verify_fuji.sh` compara `manager.slashAuthority()` con el transcript, escribe
+   `manager.slashAuthority.kind=eoa|contract` y falla con `--require-multisig`.
+   Contra el despliegue actual reporta `eoa` (y `--require-multisig` sale 1): es
+   el estado real, no un fallo del verificador.
+3. Fase 2: desplegar un Safe N-de-M y pasarlo como `SLASH_AUTHORITY` en el
+   redespliegue (registry + vault + manager). El Safe es un parámetro del
+   constructor, no un cambio de contrato.
+
+**Lo que sigue sin poder afirmarse.** Que la address sea un contrato no prueba un
+umbral: ningún call on-chain puede mirar dentro de un Safe. La comprobación separa
+"una clave" de "una política desplegada"; el umbral se audita en el explorador y en
+la configuración del Safe, no aquí.
+
+---
+
+## P-40 — El despliegue de Fuji es anterior a M-15: el origen no está en la cadena
+
+**Qué se comprobó (2026-10-22, lecturas contra Fuji).** En el registry de fase 1
+(`0x85C68a42…8B78`), `sequencer()` y `TENSOR_SIZE()` responden, pero
+`sourceChainId()` y `formulaDigest()` **revierten**: el bytecode desplegado no
+tiene esos getters. Es un build anterior a M-15, y por eso su transcript
+(`scripts/fuji_20261018/fuji_phase1.txt`) no contiene las filas `origin.*` que
+`verify_fuji.sh` exige desde T-2. Consecuencia: el verificador endurecido **no
+puede verificar ese despliegue** (muere en la comprobación de claves del
+transcript), y la propiedad que T-2 quería fijar on-chain no existe en Fuji.
+
+**Remediación.** Forma parte de la fase 2 de P-39: el registry se redespliega con
+el build actual y el transcript nuevo emite `origin.sourceChainId` y
+`origin.formulaDigest`. Mientras tanto, `verify_fuji.sh` sigue siendo válido para
+un transcript completo; contra el sellado de fase 1 no lo es, y eso queda escrito
+en `scripts/README.md` y en S-020. El ancla no se re-sella: el transcript es
+evidencia histórica, no un documento normativo.
 
 ---
 

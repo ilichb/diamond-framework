@@ -8,8 +8,12 @@ import {AVIPValidatorManager} from "../contracts/AVIPValidatorManager.sol";
 import {IAVIPRegistry} from "../contracts/interfaces/IAVIPRegistry.sol";
 import {DeployCommon} from "../scripts/DeployCommon.sol";
 import {DeployRegistry} from "../scripts/DeployRegistry.s.sol";
+import {DeployFujiPhase1} from "../scripts/DeployFujiPhase1.s.sol";
 import {DeployStakeVault} from "../scripts/DeployStakeVault.s.sol";
+import {DeployTransport} from "../scripts/DeployTransport.s.sol";
 import {DeployValidatorManager} from "../scripts/DeployValidatorManager.s.sol";
+import {AVIPMessageCodec} from "../contracts/AVIPMessageCodec.sol";
+import {AVIPMessageEndpoint} from "../contracts/AVIPMessageEndpoint.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 import {MockFundSink} from "./mocks/MockFundSink.sol";
 import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
@@ -95,6 +99,8 @@ contract DeployScriptsTest is Test {
     DeployRegistry internal registryScript;
     DeployStakeVault internal vaultScript;
     DeployValidatorManager internal managerScript;
+    DeployFujiPhase1 internal fujiPhase1Script;
+    DeployTransport internal transportScript;
     DeployCommonHarness internal harness;
 
     function setUp() public {
@@ -103,6 +109,8 @@ contract DeployScriptsTest is Test {
         registryScript = new DeployRegistry();
         vaultScript = new DeployStakeVault();
         managerScript = new DeployValidatorManager();
+        fujiPhase1Script = new DeployFujiPhase1();
+        transportScript = new DeployTransport();
         harness = new DeployCommonHarness();
     }
 
@@ -380,6 +388,59 @@ contract DeployScriptsTest is Test {
         assertEq(d.custody, address(0), "M2 mode: stake declared, not backed");
     }
 
+    function test_managerScript_refusesAnEOASlasherOffTheLocalChain() public {
+        // M9b. `slashAuthority` is immutable and has no proposal pair, so one
+        // key holding it decides every slash the manager will ever execute. On
+        // Fuji the script refuses an address without code; the local chain
+        // keeps the `anvil` default the dry run uses.
+        vm.chainId(43_113);
+        address eoa = address(0x1234_5678);
+        address registry = _fixtureRegistry();
+
+        // The plan is built before `expectRevert`: building it allocates a
+        // fixture, and `expectRevert` applies to the *next* call.
+        DeployValidatorManager.Plan memory p = DeployValidatorManager.Plan({
+            deployer: address(0xBEEF),
+            registry: registry,
+            slashAuthority: eoa,
+            // Non-zero, so the custody guard lets the slasher guard fire: the
+            // revert must be about the key, not about the missing vault.
+            custody: address(this)
+        });
+
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployCommon.SlashAuthorityIsEOA.selector, eoa, uint256(43_113))
+        );
+        managerScript.deploy(p);
+    }
+
+    function test_managerScript_acceptsAContractSlasherOffTheLocalChain() public {
+        // The other half: a contract is not proof of a threshold, but it is
+        // what a deployment can require. The vault is a convenient contract
+        // that also satisfies the custody handshake.
+        (address token, address sink) = _fixtureTokenAndSink();
+        address vault = vaultScript.deploy(_vaultPlan(token, sink, 1e12)).vault;
+
+        vm.chainId(43_113);
+        address liveDeployer = makeAddr("liveDeployer");
+        vm.deal(liveDeployer, 1 ether);
+
+        DeployValidatorManager.Deployment memory d = managerScript.deploy(
+            DeployValidatorManager.Plan({
+                deployer: liveDeployer,
+                registry: _fixtureRegistry(),
+                slashAuthority: vault,
+                custody: vault
+            })
+        );
+
+        assertEq(
+            AVIPValidatorManager(d.manager).slashAuthority(),
+            vault,
+            "the slasher is a contract, not one key"
+        );
+    }
+
     // ------------------------------------------------------- DeployStakeVault
 
     function test_vaultScript_deploysThePlanAndLeavesItUnbound() public {
@@ -548,6 +609,154 @@ contract DeployScriptsTest is Test {
 
     /// @dev A token and a sink for the vault script's plan: it needs two addresses
     ///      that exist and do nothing else.
+    function test_fujiPhase1Script_refusesAnEOASlasher() public {
+        // The phase-1 runbook is the deployment that actually happened on Fuji
+        // (2026-10-18), and it wired `slashAuthority` to an EOA. The script now
+        // refuses that shape before broadcasting, so the next phase cannot
+        // repeat it. `MissingRole` keeps the zero address on its own error; this
+        // is the case between "nobody" and "a contract".
+        vm.chainId(43_113);
+        address eoa = address(0x1234_5678);
+
+        DeployFujiPhase1.Plan memory p = DeployFujiPhase1.Plan({
+            deployer: address(0xBEEF),
+            sequencer: address(0xCAFE),
+            slashAuthority: eoa,
+            guardian: address(0xF00D),
+            token: address(0x701E),
+            sink: address(0x510C),
+            wadPerUnit: 1e12,
+            sourceChainId: keccak256("avalanche-c-chain"),
+            formulaDigest: keccak256("AVIP/fragment-function/v1")
+        });
+
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployCommon.SlashAuthorityIsEOA.selector, eoa, uint256(43_113))
+        );
+        fujiPhase1Script.deploy(p);
+    }
+
+    // ------------------------------------------------------- DeployTransport
+
+    function test_transportScript_deploysTheSourceSide() public {
+        DeployTransport.Deployment memory d = transportScript.deploy(_transportPlan(true));
+
+        assertGt(d.teleporter.code.length, 0, "local: the script deploys the mock messenger");
+        assertEq(d.localBlockchainId, keccak256("fuji"), "local chain, from the plan");
+
+        AVIPMessageEndpoint relay = AVIPMessageEndpoint(d.relay);
+        AVIPMessageEndpoint collusion = AVIPMessageEndpoint(d.collusion);
+        AVIPMessageEndpoint slashing = AVIPMessageEndpoint(d.slashing);
+
+        assertEq(
+            relay.kind(), AVIPMessageCodec.KIND_COMMITMENT_PROPAGATION, "relay answers for kind 1"
+        );
+        assertEq(
+            collusion.kind(), AVIPMessageCodec.KIND_COLLUSION_ALERT, "alert answers for kind 2"
+        );
+        assertEq(
+            slashing.kind(), AVIPMessageCodec.KIND_SLASHING_NOTIFICATION, "slash answers for kind 3"
+        );
+
+        assertEq(relay.destinationCount(), 1, "one subscriber chain");
+        AVIPMessageEndpoint.Destination memory dest = relay.destinationAt(0);
+        assertEq(dest.blockchainId, keccak256("subnet"), "the peer chain");
+        assertEq(dest.receiver, address(0xB0B1), "the peer's relay");
+        assertEq(
+            relay.originOf(AVIPMessageCodec.KIND_COMMITMENT_PROPAGATION, keccak256("subnet")),
+            address(0),
+            "a source chain accepts nothing"
+        );
+        assertEq(
+            AVIPMessageEndpoint(d.slashing).destinationCount(),
+            1,
+            "the slashing notification has somewhere to go"
+        );
+    }
+
+    function test_transportScript_deploysTheDestinationSide() public {
+        DeployTransport.Deployment memory d = transportScript.deploy(_transportPlan(false));
+
+        AVIPMessageEndpoint relay = AVIPMessageEndpoint(d.relay);
+        AVIPMessageEndpoint collusion = AVIPMessageEndpoint(d.collusion);
+        AVIPMessageEndpoint slashing = AVIPMessageEndpoint(d.slashing);
+
+        assertEq(relay.destinationCount(), 0, "receive-only: no routing table");
+        assertEq(collusion.destinationCount(), 0, "receive-only: no routing table");
+        assertEq(slashing.destinationCount(), 0, "receive-only: no routing table");
+
+        assertEq(
+            relay.originOf(AVIPMessageCodec.KIND_COMMITMENT_PROPAGATION, keccak256("subnet")),
+            address(0xB0B1),
+            "only the peer's relay may announce here"
+        );
+        assertEq(
+            collusion.originOf(AVIPMessageCodec.KIND_COLLUSION_ALERT, keccak256("subnet")),
+            address(0xB0B2),
+            "only the peer's alert channel may flag here"
+        );
+        assertEq(
+            slashing.originOf(AVIPMessageCodec.KIND_SLASHING_NOTIFICATION, keccak256("subnet")),
+            address(0xB0B3),
+            "only the peer's slashing channel may notify here"
+        );
+    }
+
+    function test_transportScript_refusesAMissingTeleporterOnFuji() public {
+        vm.chainId(43_113);
+        DeployTransport.Plan memory p = _transportPlan(true);
+        p.deployer = address(0xBEEF);
+        p.teleporter = address(0);
+
+        vm.expectRevert(abi.encodeWithSelector(DeployCommon.MissingRole.selector, "TELEPORTER"));
+        transportScript.deploy(p);
+    }
+
+    function test_transportScript_refusesAnEOATeleporterOnFuji() public {
+        vm.chainId(43_113);
+        DeployTransport.Plan memory p = _transportPlan(true);
+        p.deployer = address(0xBEEF);
+        p.teleporter = address(0x1234_5678);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployTransport.TeleporterIsEOA.selector, address(0x1234_5678))
+        );
+        transportScript.deploy(p);
+    }
+
+    function test_transportScript_refusesTheLocalChainAsItsOwnPeer() public {
+        DeployTransport.Plan memory p = _transportPlan(true);
+        p.peerBlockchainId = p.localBlockchainId;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployTransport.SameChain.selector, p.localBlockchainId)
+        );
+        transportScript.deploy(p);
+    }
+
+    /// @dev The plan the transport script would build for one side. The peers are
+    ///      arbitrary non-zero addresses: a deployment is told them, it does not
+    ///      predict them (§4), and this suite is about the wiring, not about the
+    ///      other chain. `teleporter` is empty on the local chain, which is where
+    ///      the script deploys the mock.
+    function _transportPlan(bool source) internal pure returns (DeployTransport.Plan memory) {
+        return DeployTransport.Plan({
+            deployer: ANVIL_0,
+            teleporter: address(0),
+            localBlockchainId: keccak256("fuji"),
+            peerBlockchainId: keccak256("subnet"),
+            source: source,
+            registry: source ? address(0x5EED) : address(0),
+            sequencer: source ? address(0x5E01) : address(0),
+            alerter: source ? address(0xA1E2) : address(0),
+            notifier: source ? address(0x4071) : address(0),
+            manager: source ? address(0) : address(0x4A4A),
+            peerRelay: address(0xB0B1),
+            peerCollusion: address(0xB0B2),
+            peerSlashing: address(0xB0B3)
+        });
+    }
+
     function _fixtureTokenAndSink() internal returns (address token, address sink) {
         token = address(new MockERC20("Mock USD", 6));
         sink = address(new MockFundSink());
