@@ -143,6 +143,11 @@ externo necesita para no repetir el diagnóstico:
   «threshold slash authority» y «pause» como lista de deseos, sin decir cuál es
   código, cuál es despliegue y cuál es documento. El triaje del mapa ya los
   convirtió en tickets con criterio de aceptación; la v2 los cita.
+  **Estado en S-018:** T-2 (origen del epoch) y T-1 (custodia obligatoria fuera
+  de la cadena local) están implementados y cubiertos por tests; «identity
+  binding» ya lo estaba por `P-01`/M4d y lo que falta es unicidad (`P-12`);
+  «threshold slash authority» y «pause» siguen en mecanismo/§11 por las razones
+  de §3.4, no por falta de tiempo.
 
 ## 5. Cabos sueltos documentales detectados al validar
 

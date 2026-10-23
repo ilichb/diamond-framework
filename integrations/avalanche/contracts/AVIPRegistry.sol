@@ -81,6 +81,26 @@ contract AVIPRegistry is IAVIPRegistry {
     ///         `norm + k * r` is far above this.
     uint256 internal constant MAX_NORM = 1 << 64;
 
+    /// @notice Chain whose event log the commitments of this registry describe,
+    ///         frozen at deployment (audit M-15).
+    /// @dev Together with `formulaDigest` it is the **origin** of every epoch
+    ///      this registry can ever hold. Immutable on purpose: re-pointing an
+    ///      existing history at another source would silently change what the
+    ///      epochs already posted mean. A different source is a different
+    ///      registry. The name stays lower-case although the lint would like
+    ///      `SCREAMING_SNAKE_CASE`: `sourceChainId()` is part of the published
+    ///      API (`IAVIPRegistry`, the deploy scripts and their transcripts read
+    ///      it), and a second spelling for one field is a bug waiting to happen.
+    // forge-lint: disable-next-line(screaming-snake-case-immutable)
+    bytes32 public immutable sourceChainId;
+
+    /// @notice Digest of the fragment function `f_c` that folded those events
+    ///         into the tensor, frozen at deployment (M-15, Hazard 8).
+    /// @dev A formula rotation is a new registry (or an explicit, logged
+    ///      migration), never a re-interpretation of the existing epochs.
+    // forge-lint: disable-next-line(screaming-snake-case-immutable)
+    bytes32 public immutable formulaDigest;
+
     /// @notice Address allowed to post epoch commitments: the data layer's
     ///         sequencer role.
     address public sequencer;
@@ -140,12 +160,27 @@ contract AVIPRegistry is IAVIPRegistry {
     ///        whose only power is to propose must still exist, or both roles are
     ///        frozen forever — the sequencer could never be rotated and a circuit
     ///        fix could never be installed.
-    constructor(address sequencer_, address verifier_, address guardian_) {
+    /// @param sourceChainId_ The chain whose event log every epoch describes.
+    ///        Rejected when zero: an epoch whose origin is unset is the
+    ///        unattributable commitment M-15 reports.
+    /// @param formulaDigest_ Digest of the fragment function `f_c` in force.
+    ///        Rejected when zero: without it the tensor has no defined meaning.
+    constructor(
+        address sequencer_,
+        address verifier_,
+        address guardian_,
+        bytes32 sourceChainId_,
+        bytes32 formulaDigest_
+    ) {
         if (sequencer_ == address(0)) revert ZeroSequencer();
         if (guardian_ == address(0)) revert ZeroGuardian();
+        if (sourceChainId_ == bytes32(0)) revert ZeroSourceChainId();
+        if (formulaDigest_ == bytes32(0)) revert ZeroFormulaDigest();
         sequencer = sequencer_;
         verifier = IZKThresholdVerifier(verifier_);
         guardian = guardian_;
+        sourceChainId = sourceChainId_;
+        formulaDigest = formulaDigest_;
     }
 
     modifier onlySequencer() {
@@ -273,13 +308,27 @@ contract AVIPRegistry is IAVIPRegistry {
         uint256 epoch,
         bytes32 root,
         uint256 statementRoot,
-        uint32 changedEntries
+        uint32 changedEntries,
+        bytes32 sourceChainId_,
+        bytes32 formulaDigest_
     ) external onlySequencer {
         if (root == bytes32(0)) revert ZeroRoot();
         // A zero Poseidon root is not a valid tree root and would let an epoch
         // exist that no admission proof can ever bind to. Reject it here rather
         // than making `verifyThreshold` special-case it (audit P-16).
         if (statementRoot == 0) revert ZeroStatementRoot();
+
+        // Origin (M-15, Hazard 8): the epoch must say which chain and which
+        // fragment function produced the tensor, and both must be the ones this
+        // registry was deployed with. A client wired to another source, or to a
+        // formula that was rotated without rotating the registry, now reverts
+        // instead of posting an epoch whose meaning lives only in the caller's
+        // configuration. This is a consistency check, not a proof of
+        // provenance: a sequencer that declares the right origin can still post
+        // wrong roots, and catching that is the data layer's fraud proof (A7).
+        if (sourceChainId_ != sourceChainId || formulaDigest_ != formulaDigest) {
+            revert OriginMismatch(sourceChainId, sourceChainId_, formulaDigest, formulaDigest_);
+        }
 
         uint256 expected = _empty ? 0 : _latestEpoch + 1;
         if (epoch != expected) revert NonSequentialEpoch(expected, epoch);
@@ -296,7 +345,15 @@ contract AVIPRegistry is IAVIPRegistry {
         _latestEpoch = epoch;
         _empty = false;
 
-        emit CommitmentPosted(epoch, root, statementRoot, changedEntries, uint64(block.timestamp));
+        emit CommitmentPosted(
+            epoch,
+            root,
+            statementRoot,
+            changedEntries,
+            sourceChainId,
+            formulaDigest,
+            uint64(block.timestamp)
+        );
     }
 
     /// @inheritdoc IAVIPRegistry

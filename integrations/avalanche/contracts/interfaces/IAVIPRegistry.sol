@@ -48,12 +48,19 @@ interface IAVIPRegistry {
     ///        same leaves (audit P-16).
     /// @param changedEntries Entries that differ from the previous epoch, as
     ///        declared by the sequencer (genesis declares the whole tensor).
+    /// @param sourceChainId The chain whose event log the epoch describes. Equal
+    ///        to the registry's immutable, so the log is self-describing without
+    ///        a second call (M-15).
+    /// @param formulaDigest Digest of the fragment function `f_c` that folded
+    ///        those events into the tensor (M-15, Hazard 8).
     /// @param timestamp Block timestamp of the posting.
     event CommitmentPosted(
         uint256 indexed epoch,
         bytes32 root,
         uint256 statementRoot,
         uint32 changedEntries,
+        bytes32 sourceChainId,
+        bytes32 formulaDigest,
         uint64 timestamp
     );
 
@@ -93,6 +100,27 @@ interface IAVIPRegistry {
     error NotGuardian(address caller);
     error ZeroGuardian();
 
+    /// @notice The epoch's declared origin is not this registry's.
+    /// @dev Returned by `postCommitment` when `sourceChainId` or `formulaDigest`
+    ///      differ from the immutables the registry was deployed with (M-15).
+    ///      Both expectations are reported so the operator sees which half of
+    ///      the origin is wrong.
+    error OriginMismatch(
+        bytes32 expectedSourceChainId,
+        bytes32 gotSourceChainId,
+        bytes32 expectedFormulaDigest,
+        bytes32 gotFormulaDigest
+    );
+
+    /// @notice The registry was constructed with a zero `sourceChainId`. An epoch
+    ///         whose origin is unset is exactly the unattributable commitment
+    ///         M-15 reports, so the constructor refuses it.
+    error ZeroSourceChainId();
+
+    /// @notice The registry was constructed with a zero `formulaDigest`: the
+    ///         tensor would have no defined meaning.
+    error ZeroFormulaDigest();
+
     /// @notice The guardian proposed `address(0)` as the verifier. Rejected
     ///         because a zero verifier is not a rotation: it silently turns
     ///         certification off, since `verifyThreshold` reverts
@@ -128,7 +156,8 @@ interface IAVIPRegistry {
     ///         because admission, not verification, is the decision.
     error InvalidZKProof();
 
-    /// @notice Posts the two Merkle roots of the reputation tensor for `epoch`.
+    /// @notice Posts the two Merkle roots of the reputation tensor for `epoch`,
+    ///         together with the origin they describe.
     /// @dev `root` is the keccak tree `verifyEntry` verifies; `statementRoot` is
     ///      the Poseidon tree the admission circuit commits to. They are
     ///      different roots of the same leaves and are stored in different
@@ -137,6 +166,17 @@ interface IAVIPRegistry {
     ///      them for the data layer; the registry cannot recompute either and
     ///      therefore trusts the sequencer for the pair exactly as it already
     ///      trusts it for `changedEntries`.
+    ///
+    ///      `sourceChainId` and `formulaDigest` are the epoch's **origin**: the
+    ///      chain whose event log the tensor was folded from, and the digest of
+    ///      the fragment function `f_c` that did the folding. Both are compared
+    ///      against this registry's immutables and a mismatch reverts
+    ///      (`OriginMismatch`), so a client wired to another source or another
+    ///      formula fails closed instead of posting roots nobody can attribute
+    ///      (audit M-15, Hazard 8). This is a *configuration* check, not a
+    ///      proof of provenance: a sequencer that declares the right origin can
+    ///      still post wrong roots, and catching that is the data layer's fraud
+    ///      proof (gap A7, milestone M7), unchanged by these two arguments.
     ///
     ///      Enforces the freshness constraint of the paper's Data Layer section
     ///      ("two consecutive epochs cannot differ in more than `gamma * N`
@@ -152,8 +192,20 @@ interface IAVIPRegistry {
         uint256 epoch,
         bytes32 root,
         uint256 statementRoot,
-        uint32 changedEntries
+        uint32 changedEntries,
+        bytes32 sourceChainId,
+        bytes32 formulaDigest
     ) external;
+
+    /// @notice Chain whose event log this registry's commitments describe,
+    ///         frozen at deployment. Half of every epoch's origin (M-15).
+    function sourceChainId() external view returns (bytes32);
+
+    /// @notice Digest of the fragment function `f_c` that folded those events
+    ///         into the tensor, frozen at deployment. A new formula is a new
+    ///         registry, never a silent change of meaning for the epochs already
+    ///         posted (M-15, Hazard 8).
+    function formulaDigest() external view returns (bytes32);
 
     /// @notice Keccak Merkle root of the reputation tensor for `epoch`
     ///         (`bytes32(0)` if the epoch was never committed). This is the root

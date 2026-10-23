@@ -27,7 +27,8 @@ hay `session-log.md` en este repositorio: no inventar uno.
 | S-014 | 2026-10-20 | v0.2.1: correcciones P0/P1 | a785770 | adfd08d2… | cerrada; release pendiente |
 | S-015 | 2026-10-20 | Release v0.2.1, README/email y Zenodo | fa78fff | adfd08d2… | abierta; DOI pendiente |
 | S-016 | 2026-10-22 | Validación de la matriz externa y triaje del mapa | 84e6837 | adfd08d2… | cerrada; G10/G11 roto en `ea75594`, cerrado en S-017 |
-| S-017 | 2026-10-22 | T-5: re-sello del ancla tras P-03/M4d | este commit | 5ff84501… | cerrada; OTS pendiente de upgrade; PDF anterior (T-6) |
+| S-017 | 2026-10-22 | T-5: re-sello del ancla tras P-03/M4d | a9488dc | 5ff84501… | cerrada; OTS pendiente de upgrade; PDF anterior (T-6) |
+| S-018 | 2026-10-22 | T-2 y T-1: origen del epoch y custodia obligatoria | este commit | 5ff84501… | cerrada; 283 tests Foundry, 14 casos de dry run, ancla intacta |
 
 S-016 cubre `triage-mapa-2026-10-22.md`, el acta
 `checklist-matriz-evidencia-2026-10-22.md` y la v2
@@ -38,3 +39,27 @@ lo que se auditó: no son documentos normativos y no se citan como si lo fueran.
 El gate de auditoría sigue en 9 PASS / 2 FAIL **igual que antes** de este
 commit: G10/G11 discrepan porque `docs/paper/main.tex` cambió en `ea75594` sin
 re-sellar. Es T-5, no un efecto de S-016.
+
+S-018 implementa **T-2** y **T-1**, las dos piezas que el triaje del mapa
+(§3.3) identificó como cerrables sin tocar el circuito. `AVIPRegistry` toma
+`sourceChainId` y `formulaDigest` como inmutables —cero rechazado en el
+constructor— y `postCommitment` exige que cada época declare exactamente esos
+dos valores: la comprobación va antes de escribir ningún slot, así que una
+publicación con otra cadena u otra fórmula revierte `OriginMismatch` y la época
+sigue disponible para el reintento correcto. El evento `CommitmentPosted` los
+incluye para que el log sea autocontenido. `DeployValidatorManager.deploy`
+rechaza `custody == address(0)` fuera de la cadena local (`MissingRole("CUSTODY")`),
+que era el único camino por el que un despliegue «de producción» podía quedarse
+sin la mitad que hace posible el `slash`.
+
+Lo que **no** se tocó, y es deliberado: el statement de la proof sigue siendo
+`[statementRoot, epoch, uint160(validator), certifiedNorm]`. Añadir
+`sourceChainId`, `formulaDigest` o un `stateHash` no los ligaría al tensor —el
+circuito no los deriva de `entries`, así que certificarían lo que el prover
+declara— y costaría una ceremonia nueva (E-05/M-5, §3.1). El hueco de fondo
+(tensor ↔ raíces) sigue siendo `P-38`/`T-3`, no un parche de interfaz.
+
+Ninguno de los 11 ficheros del ancla cambia: `fase0_anchor.sh --check` sale 0 y
+el gate sigue en PASS=11 FAIL=0 SKIP=0 sobre `5ff84501…`. La suite Foundry pasa
+de 275 a 283 tests, y `deploy_dryrun_output.txt` se regeneró con 14 casos
+(`md5 41fb72a858a4180fb31b3a2d4ceb4b32`), byte-idéntico entre dos ejecuciones.

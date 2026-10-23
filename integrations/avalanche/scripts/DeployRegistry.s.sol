@@ -52,6 +52,11 @@ contract DeployRegistry is DeployCommon {
         address sequencer;
         address verifier;
         address guardian;
+        /// @dev Origin (M-15): the chain whose log the epochs describe and the
+        ///      digest of the fragment function `f_c` in force. Resolved from
+        ///      `SOURCE_CHAIN_ID` / `FORMULA_DIGEST`, never invented per call.
+        bytes32 sourceChainId;
+        bytes32 formulaDigest;
     }
 
     /// @notice What the script actually did: the plan plus the address the
@@ -62,6 +67,8 @@ contract DeployRegistry is DeployCommon {
         address sequencer;
         address verifier;
         address guardian;
+        bytes32 sourceChainId;
+        bytes32 formulaDigest;
     }
 
     /// @notice The frozen constants the registry is supposed to carry: `N =
@@ -108,7 +115,8 @@ contract DeployRegistry is DeployCommon {
         if (p.guardian == p.sequencer) revert RolesCollapsed("GUARDIAN", "SEQUENCER");
 
         vm.startBroadcast(p.deployer);
-        AVIPRegistry registry = new AVIPRegistry(p.sequencer, p.verifier, p.guardian);
+        AVIPRegistry registry =
+            new AVIPRegistry(p.sequencer, p.verifier, p.guardian, p.sourceChainId, p.formulaDigest);
         vm.stopBroadcast();
 
         d = Deployment({
@@ -116,7 +124,9 @@ contract DeployRegistry is DeployCommon {
             registry: address(registry),
             sequencer: p.sequencer,
             verifier: p.verifier,
-            guardian: p.guardian
+            guardian: p.guardian,
+            sourceChainId: p.sourceChainId,
+            formulaDigest: p.formulaDigest
         });
 
         _checkWiring(registry, d);
@@ -130,6 +140,8 @@ contract DeployRegistry is DeployCommon {
         p.sequencer = _sequencer();
         p.verifier = _verifier();
         p.guardian = _guardian();
+        p.sourceChainId = _sourceChainId();
+        p.formulaDigest = _formulaDigest();
     }
 
     /// @dev Reads the state back from the instance just deployed. The registry's
@@ -139,6 +151,8 @@ contract DeployRegistry is DeployCommon {
         _assertAddressEq("sequencer", d.sequencer, registry.sequencer());
         _assertAddressEq("verifier", d.verifier, address(registry.verifier()));
         _assertAddressEq("guardian", d.guardian, registry.guardian());
+        _assertEq("sourceChainId", uint256(d.sourceChainId), uint256(registry.sourceChainId()));
+        _assertEq("formulaDigest", uint256(d.formulaDigest), uint256(registry.formulaDigest()));
         _assertEq("TENSOR_SIZE", N, registry.TENSOR_SIZE());
         _assertEq("MAX_DELTA_ENTRIES", GAMMA_N, registry.MAX_DELTA_ENTRIES());
         _assertEq("CHANGE_DELAY", CHANGE_DELAY, registry.CHANGE_DELAY());
@@ -150,6 +164,8 @@ contract DeployRegistry is DeployCommon {
         _logAddress("role.sequencer", d.sequencer);
         _logAddress("role.verifier", d.verifier);
         _logAddress("role.guardian", d.guardian);
+        _logBytes32("origin.sourceChainId", d.sourceChainId);
+        _logBytes32("origin.formulaDigest", d.formulaDigest);
         _logUint("check.TENSOR_SIZE", N);
         _logUint("check.MAX_DELTA_ENTRIES", GAMMA_N);
         _logUint("check.CHANGE_DELAY", CHANGE_DELAY);

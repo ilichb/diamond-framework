@@ -236,12 +236,24 @@ forma, y tres de ellas son baratas.
   `scripts/deploy_dryrun.sh` ya tiene los casos G–I de §5.12; falta el caso que
   falla cuando el manager se despliega sin la mitad de custodia y el
   `verify_fuji.sh` que lo comprueba en la cadena. No toca contratos.
+  **→ Hecho en S-018:** `DeployValidatorManager.deploy` revierte
+  `MissingRole("CUSTODY")` cuando `custody == address(0)` y la cadena no es la
+  local, con dos tests en `DeployScripts.t.sol` (uno por cada mitad del guard).
+  `verify_fuji.sh` ya comprobaba `manager.custody() == VAULT`; el guard cierra el
+  caso del despliegue suelto, que era el que no tenía comprobación.
 - **T-2 — `sourceChainId` y `activeFormulaDigest` como constantes del registry
   (M-15, Hazard 8).** `postCommitment` gana dos argumentos que el contrato
   compara con sus inmutables; sin ellos, un cambio de fórmula o de cadena de
   origen es indistinguible de una publicación normal. Cambia la interfaz
   pública: va a un milestone con nota de despliegue (§5.12 ya es el precedente
   de cómo se documenta una firma nueva) y con tests de `revert` por mismatch.
+  **→ Hecho en S-018:** `AVIPRegistry` toma `sourceChainId` y `formulaDigest`
+  como inmutables (cero rechazado en el constructor), `postCommitment` los exige
+  y revierte `OriginMismatch` antes de escribir ningún slot; el evento
+  `CommitmentPosted` los incluye. Seis tests nuevos en `AVIPRegistry.t.sol`,
+  casos L–N en el dry run, `SOURCE_CHAIN_ID`/`FORMULA_DIGEST` en los scripts, y
+  el statement de la proof **sin tocar** (§3.1: una palabra pública que el
+  circuito no deriva sólo certifica lo que el prover declara).
 - **T-3 — `EpochMeta` off-chain para trazabilidad (M-06/M-15).** Un
   `EpochMeta { number, root, statement_root, source_chain_id,
   parameters_digest, changed_entries }` con digest de dominio separado
@@ -296,8 +308,8 @@ forma, y tres de ellas son baratas.
 
 | # | Acción | Archivos | Criterio de aceptación |
 |---|---|---|---|
-| 5 | T-2: `sourceChainId` y `activeFormulaDigest` inmutables en el registry | `AVIPRegistry.sol`, `IAVIPRegistry.sol`, tests Foundry, nota §5.12-style | Publicación con `sourceChainId` distinto revierte; con digest distinto revierte; la publicación válida no sube el gas más de un `SLOAD` medido |
-| 6 | T-1: guard de despliegue de custodia | `scripts/deploy_dryrun.sh`, `scripts/verify_fuji.sh` | El dry-run falla con un caso nuevo «manager sin custodia»; el caso queda en el README del script |
+| 5 | **Hecho en S-018.** T-2: `sourceChainId` y `activeFormulaDigest` inmutables en el registry | `AVIPRegistry.sol`, `IAVIPRegistry.sol`, tests Foundry, nota §5.12-style | Publicación con `sourceChainId` distinto revierte; con digest distinto revierte; la publicación válida no sube el gas más de un `SLOAD` medido. ✔ Los dos `revert` y el «no consume época» están en `AVIPRegistry.t.sol`; el gas sólo paga los dos `bytes32` de calldata, porque un `immutable` se lee del bytecode y no toca `SLOAD` |
+| 6 | **Hecho en S-018.** T-1: guard de despliegue de custodia | `scripts/deploy_dryrun.sh`, `scripts/verify_fuji.sh` | El dry-run falla con un caso nuevo «manager sin custodia»; el caso queda en el README del script. ✔ El guard es de script (`MissingRole("CUSTODY")` fuera de la cadena local), con sus dos mitades en `DeployScripts.t.sol`; el dry run no puede probar la rama de Fuji sin roles vivos, así que esa mitad vive en el test |
 | 7 | T-3: `EpochMeta` con dominio separado | `src/datalayer/src/report.rs` (tests inline), `commitment.rs` | El digest viejo no cambia (test pineado verde); el nuevo está cubierto por un vector fijo |
 
 ### P2 — rechazado o diferido, con motivo escrito

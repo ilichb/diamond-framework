@@ -93,6 +93,10 @@ contract DeployFujiPhase1 is DeployCommon {
         address token;
         address sink;
         uint256 wadPerUnit;
+        /// @dev Origin (M-15): chain and fragment-function digest every epoch of
+        ///      this registry will declare.
+        bytes32 sourceChainId;
+        bytes32 formulaDigest;
     }
 
     /// @notice What the script actually did.
@@ -108,6 +112,8 @@ contract DeployFujiPhase1 is DeployCommon {
         address slashAuthority;
         address guardian;
         address verifier;
+        bytes32 sourceChainId;
+        bytes32 formulaDigest;
     }
 
     /// @notice CLI entry point: resolves the environment and deploys.
@@ -146,7 +152,8 @@ contract DeployFujiPhase1 is DeployCommon {
         if (predictedManager.code.length != 0) revert ManagerAddressOccupied(predictedManager);
 
         vm.startBroadcast(p.deployer);
-        AVIPRegistry registry = new AVIPRegistry(p.sequencer, VERIFIER, p.guardian);
+        AVIPRegistry registry =
+            new AVIPRegistry(p.sequencer, VERIFIER, p.guardian, p.sourceChainId, p.formulaDigest);
         AVIPStakeVault vault = new AVIPStakeVault(p.token, p.sink, p.wadPerUnit);
         AVIPValidatorManager manager =
             new AVIPValidatorManager(address(registry), p.slashAuthority, address(vault));
@@ -167,7 +174,9 @@ contract DeployFujiPhase1 is DeployCommon {
             sequencer: p.sequencer,
             slashAuthority: p.slashAuthority,
             guardian: p.guardian,
-            verifier: VERIFIER
+            verifier: VERIFIER,
+            sourceChainId: p.sourceChainId,
+            formulaDigest: p.formulaDigest
         });
 
         _checkWiring(registry, vault, manager, d, predictedManager);
@@ -186,6 +195,8 @@ contract DeployFujiPhase1 is DeployCommon {
         p.token = _requiredRole("TOKEN");
         p.sink = _requiredRole("SINK");
         p.wadPerUnit = _requiredUint("WAD_PER_UNIT");
+        p.sourceChainId = _sourceChainId();
+        p.formulaDigest = _formulaDigest();
     }
 
     /// @dev Reads the deployment back from the instances just created. The
@@ -206,6 +217,8 @@ contract DeployFujiPhase1 is DeployCommon {
         _assertAddressEq("verifier", VERIFIER, address(registry.verifier()));
         _assertEq("TENSOR_SIZE", N, registry.TENSOR_SIZE());
         _assertEq("MAX_DELTA_ENTRIES", GAMMA_N, registry.MAX_DELTA_ENTRIES());
+        _assertEq("sourceChainId", uint256(d.sourceChainId), uint256(registry.sourceChainId()));
+        _assertEq("formulaDigest", uint256(d.formulaDigest), uint256(registry.formulaDigest()));
         _assertAddressEq("custody", d.vault, address(manager.custody()));
         _assertAddressEq("vault.manager", d.manager, vault.manager());
         _assertAddressEq("slashAuthority", d.slashAuthority, manager.slashAuthority());

@@ -185,7 +185,14 @@ contract DeployScriptsTest is Test {
 
         AVIPRegistry registry = AVIPRegistry(d.registry);
         vm.prank(d.sequencer);
-        registry.postCommitment(0, keccak256("epoch-0"), STATEMENT_ROOT, 500);
+        registry.postCommitment(
+            0,
+            keccak256("epoch-0"),
+            STATEMENT_ROOT,
+            500,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
 
         // That is not a hole: `verifyThreshold` reverts instead of returning a
         // verdict nobody checked.
@@ -213,7 +220,12 @@ contract DeployScriptsTest is Test {
         // M9a. A guardian of zero is not "ungoverned": it is frozen. Neither role
         // could ever be replaced, so the plan is refused before anything exists.
         DeployRegistry.Plan memory plan = DeployRegistry.Plan({
-            deployer: ANVIL_0, sequencer: ANVIL_1, verifier: address(0), guardian: address(0)
+            deployer: ANVIL_0,
+            sequencer: ANVIL_1,
+            verifier: address(0),
+            guardian: address(0),
+            sourceChainId: keccak256("avalanche-c-chain"),
+            formulaDigest: keccak256("AVIP/fragment-function/v1")
         });
         vm.expectRevert(abi.encodeWithSelector(DeployCommon.MissingRole.selector, "GUARDIAN"));
         registryScript.deploy(plan);
@@ -224,7 +236,12 @@ contract DeployScriptsTest is Test {
         // proposes its own continuation. The delay would then only *announce* the
         // capture, so the plan is refused rather than deployed with a warning.
         DeployRegistry.Plan memory plan = DeployRegistry.Plan({
-            deployer: ANVIL_0, sequencer: ANVIL_1, verifier: address(0), guardian: ANVIL_1
+            deployer: ANVIL_0,
+            sequencer: ANVIL_1,
+            verifier: address(0),
+            guardian: ANVIL_1,
+            sourceChainId: keccak256("avalanche-c-chain"),
+            formulaDigest: keccak256("AVIP/fragment-function/v1")
         });
         vm.expectRevert(
             abi.encodeWithSelector(DeployCommon.RolesCollapsed.selector, "GUARDIAN", "SEQUENCER")
@@ -253,10 +270,24 @@ contract DeployScriptsTest is Test {
         assertEq(registry.sequencer(), ANVIL_2, "rotated");
         vm.prank(ANVIL_1);
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotSequencer.selector, ANVIL_1));
-        registry.postCommitment(0, keccak256("tensor"), STATEMENT_ROOT, 500);
+        registry.postCommitment(
+            0,
+            keccak256("tensor"),
+            STATEMENT_ROOT,
+            500,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
 
         vm.prank(ANVIL_2);
-        registry.postCommitment(0, keccak256("tensor"), STATEMENT_ROOT, 500);
+        registry.postCommitment(
+            0,
+            keccak256("tensor"),
+            STATEMENT_ROOT,
+            500,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
         assertEq(registry.latestEpoch(), 0, "the new sequencer posts");
     }
 
@@ -329,6 +360,24 @@ contract DeployScriptsTest is Test {
         vm.chainId(43_114);
         vm.expectRevert(abi.encodeWithSelector(DeployCommon.MainnetRefused.selector, 43_114));
         managerScript.run();
+    }
+
+    function test_managerScript_refusesACustodylessManagerOffTheLocalChain() public {
+        // M-12/T-1. On a live chain a manager with no custody accepts a stake it
+        // cannot slash (§5.2.3), which is a declaration, not a bond. The local
+        // chain keeps the M2 mode on purpose — every other test here deploys that
+        // way — so the guard is asserted where it can fire: on Fuji.
+        vm.chainId(43_113);
+        vm.expectRevert(abi.encodeWithSelector(DeployCommon.MissingRole.selector, "CUSTODY"));
+        managerScript.deploy(_managerPlanWith(address(this), address(0)));
+    }
+
+    function test_managerScript_acceptsACustodylessManagerOnTheLocalChain() public {
+        // The other half of the guard: refusing `address(0)` everywhere would
+        // delete the M2 mode that phase 1 deploys and that §5.2.3 documents.
+        DeployValidatorManager.Deployment memory d =
+            managerScript.deploy(_managerPlan(_fixtureRegistry()));
+        assertEq(d.custody, address(0), "M2 mode: stake declared, not backed");
     }
 
     // ------------------------------------------------------- DeployStakeVault
@@ -431,7 +480,14 @@ contract DeployScriptsTest is Test {
         //    the whole tensor, delta = N = 500.
         bytes32 root = keccak256("epoch-0");
         vm.prank(r.sequencer);
-        registry.postCommitment(0, root, STATEMENT_ROOT, 500);
+        registry.postCommitment(
+            0,
+            root,
+            STATEMENT_ROOT,
+            500,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
         assertEq(registry.latestEpoch(), 0, "genesis epoch");
 
         // 4. ... and installs the threshold verifier. M7a deploys no verifier, so
@@ -481,7 +537,12 @@ contract DeployScriptsTest is Test {
         returns (DeployRegistry.Plan memory)
     {
         return DeployRegistry.Plan({
-            deployer: ANVIL_0, sequencer: sequencer, verifier: verifier, guardian: ANVIL_3
+            deployer: ANVIL_0,
+            sequencer: sequencer,
+            verifier: verifier,
+            guardian: ANVIL_3,
+            sourceChainId: keccak256("avalanche-c-chain"),
+            formulaDigest: keccak256("AVIP/fragment-function/v1")
         });
     }
 
@@ -530,7 +591,15 @@ contract DeployScriptsTest is Test {
     /// @dev A registry the manager script can point at. The scripts deploy their
     ///      own instances; this one is a fixture for the manager tests.
     function _fixtureRegistry() internal returns (address) {
-        return address(new AVIPRegistry(ANVIL_1, address(0), ANVIL_3));
+        return address(
+            new AVIPRegistry(
+                ANVIL_1,
+                address(0),
+                ANVIL_3,
+                keccak256("avalanche-c-chain"),
+                keccak256("AVIP/fragment-function/v1")
+            )
+        );
     }
 
     /// @dev The statement the registry is expected to build itself from its own

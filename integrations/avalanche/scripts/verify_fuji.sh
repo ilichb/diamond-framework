@@ -110,7 +110,7 @@ value_for() {
     printf '%s\n' "${line#*=}"
 }
 
-for key in chain.id chain.name registry vault manager sequencer verifier TENSOR_SIZE status; do
+for key in chain.id chain.name registry vault manager sequencer verifier origin.sourceChainId origin.formulaDigest TENSOR_SIZE status; do
     value_for "$key" >/dev/null || die "transcript has no [fuji] $key=..."
 done
 

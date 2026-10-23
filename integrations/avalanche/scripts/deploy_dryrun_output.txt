@@ -19,6 +19,11 @@ refused when it collapses (GUARDIAN == SEQUENCER — the capture the proposal de
 exists to prevent, since one key would be proposing its own continuation) and when
 the guardian is the zero address. Neither refusal creates a contract.
 
+Cases L to N are M-15's: the registry's origin (`SOURCE_CHAIN_ID`,
+`FORMULA_DIGEST`) is read as strictly as a role, it wins over the reference
+default when the environment sets it, and a zero formula is refused by the
+contract (`ZeroFormulaDigest`) rather than deployed.
+
 Gas and timings are deliberately absent — the transcript keeps only the `[m7a]`
 and `[m8]` lines the scripts log — so it is byte-stable and carries no cost claim.
 
@@ -33,6 +38,8 @@ A. DeployRegistry, no environment
   [m7a] role.sequencer=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
   [m7a] role.verifier=0x0000000000000000000000000000000000000000
   [m7a] role.guardian=0x90F79bf6EB2c4f870365E785982E1f101E93b906
+  [m7a] origin.sourceChainId=0xce12864578eb11634416932021724652c9a481fbf6a42ba77cde799fad091bc1
+  [m7a] origin.formulaDigest=0x403af787fee703ec18c440a91e8405b72dc55ea700ec557263baaab0e24a4cfc
   [m7a] check.TENSOR_SIZE=500
   [m7a] check.MAX_DELTA_ENTRIES=50
   [m7a] check.CHANGE_DELAY=172800
@@ -55,6 +62,8 @@ C. DeployRegistry, roles pinned
   [m7a] role.sequencer=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
   [m7a] role.verifier=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
   [m7a] role.guardian=0x90F79bf6EB2c4f870365E785982E1f101E93b906
+  [m7a] origin.sourceChainId=0xce12864578eb11634416932021724652c9a481fbf6a42ba77cde799fad091bc1
+  [m7a] origin.formulaDigest=0x403af787fee703ec18c440a91e8405b72dc55ea700ec557263baaab0e24a4cfc
   [m7a] check.TENSOR_SIZE=500
   [m7a] check.MAX_DELTA_ENTRIES=50
   [m7a] check.CHANGE_DELAY=172800
@@ -133,6 +142,36 @@ K. DeployRegistry, GUARDIAN pinned to zero
   $ DEPLOYER=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 SEQUENCER=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 GUARDIAN=0x0000000000000000000000000000000000000000 forge script scripts/DeployRegistry.s.sol:DeployRegistry --offline
   <the script stopped before it logged anything>
   Error: script failed: MissingRole("GUARDIAN")
+
+L. DeployRegistry, malformed SOURCE_CHAIN_ID
+  expects: a revert: the origin is parsed as strictly as the roles, never defaulted
+  $ DEPLOYER=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 SOURCE_CHAIN_ID=0xnot-a-bytes32 forge script scripts/DeployRegistry.s.sol:DeployRegistry --offline
+  <the script stopped before it logged anything>
+  Error: script failed: vm.parseBytes32: failed parsing "0xnot-a-bytes32" as type `bytes32`: parser error:
+
+M. DeployRegistry, origin pinned
+  expects: the environment wins: the transcript carries the chain and formula every epoch must declare
+  $ DEPLOYER=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 SOURCE_CHAIN_ID=0x1111111111111111111111111111111111111111111111111111111111111111 FORMULA_DIGEST=0x2222222222222222222222222222222222222222222222222222222222222222 forge script scripts/DeployRegistry.s.sol:DeployRegistry --offline
+  [m7a] script=DeployRegistry
+  [m7a] chain=31337
+  [m7a] chain.name=anvil-or-dry-run
+  [m7a] sender=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  [m7a] AVIPRegistry=0x5FbDB2315678afecb367f032d93F642f64180aa3
+  [m7a] role.sequencer=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+  [m7a] role.verifier=0x0000000000000000000000000000000000000000
+  [m7a] role.guardian=0x90F79bf6EB2c4f870365E785982E1f101E93b906
+  [m7a] origin.sourceChainId=0x1111111111111111111111111111111111111111111111111111111111111111
+  [m7a] origin.formulaDigest=0x2222222222222222222222222222222222222222222222222222222222222222
+  [m7a] check.TENSOR_SIZE=500
+  [m7a] check.MAX_DELTA_ENTRIES=50
+  [m7a] check.CHANGE_DELAY=172800
+  [m7a] status=ok
+
+N. DeployRegistry, FORMULA_DIGEST pinned to zero
+  expects: ZeroFormulaDigest: a registry whose tensor has no defined meaning is refused
+  $ DEPLOYER=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 FORMULA_DIGEST=0x0000000000000000000000000000000000000000000000000000000000000000 forge script scripts/DeployRegistry.s.sol:DeployRegistry --offline
+  <the script stopped before it logged anything>
+  Error: script failed: ZeroFormulaDigest()
 
 WHAT THIS IS NOT
   A deployment. Nothing here touches an RPC endpoint, and the addresses are the

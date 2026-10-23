@@ -193,6 +193,51 @@ abstract contract DeployCommon is Script {
         return "unknown";
     }
 
+    /// @notice Reference `sourceChainId`: the C-Chain, where this registry lives
+    ///         and where the reference deployment folds from. Overridable with
+    ///         `SOURCE_CHAIN_ID` when the data layer folds another chain's log.
+    /// @dev **A deployment input, not a model parameter** (§6): no paper
+    ///      equation names it. It is a `keccak256` of a domain string, not the
+    ///      EIP-155 number, because `postCommitment` compares it as a `bytes32`
+    ///      and a bare integer invites a silent unit mismatch.
+    bytes32 internal constant DEFAULT_SOURCE_CHAIN_ID = keccak256("avalanche-c-chain");
+
+    /// @notice Reference `formulaDigest`: `keccak256("AVIP/fragment-function/v1")`.
+    /// @dev **A reference value, not a derived one.** The canonical digest of
+    ///      `f_c` belongs to the implementation in `src/datalayer`; asserting a
+    ///      literal here would let the script claim a check it cannot make. What
+    ///      the contract enforces is that every epoch declares *this* value, so
+    ///      a formula rotation cannot happen silently (M-15, Hazard 8). Supply
+    ///      the real digest with `FORMULA_DIGEST` in a live deployment.
+    bytes32 internal constant DEFAULT_FORMULA_DIGEST = keccak256("AVIP/fragment-function/v1");
+
+    /// @dev Resolves `sourceChainId` from the environment, falling back to the
+    ///      reference C-Chain value.
+    function _sourceChainId() internal view returns (bytes32) {
+        return _bytes32Or("SOURCE_CHAIN_ID", DEFAULT_SOURCE_CHAIN_ID);
+    }
+
+    /// @dev Resolves `formulaDigest` from the environment, falling back to the
+    ///      reference value.
+    function _formulaDigest() internal view returns (bytes32) {
+        return _bytes32Or("FORMULA_DIGEST", DEFAULT_FORMULA_DIGEST);
+    }
+
+    /// @dev Reads a `bytes32` input with the same discipline as `_roleOr`:
+    ///      absent or empty falls back, present but malformed reverts
+    ///      (`vm.parseBytes32`), so a typo cannot silently deploy a registry
+    ///      claiming an origin nobody chose.
+    function _bytes32Or(string memory name, bytes32 fallbackTo) internal view returns (bytes32) {
+        string memory raw;
+        try vm.envString(name) returns (string memory value) {
+            raw = value;
+        } catch {
+            return fallbackTo;
+        }
+        if (bytes(raw).length == 0) return fallbackTo;
+        return vm.parseBytes32(raw);
+    }
+
     /// @dev The strongest statement a deployment script can make without a
     ///      network: read the wiring back from the instance it just created, so
     ///      a wrong constructor argument fails here rather than at the first
@@ -218,6 +263,10 @@ abstract contract DeployCommon is Script {
     }
 
     function _logUint(string memory key, uint256 value) internal pure {
+        _log(key, vm.toString(value));
+    }
+
+    function _logBytes32(string memory key, bytes32 value) internal pure {
         _log(key, vm.toString(value));
     }
 

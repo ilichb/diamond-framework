@@ -43,12 +43,21 @@ import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
 ///    times, so no caller can consume another validator's proof slot (this is
 ///    the test that closes the M1 DoS). The registry itself enforces no
 ///    threshold: `certifiedNorm = 0` is a valid statement for it.
+/// 8. Origin (M-15, Hazard 8): `sourceChainId` and `formulaDigest` are immutable
+///    and every `postCommitment` must declare exactly them. A client wired to
+///    another chain or to another `f_c` reverts with `OriginMismatch` before any
+///    slot is written, so a rejected epoch can still be posted correctly and a
+///    formula rotation cannot happen silently.
 ///
 /// WHAT IS NOT TESTED
 /// ------------------
 /// - No real proof is ever verified: `IZKThresholdVerifier` is a mock, so
 ///   nothing here says the pairing check or the recursive SNARK is correct
 ///   (milestone M3).
+/// - The origin check is a *configuration* check, not a proof of provenance: a
+///   sequencer that declares the right chain and formula can still post roots
+///   computed from the wrong events. Catching that is the data layer's fraud
+///   proof (gap A7, milestone M7), not this contract.
 /// - The freshness bound is enforced on the delta the sequencer *declares*.
 ///   The registry does not hold the tensor, so it cannot recompute that delta:
 ///   a lying sequencer is not caught here, that is the data layer's fraud proof
@@ -69,6 +78,12 @@ contract AVIPRegistryTest is Test {
     ///      mock reads only what the registry builds, and the pairing is M3.
     uint256 internal constant STATEMENT_ROOT = 0x1234_5678;
 
+    /// @dev Origin (M-15) the fixture registry is deployed with. The value is
+    ///      arbitrary here: what these tests assert is that the registry compares
+    ///      against *its own* immutables, not that a particular chain is special.
+    bytes32 internal constant ORIGIN_CHAIN = keccak256("avalanche-c-chain");
+    bytes32 internal constant ORIGIN_FORMULA = keccak256("AVIP/fragment-function/v1");
+
     AVIPRegistry internal registry;
     address internal sequencer;
     address internal validator;
@@ -87,7 +102,13 @@ contract AVIPRegistryTest is Test {
         stranger = makeAddr("stranger");
         guardian = makeAddr("guardian");
 
-        registry = new AVIPRegistry(sequencer, address(0), guardian);
+        registry = new AVIPRegistry(
+            sequencer,
+            address(0),
+            guardian,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
 
         // Reference tensor of the paper: N = C*D*H = 500 entries.
         bytes32[] memory entries = new bytes32[](N);
@@ -100,7 +121,14 @@ contract AVIPRegistryTest is Test {
         epoch0Proofs = proofs;
 
         vm.prank(sequencer);
-        registry.postCommitment(0, epoch0Root, STATEMENT_ROOT, N);
+        registry.postCommitment(
+            0,
+            epoch0Root,
+            STATEMENT_ROOT,
+            N,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
     }
 
     // ---------------------------------------------------------------- reference
@@ -114,7 +142,14 @@ contract AVIPRegistryTest is Test {
 
     function test_postCommitment_acceptsTheFullGammaBound() public {
         vm.prank(sequencer);
-        registry.postCommitment(1, keccak256("epoch-1"), STATEMENT_ROOT + 1, GAMMA_N);
+        registry.postCommitment(
+            1,
+            keccak256("epoch-1"),
+            STATEMENT_ROOT + 1,
+            GAMMA_N,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
 
         assertEq(registry.changedEntriesOf(1), GAMMA_N);
         assertEq(registry.latestEpoch(), 1);
@@ -126,23 +161,56 @@ contract AVIPRegistryTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAVIPRegistry.FreshnessViolation.selector, GAMMA_N + 1, GAMMA_N)
         );
-        registry.postCommitment(1, keccak256("epoch-1"), STATEMENT_ROOT + 1, GAMMA_N + 1);
+        registry.postCommitment(
+            1,
+            keccak256("epoch-1"),
+            STATEMENT_ROOT + 1,
+            GAMMA_N + 1,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
     }
 
     function test_postCommitment_genesisRequiresTheWholeTensor() public {
-        AVIPRegistry fresh = new AVIPRegistry(sequencer, address(0), guardian);
+        AVIPRegistry fresh = new AVIPRegistry(
+            sequencer,
+            address(0),
+            guardian,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
         vm.prank(sequencer);
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.GenesisDelta.selector, N - 1, N));
-        fresh.postCommitment(0, keccak256("genesis"), STATEMENT_ROOT, N - 1);
+        fresh.postCommitment(
+            0,
+            keccak256("genesis"),
+            STATEMENT_ROOT,
+            N - 1,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
     }
 
     function test_postCommitment_emitsTheCommitment() public {
         vm.prank(sequencer);
         vm.expectEmit(true, false, false, true, address(registry));
         emit IAVIPRegistry.CommitmentPosted(
-            1, keccak256("epoch-1"), STATEMENT_ROOT + 1, GAMMA_N, uint64(block.timestamp)
+            1,
+            keccak256("epoch-1"),
+            STATEMENT_ROOT + 1,
+            GAMMA_N,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1"),
+            uint64(block.timestamp)
         );
-        registry.postCommitment(1, keccak256("epoch-1"), STATEMENT_ROOT + 1, GAMMA_N);
+        registry.postCommitment(
+            1,
+            keccak256("epoch-1"),
+            STATEMENT_ROOT + 1,
+            GAMMA_N,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
     }
 
     // ------------------------------------------------------------ epoch order
@@ -150,13 +218,27 @@ contract AVIPRegistryTest is Test {
     function test_postCommitment_rejectsASkippedEpoch() public {
         vm.prank(sequencer);
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NonSequentialEpoch.selector, 1, 2));
-        registry.postCommitment(2, keccak256("epoch-2"), STATEMENT_ROOT + 2, 1);
+        registry.postCommitment(
+            2,
+            keccak256("epoch-2"),
+            STATEMENT_ROOT + 2,
+            1,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
     }
 
     function test_postCommitment_rejectsRePostingAnEpoch() public {
         vm.prank(sequencer);
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NonSequentialEpoch.selector, 1, 0));
-        registry.postCommitment(0, epoch0Root, STATEMENT_ROOT, N);
+        registry.postCommitment(
+            0,
+            epoch0Root,
+            STATEMENT_ROOT,
+            N,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
     }
 
     function test_unpostedEpochReadsAsEmpty() public view {
@@ -165,7 +247,13 @@ contract AVIPRegistryTest is Test {
     }
 
     function test_latestEpochIsMaxBeforeGenesis() public {
-        AVIPRegistry fresh = new AVIPRegistry(sequencer, address(0), guardian);
+        AVIPRegistry fresh = new AVIPRegistry(
+            sequencer,
+            address(0),
+            guardian,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
         assertEq(fresh.latestEpoch(), type(uint256).max);
     }
 
@@ -174,13 +262,27 @@ contract AVIPRegistryTest is Test {
     function test_postCommitment_rejectsAnUnauthorisedCaller() public {
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotSequencer.selector, stranger));
-        registry.postCommitment(1, keccak256("epoch-1"), STATEMENT_ROOT + 1, 1);
+        registry.postCommitment(
+            1,
+            keccak256("epoch-1"),
+            STATEMENT_ROOT + 1,
+            1,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
     }
 
     function test_postCommitment_rejectsTheZeroRoot() public {
         vm.prank(sequencer);
         vm.expectRevert(IAVIPRegistry.ZeroRoot.selector);
-        registry.postCommitment(1, bytes32(0), STATEMENT_ROOT + 1, 1);
+        registry.postCommitment(
+            1,
+            bytes32(0),
+            STATEMENT_ROOT + 1,
+            1,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
     }
 
     function test_postCommitment_rejectsTheZeroStatementRoot() public {
@@ -188,7 +290,14 @@ contract AVIPRegistryTest is Test {
         // slot, so it is validated on its own. Zero is not a tree root.
         vm.prank(sequencer);
         vm.expectRevert(IAVIPRegistry.ZeroStatementRoot.selector);
-        registry.postCommitment(1, keccak256("epoch-1"), 0, 1);
+        registry.postCommitment(
+            1,
+            keccak256("epoch-1"),
+            0,
+            1,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
     }
 
     function test_unpostedStatementRootReadsAsZero() public view {
@@ -197,7 +306,13 @@ contract AVIPRegistryTest is Test {
 
     function test_constructor_rejectsTheZeroSequencer() public {
         vm.expectRevert(IAVIPRegistry.ZeroSequencer.selector);
-        new AVIPRegistry(address(0), address(0), guardian);
+        new AVIPRegistry(
+            address(0),
+            address(0),
+            guardian,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
     }
 
     function test_constructor_rejectsTheZeroGuardian() public {
@@ -205,7 +320,101 @@ contract AVIPRegistryTest is Test {
         // sequencer nor install a fixed verifier: the first circuit bug would
         // force a redeploy that loses `_roots` and `_changedEntries`.
         vm.expectRevert(IAVIPRegistry.ZeroGuardian.selector);
-        new AVIPRegistry(sequencer, address(0), address(0));
+        new AVIPRegistry(
+            sequencer,
+            address(0),
+            address(0),
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
+    }
+
+    // ------------------------------------------------------------------- origin
+
+    function test_origin_isFrozenAtDeployment() public view {
+        // M-15: the chain and the fragment function are part of the epoch's
+        // meaning, so they are readable from the instance that holds the epochs.
+        assertEq(registry.sourceChainId(), ORIGIN_CHAIN, "sourceChainId");
+        assertEq(registry.formulaDigest(), ORIGIN_FORMULA, "formulaDigest");
+    }
+
+    function test_constructor_rejectsAZeroSourceChainId() public {
+        // An epoch whose origin is unset is the unattributable commitment M-15
+        // reports; there is no "configure it later".
+        vm.expectRevert(IAVIPRegistry.ZeroSourceChainId.selector);
+        new AVIPRegistry(sequencer, address(0), guardian, bytes32(0), ORIGIN_FORMULA);
+    }
+
+    function test_constructor_rejectsAZeroFormulaDigest() public {
+        // Without a formula the tensor has no defined meaning.
+        vm.expectRevert(IAVIPRegistry.ZeroFormulaDigest.selector);
+        new AVIPRegistry(sequencer, address(0), guardian, ORIGIN_CHAIN, bytes32(0));
+    }
+
+    function test_postCommitment_rejectsAnotherSourceChain() public {
+        // A client wired to another chain fails closed instead of posting a root
+        // nobody can attribute to the chain this registry describes.
+        vm.prank(sequencer);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAVIPRegistry.OriginMismatch.selector,
+                ORIGIN_CHAIN,
+                keccak256("another-chain"),
+                ORIGIN_FORMULA,
+                ORIGIN_FORMULA
+            )
+        );
+        registry.postCommitment(
+            1,
+            keccak256("epoch-1"),
+            STATEMENT_ROOT + 1,
+            1,
+            keccak256("another-chain"),
+            ORIGIN_FORMULA
+        );
+    }
+
+    function test_postCommitment_rejectsAnotherFormulaDigest() public {
+        // Hazard 8: rotating `f_c` without rotating the registry would silently
+        // change what every future epoch means. It reverts instead.
+        bytes32 otherFormula = keccak256("AVIP/fragment-function/v2");
+        vm.prank(sequencer);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAVIPRegistry.OriginMismatch.selector,
+                ORIGIN_CHAIN,
+                ORIGIN_CHAIN,
+                ORIGIN_FORMULA,
+                otherFormula
+            )
+        );
+        registry.postCommitment(
+            1, keccak256("epoch-1"), STATEMENT_ROOT + 1, 1, ORIGIN_CHAIN, otherFormula
+        );
+    }
+
+    function test_aRejectedOriginDoesNotConsumeTheEpoch() public {
+        // Fail closed, not half-open: the revert happens before any slot is
+        // written, so the sequencer can retry with the right origin.
+        vm.prank(sequencer);
+        vm.expectRevert();
+        registry.postCommitment(
+            1,
+            keccak256("epoch-1"),
+            STATEMENT_ROOT + 1,
+            1,
+            keccak256("another-chain"),
+            ORIGIN_FORMULA
+        );
+
+        assertEq(registry.latestEpoch(), 0, "latestEpoch");
+        assertEq(registry.commitmentOf(1), bytes32(0), "epoch 1 must not exist");
+
+        vm.prank(sequencer);
+        registry.postCommitment(
+            1, keccak256("epoch-1"), STATEMENT_ROOT + 1, 1, ORIGIN_CHAIN, ORIGIN_FORMULA
+        );
+        assertEq(registry.latestEpoch(), 1, "latestEpoch after retry");
     }
 
     // ------------------------------------------------------------ governance (M9a)
@@ -329,11 +538,25 @@ contract AVIPRegistryTest is Test {
         // The new sequencer posts; the old one is a stranger now, even though it
         // still holds the same private key it held before the change.
         vm.prank(stranger);
-        registry.postCommitment(1, keccak256("epoch-1"), STATEMENT_ROOT + 1, 1);
+        registry.postCommitment(
+            1,
+            keccak256("epoch-1"),
+            STATEMENT_ROOT + 1,
+            1,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
 
         vm.prank(sequencer);
         vm.expectRevert(abi.encodeWithSelector(IAVIPRegistry.NotSequencer.selector, sequencer));
-        registry.postCommitment(2, keccak256("epoch-2"), STATEMENT_ROOT + 2, 1);
+        registry.postCommitment(
+            2,
+            keccak256("epoch-2"),
+            STATEMENT_ROOT + 2,
+            1,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
     }
 
     function test_governance_reproposingRestartsTheDelay() public {
@@ -566,7 +789,14 @@ contract AVIPRegistryTest is Test {
 
     function test_verifyThreshold_bindsTheStatementToTheEpochRoot() public {
         vm.prank(sequencer);
-        registry.postCommitment(1, keccak256("epoch-1"), STATEMENT_ROOT + 1, 1);
+        registry.postCommitment(
+            1,
+            keccak256("epoch-1"),
+            STATEMENT_ROOT + 1,
+            1,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
         _setVerifier(true, STATEMENT_ROOT + 1, 1, NORM);
 
         // The statement root of epoch 1 is not the statement root of epoch 0: a

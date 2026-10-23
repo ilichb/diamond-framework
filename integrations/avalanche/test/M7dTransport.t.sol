@@ -182,8 +182,20 @@ contract M7dTransportTest is Test {
         validator = address(uint160(F4d.STATEMENT_VALIDATOR));
         guardian = makeAddr("guardian");
 
-        registryForAdmission = new AVIPRegistry(sequencer, address(verifier), guardian);
-        registryForCommitment = new AVIPRegistry(sequencer, address(verifier), guardian);
+        registryForAdmission = new AVIPRegistry(
+            sequencer,
+            address(verifier),
+            guardian,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
+        registryForCommitment = new AVIPRegistry(
+            sequencer,
+            address(verifier),
+            guardian,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
         manager = new AVIPValidatorManager(
             address(registryForAdmission), predictedSlashingDestination, address(0)
         );
@@ -310,7 +322,14 @@ contract M7dTransportTest is Test {
     /// @dev Commits an epoch in the relay's registry, as the sequencer.
     function _commit(uint256 epoch, bytes32 root, uint32 changedEntries) internal {
         vm.prank(sequencer);
-        registryForCommitment.postCommitment(epoch, root, uint256(root), changedEntries);
+        registryForCommitment.postCommitment(
+            epoch,
+            root,
+            uint256(root),
+            changedEntries,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
     }
 
     /// @dev Admits `validator` with the M4d admission key and the inclusion proof
@@ -320,7 +339,14 @@ contract M7dTransportTest is Test {
     function _admitValidator() internal {
         if (registryForAdmission.commitmentOf(0) == bytes32(0)) {
             vm.prank(sequencer);
-            registryForAdmission.postCommitment(0, keccak256("tensor"), F4d.STATEMENT_ROOT, N);
+            registryForAdmission.postCommitment(
+                0,
+                keccak256("tensor"),
+                F4d.STATEMENT_ROOT,
+                N,
+                keccak256("avalanche-c-chain"),
+                keccak256("AVIP/fragment-function/v1")
+            );
         }
         vm.prank(validator);
         manager.admit(validator, STAKE_WAD, F4d.STATEMENT_NORM, F4d.proof());

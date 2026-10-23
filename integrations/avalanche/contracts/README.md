@@ -53,6 +53,18 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
   previous one by more than `gamma * N = 0.10 * 500 = 50` entries. The bound is
   checked against the delta the sequencer *declares*; the registry never stores
   the tensor.
+- **Every epoch declares its origin (M-15).** The constructor takes
+  `sourceChainId` and `formulaDigest` as immutables and rejects a zero for either
+  (`ZeroSourceChainId`, `ZeroFormulaDigest`); `postCommitment` takes both with the
+  epoch and reverts `OriginMismatch(expectedChain, declaredChain,
+  expectedFormula, declaredFormula)` unless they equal the registry's. The check
+  runs before any slot is written, so a rejected epoch can still be posted with
+  the right origin, and a formula rotation that did not redeploy the registry
+  fails closed instead of silently changing what every future epoch means
+  (Hazard 8). It is a **consistency** check, not a proof of provenance: a
+  sequencer that declares the right origin can still post roots folded from the
+  wrong events, and catching that is the data layer's fraud proof (A7). The
+  verifier's statement is untouched — see the next point for why.
 - **`verifyThreshold` certifies a norm, it does not compare it.** Since M2 it is
   `view` and takes `(epoch, validator, certifiedNorm, proof)`: it builds the
   statement `[statementRoot, epoch, uint160(validator), certifiedNorm]` from its
@@ -76,6 +88,12 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
   Enforcing `T(v) >= Theta_r` is the manager's job (§5.2.2 of the plan), which
   keeps economic parameters out of the circuit and the trusted setup. With no
   proof in the blob the registry reverts with `InvalidZKProof`.
+  **The statement stays four words on purpose.** `sourceChainId`,
+  `formulaDigest` and a state hash would be *prover-chosen* words: the circuit
+  does not derive them from `entries`, so adding them would certify the prover's
+  own claim rather than bind the root to the state. Binding them needs a new
+  circuit, a new key and a new ceremony (E-05/M-5); the origin is enforced where
+  it can be checked instead — see the first point above (M-15).
 - **A role cannot rotate itself (M9a, plan §12.1.2).** The constructor takes an
   immutable `guardian` and `setSequencer`/`setVerifier` are gone. Each role now
   changes in three steps: `propose*` is `onlyGuardian`, rejects `address(0)` and

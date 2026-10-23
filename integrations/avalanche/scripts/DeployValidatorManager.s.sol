@@ -105,6 +105,15 @@ contract DeployValidatorManager is DeployCommon {
         // zero address enforces `Theta_r` against nothing.
         if (p.registry == address(0)) revert MissingRole("REGISTRY");
 
+        // M-12/T-1. With no custody the manager accepts a declared stake it can
+        // never slash: that is the original M2 behaviour (§5.2.3), the right
+        // *default* for a local dry run and never right for "production". On any
+        // chain other than the local one, a custody-less manager is refused here,
+        // before the constructor runs. `verify_fuji.sh` reads the same fact back
+        // from the chain: `manager.custody()` must be the vault the transcript
+        // names, and the vault is what makes `slash` possible at all.
+        if (p.custody == address(0) && block.chainid != LOCAL_CHAIN) revert MissingRole("CUSTODY");
+
         vm.startBroadcast(p.deployer);
         AVIPValidatorManager manager =
             new AVIPValidatorManager(p.registry, p.slashAuthority, p.custody);

@@ -109,8 +109,12 @@ contract M7dReport is DeployCommon {
 
         teleporter = new MockTeleporterMessenger();
         verifier = new Groth16Verifier(F4d.verifyingKey());
-        registryForAdmission = new AVIPRegistry(SEQUENCER, address(verifier), GUARDIAN);
-        registryForCommitment = new AVIPRegistry(SEQUENCER, address(verifier), GUARDIAN);
+        registryForAdmission = new AVIPRegistry(
+            SEQUENCER, address(verifier), GUARDIAN, _sourceChainId(), _formulaDigest()
+        );
+        registryForCommitment = new AVIPRegistry(
+            SEQUENCER, address(verifier), GUARDIAN, _sourceChainId(), _formulaDigest()
+        );
         manager = new AVIPValidatorManager(
             address(registryForAdmission), slashingDestinationAddress, address(0)
         );
@@ -399,7 +403,9 @@ contract M7dReport is DeployCommon {
         // M4d's real admission proof, against the registry state it was made for: the same
         // recipe `test/M4dRealKey.t.sol` uses, unchanged.
         vm.prank(SEQUENCER);
-        registryForAdmission.postCommitment(0, keccak256("tensor"), F4d.STATEMENT_ROOT, N);
+        registryForAdmission.postCommitment(
+            0, keccak256("tensor"), F4d.STATEMENT_ROOT, N, _sourceChainId(), _formulaDigest()
+        );
         vm.prank(VALIDATOR);
         manager.admit(VALIDATOR, STAKE_WAD, F4d.STATEMENT_NORM, F4d.proof());
         _m7d("admit.validator", vm.toString(VALIDATOR));
@@ -491,7 +497,9 @@ contract M7dReport is DeployCommon {
 
     function _commit(uint256 epoch, bytes32 root, uint32 changedEntries) internal {
         vm.prank(SEQUENCER);
-        registryForCommitment.postCommitment(epoch, root, uint256(root), changedEntries);
+        registryForCommitment.postCommitment(
+            epoch, root, uint256(root), changedEntries, _sourceChainId(), _formulaDigest()
+        );
     }
 
     /// @dev M7c's commitment as a wire message, built exactly as

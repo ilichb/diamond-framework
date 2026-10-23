@@ -100,10 +100,23 @@ contract AVIPValidatorManagerTest is Test {
         stranger = makeAddr("stranger");
         guardian = makeAddr("guardian");
 
-        registry = new AVIPRegistry(sequencer, address(0), guardian);
+        registry = new AVIPRegistry(
+            sequencer,
+            address(0),
+            guardian,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
         epoch0Root = keccak256("tensor");
         vm.prank(sequencer);
-        registry.postCommitment(0, epoch0Root, STATEMENT_ROOT, N);
+        registry.postCommitment(
+            0,
+            epoch0Root,
+            STATEMENT_ROOT,
+            N,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
 
         manager = new AVIPValidatorManager(address(registry), slashAuthority, address(0));
     }
@@ -290,7 +303,14 @@ contract AVIPValidatorManagerTest is Test {
     function test_admit_usesTheLatestEpoch() public {
         bytes32 epoch1Root = keccak256("tensor-epoch-1");
         vm.prank(sequencer);
-        registry.postCommitment(1, epoch1Root, STATEMENT_ROOT + 1, 1);
+        registry.postCommitment(
+            1,
+            epoch1Root,
+            STATEMENT_ROOT + 1,
+            1,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
         _setVerifier(true, STATEMENT_ROOT + 1, 1, THETA_R);
 
         vm.expectEmit(true, false, false, true, address(manager));
@@ -306,7 +326,14 @@ contract AVIPValidatorManagerTest is Test {
     function test_admit_rejectsAProofForAnOlderEpoch() public {
         bytes32 epoch1Root = keccak256("tensor-epoch-1");
         vm.prank(sequencer);
-        registry.postCommitment(1, epoch1Root, STATEMENT_ROOT + 1, 1);
+        registry.postCommitment(
+            1,
+            epoch1Root,
+            STATEMENT_ROOT + 1,
+            1,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
         // The verifier knows the epoch 0 statement, but the manager asks the
         // registry for its latest epoch, which is 1: different statement.
         _setVerifier(true, STATEMENT_ROOT, 0, THETA_R);
@@ -319,7 +346,13 @@ contract AVIPValidatorManagerTest is Test {
     }
 
     function test_admit_revertsWithoutACommitment() public {
-        AVIPRegistry empty = new AVIPRegistry(sequencer, address(0), guardian);
+        AVIPRegistry empty = new AVIPRegistry(
+            sequencer,
+            address(0),
+            guardian,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
         AVIPValidatorManager fresh =
             new AVIPValidatorManager(address(empty), slashAuthority, address(0));
         _setVerifierAtEpoch0(true, THETA_R);

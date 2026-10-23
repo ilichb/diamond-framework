@@ -94,7 +94,9 @@ contract M8Report is DeployCommon {
         sink = new AVIPBurnSink(address(token));
         vault = new AVIPStakeVault(address(token), address(sink), F8.WAD_PER_UNIT);
         verifier = new Groth16Verifier(F4d.verifyingKey());
-        registry = new AVIPRegistry(SEQUENCER, address(verifier), GUARDIAN);
+        registry = new AVIPRegistry(
+            SEQUENCER, address(verifier), GUARDIAN, _sourceChainId(), _formulaDigest()
+        );
         manager = new AVIPValidatorManager(address(registry), SLASH_AUTHORITY, address(vault));
         vm.stopBroadcast();
 
@@ -131,7 +133,9 @@ contract M8Report is DeployCommon {
     ///      §12.1.2/M9b), which is what makes the two milestones commensurable.
     function _escrowAndAdmission() internal {
         vm.prank(SEQUENCER);
-        registry.postCommitment(0, keccak256("tensor"), F4d.STATEMENT_ROOT, N);
+        registry.postCommitment(
+            0, keccak256("tensor"), F4d.STATEMENT_ROOT, N, _sourceChainId(), _formulaDigest()
+        );
 
         // Fund and approve the *whole* lifecycle in one go: the deposit (pulled
         // into escrow) and the fee (pulled straight to the sink). The reads happen

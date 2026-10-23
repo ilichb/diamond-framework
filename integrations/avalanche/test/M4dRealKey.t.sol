@@ -67,13 +67,26 @@ contract M4dRealKeyTest is Test {
 
         sequencer = makeAddr("sequencer");
         guardian = makeAddr("guardian");
-        registry = new AVIPRegistry(sequencer, address(verifier), guardian);
+        registry = new AVIPRegistry(
+            sequencer,
+            address(verifier),
+            guardian,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
 
         // Genesis: the registry's own post. The keccak root is deliberately a
         // different value from the admission root -- the two slots are not the
         // same thing, and `verifyThreshold` reads only the latter.
         vm.prank(sequencer);
-        registry.postCommitment(0, keccak256("tensor"), F.STATEMENT_ROOT, N);
+        registry.postCommitment(
+            0,
+            keccak256("tensor"),
+            F.STATEMENT_ROOT,
+            N,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
     }
 
     /// @dev The blob `AVIPRegistry` decodes: `(a, b, c)`, 256 bytes.
@@ -204,7 +217,14 @@ contract M4dRealKeyTest is Test {
     ///         the epoch-0 proof valid there.
     function test_theSameRootAtTheNextEpochIsRejected() public {
         vm.prank(sequencer);
-        registry.postCommitment(1, keccak256("tensor"), F.STATEMENT_ROOT, 1);
+        registry.postCommitment(
+            1,
+            keccak256("tensor"),
+            F.STATEMENT_ROOT,
+            1,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
 
         assertTrue(registry.verifyThreshold(0, validator, F.STATEMENT_NORM, proof()));
         assertFalse(registry.verifyThreshold(1, validator, F.STATEMENT_NORM, proof()));

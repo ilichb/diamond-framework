@@ -68,12 +68,25 @@ contract M4dRootSeparationTest is Test {
 
         sequencer = makeAddr("sequencer");
         guardian = makeAddr("guardian");
-        registry = new AVIPRegistry(sequencer, address(verifier), guardian);
+        registry = new AVIPRegistry(
+            sequencer,
+            address(verifier),
+            guardian,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
 
         // One post, both roots, one epoch: M1's fold of the tensor and M4d's
         // admission tree. This is the deployment P-16's remediation describes.
         vm.prank(sequencer);
-        registry.postCommitment(F7c.EPOCH, F7c.MERKLE_ROOT, F4d.STATEMENT_ROOT, N);
+        registry.postCommitment(
+            F7c.EPOCH,
+            F7c.MERKLE_ROOT,
+            F4d.STATEMENT_ROOT,
+            N,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
     }
 
     /// @dev A registry that committed a chosen pair, for the negative cases.
@@ -81,9 +94,22 @@ contract M4dRootSeparationTest is Test {
         internal
         returns (AVIPRegistry made)
     {
-        made = new AVIPRegistry(sequencer, address(verifier), guardian);
+        made = new AVIPRegistry(
+            sequencer,
+            address(verifier),
+            guardian,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
         vm.prank(sequencer);
-        made.postCommitment(F7c.EPOCH, commitment, statementRoot, N);
+        made.postCommitment(
+            F7c.EPOCH,
+            commitment,
+            statementRoot,
+            N,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
     }
 
     // ------------------------------------------------- the two slots, one post

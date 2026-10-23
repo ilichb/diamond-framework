@@ -76,6 +76,8 @@ Roles come from the environment, never from the deployer:
 | `SEQUENCER` | anvil 1 | the registry's only writer of commitments; a zero one reverts `MissingRole("SEQUENCER")` |
 | `GUARDIAN` | anvil 3 | M9a's second authority (plan §12.1.2): it alone proposes and cancels a role change, which **anyone** may then execute once the 2-day `CHANGE_DELAY` has elapsed. A zero one reverts `MissingRole("GUARDIAN")`; `GUARDIAN == SEQUENCER` reverts `RolesCollapsed`, because one key proposing its own continuation is the capture the delay exists to prevent |
 | `VERIFIER` | `address(0)` | the M3 threshold verifier; M7a deploys none, so the registry certifies nothing (`VerifierNotSet`) |
+| `SOURCE_CHAIN_ID` | C-Chain (`keccak256("avalanche-c-chain")`) | M-15: the chain whose event log every epoch describes. Immutable in the registry; `postCommitment` reverts `OriginMismatch` unless the epoch declares exactly this. Parsed with `vm.parseBytes32`, so a typo is a hard error |
+| `FORMULA_DIGEST` | `keccak256("AVIP/fragment-function/v1")` (**reference value**, not derived) | M-15/Hazard 8: the digest of the fragment function `f_c` in force. A zero one is refused by the contract (`ZeroFormulaDigest`); a live deployment must supply the real digest, because a rotation that does not change this value would silently change what every epoch means |
 | `REGISTRY` | **none** | the manager's registry; absent reverts `MissingRole("REGISTRY")` |
 | `SLASH_AUTHORITY` | anvil 2 | the manager's only slasher |
 | `CUSTODY` | `address(0)` | M8's vault (§5.12): `0` is the M2 mode (stake declared, not backed); a non-zero one must answer the handshake or the manager's deployment reverts |
@@ -91,7 +93,8 @@ The chain guard is a `require`, not a comment: `43114` (C-Chain mainnet) reverts
 with `MainnetRefused(43114)` **before a single role is read**; `43113` (Fuji) and
 `31337` (anvil/dry run) pass. `deploy` then reads its own wiring back from the
 instance it just created — `sequencer`, `verifier`, `guardian`,
-`TENSOR_SIZE = 500`, `MAX_DELTA_ENTRIES = 50`, `CHANGE_DELAY = 172800`, and the
+`sourceChainId`, `formulaDigest`, `TENSOR_SIZE = 500`, `MAX_DELTA_ENTRIES = 50`,
+`CHANGE_DELAY = 172800`, and the
 manager's `Theta = 1.0`, `C_R^inf = 0.8`,
 `S_min = 0.2`, `Theta_r = 0.5`, `F_0* = 0.05`, the ejection surcharge `κ = 0.1`
 (M9c: a deployment constant the paper gives no value for, so this is the artifact
@@ -105,14 +108,14 @@ validator.
 bash scripts/deploy_dryrun.sh
 ```
 
-Eleven cases, **one fresh `forge script` process each** (the environment is
+Fourteen cases, **one fresh `forge script` process each** (the environment is
 process-wide, so two cases sharing a process could not prove how either was
 read), and each case asserts what its transcript must contain. A to F are M7a's,
-G to I M8's, J and K M9a's:
+G to I M8's, J and K M9a's, L to N M-15's (the registry's origin):
 
 | Case | Environment | Expects |
 |------|-------------|---------|
-| A | none | the documented defaults: anvil 0 deploys, anvil 1 sequences, anvil 3 guards, no verifier |
+| A | none | the documented defaults: anvil 0 deploys, anvil 1 sequences, anvil 3 guards, no verifier, C-Chain origin |
 | B | none, manager | `MissingRole("REGISTRY")` |
 | C | `SEQUENCER`, `VERIFIER`, `DEPLOYER` | the environment wins over the defaults |
 | D | `REGISTRY` = the address case C printed | the manager chains onto it |
@@ -123,12 +126,14 @@ G to I M8's, J and K M9a's:
 | I | manager script: `CUSTODY` = an address with no code | the handshake refuses: the deployment fails instead of producing a manager with no custody |
 | J | registry: `GUARDIAN` = `SEQUENCER` | `RolesCollapsed("GUARDIAN", "SEQUENCER")`, and nothing is created |
 | K | registry: `GUARDIAN=0x0` | `MissingRole("GUARDIAN")` — the one role with no zero default is refused, not guessed |
+| L | registry: `SOURCE_CHAIN_ID=0xnot-a-bytes32` | a revert: the origin is parsed as strictly as a role, never defaulted |
+| M | registry: `SOURCE_CHAIN_ID`, `FORMULA_DIGEST` pinned | the environment wins, and the transcript carries the origin every epoch must declare |
+| N | registry: `FORMULA_DIGEST=0x0` | `ZeroFormulaDigest()` — a tensor with no defined meaning is refused |
 
 It writes `deploy_dryrun_output.txt` (committed) and, if any expectation fails,
 exits non-zero **without rewriting it**. The transcript keeps only the `[m7a]` and
 `[m8]` lines the scripts log — no gas, no timings — so it is byte-stable: two runs
-diff clean (`md5 d68537cdb33ba64c33f45129c0538646` after M9c's one extra check row,
-`check.EJECTION_SURCHARGE`). It is not a deployment, and the addresses in it are the
+diff clean (`md5 41fb72a858a4180fb31b3a2d4ceb4b32` after M-15 added the origin rows). It is not a deployment, and the addresses in it are the
 ones a fresh EVM hands out, not Fuji addresses.
 
 ## `M7dReport.s.sol` and `m7d_report.sh` (milestone M7d)

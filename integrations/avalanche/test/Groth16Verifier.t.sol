@@ -295,9 +295,22 @@ contract Groth16VerifierTest is Test {
     // ------------------------------------------------------------ integration
 
     function test_registry_acceptsTheFixtureProofAndBindsItToTheNorm() public {
-        AVIPRegistry registry = new AVIPRegistry(sequencer, address(verifier), guardian);
+        AVIPRegistry registry = new AVIPRegistry(
+            sequencer,
+            address(verifier),
+            guardian,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
         vm.prank(sequencer);
-        registry.postCommitment(0, keccak256("tensor"), Groth16Fixtures.STATEMENT_ROOT, N);
+        registry.postCommitment(
+            0,
+            keccak256("tensor"),
+            Groth16Fixtures.STATEMENT_ROOT,
+            N,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
 
         bytes memory blob = proof();
 
@@ -312,9 +325,22 @@ contract Groth16VerifierTest is Test {
     }
 
     function test_manager_admitsAValidatorWithTheFixtureProof() public {
-        AVIPRegistry registry = new AVIPRegistry(sequencer, address(verifier), guardian);
+        AVIPRegistry registry = new AVIPRegistry(
+            sequencer,
+            address(verifier),
+            guardian,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
         vm.prank(sequencer);
-        registry.postCommitment(0, keccak256("tensor"), Groth16Fixtures.STATEMENT_ROOT, N);
+        registry.postCommitment(
+            0,
+            keccak256("tensor"),
+            Groth16Fixtures.STATEMENT_ROOT,
+            N,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
 
         AVIPValidatorManager manager =
             new AVIPValidatorManager(address(registry), slashAuthority, address(0));
@@ -329,9 +355,22 @@ contract Groth16VerifierTest is Test {
     }
 
     function test_manager_rejectsAProofWhoseStatementIsAnotherNorm() public {
-        AVIPRegistry registry = new AVIPRegistry(sequencer, address(verifier), guardian);
+        AVIPRegistry registry = new AVIPRegistry(
+            sequencer,
+            address(verifier),
+            guardian,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
         vm.prank(sequencer);
-        registry.postCommitment(0, keccak256("tensor"), Groth16Fixtures.STATEMENT_ROOT, N);
+        registry.postCommitment(
+            0,
+            keccak256("tensor"),
+            Groth16Fixtures.STATEMENT_ROOT,
+            N,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
 
         AVIPValidatorManager manager =
             new AVIPValidatorManager(address(registry), slashAuthority, address(0));

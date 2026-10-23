@@ -82,6 +82,7 @@ run_case() {
     set +e
     env -u DEPLOYER -u SEQUENCER -u GUARDIAN -u SLASH_AUTHORITY -u VERIFIER -u REGISTRY \
         -u CUSTODY -u TOKEN -u SINK -u WAD_PER_UNIT \
+        -u SOURCE_CHAIN_ID -u FORMULA_DIGEST \
         ${env_args[@]+"${env_args[@]}"} "$@" >"$out" 2>&1
     echo $? >"$TMP_DIR/$tag.status"
     set -e
@@ -122,6 +123,9 @@ expect_line A "  [m7a] role.sequencer=$ANVIL_1"
 expect_line A "  [m7a] role.guardian=$ANVIL_3"
 expect_line A "  [m7a] role.verifier=0x0000000000000000000000000000000000000000"
 expect_line A "  [m7a] check.CHANGE_DELAY=172800"
+# M-15: the origin is a deployment fact, so the no-environment run pins it too.
+expect_line A "  [m7a] origin.sourceChainId=0xce12864578eb11634416932021724652c9a481fbf6a42ba77cde799fad091bc1"
+expect_line A "  [m7a] origin.formulaDigest=0x403af787fee703ec18c440a91e8405b72dc55ea700ec557263baaab0e24a4cfc"
 expect_line A "  [m7a] status=ok"
 
 # ---------------------------------------------------------------- case B
@@ -229,6 +233,40 @@ expect_error K 'Error: script failed: MissingRole("GUARDIAN")'
 grep -q 'AVIPRegistry=' "$TMP_DIR/K.log" &&
     fail "K: an explicit zero guardian must be refused, not defaulted"
 
+# ---------------------------------------------------------------- case L
+# M-15. The origin is read with the same strict parser as the roles: a malformed
+# `SOURCE_CHAIN_ID` must stop the deployment, never fall back to the C-Chain
+# default and silently attribute every future epoch to the wrong chain.
+ENV_L=(DEPLOYER=$ANVIL_0 SOURCE_CHAIN_ID=0xnot-a-bytes32)
+run_case L ${ENV_L[@]+"${ENV_L[@]}"} -- forge script "$REGISTRY_SCRIPT" --offline
+expect_failure L
+expect_error L 'failed parsing "0xnot-a-bytes32"'
+grep -q 'AVIPRegistry=' "$TMP_DIR/L.log" &&
+    fail "L: a malformed origin must not be replaced by the default"
+
+# ---------------------------------------------------------------- case M
+# The environment wins over the default, and the transcript carries the origin
+# the registry was actually deployed with — which is the value every epoch will
+# have to declare in `postCommitment`.
+ORIGIN_M=0x1111111111111111111111111111111111111111111111111111111111111111
+FORMULA_M=0x2222222222222222222222222222222222222222222222222222222222222222
+ENV_M=(DEPLOYER=$ANVIL_0 SOURCE_CHAIN_ID=$ORIGIN_M FORMULA_DIGEST=$FORMULA_M)
+run_case M ${ENV_M[@]+"${ENV_M[@]}"} -- forge script "$REGISTRY_SCRIPT" --offline
+expect_ok M
+expect_line M "  [m7a] origin.sourceChainId=$ORIGIN_M"
+expect_line M "  [m7a] origin.formulaDigest=$FORMULA_M"
+expect_line M "  [m7a] status=ok"
+
+# ---------------------------------------------------------------- case N
+# A zero formula reaches the contract and is refused there (`ZeroFormulaDigest`),
+# so the script cannot deploy a registry whose tensor has no defined meaning.
+ENV_N=(DEPLOYER=$ANVIL_0 FORMULA_DIGEST=0x0000000000000000000000000000000000000000000000000000000000000000)
+run_case N ${ENV_N[@]+"${ENV_N[@]}"} -- forge script "$REGISTRY_SCRIPT" --offline
+expect_failure N
+expect_error N 'Error: script failed: ZeroFormulaDigest()'
+grep -q 'AVIPRegistry=' "$TMP_DIR/N.log" &&
+    fail "N: a zero formula must be refused before anything is deployed"
+
 # ------------------------------------------------------------- transcript
 
 if [ "$FAILURES" -ne 0 ]; then
@@ -279,6 +317,11 @@ refused when it collapses (GUARDIAN == SEQUENCER — the capture the proposal de
 exists to prevent, since one key would be proposing its own continuation) and when
 the guardian is the zero address. Neither refusal creates a contract.
 
+Cases L to N are M-15's: the registry's origin (`SOURCE_CHAIN_ID`,
+`FORMULA_DIGEST`) is read as strictly as a role, it wins over the reference
+default when the environment sets it, and a zero formula is refused by the
+contract (`ZeroFormulaDigest`) rather than deployed.
+
 Gas and timings are deliberately absent — the transcript keeps only the `[m7a]`
 and `[m8]` lines the scripts log — so it is byte-stable and carries no cost claim.
 HEADER
@@ -316,6 +359,15 @@ HEADER
     section K "DeployRegistry, GUARDIAN pinned to zero" \
         "MissingRole(\"GUARDIAN\"): the one role with no zero default is refused, not guessed" \
         "${ENV_K[*]} forge script $REGISTRY_SCRIPT --offline"
+    section L "DeployRegistry, malformed SOURCE_CHAIN_ID" \
+        "a revert: the origin is parsed as strictly as the roles, never defaulted" \
+        "${ENV_L[*]} forge script $REGISTRY_SCRIPT --offline"
+    section M "DeployRegistry, origin pinned" \
+        "the environment wins: the transcript carries the chain and formula every epoch must declare" \
+        "${ENV_M[*]} forge script $REGISTRY_SCRIPT --offline"
+    section N "DeployRegistry, FORMULA_DIGEST pinned to zero" \
+        "ZeroFormulaDigest: a registry whose tensor has no defined meaning is refused" \
+        "${ENV_N[*]} forge script $REGISTRY_SCRIPT --offline"
 
     cat <<'FOOTER'
 
@@ -327,5 +379,5 @@ WHAT THIS IS NOT
 FOOTER
 } >"$OUT"
 
-echo "deploy_dryrun: 11 cases ok; wrote $OUT"
+echo "deploy_dryrun: 14 cases ok; wrote $OUT"
 

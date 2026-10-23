@@ -123,10 +123,23 @@ contract M8StakeVaultTest is Test {
         token = new MockERC20("Mock USD", 6);
         sink = new MockFundSink();
 
-        registry = new AVIPRegistry(sequencer, address(0), guardian);
+        registry = new AVIPRegistry(
+            sequencer,
+            address(0),
+            guardian,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
         epoch0Root = keccak256("tensor");
         vm.prank(sequencer);
-        registry.postCommitment(0, epoch0Root, uint256(epoch0Root), N);
+        registry.postCommitment(
+            0,
+            epoch0Root,
+            uint256(epoch0Root),
+            N,
+            keccak256("avalanche-c-chain"),
+            keccak256("AVIP/fragment-function/v1")
+        );
 
         // The order is the handshake's: custody first, manager second.
         vault = new AVIPStakeVault(address(token), address(sink), WAD_PER_UNIT_6);
