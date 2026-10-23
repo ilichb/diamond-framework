@@ -32,6 +32,7 @@ hay `session-log.md` en este repositorio: no inventar uno.
 | S-019 | 2026-10-22 | P-10: la pareja de autoridad no puede colapsar | este commit | 5ff84501… | cerrada; 286 tests, ancla intacta; queda el follow-up de `proposeVerifier` |
 | S-020 | 2026-10-22 | P-39/P-40 y el despliegue del transporte M7d | este commit | 5ff84501… | cerrada; 294 tests, 15 casos de dry run, ancla intacta |
 | S-021 | 2026-10-22 | Fase 2: preflight, y el transcript de fase 1 que no verificaba | este commit | 5ff84501… | cerrada; 17 casos de dry run, ancla intacta; el despliegue espera al Safe |
+| S-022 | 2026-10-23 | CreateSafe: el multisig sin llaves, y P11 | este commit | 5ff84501… | cerrada; 294 + 1 skip, dry run intacto; el Safe espera owners y umbral |
 
 S-016 cubre `triage-mapa-2026-10-22.md`, el acta
 `checklist-matriz-evidencia-2026-10-22.md` y la v2
@@ -170,3 +171,73 @@ esta sesión reportó **260** tests y `--match-path test/DeployScripts.t.sol` de
 nada: `out/` estaba desincronizado tras editar el script, y `forge clean &&
 forge test` devuelve los 294 (10 suites, `DeployScriptsTest` incluida). Un conteo
 leído de una corrida incremental no es evidencia; se limpia antes de citarlo.
+
+S-022 desbloquea la parte que no era gobernanza. La fase 2 esperaba un Safe, y
+crear un Safe parecía exigir una llave de owner: `app.safe.global` no lista Fuji,
+y `safe-global/protocol-kit` necesita un firmante para enviar el despliegue, que
+en la práctica sería la llave de un dueño —manipulada para crear el contrato cuyo
+propósito es que ninguna llave sola decida—. No hace falta. La factory canónica
+despliega un proxy cuyo constructor hace `delegatecall` a `setup` en el singleton,
+y `setup` no comprueba ninguna firma: en ese instante el Safe no tiene todavía una
+política contra la que comprobar. La única firma es la del deployer, y sólo paga
+gas; no se convierte en owner. `CreateSafe.s.sol` toma los owners como
+**direcciones** y nada más: ninguna clave, ni como variable de entorno.
+
+El script usa las direcciones canónicas de Safe 1.4.1, verificadas con `cast code`
+en Fuji antes de escribirlo (singleton `0x41675C09…`, factory `0x4e1DCf7A…`,
+handler `0xfd0732Dc…`, `MultiSendCallOnly` `0x40A2aCCb…`). Ordena los owners
+ascendentemente antes de codificar, que es lo que hace el SDK: así la dirección
+CREATE2 no depende del orden en que se teclearon y coincide con la que el SDK
+reportará. Predice la dirección con `proxyCreationCode()` más el singleton,
+despliega, y **comprueba que coinciden**; después relee la política —umbral,
+lista de owners, `nonce()`, el singleton en el slot 0 del proxy, el handler en su
+slot de storage y `VERSION() = 1.4.1`— y emite `status=ok`. Rechaza owner cero,
+duplicado, el deployer como owner, un hueco en la numeración `SAFE_OWNER_n` —que
+de otro modo desplegaría una política con menos owners de los escritos— y umbral
+fuera de `1..n`.
+
+Dos errores propios, porque el registro sirve para eso. El primero: leía el
+handler con `getFallbackHandler()`, que **no existe en 1.4.1** —llegó con 1.5.0—
+y la llamada acaba en el fallback del propio handler y revierte con datos vacíos;
+el slot `keccak256("fallback_manager.handler.address")` dice lo mismo y es lo que
+`setup` escribió. El segundo: P11 contaba owners con `grep -c`, que cuenta
+*líneas*, y `cast` imprime el array en una sola; habría reportado `2-of-1`. Los
+dos se vieron ejecutando, no leyendo: el primero abortó la simulación, el segundo
+sólo habría mentido en el recuento.
+
+La prueba de que el resultado es una *política* y no un contrato con dos dueños
+escritos es `test/SafeFork.t.sol`, sobre estado real de Fuji y con llaves
+desechables generadas en el test: dos firmas EIP-712 ejecutan una transacción y
+avanzan el `nonce`, una sola revierte y el `nonce` no se mueve. Se comprueban las
+dos direcciones porque un umbral mal puesto (1-de-3) pasaría la primera mitad.
+Sin `FUJI_RPC_URL` el test se salta a sí mismo: `forge test` sin red sigue verde
+(`294 passed, 0 failed, 1 skipped`), y el skip se ve en el resumen en vez de
+esconderse. La corrida con RPC la da por buena (1 suite, 1 test, 2 s).
+
+El preflight gana **P11**, que es donde este trabajo toca la fase 2: P5 preguntaba
+si el slasher tiene código; P11 pregunta si ese código es una política. Lee
+`getThreshold()` y falla por debajo de 2, porque un Safe 1-de-N pasa "tiene
+código" y deja P-39 exactamente como estaba; si la dirección no responde —no es
+un Safe, o es anterior a 1.1.0— avisa y no falla, porque el control sólo puede
+juzgar una política que sabe leer. Verificado en los tres caminos contra una fork
+local de Fuji: 2-de-3 da `PASS=11 FAIL=0 SKIP=0`; 1-de-1 da
+`FAIL P11 … one signature still decides every slash (P-39)` con salida 1; y la
+EOA de fase 1 da `SKIP P11` porque P5 ya la rechaza. El `--offline` pasa de 7 a 8
+skips (`PASS=3`) y el dry run sigue en 17 casos con el mismo
+`md5 bf274cdbc9ebeae61e0daafa00c6ee56`: el bloque P11 no se ejecuta sin cadena y
+la salida del caso Q no cambia.
+
+**Estado operativo:** sigue sin haber Safe. Lo que falta ya no es código sino la
+decisión —las tres direcciones y el umbral—, y el comando está listo:
+
+```shell
+DEPLOYER=0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb \
+SAFE_OWNER_1=0x... SAFE_OWNER_2=0x... SAFE_OWNER_3=0x... SAFE_THRESHOLD=2 \
+    forge script scripts/CreateSafe.s.sol:CreateSafe --rpc-url "$FUJI_RPC_URL"   # sin --broadcast
+```
+
+En cuanto el Safe exista: preflight con esa dirección (`PASS=11`), `DeployFujiPhase1
+--broadcast`, `verify_fuji.sh <transcript> --require-multisig`. Nada de esto toca
+el ancla: los 11 ficheros siguen igual, `fase0_anchor.sh --check` sale 0 y el gate
+en `PASS=11 FAIL=0 SKIP=0` sobre `5ff84501…`. El transporte (I-1.4) sigue igual:
+el script existe, los peers de la otra cadena no.

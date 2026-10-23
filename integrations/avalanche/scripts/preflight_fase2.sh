@@ -31,6 +31,9 @@ PHASE1_SLASHER=0xcdFBb0c0801d52Deb983C85F4e046B97D2362ec7
 # that asks both questions at once.
 TELEPORTER=0x253b2784c75e510dD0fF1da844684a1aC0aa5fcf
 MIN_BALANCE_AVAX=0.05
+# A Safe is the shape P-39 asks for, but only if its threshold is above one: a
+# 1-of-N Safe passes "has code" and still leaves one key deciding every slash.
+MIN_SAFE_THRESHOLD="${SAFE_MIN_THRESHOLD:-2}"
 TRANSCRIPT=scripts/fuji_20261018/fuji_phase1.txt
 
 OFFLINE=0
@@ -122,7 +125,7 @@ else
 fi
 
 if [ "$OFFLINE" -eq 1 ]; then
-    for id in P4 P5 P6 P7 P8 P9 P10; do skip "$id" "offline"; done
+    for id in P4 P5 P6 P7 P8 P9 P10 P11; do skip "$id" "offline"; done
     printf 'preflight: PASS=%d FAIL=%d SKIP=%d\n' "$N_PASS" "$N_FAIL" "$N_SKIP"
     [ "$N_FAIL" -eq 0 ] || exit 1
     exit 0
@@ -213,6 +216,34 @@ elif cast call --rpc-url "$RPC_URL" "$REGISTRY" "sourceChainId()(bytes32)" >/dev
     skip P10 "$REGISTRY already answers sourceChainId(); phase 2 already happened"
 else
     pass P10 "phase-1 registry $REGISTRY still predates M-15 (P-40 confirmed)"
+fi
+
+# P11. P5 asked whether the slasher has code; this asks whether that code is a
+# *policy*. A Safe answers `getThreshold()`, and a threshold of one is an EOA
+# with extra steps: it would pass P5 and P6 and leave P-39 exactly as it was.
+# A custody contract that is not a Safe does not answer, which is a warning
+# rather than a failure — the check can only judge a policy it can read.
+if [ -z "${SLASHER:-}" ]; then
+    skip P11 "SLASH_AUTHORITY unset"
+elif [ -z "$SLASHER_CODE" ] || [ "$SLASHER_CODE" = "0x" ]; then
+    skip P11 "SLASH_AUTHORITY has no code (P5)"
+else
+    THRESHOLD="$(cast call --rpc-url "$RPC_URL" "$SLASHER" "getThreshold()(uint256)" 2>/dev/null || true)"
+    if [ -z "$THRESHOLD" ]; then
+        printf 'WARN P11 %s does not answer getThreshold(): not a Safe, or older than 1.1.0; threshold unknown\n' \
+            "$SLASHER" >&2
+        pass P11 "SLASH_AUTHORITY answers no threshold; P-39 rests on P5/P6 only"
+    else
+        # `cast call` prints the array on one line, so `grep -c` would say 1.
+        OWNERS="$(cast call --rpc-url "$RPC_URL" "$SLASHER" "getOwners()(address[])" 2>/dev/null \
+            | grep -oE '0x[0-9a-fA-F]{40}' | wc -l || true)"
+        OWNERS="${OWNERS//[[:space:]]/}"
+        if [ "$THRESHOLD" -ge "$MIN_SAFE_THRESHOLD" ] 2>/dev/null; then
+            pass P11 "SLASH_AUTHORITY is ${THRESHOLD}-of-${OWNERS} (>= ${MIN_SAFE_THRESHOLD})"
+        else
+            fail P11 "SLASH_AUTHORITY is ${THRESHOLD}-of-${OWNERS}: one signature still decides every slash (P-39)"
+        fi
+    fi
 fi
 
 printf 'preflight: PASS=%d FAIL=%d SKIP=%d\n' "$N_PASS" "$N_FAIL" "$N_SKIP"

@@ -82,7 +82,7 @@ allí.
 | P-36 | Bibliografía: Bauer–Jost está mal citado (CPAM 2012 → *Comm. Anal. Geom.* 21(4):787–845, 2013) y faltan referencias para Kesten–Stigum, Feller y EIP-196/197 | Baja (paper) | Confirmado con Crossref/arXiv | Sí (tercera lectura) |
 | P-37 | La permutación Poseidon reproduce los vectores t=3 de circomlib; el digest usa `state[1]` (rate) y no el `state[0]` (capacidad) de circomlib. Es una convención de esponja válida, no un defecto del circuito; sólo limita la interoperabilidad con primitivas de 2 entradas | Baja (interoperabilidad; no soundness) | Confirmado con sonda: 2 vectores t=3, absorción 1–10/500 y ambigüedad de longitud documentada | Sí (sonda de cierre; nota de documentación) |
 | P-38 | La prueba de admisión tiene todo el statement público y su testigo es el camino de Merkle: sólo oculta la posición de la hoja. No aporta zero-knowledge sobre la norma ni ahorra gas frente a `verifyEntry` | Media (diseño y honestidad del artefacto; no soundness) | Confirmado por lectura (`admission.rs:212-276`) y por medición: 306,275 gas fríos frente a una inclusión keccak de pocos miles | Sí (adenda M4d) |
-| P-39 | El `slashAuthority` del despliegue de Fuji es una EOA y el rol es inmutable: una sola clave decide todo slash del stake registrado | **Alta** (custodia/operacional) | Confirmado on-chain: `cast code` = `0x` (2026-10-22); los scripts de despliegue ahora lo rechazan | Sí (S-020, S-021) |
+| P-39 | El `slashAuthority` del despliegue de Fuji es una EOA y el rol es inmutable: una sola clave decide todo slash del stake registrado | **Alta** (custodia/operacional) | Confirmado on-chain: `cast code` = `0x` (2026-10-22); los scripts de despliegue lo rechazan y P11 rechaza un Safe con umbral < 2; la creación del Safe ya no exige llaves de owner (`CreateSafe.s.sol`, S-022). Sigue abierto hasta que la fase 2 se despliegue con ese Safe | Sí (S-020, S-021, S-022) |
 | P-40 | El despliegue de Fuji es de un build anterior a M-15: `sourceChainId()` y `formulaDigest()` revierten en el registry desplegado, y su transcript no tiene las claves `origin.*` que `verify_fuji.sh` exige | Media (trazabilidad; operacional) | Confirmado on-chain: ambos getters revierten; `sequencer()` y `TENSOR_SIZE()` responden | Sí (S-020, S-021) |
 
 **Remediación posterior a este worksheet.** M4d (plan §5.5.11) cierra **P-01** y
@@ -2970,11 +2970,29 @@ exige un vault nuevo; el registry entra en el redespliegue por P-40.
    despliegue actual y el slasher de fase 1 sale `FAIL=2` (`P5`, `P6`); con una
    dirección con código, `PASS=10 FAIL=0`. El preflight habría bloqueado el
    despliegue original.
+5. Hecho en S-022: el Safe se crea con `scripts/CreateSafe.s.sol`, sin ninguna
+   llave de owner. La factory canónica de Safe 1.4.1 despliega un proxy cuyo
+   constructor llama a `setup(owners, threshold, …)` y `setup` no verifica firma:
+   la única firma es la del deployer, que paga gas y **no** es owner. Los owners
+   entran como direcciones, se ordenan ascendentemente (como el SDK) y la
+   dirección se predice por CREATE2 y se comprueba contra la creada; el script
+   relee umbral, owners, `nonce()`, el singleton del slot 0, el handler de su slot
+   y `VERSION() = 1.4.1`. `test/SafeFork.t.sol` fija la política sobre estado real
+   de Fuji con llaves desechables: dos firmas ejecutan y avanzan el `nonce`, una
+   revierte.
+6. Hecho en S-022: P11 en el preflight lee `getThreshold()`/`getOwners()` del
+   slasher y falla por debajo de 2. Verificado contra una fork de Fuji: 2-de-3 da
+   `PASS=11 FAIL=0 SKIP=0`; 1-de-1 da `FAIL P11 … one signature still decides
+   every slash (P-39)` con salida 1; la EOA de fase 1 da `SKIP P11` porque P5 ya
+   la rechaza.
 
 **Lo que sigue sin poder afirmarse.** Que la address sea un contrato no prueba un
-umbral: ningún call on-chain puede mirar dentro de un Safe. La comprobación separa
-"una clave" de "una política desplegada"; el umbral se audita en el explorador y en
-la configuración del Safe, no aquí.
+umbral por sí solo, y un Safe anterior a 1.1.0 no expone `getThreshold()`; con un
+Safe de 1.4.1 sí se lee el umbral y el número de owners (P11), que es lo que el
+despliegue instala. Lo que **no** se puede leer on-chain es que los owners sean
+quienes deben ser, ni que sus llaves sigan bajo control distinto: eso se audita en
+el explorador y en la configuración del Safe. La comprobación separa "una clave"
+de "una política desplegada con umbral ≥ 2".
 
 ---
 

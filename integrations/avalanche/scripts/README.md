@@ -1,6 +1,6 @@
 # `integrations/avalanche/scripts/` — Deployment scripts and generators
 
-Status: **seven deployment scripts, two reports and the Fuji verifier**.
+Status: **eight deployment scripts, two reports and the Fuji verifier**.
 `DeployRegistry.s.sol`, `DeployValidatorManager.s.sol` and `DeployStakeVault.s.sol`
 exist as of M7a/M8 (`docs/architecture/implementation-plan.md` §5.8, §5.12) and
 build the frozen M1/M2/M8 contracts; `DeployTransport.s.sol` exists as of M7d
@@ -152,16 +152,19 @@ DEPLOYER=0x... SEQUENCER=0x... SLASH_AUTHORITY=<safe> GUARDIAN=<safe> \
 It refuses a slasher with no code, the phase-1 EOA itself, and a slasher equal to
 `SEQUENCER` or `DEPLOYER`; it warns when the slasher is also the guardian (a Safe
 holding both powers is a policy decision, not an accident, so it is reported
-rather than refused); it requires 0.05 AVAX on the deployer; it confirms the
+rather than refused); it reads a Safe's `getThreshold()` and refuses anything
+below 2, because a 1-of-N Safe passes "has code" while leaving one key deciding
+every slash; it requires 0.05 AVAX on the deployer; it confirms the
 Teleporter messenger the transport will need; and it confirms that the phase-1
 registry still lacks the M-15 getters, so the redeployment is still the right
-move. Against the live deployment it prints `PASS=10 FAIL=0` with a Safe, and
-`FAIL=2` with the phase-1 EOA.
+move. Against the live deployment it prints `PASS=11 FAIL=0` with a 2-of-3 Safe,
+`FAIL=1` with a 1-of-1 Safe (`P11`), and `FAIL=2` with the phase-1 EOA.
 
 The order, once the preflight is green:
 
-1. Create the Safe. Owners and threshold are a governance decision; the scripts
-   only require that the address has code.
+1. Create the Safe with `CreateSafe.s.sol` (below). Owners and threshold are a
+   governance decision; the preflight only requires that the address has code
+   and that its threshold is at least 2.
 2. Run the preflight with that Safe as `SLASH_AUTHORITY`; `FAIL=0` or stop.
 3. `DeployFujiPhase1` with `--rpc-url … --broadcast`, from
    `~/.config/avip/deployer.json` (0.5 AVAX at the time of writing, roughly 6M
@@ -171,6 +174,49 @@ The order, once the preflight is green:
    transcript cannot pass it, by design.
 5. Only then the transport: `DeployTransport.s.sol` needs the peer endpoints of
    the other chain, which do not exist yet (`I-1.4`).
+
+### Creating the Safe itself (`CreateSafe.s.sol`)
+
+`app.safe.global` does not offer Fuji, and the SDK route (`safe-global/protocol-kit`)
+needs a signer to send the deployment — in practice an owner's key, handled to
+create the very contract whose purpose is that no single key decides. Neither is
+necessary. `SafeProxyFactory.createProxyWithNonce` deploys a proxy whose
+constructor `setup`s the owner set and the threshold, and `setup` checks no
+signature: at that instant the Safe has no policy to check against yet. The only
+signature involved is the deployer's, and it pays gas. The deployer does **not**
+become an owner, and no owner key is ever read — the owners enter the script as
+addresses and nothing else.
+
+```shell
+DEPLOYER=0x...                                  # funded; pays gas; not an owner
+SAFE_OWNER_1=0x... SAFE_OWNER_2=0x... SAFE_OWNER_3=0x...
+SAFE_THRESHOLD=2                                # 2-of-3
+# SAFE_SALT_NONCE=0                             # optional, the SDK default
+
+# dry run against Fuji state: no transaction, and it prints the address
+forge script scripts/CreateSafe.s.sol:CreateSafe --rpc-url "$FUJI_RPC_URL"
+
+# the real one, from the same keystore the other deployments use
+forge script scripts/CreateSafe.s.sol:CreateSafe --rpc-url "$FUJI_RPC_URL" \
+    --broadcast --account deployer
+```
+
+Owners are sorted ascending before encoding, as the SDK does, so the CREATE2
+address does not depend on the order they were typed and matches the one the SDK
+reports. The script logs the predicted address and asserts it equals the created
+one, then reads the policy back — threshold, owner list, `nonce()`, the singleton
+in proxy slot 0, the handler in its storage slot, and `VERSION() = 1.4.1` — and
+prints `status=ok`. It refuses a zero owner, a duplicate, the deployer as an
+owner, a gap in the `SAFE_OWNER_n` numbering (which would otherwise deploy a
+policy with fewer owners than were typed), and a threshold outside `1..n`. The
+canonical 1.4.1 singleton, factory, handler and `MultiSendCallOnly` addresses are
+constants in the script, and it refuses a chain where the factory has no code.
+
+`test/SafeFork.t.sol` is the evidence that the result is a *policy* and not just
+a contract: on live Fuji state, with throwaway keys, two signatures execute a
+transaction and advance the nonce, and one signature reverts. It skips itself
+when `FUJI_RPC_URL` is unset, so the offline suite stays green (`294 passed, 1
+skipped`); run it with `FUJI_RPC_URL=... forge test --match-path test/SafeFork.t.sol`.
 
 ### The dry run
 
