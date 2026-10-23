@@ -53,7 +53,7 @@ allí.
 | P-07 | Paper/plan/README afirman un binding que el código no tiene | Media | Confirmado por lectura | Derivado |
 | P-08 | `Groth16Verifier` acepta una clave degenerada (todo en el infinito, o sólo `gamma2`) y devuelve `true` para cualquier proof | **Alta** (crítica si se instala) | Confirmado con PoC | Sí |
 | P-09 | Con un token de 0 decimales, `debit` redondea el slash completo a 0 unidades y el validador retira el escrow | **Alta/media** (según token) | Confirmado con PoC | Sí |
-| P-10 | El guardian puede proponerse a sí mismo como sequencer: la separación de roles sólo se comprueba al desplegar | Media | Confirmado con PoC | Sí |
+| P-10 | El guardian puede proponerse a sí mismo como sequencer: la separación de roles sólo se comprueba al desplegar | Media | Confirmado con PoC; **remediado en S-019** (contrato + tests) | Sí |
 | P-11 | `requiredStake` queda obsoleto tras una eyección: no incluye el surcharge que el siguiente `admit` cobra | Baja | Confirmado con PoC | Sí |
 | P-12 | La freshness `γN` sólo se comprueba sobre el delta **declarado**; no está atada al root ni al tensor. Addendum: el data layer tampoco impone `N` ni unicidad | Media (confianza/overclaim) | Confirmado con PoC | Sí |
 | P-13 | `Groth16Verifier` acepta `certifiedNorm + r` (public input no canónico); el manager lo bloquea por overflow, no por política | Baja/media (latente) | Confirmado con PoC | Sí |
@@ -715,8 +715,12 @@ una comprobación de representabilidad.
 ## P-10 — El guardian puede proponerse a sí mismo como sequencer
 
 **Severidad provisional:** Media (gobernanza).
-**Estado:** Confirmado con PoC.
-**Ubicación:** `AVIPRegistry.sol:125-131,156-169`;
+**Estado:** Confirmado con PoC. **Remediado en S-019**: el constructor rechaza
+`guardian == sequencer` y `proposeSequencer` rechaza `next == guardian`
+(`RolesCollapsed`), con tres tests permanentes en `AVIPRegistry.t.sol`. Queda
+abierto el follow-up 4 (`proposeVerifier` acepta una EOA o un contrato con otra
+aridad), que es un footgun de liveness, no una captura.
+**Ubicación:** `AVIPRegistry.sol` (constructor y `proposeSequencer`);
 `DeployRegistry.s.sol` (`RolesCollapsed`), `DeployFujiPhase1.s.sol`.
 
 ### Qué hace el código
@@ -766,17 +770,24 @@ que se proponga y ejecute otra rotación. No es una captura —el guardian ya
 puede instalar un verificador malicioso— pero sí un footgun de liveness que un
 chequeo barato en `proposeVerifier`/`executeVerifierChange` cerraría.
 
-### Remediación propuesta (no implementada)
+### Remediación (implementada en S-019)
 
-1. Rechazar `next == guardian` en `proposeSequencer` (y, por simetría, valorar
-   `next == address(this)`).
-2. O declarar explícitamente que la separación es sólo un invariante de
-   despliegue y retirar la afirmación de “dos autoridades” del plan/README.
-3. Añadir un test runtime permanente: el guardian no puede proponerse a sí mismo
-   como sequencer.
-4. En `proposeVerifier`, comprobar código y aridad (`numPublicInputs() == 3`) o
-   al menos rechazar una EOA; en `executeVerifierChange`, repetir la comprobación
-   por si el contrato cambió entre propuesta y ejecución.
+1. **Hecho.** `proposeSequencer` rechaza `next == guardian` con
+   `RolesCollapsed()`, y el constructor rechaza `guardian == sequencer`, así que
+   la separación deja de ser un invariante del script para serlo del contrato.
+   `DeployRegistry`/`DeployFujiPhase1` conservan su comprobación: fallan antes
+   de transmitir nada, con un mensaje que nombra la variable.
+2. **No hace falta.** Con (1) la afirmación de «dos autoridades» es cierta en el
+   contrato; retirarla del README sería documentar peor, no mejor.
+3. **Hecho** con (1): `test_governance_theGuardianCannotAppointItselfAsSequencer`,
+   `test_governance_theGuardianCanStillProposeAnyoneElse` (la mitad de liveness)
+   y `test_constructor_rejectsCollapsedRoles`.
+4. **Pendiente, y es otra cosa.** `proposeVerifier` sigue aceptando una EOA o un
+   contrato con otra aridad: `verifyThreshold` revertiría durante `CHANGE_DELAY`
+   y hasta la siguiente rotación. No es una captura —el guardian ya puede
+   instalar un verificador malicioso— sino un footgun de liveness; el chequeo
+   barato (`staticcall` a `numPublicInputs()`) va con la ceremonia (§11), porque
+   la aridad cambia con el circuito.
 
 ### Addendum: no hay rotación del guardian
 

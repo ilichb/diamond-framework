@@ -29,6 +29,7 @@ hay `session-log.md` en este repositorio: no inventar uno.
 | S-016 | 2026-10-22 | Validación de la matriz externa y triaje del mapa | 84e6837 | adfd08d2… | cerrada; G10/G11 roto en `ea75594`, cerrado en S-017 |
 | S-017 | 2026-10-22 | T-5: re-sello del ancla tras P-03/M4d | a9488dc | 5ff84501… | cerrada; OTS pendiente de upgrade; PDF anterior (T-6) |
 | S-018 | 2026-10-22 | T-2 y T-1: origen del epoch y custodia obligatoria | este commit | 5ff84501… | cerrada; 283 tests Foundry, 14 casos de dry run, ancla intacta |
+| S-019 | 2026-10-22 | P-10: la pareja de autoridad no puede colapsar | este commit | 5ff84501… | cerrada; 286 tests, ancla intacta; queda el follow-up de `proposeVerifier` |
 
 S-016 cubre `triage-mapa-2026-10-22.md`, el acta
 `checklist-matriz-evidencia-2026-10-22.md` y la v2
@@ -63,3 +64,22 @@ Ninguno de los 11 ficheros del ancla cambia: `fase0_anchor.sh --check` sale 0 y
 el gate sigue en PASS=11 FAIL=0 SKIP=0 sobre `5ff84501…`. La suite Foundry pasa
 de 275 a 283 tests, y `deploy_dryrun_output.txt` se regeneró con 14 casos
 (`md5 41fb72a858a4180fb31b3a2d4ceb4b32`), byte-idéntico entre dos ejecuciones.
+
+S-019 cierra **P-10**, el hallazgo de gobernanza que el registro tenía confirmado
+con PoC desde el 2026-10-20 y que S-018 no tocó. `proposeSequencer` rechaza
+`next == guardian` y el constructor rechaza `guardian == sequencer`, ambos con
+`RolesCollapsed`, así que la separación de la pareja de autoridad deja de
+depender de que el script de despliegue la compruebe: es una propiedad del
+contrato desplegado. Tres tests: el PoC del hallazgo (proponer, esperar,
+ejecutar) revierte en el primer paso; el camino ordinario sigue abierto —el
+guard rechaza el **destino**, no al proponente, que es lo que habría convertido
+el arreglo en un problema de liveness—; y un despliegue directo tampoco puede
+arrancar con la pareja colapsada.
+
+No mueve el ancla: ninguno de los 11 ficheros sellados cambia. 286 tests Foundry,
+`deploy_dryrun.sh` sigue en 14 casos (el caso J ejerce la mitad de script, que
+falla antes de transmitir), y el gate permanece en PASS=11.
+
+Queda abierto el follow-up de `proposeVerifier` —acepta una EOA o un contrato con
+otra aridad—: es liveness, no captura, y el chequeo natural (`numPublicInputs()`)
+depende de la aridad del circuito, así que va con la ceremonia (§11).

@@ -46,7 +46,10 @@ import {Bn254} from "./verifiers/Bn254.sol";
 ///      `guardian` is the only proposer of changes to `sequencer` and to
 ///      `verifier`. The two roles are separate and neither acts alone on a
 ///      rotation: the guardian proposes, the proposal waits `CHANGE_DELAY`, and
-///      then anyone may execute it. A compromised sitting key can therefore
+///      then anyone may execute it. The separation is enforced, not assumed: the
+///      constructor refuses `guardian == sequencer` and `proposeSequencer`
+///      refuses `next == guardian` (P-10), so the runtime path cannot merge the
+///      pair either. A compromised sitting key can therefore
 ///      neither rotate itself nor veto the rotation that replaces it, and a
 ///      compromised guardian cannot install a key without the delay being
 ///      observable first. The verifier stays *mutable* on purpose: this registry
@@ -174,6 +177,10 @@ contract AVIPRegistry is IAVIPRegistry {
     ) {
         if (sequencer_ == address(0)) revert ZeroSequencer();
         if (guardian_ == address(0)) revert ZeroGuardian();
+        // P-10: the separation of the authority pair is a property of this
+        // contract, not only of the deploy scripts. Two roles that can be one
+        // key are one role, and the delay would only announce the capture.
+        if (guardian_ == sequencer_) revert RolesCollapsed();
         if (sourceChainId_ == bytes32(0)) revert ZeroSourceChainId();
         if (formulaDigest_ == bytes32(0)) revert ZeroFormulaDigest();
         sequencer = sequencer_;
@@ -208,6 +215,12 @@ contract AVIPRegistry is IAVIPRegistry {
     ///      change earlier than `CHANGE_DELAY` after it was last announced.
     function proposeSequencer(address next) external onlyGuardian {
         if (next == address(0)) revert ZeroSequencer();
+
+        // P-10: a guardian that can appoint itself sequencer holds both halves
+        // of the pair, and `CHANGE_DELAY` would only announce the capture
+        // instead of preventing it. The deploy scripts have always refused
+        // `GUARDIAN == SEQUENCER`; this is the runtime half, which had no check.
+        if (next == guardian) revert RolesCollapsed();
 
         // casting to 'uint64' is safe because the value is this block's timestamp
         // plus a constant `CHANGE_DELAY`: it stays far below `2**64` for any

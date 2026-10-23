@@ -100,6 +100,17 @@ interface IAVIPRegistry {
     error NotGuardian(address caller);
     error ZeroGuardian();
 
+    /// @notice The same key would hold both halves of the authority pair: the
+    ///         constructor refuses `guardian == sequencer`, and
+    ///         `proposeSequencer` refuses `next == guardian` (audit P-10).
+    /// @dev Two authorities that can be one key are one authority. A guardian
+    ///      that appoints itself sequencer writes the commitments *and* proposes
+    ///      its own continuation, and `CHANGE_DELAY` would only announce the
+    ///      capture. The deploy scripts already refused this at configuration
+    ///      time; the contract now refuses it as well, including the runtime
+    ///      path that had no check.
+    error RolesCollapsed();
+
     /// @notice The epoch's declared origin is not this registry's.
     /// @dev Returned by `postCommitment` when `sourceChainId` or `formulaDigest`
     ///      differ from the immutables the registry was deployed with (M-15).

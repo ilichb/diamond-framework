@@ -23,7 +23,8 @@ import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
 ///    replaces it; there is nothing to execute without a proposal and nothing
 ///    executable during the delay; a cancelled change leaves the role where it
 ///    was; a pending verifier change survives a sequencer change, because the two
-///    roles have two independent slots.
+///    roles have two independent slots. The pair cannot collapse (P-10): the
+///    constructor and `proposeSequencer` both refuse the guardian as sequencer.
 /// 6. Merkle inclusion: the convention documented in `AVIPRegistry.sol` accepts
 ///    valid proofs for a single-leaf tree, an 8-leaf tree and the full 500-leaf
 ///    tensor, and rejects a tampered leaf, a foreign proof, a foreign root and
@@ -466,6 +467,35 @@ contract AVIPRegistryTest is Test {
         vm.expectRevert(IAVIPRegistry.ZeroSequencer.selector);
         registry.proposeSequencer(address(0));
         assertEq(registry.pendingSequencer(), address(0), "nothing pending");
+    }
+
+    function test_governance_theGuardianCannotAppointItselfAsSequencer() public {
+        // P-10: the deploy scripts have always refused `GUARDIAN == SEQUENCER`,
+        // but the runtime path had no check, so a guardian could concentrate
+        // both powers after the delay and the delay would only announce it.
+        // The PoC of the finding did exactly this: propose, wait, execute.
+        vm.prank(guardian);
+        vm.expectRevert(IAVIPRegistry.RolesCollapsed.selector);
+        registry.proposeSequencer(guardian);
+        assertEq(registry.pendingSequencer(), address(0), "nothing was armed");
+        assertEq(registry.sequencer(), sequencer, "the role did not move");
+    }
+
+    function test_governance_theGuardianCanStillProposeAnyoneElse() public {
+        // The other half, so the guard cannot become a liveness bug: the
+        // guardian is refused as the *target*, not as the proposer.
+        assertTrue(stranger != guardian, "the fixture keeps the roles apart");
+        vm.prank(guardian);
+        registry.proposeSequencer(stranger);
+        assertEq(registry.pendingSequencer(), stranger, "the ordinary path is intact");
+    }
+
+    function test_constructor_rejectsCollapsedRoles() public {
+        // P-10 at construction: the scripts refuse it, but a direct deployment
+        // (another tool, a fixture, a hand-rolled cast) must not be able to
+        // bootstrap the capture either.
+        vm.expectRevert(IAVIPRegistry.RolesCollapsed.selector);
+        new AVIPRegistry(sequencer, address(0), sequencer, ORIGIN_CHAIN, ORIGIN_FORMULA);
     }
 
     function test_governance_theSequencerProposalIsAnnouncedWithItsEta() public {

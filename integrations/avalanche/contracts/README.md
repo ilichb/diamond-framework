@@ -105,8 +105,13 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
   second authority is what makes it effective — the sitting sequencer can
   neither rotate itself nor veto the proposal that replaces it, and the guardian
   alone cannot install a key without the delay passing first. The guardian must
-  differ from the sequencer (`RolesCollapsed`), since one key holding both would
-  propose its own continuation and the delay would only announce it.
+  differ from the sequencer, and the pair cannot collapse at runtime either: the
+  constructor refuses `guardian == sequencer` and `proposeSequencer` refuses
+  `next == guardian` (`RolesCollapsed`, audit P-10), since one key holding both
+  would propose its own continuation and the delay would only announce it. The
+  deploy scripts refuse the same configuration before any broadcast; the
+  contract is what makes it a property of the deployed system rather than a
+  convention of the tool that deployed it.
 - **The verifier stays mutable on purpose.** `setVerifier`'s `address(0)` hole is
   gone, but the slower `propose*`/`execute*` path replaces it rather than freezing
   it: this registry is also the commitment history (`_roots`, `_changedEntries`)
