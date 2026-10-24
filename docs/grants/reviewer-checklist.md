@@ -10,7 +10,7 @@ check without trusting the applicant.
 | **Relevance** — validator economics, network security, non-inflationary rewards | Area 2 asks how validator incentives are structured, measured and optimised. The mechanism prices admission on non-transferable reputation; nothing pays a validator for existing. | Paper §5 (stake floor), §7 (slashing), §10 (open items) |
 | **Methodological rigour** | Every claim carries a label (Verified / Measured / Estimated / Design / Deferred); 22 documented self-falsifications; a gate with 11 guards that re-derive their own values. | `docs/audit/numerical-verification.md`, `verification/audit-gate.sh` |
 | **Novelty** | Admission is certified per validator on its **own** tensor entry — a proof of a global norm was removed because it is a bearer token. The coalition-cost result is derived, not simulated. | Paper §8 (zero-knowledge), §5.2 |
-| **Feasibility** | Not promised: deployed on Fuji, verified on Snowtrace, 300 tests with none failing, 100% statement coverage on registry/vault/manager, CI green on every push. | Addresses in `evidence-appendix.md`; `forge test` |
+| **Feasibility** | Not promised: deployed on Fuji, verified on Snowtrace, 300 tests with none failing, 100% line coverage on registry/vault/manager (branch coverage 96.43/95.45/100), CI green on every push. | Addresses in `evidence-appendix.md`; `forge test` |
 | **Researcher qualifications** | Sole author of paper and of all 250 commits; a public history where corrections are as visible as claims. No prior audit history — stated, not hidden. | `git log`, `docs/audit/sessions/` |
 | **Proposal format** — ≤10 pages, question, methodology, contributions, timeline, budget, CVs | Sections 1–10 of `avalanche-research-proposal.md`, in that order. | this directory |
 
@@ -45,18 +45,26 @@ No command requires a key, an account, or a network other than a public Fuji RPC
 
 **In scope: 2,856 lines** — the nine core contracts (2,673) plus the BN254 wrapper (183).
 
-| Contract | Lines | Statement coverage | Why it is in scope |
-|---|---|---|---|
-| `AVIPRegistry.sol` | 466 | 100% (114/114) | Epoch commitment, admission policy, role-rotation delay |
-| `AVIPStakeVault.sol` | 476 | 100% (95/95) | Escrow; slash over the whole recorded stake |
-| `AVIPValidatorManager.sol` | 332 | 100% (61/61) | Stake floor, ejection accounting, re-entry surcharge |
-| `AVIPMessageCodec.sol` | 351 | 100% (46/46) | Encoding of commitments across chains |
-| `AVIPMessageEndpoint.sol` | 335 | 93.55% (58/62) | Transport entry point |
-| `AVIPCommitmentRelay.sol` | 246 | 100% (29/29) | Commitment relay |
-| `AVIPSlashingChannel.sol` | 190 | 100% (23/23) | Slash path |
-| `AVIPCollusionAlertChannel.sol` | 194 | 100% (18/18) | Collusion signal path |
-| `AVIPBurnSink.sol` | 83 | 100% (11/11) | Sink for slashed value |
-| `verifiers/Bn254.sol` | 183 | 95.24% (40/42) | Pairing and scalar checks around the verifier |
+| Contract | Lines | Line cov. | Statement cov. | Branch cov. | Why it is in scope |
+|---|---|---|---|---|---|
+| `AVIPRegistry.sol` | 466 | 100% (114/114) | 99.21% (126/127) | 96.43% (27/28) | Epoch commitment, admission policy, role-rotation delay |
+| `AVIPStakeVault.sol` | 476 | 100% (95/95) | 99.16% (118/119) | 95.45% (21/22) | Escrow; slash over the whole recorded stake |
+| `AVIPValidatorManager.sol` | 332 | 100% (61/61) | 100% (75/75) | 100% (17/17) | Stake floor, ejection accounting, re-entry surcharge |
+| `AVIPMessageCodec.sol` | 351 | 100% (46/46) | 95.45% (63/66) | 82.35% (14/17) | Encoding of commitments across chains |
+| `AVIPMessageEndpoint.sol` | 335 | 93.55% (58/62) | 92.42% (61/66) | 61.54% (8/13) | Transport entry point |
+| `AVIPCommitmentRelay.sol` | 246 | 100% (29/29) | 100% (29/29) | 100% (6/6) | Commitment relay |
+| `AVIPSlashingChannel.sol` | 190 | 100% (23/23) | 100% (22/22) | 100% (3/3) | Slash path |
+| `AVIPCollusionAlertChannel.sol` | 194 | 100% (18/18) | 100% (16/16) | 100% (3/3) | Collusion signal path |
+| `AVIPBurnSink.sol` | 83 | 100% (11/11) | 100% (15/15) | 100% (4/4) | Sink for slashed value |
+| `verifiers/Bn254.sol` | 183 | 95.24% (40/42) | 92.86% (52/56) | 80.00% (8/10) | Pairing and scalar checks around the verifier |
+
+Reproduce with `forge coverage --report summary`. **Read the column, not the
+headline:** line coverage is 100% on eight of the ten, but branch coverage is
+where the audit should look — `AVIPMessageEndpoint` is 61.54% (8/13) and
+`AVIPMessageCodec` 82.35% (14/17). Those uncovered branches are the transport's
+failure paths, and the scope below asks the auditor to start there rather than
+to re-walk what the suite already exercises. Claiming "100% coverage" without
+the column would be true of lines and misleading about behaviour.
 
 **Out of scope, with reasons:** `verifiers/Groth16Verifier.sol` (generated: constants
 and pairing calls, reviewed as generated code rather than hand-written logic),

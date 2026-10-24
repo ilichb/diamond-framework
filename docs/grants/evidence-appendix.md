@@ -80,19 +80,22 @@ registry.verifier()      →  0x0000…0000                                    #
 | Contract source | 3,956 lines, 20 files: **2,673 core** + 1,283 interfaces/verifiers |
 | Toolchain | solc 0.8.33, EVM `cancun`, optimizer off (paper's gas basis) |
 
-Statement coverage, per contract, from `forge coverage --report summary`:
+Coverage per contract, from `forge coverage --report summary`. All four columns are
+reproduced because publishing only the first one would be true and misleading:
 
-| Contract | Statements | Branches | Functions |
-|---|---|---|---|
-| `AVIPRegistry` | **100%** (114/114) | 99.21% (126/127) | 100% (20/20) |
-| `AVIPStakeVault` | **100%** (95/95) | 99.16% (118/119) | 100% (18/18) |
-| `AVIPValidatorManager` | **100%** (61/61) | 100% (75/75) | 100% (10/10) |
-| `AVIPMessageCodec` | **100%** (46/46) | 95.45% (63/66) | 100% (11/11) |
-| `AVIPMessageEndpoint` | 93.55% (58/62) | 92.42% (61/66) | 100% (11/11) |
-| `AVIPCommitmentRelay` | **100%** (29/29) | 100% (29/29) | 100% (7/7) |
-| `AVIPSlashingChannel` | **100%** (23/23) | 100% (22/22) | 100% (6/6) |
-| `AVIPCollusionAlertChannel` | **100%** (18/18) | 100% (16/16) | 100% (5/5) |
-| `AVIPBurnSink` | **100%** (11/11) | 100% (15/15) | 100% (2/2) |
+| Contract | Lines | Statements | Branches | Functions |
+|---|---|---|---|---|
+| `AVIPRegistry` | **100%** (114/114) | 99.21% (126/127) | 96.43% (27/28) | 100% (20/20) |
+| `AVIPStakeVault` | **100%** (95/95) | 99.16% (118/119) | 95.45% (21/22) | 100% (18/18) |
+| `AVIPValidatorManager` | **100%** (61/61) | 100% (75/75) | 100% (17/17) | 100% (10/10) |
+| `AVIPMessageCodec` | **100%** (46/46) | 95.45% (63/66) | 82.35% (14/17) | 100% (11/11) |
+| `AVIPMessageEndpoint` | 93.55% (58/62) | 92.42% (61/66) | **61.54%** (8/13) | 100% (11/11) |
+| `AVIPCommitmentRelay` | **100%** (29/29) | 100% (29/29) | 100% (6/6) | 100% (7/7) |
+| `AVIPSlashingChannel` | **100%** (23/23) | 100% (22/22) | 100% (3/3) | 100% (6/6) |
+| `AVIPCollusionAlertChannel` | **100%** (18/18) | 100% (16/16) | 100% (3/3) | 100% (5/5) |
+| `AVIPBurnSink` | **100%** (11/11) | 100% (15/15) | 100% (4/4) | 100% (2/2) |
+| `verifiers/Bn254` | 95.24% (40/42) | 92.86% (52/56) | 80.00% (8/10) | 100% (7/7) |
+| `verifiers/Groth16Verifier` | **100%** (62/62) | 97.06% (66/68) | 77.78% (7/9) | 100% (13/13) |
 | `verifiers/Bn254` | 95.24% (40/42) | 92.86% (52/56) | 100% (7/7) |
 
 The repository-wide figure (7.97%) is not quoted here on purpose: it is dominated

@@ -119,11 +119,14 @@ and those negative results are, for a reader, worth more than the positive one.
 **To engineering.** A specification precise enough to be audited: 2,673 lines of
 core Solidity and **300 tests in 11 suites** with none failing — 299 offline plus
 `SafeForkTest`, which reads the live 2-of-3 Safe on Fuji and skips when no RPC is
-configured — and statement coverage of **100%** on the registry (114/114), the
-vault (95/95) and the manager (61/61); 93.55% on the endpoint and 95.24% on the
-BN254 wrapper. Coverage is not security, and this proposal does not pretend
-otherwise — it is the floor that makes a two-week audit meaningful rather than
-exploratory.
+configured — and **line** coverage of 100% on the registry (114/114), the vault
+(95/95) and the manager (61/61), with branch coverage of 96.43% (27/28), 95.45%
+(21/22) and 100% (17/17) respectively; 93.55% lines and 61.54% branches on the
+endpoint, 95.24% lines and 80.00% branches on the BN254 wrapper. The branch
+column is quoted because it is the honest one: the transport's failure paths are
+the least exercised code in the repository and the first thing an auditor should
+open. Coverage is not security, and this proposal does not pretend otherwise — it
+is the floor that makes a two-week audit meaningful rather than exploratory.
 
 **To Avalanche.** A validator-admission design that a Subnet can adopt without
 paying emissions for security, with the enforcement already portable to an L1, and
