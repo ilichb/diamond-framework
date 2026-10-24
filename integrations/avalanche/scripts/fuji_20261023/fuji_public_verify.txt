@@ -1,0 +1,103 @@
+# Public evidence — Diamond Framework phase 2 on Avalanche Fuji (43113)
+# generated 2026-10-24T13:49:15Z by scripts/verify_public_fuji.sh
+# phase-2 transcript: scripts/fuji_20261023/fuji_phase2.txt
+# safe transcript:    scripts/fuji_20261023/fuji_safe.txt
+# RPC host:           https://avax-fuji.g.alchemy.com (credentials never printed)
+
+## 1. the three contracts are this repository's source
+
+Snowtrace compiles contracts/ with solc 0.8.33 and optimizer off — the
+settings pinned in foundry.toml — and matches the deployed bytecode. The
+constructor arguments are the ones the transcript records.
+
+
+-- registry  0x8DE8C8436D0cc9ED85ea630D5324B8A580EAd69a
+   source     contracts/AVIPRegistry.sol:AVIPRegistry
+   ctor args  0x000000000000000000000000fcd6b18b546e94e3289d514ba89174531afe101e000000000000000000000000000000000000000000000000000000000000000000000000000000000000000012458cd567c9f01cba220fe3f2af97034f9635bbce12864578eb11634416932021724652c9a481fbf6a42ba77cde799fad091bc1403af787fee703ec18c440a91e8405b72dc55ea700ec557263baaab0e24a4cfc
+   explorer   name=AVIPRegistry solc=v0.8.33+commit.64118f21 optimizer=0 verified=yes
+OK        registry.explorer.name
+OK        registry.explorer.solc
+OK        registry.explorer.optimizer
+
+-- vault  0xD560F40BfEd79D8a3b39279fc5Cd8149f71b7e60
+   source     contracts/AVIPStakeVault.sol:AVIPStakeVault
+   ctor args  0x000000000000000000000000f1db80d21d8596fe1571cae2da0b1be089c8ca0c000000000000000000000000e0297ab12fa987841e581b54bd7fc0969483fa4d0000000000000000000000000000000000000000000000000000000000000001
+   explorer   name=AVIPStakeVault solc=v0.8.33+commit.64118f21 optimizer=0 verified=yes
+OK        vault.explorer.name
+OK        vault.explorer.solc
+OK        vault.explorer.optimizer
+
+-- manager  0x88e60aA2f031B35C823CE4b8994804c025B80317
+   source     contracts/AVIPValidatorManager.sol:AVIPValidatorManager
+   ctor args  0x0000000000000000000000008de8c8436d0cc9ed85ea630d5324b8a580ead69a000000000000000000000000673f7725cf17a481299c7073486f8fb222a66813000000000000000000000000d560f40bfed79d8a3b39279fc5cd8149f71b7e60
+   explorer   name=AVIPValidatorManager solc=v0.8.33+commit.64118f21 optimizer=0 verified=yes
+OK        manager.explorer.name
+OK        manager.explorer.solc
+OK        manager.explorer.optimizer
+
+## 2. the constructor arguments, read back from the chain
+
+A verified source with the wrong arguments is still the wrong contract.
+Each getter below is constructor-fixed: none of these values has a setter.
+
+OK        registry.sequencer()
+OK        registry.verifier()
+OK        registry.guardian()
+OK        registry.sourceChainId()
+OK        registry.formulaDigest()
+OK        vault.TOKEN()
+OK        vault.SINK()
+OK        vault.WAD_PER_UNIT()
+OK        manager.registry()
+OK        manager.slashAuthority()
+OK        manager.custody()
+
+## 3. the pair is wired to itself, not to phase 1
+
+bindManager is one-shot and runs inside the manager's constructor, so
+vault.manager() is a handshake that either happened in the phase-2
+broadcast or can never happen at all. It is this manager or nothing.
+
+OK        vault.manager()
+
+## 4. the Safe is a policy, not a source file
+
+Its runtime is the factory's 171-byte proxy, so 'verifying the Safe
+against this repo' would verify somebody else's bytecode against our
+tree. The evidence is what the proxy answers plus what its creation
+receipt says: factory, singleton, threshold, handler, owners.
+
+          safe.code                171 bytes of runtime
+OK        safe.code.bytes
+OK        safe.slot0 (singleton)
+OK        safe.fallbackHandler
+OK        safe.getThreshold()
+OK        safe.VERSION()
+OK        safe.nonce()
+          safe.owners              0x27923a94b9f45d0917ec998a7fbf32b12b990a01,0x8022bbc2abd0406a97569dfd2b852a4e01e44ce9,0xdaa59b402c66d885059d2e5b81bcfff6ff5c0e47
+OK        safe.getOwners()
+          creation tx              0x3c39a83e6acdf38a87789d1dbd90c11317329139e9623e85ac7175fa09772112
+OK        safe.creation.status
+OK        safe.creation.to (factory)
+OK        proxyCreation.emitter (factory)
+OK        proxyCreation.proxy
+OK        proxyCreation.singleton
+OK        safeSetup.threshold
+OK        safeSetup.initializer
+OK        safeSetup.fallbackHandler
+OK        safeSetup.owners
+
+## 5. verdict
+
+Established: the three deployed contracts compile from contracts/ with the
+arguments the transcript records; the vault/manager pair is wired to
+itself; and slashAuthority is a 2-of-3 policy whose owners, threshold,
+handler and singleton are the ones the creation receipt records from the
+canonical factory.
+
+Not established: that the three owner keys are held by three different
+people, or that they are still under control. That is an organisational
+question answered outside the chain. The guardian is the deployer EOA by
+decision (see scripts/README.md), not a defect of the base layer.
+
+OK: scripts/fuji_20261023/fuji_public_verify.txt

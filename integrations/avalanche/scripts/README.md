@@ -1,6 +1,6 @@
 # `integrations/avalanche/scripts/` — Deployment scripts and generators
 
-Status: **eight deployment scripts, two reports and the Fuji verifier**.
+Status: **eight deployment scripts, two reports and the two Fuji verifiers**.
 `DeployRegistry.s.sol`, `DeployValidatorManager.s.sol` and `DeployStakeVault.s.sol`
 exist as of M7a/M8 (`docs/architecture/implementation-plan.md` §5.8, §5.12) and
 build the frozen M1/M2/M8 contracts; `DeployTransport.s.sol` exists as of M7d
@@ -11,15 +11,19 @@ end; `M8Report.s.sol` and `m8_report.sh`
 audit the whole fund lifecycle; `DeployMockToken.s.sol` and
 `DeployBurnSink.s.sol` deploy the token/sink half of the Fuji runbook; and
 `DeployFujiPhase1.s.sol` drove the manual phase-1 deployment.
-**Fuji phase 1 is deployed** (chain 43113, `2026-10-19T01:46:52Z` UTC): registry,
-vault and manager, with the token and sink wired and `verifier = address(0)`.
-That deployment predates M-15 (its registry does not expose `sourceChainId()`)
-and wired `slashAuthority` to an EOA; both are recorded as P-39/P-40. The
-transport, the Subnet L1 and M9's on-chain paths are not deployed. The
-transcripts and broadcast JSON are in `fuji_20261018/`, and `verify_fuji.sh`
-reads the wiring facts back from the chain. The dry runs and reports remain
-offline and use no key. See `docs/architecture/avalanche-integration.md` §6
-(Deployment Phases) and §3 (nothing here has been audited).
+**Phase 2 is the live deployment** (chain 43113, `2026-10-23`): registry
+`0x8DE8C843…`, vault `0xD560F40B…`, manager `0x88e60aA2…`, with the 2-of-3 Safe
+`0x673F7725…` as `slashAuthority` and `verifier = address(0)`. Phase 1
+(`2026-10-19`, `fuji_20261018/`) stays on chain without `sourceChainId()` and with
+an EOA slasher: it is what P-39 and P-40 recorded, and why both are closed by the
+redeployment rather than by patching it. On Snowtrace the three phase-2 contracts
+are verified from this tree; the Safe is not, and should not be (see below). The
+transport, the Subnet L1 and M9's on-chain paths are not deployed. The phase-2
+transcripts and broadcast JSON are in `fuji_20261023/`; `verify_fuji.sh` reads the
+wiring facts back from the chain and `verify_public_fuji.sh` produces the public
+evidence report. The dry runs and reports remain offline and use no key. See
+`docs/architecture/avalanche-integration.md` §6 (Deployment Phases) and §3
+(nothing here has been audited).
 
 ## `generate_groth16_fixtures.py` (milestone M3)
 
@@ -303,6 +307,35 @@ different people. That is a governance fact, audited in the explorer and in the
 Safe's configuration, not in a `getOwners()` call — and it is why P-39 is closed
 by the *redeployment* below, not by the Safe existing.
 
+### Verifying the three contracts on Snowtrace
+
+The Safe is not a source file, but the other three are, and the phase-2 build is
+this tree: verifying them needs no older worktree, which is what the phase-1 pair
+would have needed. One command does the whole report:
+
+```shell
+bash scripts/verify_public_fuji.sh                  # submit if needed, write /tmp/fuji_verify_public.txt
+bash scripts/verify_public_fuji.sh --skip-submit    # read only, no explorer writes
+```
+
+It submits each contract with the constructor arguments the transcript records,
+then reads the explorer **back** instead of trusting `forge`'s exit code, and
+finally compares eleven constructor-fixed getters against the transcript — a
+verified source with the wrong arguments is still the wrong contract. Snowtrace
+answers `getsourcecode` with no key, but `forge` refuses to POST without
+`ETHERSCAN_API_KEY`, so the script supplies a placeholder when the environment has
+none: that is a client-side check, not a credential.
+
+The report is committed as `fuji_20261023/fuji_public_verify.txt`. It prints the
+RPC host only, never the endpoint, because the runbook's endpoint carries a key in
+its path and the report gets committed.
+
+For the Safe it does what the section above describes plus the creation receipt:
+`ProxyCreation` names the factory that emitted it, the proxy and the singleton,
+and `SafeSetup` carries threshold 2, `initializer = 0x0`, the 1.4.1 fallback
+handler and the three owners. Those come from the log the deployment produced, not
+from a restatement of it.
+
 ### The dry run
 
 ```shell
@@ -485,6 +518,7 @@ run to run and not Fuji addresses.
 | `DeployBurnSink.s.sol` | Deploy the reference `AVIPBurnSink` | 1 | deployed on Fuji (reference sink) |
 | `DeployFujiPhase1.s.sol` | Deploy registry, vault and manager in one broadcast session | 1 | **deployed on Fuji** (chain 43113, 2026-10-19T01:46:52Z UTC) |
 | `verify_fuji.sh` | Read five wiring facts back from Fuji and compare them with the transcript | 1 | available; reads phase 1 and writes `fuji_<date>_verify.txt` |
+| `verify_public_fuji.sh` | Verify the three phase-2 contracts on Snowtrace and report constructor args, the wiring and the Safe's policy | 1 (+ explorer) | available; writes `fuji_verify_public.txt`; committed run in `fuji_20261023/` |
 | `M7dReport.s.sol` | Drive the three §4 message types end to end; pinned by `m7d_report.sh` | 1 + transport | offline only (M7d); transport not deployed |
 | `M8Report.s.sol` | Audit the fund lifecycle end to end; pinned by `m8_report.sh` | 1 + custody | offline only (M8) |
 | `RegisterSubnetL1.s.sol` | ACP-77 Subnet L1 registration on the P-Chain | 4 | intended |

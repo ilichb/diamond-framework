@@ -3014,6 +3014,14 @@ ejerce *una política con umbral ≥ 2*, no que las tres llaves estén en manos
 distintas — eso se audita fuera de la cadena. El manager de fase 1 no se toca:
 sigue con la EOA y es un objeto histórico, no el despliegue vivo.
 
+La evidencia es reproducible por un tercero: `bash scripts/verify_public_fuji.sh`
+verifica los tres contratos en Snowtrace con los argumentos del transcript, coteja
+once getters fijados por constructor contra la cadena y reconstruye la política del
+Safe desde el recibo de creación (`ProxyCreation` y `SafeSetup`). El informe queda
+en `scripts/fuji_20261023/fuji_public_verify.txt`. La Safe no se verifica como
+fuente, y el documento lo dice: su runtime es el proxy de la factoría, no código de
+este repo.
+
 ---
 
 ## P-40 — El despliegue de Fuji es anterior a M-15: el origen no está en la cadena

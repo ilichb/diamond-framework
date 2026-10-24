@@ -35,6 +35,7 @@ hay `session-log.md` en este repositorio: no inventar uno.
 | S-022 | 2026-10-23 | CreateSafe: el multisig sin llaves, y P11 | este commit | 5ff84501… | cerrada; 294 + 1 skip, dry run intacto; el Safe espera owners y umbral |
 | S-023 | 2026-10-23 | El Safe 2-de-3 en Fuji: una política, no una llave | este commit | 5ff84501… | cerrada; Safe `0x673F77…` vivo (305835 gas); la fase 2 espera el preflight |
 | S-024 | 2026-10-23 | Fase 2 desplegada: el slasher es una política (P-39/P-40) | este commit | 5ff84501… | cerrada; 5981575 gas, `verify --require-multisig` OK; P-39 y P-40 cerrados |
+| S-025 | 2026-10-24 | Snowtrace: los tres contratos verificados, la Safe como política | este commit | 5ff84501… | cerrada; 3 verificados (solc 0.8.33, optimizer 0), informe reproducible |
 
 S-016 cubre `triage-mapa-2026-10-22.md`, el acta
 `checklist-matriz-evidencia-2026-10-22.md` y la v2
@@ -337,3 +338,42 @@ detrás. Ancla intacta —los 11 ficheros no se tocan, `fase0_anchor.sh --check`
 tests más el skip de `SafeFork` sin RPC. Lo que sigue abierto es el transporte
 (I-1.4, sin peers en la otra cadena), la rotación de `guardian` y el resto del
 roadmap.
+
+S-025 separa lo que la cadena puede atestiguar de lo que no, y lo escribe donde
+cualquiera puede repetirlo. Los tres contratos de fase 2 se verifican en Snowtrace
+con los argumentos del transcript —`solc 0.8.33`, optimizer off, que es lo que fija
+`foundry.toml`— y ese es el único sentido en el que "el código está en la cadena"
+es una afirmación comprobable. La Safe no se verifica, y no por pereza: su runtime
+es el proxy de 171 bytes de la factoría, así que verificar *eso* contra este repo
+sería verificar bytecode ajeno contra nuestro árbol. La prueba de la Safe es de
+política, y son sus lecturas y su recibo de creación.
+
+El detalle que hizo falta descubrir: Snowtrace responde `getsourcecode` sin clave,
+pero `forge` se niega a enviar el POST si `ETHERSCAN_API_KEY` no está definida. El
+script pone un placeholder cuando el entorno no trae ninguna y lo dice en la
+cabecera, porque un `ETHERSCAN_API_KEY=0000…` en un script se lee como credencial y
+no lo es: es una comprobación del lado del cliente. Con eso, `forge verify-contract`
+aceptó los tres (registry `831fffd9…`, y dos más) y el explorador pasó de
+`Contract source code not verified` a `Pass - Verified` con nombre, compilador y
+optimizer correctos en cada uno.
+
+`scripts/verify_public_fuji.sh` empaqueta eso y añade lo que un `verify-contract`
+no dice: lee el explorador **de vuelta** en vez de fiarse del código de salida de
+forge, compara once getters fijados por constructor contra el transcript —un source
+verificado con argumentos equivocados sigue siendo el contrato equivocado— y
+reconstruye la política del Safe desde el recibo: `ProxyCreation` nombra la
+factoría que lo emitió, el proxy y el singleton; `SafeSetup` lleva umbral 2,
+`initializer = 0x0`, el handler 1.4.1 y los tres owners. El informe queda en
+`scripts/fuji_20261023/fuji_public_verify.txt`, y `--skip-submit` lo reduce a
+lectura para cuando no se quiere escribir en el explorador.
+
+Un fallo propio, encontrado al leer la primera salida: el informe imprimía la URL
+del RPC completa, y la del runbook (`~/.config/avip/fuji_rpc.txt`) lleva la clave
+de Alchemy en el path. Un fichero que se commitea no puede llevar eso. Ahora se
+imprime sólo esquema y host, con la línea diciendo que las credenciales no se
+imprimen. `verify_fuji.sh` ya lo hacía así —"never print it"— y este script lo
+violaba por copiar el patrón de lectura sin copiar la precaución.
+
+Lo que el informe no establece, y dice: que las tres llaves de owner estén en tres
+manos distintas o que sigan bajo control. Eso es gobernanza, se audita fuera de la
+cadena, y el guardian sigue siendo la EOA del deployer por decisión.
