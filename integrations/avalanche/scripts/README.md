@@ -13,7 +13,10 @@ audit the whole fund lifecycle; `DeployMockToken.s.sol` and
 `DeployFujiPhase1.s.sol` drove the manual phase-1 deployment.
 **Phase 2 is the live deployment** (chain 43113, `2026-10-23`): registry
 `0x8DE8C843…`, vault `0xD560F40B…`, manager `0x88e60aA2…`, with the 2-of-3 Safe
-`0x673F7725…` as `slashAuthority` and `verifier = address(0)`. Phase 1
+`0x673F7725…` as `slashAuthority` and `verifier = address(0)` at creation. A
+development-key `Groth16Verifier` was deployed and announced on 2026-10-24; the
+registry installs it after `CHANGE_DELAY`, so `verifier()` still reads zero until
+2026-10-26T17:22:54Z (see *Installing the verifier* below). Phase 1
 (`2026-10-19`, `fuji_20261018/`) stays on chain without `sourceChainId()` and with
 an EOA slasher: it is what P-39 and P-40 recorded, and why both are closed by the
 redeployment rather than by patching it. On Snowtrace the three phase-2 contracts
@@ -200,12 +203,13 @@ chain and are what P-39 and P-40 described; nothing below touches them.
 | slashAuthority | `0x673F7725CF17A481299c7073486F8Fb222a66813` (the 2-of-3 Safe) |
 | sequencer | `0xFCD6b18B546e94e3289d514Ba89174531aFE101E` |
 | guardian | `0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb` (the deployer; an EOA) |
-| verifier | `0x0` |
+| verifier | `0x0` at deployment; `0x125f2054EaCFbd9e34F991cF7A437b3dC95E3eCa` announced 2026-10-24, installable from 2026-10-26T17:22:54Z |
 | token / sink | `0xf1db80d2…cA0C` / `0xE0297ab1…3fA4d`, reused from phase 1 |
 | `wadPerUnit` | 1 |
 | origin | `sourceChainId=0xce128645…091bc1`, `formulaDigest=0x403af787…a4cfc` |
 | gas | 5981575 in three transactions, ~0.00000000096 AVAX at 160 wei/gas |
 | evidence | `fuji_20261023/fuji_phase2.txt`, `fuji_phase2_chain.txt`, `phase2.json` |
+| verifier evidence | `fuji_20261024/fuji_verifier.txt`, `fuji_verifier_proposal.txt`, `fuji_verifier_chain.txt` |
 
 What the chain says afterwards, read rather than trusted:
 
@@ -228,6 +232,52 @@ the deployer's EOA, as in phase 1, because the initialiser takes it as a paramet
 and changing it changes all three addresses. And it cannot un-do phase 1: the old
 manager still points at `0xcdFB…2ec7` and always will, which is exactly why the
 flag exists — on that transcript `--require-multisig` fails.
+
+### Installing the verifier (`DeployVerifier.s.sol`, `ProposeVerifier.s.sol`)
+
+The phase-2 registry has no verifier, so `verifyThreshold` has nothing to consult.
+Closing that is two steps, and only the second is the registry's:
+
+```shell
+# 1. the contract (deployer key; refuses C-Chain mainnet by chain id)
+forge script scripts/DeployVerifier.s.sol:DeployVerifier --rpc-url "$FUJI_RPC_URL" --broadcast
+
+# 2. the announcement (guardian key; the script asserts the key *is* the guardian)
+REGISTRY=0x8DE8C8436D0cc9ED85ea630D5324B8A580EAd69a \
+VERIFIER=<address from step 1> \
+forge script scripts/ProposeVerifier.s.sol:ProposeVerifier --rpc-url "$FUJI_RPC_URL" --broadcast
+
+# 3. after CHANGE_DELAY (2 days), permissionless: any account, 46 299 gas in the run below
+cast send $REGISTRY 'executeVerifierChange()' --rpc-url "$FUJI_RPC_URL" --private-key ...
+```
+
+Step 1 deploys `Groth16Verifier` from `test/fixtures/M4dGroth16Fixtures.sol` and
+self-checks what it deployed: `keyDigest`, `numPublicInputs == 4`, `icLength == 5`.
+The key is the **development** setup — seed committed, no ceremony — and the script
+says so in its own output. It is not a soundness claim; it is the contract the
+registry will hold, so that the wired admission path stops being unreachable for
+want of a verifier.
+
+Step 2 is the M9a pair the paper describes: `proposeVerifier` records the address
+and an `eta`, and `executeVerifierChange` refuses before it. A guardian cannot swap
+a verifier inside a block, and a compromised guardian is visible for two days. The
+script reads `registry.guardian()` first and reverts `WiringMismatch` if the key
+being used is not that account — the alternative is a broadcast that fails on chain
+after paying gas, or worse, one sent from a key the operator assumed was the guardian.
+
+Steps 1 and 2 were run on 2026-10-24 and are recorded in
+`fuji_20261024/fuji_verifier_chain.txt`: `0x125f2054…3eCa`, 2 273 291 gas to deploy,
+46 299 to announce, `eta = 1793035395` (2026-10-26T17:22:54Z). Step 3 is pending by
+construction; the record says which account may send it (any) and what to read
+afterwards (`registry.verifier()` non-zero, `pendingVerifier()` zero,
+`verifierChangeEta()` zero).
+
+What this does **not** show is an admission. With no epoch posted, `verifyThreshold`
+reverts `UnknownEpoch` before it ever reaches the verifier
+(`AVIPRegistry.sol:427-431`), so the gap that remains is a posted commitment and a
+proof the key accepts — not a missing verifier. Replacing the development key with a
+ceremony key is the same operation again, with no contract change: the rotation
+exists precisely so that the two are the same operation.
 
 ### Creating the Safe itself (`CreateSafe.s.sol`)
 
@@ -514,6 +564,8 @@ run to run and not Fuji addresses.
 | `DeployRegistry.s.sol` | Deploy `AVIPRegistry` to a testnet C-Chain | 1 | dry run + tests (M7a); phase 1 uses `DeployFujiPhase1` |
 | `DeployValidatorManager.s.sol` | Deploy `AVIPValidatorManager`, with `CUSTODY` optional | 1 | dry run + tests (M7a, amended by M8); phase 1 uses `DeployFujiPhase1` |
 | `DeployStakeVault.s.sol` | Deploy `AVIPStakeVault`, the custody the manager binds | 1 | dry run + tests (M8); phase 1 uses `DeployFujiPhase1` |
+| `DeployVerifier.s.sol` | Deploy `Groth16Verifier` from the committed development key and self-check its digest | 1.5 | **deployed on Fuji** (chain 43113, 2026-10-24, `0x125f2054…3eCa`) |
+| `ProposeVerifier.s.sol` | Announce that verifier through the M9a pair; asserts the key is the registry guardian | 1.5 | **broadcast on Fuji** (2026-10-24, eta 2026-10-26T17:22:54Z; `executeVerifierChange` pending) |
 | `DeployMockToken.s.sol` | Deploy the burnable test token used by phase 1 | 1 | deployed on Fuji (mock token, 18 decimals) |
 | `DeployBurnSink.s.sol` | Deploy the reference `AVIPBurnSink` | 1 | deployed on Fuji (reference sink) |
 | `DeployFujiPhase1.s.sol` | Deploy registry, vault and manager in one broadcast session | 1 | **deployed on Fuji** (chain 43113, 2026-10-19T01:46:52Z UTC) |

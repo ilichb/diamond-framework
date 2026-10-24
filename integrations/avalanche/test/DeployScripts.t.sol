@@ -8,6 +8,10 @@ import {AVIPValidatorManager} from "../contracts/AVIPValidatorManager.sol";
 import {IAVIPRegistry} from "../contracts/interfaces/IAVIPRegistry.sol";
 import {DeployCommon} from "../scripts/DeployCommon.sol";
 import {DeployRegistry} from "../scripts/DeployRegistry.s.sol";
+import {DeployVerifier} from "../scripts/DeployVerifier.s.sol";
+import {ProposeVerifier} from "../scripts/ProposeVerifier.s.sol";
+import {Groth16Verifier} from "../contracts/verifiers/Groth16Verifier.sol";
+import {M4dGroth16Fixtures as F} from "./fixtures/M4dGroth16Fixtures.sol";
 import {DeployFujiPhase1} from "../scripts/DeployFujiPhase1.s.sol";
 import {DeployStakeVault} from "../scripts/DeployStakeVault.s.sol";
 import {DeployTransport} from "../scripts/DeployTransport.s.sol";
@@ -97,6 +101,8 @@ contract DeployScriptsTest is Test {
     uint256 internal constant STATEMENT_ROOT = 0x1234_5678;
 
     DeployRegistry internal registryScript;
+    DeployVerifier internal verifierScript;
+    ProposeVerifier internal proposeScript;
     DeployStakeVault internal vaultScript;
     DeployValidatorManager internal managerScript;
     DeployFujiPhase1 internal fujiPhase1Script;
@@ -107,6 +113,8 @@ contract DeployScriptsTest is Test {
         // Instruments only. No `setEnv` here: this suite cannot clear what an
         // earlier test wrote (see the note above), so it does not pretend to.
         registryScript = new DeployRegistry();
+        verifierScript = new DeployVerifier();
+        proposeScript = new ProposeVerifier();
         vaultScript = new DeployStakeVault();
         managerScript = new DeployValidatorManager();
         fujiPhase1Script = new DeployFujiPhase1();
@@ -583,6 +591,106 @@ contract DeployScriptsTest is Test {
         assertEq(manager.requiredStake(validator), stake, "minimum stake recorded");
         assertEq(
             manager.collateralOf(validator), manager.collateralFor(THETA_R), "collateral = C_R"
+        );
+    }
+
+    // ------------------------------------------- DeployVerifier / ProposeVerifier
+    //
+    // The pair that closes the hole `DeployCommon` documents: M7a deploys no
+    // verifier, so `verifyThreshold` reverts `VerifierNotSet`; these two scripts
+    // install one and announce it through the M9a proposal pair.
+
+    function test_verifierScript_installsTheDevelopmentKey() public {
+        DeployVerifier.Deployment memory d = verifierScript.deploy(ANVIL_0);
+
+        assertGt(d.verifier.code.length, 0, "verifier deployed");
+        Groth16Verifier verifier = Groth16Verifier(d.verifier);
+
+        // Two independent implementations of the same digest: the fixture's is
+        // computed in Rust from the ABI layout, the contract's in its constructor.
+        assertEq(d.keyDigest, F.KEY_DIGEST, "the digest the script reports");
+        assertEq(verifier.verifyingKeyDigest(), F.KEY_DIGEST, "the digest on chain");
+        assertEq(d.numPublicInputs, 4, "statementRoot, epoch, validator, norm");
+        assertEq(d.icLength, 5, "four inputs plus the constant term");
+        assertEq(verifier.numPublicInputs(), 4, "read back");
+        assertEq(verifier.icLength(), 5, "read back");
+
+        // The key is the fixture's, point by point, not a re-derivation of it.
+        uint256[2] memory chainAlpha = verifier.alpha1();
+        uint256[2] memory fixtureAlpha = F.verifyingKey().alpha1;
+        assertEq(chainAlpha[0], fixtureAlpha[0], "alpha1.x");
+        assertEq(chainAlpha[1], fixtureAlpha[1], "alpha1.y");
+    }
+
+    function test_verifierScript_refusesMainnet() public {
+        vm.chainId(43_114);
+        vm.expectRevert(abi.encodeWithSelector(DeployCommon.MainnetRefused.selector, 43_114));
+        verifierScript.deploy(ANVIL_0);
+    }
+
+    function test_proposeVerifier_announcesAndWaitsTheChangeDelay() public {
+        AVIPRegistry registry =
+            AVIPRegistry(registryScript.deploy(_registryPlan(ANVIL_1, address(0))).registry);
+        address verifier = verifierScript.deploy(ANVIL_0).verifier;
+
+        assertEq(address(registry.verifier()), address(0), "no verifier yet");
+
+        ProposeVerifier.Announcement memory a = proposeScript.propose(
+            ProposeVerifier.Plan({guardian: ANVIL_3, registry: address(registry), verifier: verifier})
+        );
+
+        assertEq(a.previous, address(0), "nothing was installed before");
+        assertEq(a.pending, verifier, "the announcement is the script's verifier");
+        assertEq(a.eta, block.timestamp + 2 days, "exactly CHANGE_DELAY, not less");
+        assertEq(registry.pendingVerifier(), verifier, "read back from the registry");
+
+        // The delay is the protection: the change cannot land early.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAVIPRegistry.ChangeNotReady.selector, a.eta, block.timestamp
+            )
+        );
+        registry.executeVerifierChange();
+
+        // Once elapsed it is permissionless: any account can send it.
+        vm.warp(a.eta);
+        registry.executeVerifierChange();
+
+        assertEq(address(registry.verifier()), verifier, "installed");
+        assertEq(registry.pendingVerifier(), address(0), "no pending change left");
+        assertEq(registry.verifierChangeEta(), 0, "eta cleared");
+    }
+
+    function test_proposeVerifier_refusesAVerifierWithoutCode() public {
+        AVIPRegistry registry =
+            AVIPRegistry(registryScript.deploy(_registryPlan(ANVIL_1, address(0))).registry);
+
+        vm.expectRevert(abi.encodeWithSelector(DeployCommon.MissingRole.selector, "VERIFIER"));
+        proposeScript.propose(
+            ProposeVerifier.Plan({
+                guardian: ANVIL_3,
+                registry: address(registry),
+                verifier: ANVIL_2 // an EOA: an announcement that would disable nothing
+            })
+        );
+    }
+
+    function test_proposeVerifier_refusesAGuardianTheRegistryDoesNotHave() public {
+        AVIPRegistry registry =
+            AVIPRegistry(registryScript.deploy(_registryPlan(ANVIL_1, address(0))).registry);
+        address verifier = verifierScript.deploy(ANVIL_0).verifier;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DeployCommon.WiringMismatch.selector, "guardian", uint256(uint160(ANVIL_3)), uint256(uint160(ANVIL_2))
+            )
+        );
+        proposeScript.propose(
+            ProposeVerifier.Plan({
+                guardian: ANVIL_2,
+                registry: address(registry),
+                verifier: verifier
+            })
         );
     }
 

@@ -40,7 +40,7 @@ The core insight is an opportunity-cost argument:
 | Principle | What it means in the protocol |
 |-----------|-------------------------------|
 | **Non-transferable** | Reputation cannot be bought, sold, or delegated in the reputation state. It accrues to a validator's own verifiable history. v1 assumes an identity layer rather than providing one: selling a signing key would transfer the income stream even though the token cannot be transferred (paper §10). |
-| **Verifiable** | Possession is proven with V3/Groth16 threshold proofs in the delivered circuit (measured; the on-chain verifier is not deployed in phase 2), and the statement binds the validator address, so a proof cannot be replayed for another address. Proving it does not remove trust in the roles below. |
+| **Verifiable** | Possession is proven with V3/Groth16 threshold proofs in the delivered circuit (measured; a development-key verifier is deployed on Fuji, no ceremony key is), and the statement binds the validator address, so a proof cannot be replayed for another address. Proving it does not remove trust in the roles below. |
 | **Partial** | Reputation never replaces stake entirely. A capital floor remains, so the financial component is bounded below by capital; the full Cost of Attack is not established in this version. |
 | **Out of the security path by default** | Research tooling that only reduces cost (e.g. tensor compression) never decides admission or slashing. |
 
@@ -54,7 +54,7 @@ v1 does not remove trust; it places it in five roles, all of them visible in the
 | `guardian` | The only address that may propose a change of `sequencer` or of `verifier`; the change takes effect after `CHANGE_DELAY = 2 days`, and executing it is permissionless. | A compromised guardian can install a verifier that returns `true` for any proof. The guardian is immutable and there is no rotation path yet. |
 | `slashAuthority` | The only address that may slash, and a slash debits the validator's whole recorded stake. | The debit is not adjudicated by an on-chain court; it is authorised by this role. In the Fuji phase-2 deployment it is a 2-of-3 Safe. |
 | `NOTIFIER` of the slashing channel | The only address that may request a cross-chain slash. | The destination executes without re-checking the fraud; the reference M7d report uses an EOA. |
-| `verifier` | Verifies the admission statement for a given validator. | It is mutable by design, so a circuit defect does not force a registry redeploy. In the Fuji phase-2 deployment it is `address(0)`, and `verifyThreshold` reverts `VerifierNotSet` until one is installed. |
+| `verifier` | Verifies the admission statement for a given validator. | It is mutable by design, so a circuit defect does not force a registry redeploy. In the Fuji phase-2 deployment a development-key verifier was announced on 2026-10-24 and installs after `CHANGE_DELAY`; until then `verifier` is `address(0)` and `verifyThreshold` reverts `VerifierNotSet`. No ceremony key exists, so the deployed key certifies nothing worth trusting. |
 
 ### Non-goals
 
@@ -63,7 +63,7 @@ v1 does not remove trust; it places it in five roles, all of them visible in the
 - **Not formally verified.** All proofs are mathematical arguments, not machine-checked proofs.
 - **Not a production implementation.** The off-chain components under `src/` (`reputation/`,
   `rmt/`, `zk/`, `datalayer/`) are built and tested against their own design notes, but they
-  are research code: the protocol's Fuji phase 2 is deployed, nothing has been audited, and the V3 circuit is measured, the on-chain verifier is not deployed, and the
+  are research code: the protocol's Fuji phase 2 is deployed, nothing has been audited, and the V3 circuit is measured, the on-chain verifier carries a development key (no ceremony), and the
   recursive option is deferred. What exists, what is missing and in what order it is
   being built is in
   [`docs/architecture/implementation-plan.md`](docs/architecture/implementation-plan.md).
@@ -81,12 +81,12 @@ v1 does not remove trust; it places it in five roles, all of them visible in the
 |-----------|--------|-----------------------|
 | Reputation dynamics | Positive under multiplicative jumps (0% violations) | [`verification/stochastics/`](verification/stochastics) |
 | Tensor compression | Tucker reduces storage by 70.8%; **not** used in the security path | [`verification/`](verification) |
-| ZK threshold proof | **Measured** — V3/Groth16: 94,438 constraints, 3.9 s proving, 128 B compressed proof (256 B on-chain); original circuit unsound; on-chain verifier not deployed | [`src/zk/`](src/zk), [`verification/zk/`](verification/zk) |
+| ZK threshold proof | **Measured** — V3/Groth16: 94,438 constraints, 3.9 s proving, 128 B compressed proof (256 B on-chain); original circuit unsound; development-key verifier on Fuji, no ceremony key | [`src/zk/`](src/zk), [`verification/zk/`](verification/zk) |
 | RMT collusion detection | Modularity matrix; TPR characterized for cliques | [`verification/rmt/`](verification/rmt) |
 | Data layer / fraud proofs | Equilibrium `n* = floor(B/B*)`; attacker profit `-502` (seed-42 mean with `S_slash = 10`; model bookkeeping, not an executable loss) | [`verification/data-layer/`](verification/data-layer) |
 | Bootstrap dynamics | Verified — δ/g sweep: R_std peaks at δ/g = 1.5 (0.0424, five seeds); 1.0–2.0 form a plateau | [`verification/bootstrap/`](verification/bootstrap) |
 | Mechanism design (payment) | Fee rule specified: posted price F0* = π_val − ω̄·Θ, saturated at highest-cost type | [`verification/mechanism/`](verification/mechanism) |
-| Avalanche integration | **Partial** — Fuji phase 2 deployed (chain 43113; 2-of-3 Safe as `slashAuthority`, `verifier = address(0)`); `AVIPRegistry`, `AVIPStakeVault`, `AVIPValidatorManager` and `AVIPBurnSink` deployed and wired (Table 4.4), the three phase-2 contracts verified on Snowtrace; benchmarks done (ecPairing k=4: 181,142 gas; five creations: 7,787,000 gas total); transport latency pending | [`integrations/avalanche/contracts/`](integrations/avalanche/contracts) |
+| Avalanche integration | **Partial** — Fuji phase 2 deployed (chain 43113; 2-of-3 Safe as `slashAuthority`, development-key verifier announced 2026-10-24 and installable after 2026-10-26T17:22:54Z); `AVIPRegistry`, `AVIPStakeVault`, `AVIPValidatorManager` and `AVIPBurnSink` deployed and wired (Table 4.4), the three phase-2 contracts verified on Snowtrace; benchmarks done (ecPairing k=4: 181,142 gas; five creations: 7,787,000 gas total); transport latency pending | [`integrations/avalanche/contracts/`](integrations/avalanche/contracts) |
 
 Rows without a **Partial**/**Pending** marker carry numerical backing in the paper's
 verification program; claims in the paper without numerical backing are marked
@@ -214,7 +214,8 @@ The protocol integrates with Avalanche through:
 See [`docs/architecture/`](docs/architecture) for the design notes. The code under
 [`integrations/avalanche/`](integrations/avalanche) has **no mainnet deployment** and
 has **not** been audited. Fuji phase 2 (chain 43113) is a testnet deployment with a
-2-of-3 Safe as `slashAuthority`, `verifier = address(0)` and no transport.
+2-of-3 Safe as `slashAuthority`, a development-key verifier announced on 2026-10-24
+(installed by anyone after 2026-10-26T17:22:54Z) and no transport.
 
 ---
 

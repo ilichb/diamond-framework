@@ -1,0 +1,41 @@
+No files changed, compilation skipped
+Script ran successfully.
+
+== Return ==
+0: struct DeployVerifier.Deployment Deployment({ deployer: 0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb, verifier: 0x125f2054EaCFbd9e34F991cF7A437b3dC95E3eCa, keyDigest: 0x018ce1b832c244ea2697e03f964c5f7e393bd88e2624ad6cd72de5a9dd3a319d, numPublicInputs: 4, icLength: 5 })
+
+== Logs ==
+  [m4d] script=DeployVerifier
+  [m4d] chain=43113
+  [m4d] chain.name=fuji
+  [m4d] sender=0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb
+  [m4d] Groth16Verifier=0x125f2054EaCFbd9e34F991cF7A437b3dC95E3eCa
+  [m4d] key.digest=0x018ce1b832c244ea2697e03f964c5f7e393bd88e2624ad6cd72de5a9dd3a319d
+  [m4d] key.numPublicInputs=4
+  [m4d] key.icLength=5
+  [m4d] key.source=M4dGroth16Fixtures (development setup, no ceremony)
+  [m4d] status=ok
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 43113
+
+Estimated gas price: 0.00000017 gwei
+
+Estimated total gas used for script: 2955278
+
+Estimated amount required: 0.00000000050239726 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /home/ilich/Escritorio/diamond-framework/integrations/avalanche/broadcast/DeployVerifier.s.sol/43113/run-latest.json
+
+Sensitive values saved to: /home/ilich/Escritorio/diamond-framework/integrations/avalanche/cache/DeployVerifier.s.sol/43113/run-latest.json
+

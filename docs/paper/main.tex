@@ -40,7 +40,7 @@ The Diamond Framework addresses the structural tension in Proof-of-Stake between
 
 The paper makes four contributions: a cryptoeconomic protocol in which reputation lowers the financial stake that admission requires --- a reputation-weighted access cost, not collateral at risk; a numerical verification suite that pairs every claim backed by a reproducible script with that script and states the status of the rest; a falsification log documenting twenty-two claims that were made, tested, and corrected during development; and a set of design decisions with explicit boundaries, stating where the protocol cannot deliver a guarantee.
 
-The protocol is verified numerically for the reputation dynamics, the tensor representation, the collusion detection, the payment rule, the data layer, and the bootstrap transition. The zero-knowledge threshold proof is analysed: the original circuit is shown unsound, and the delivered V3/Groth16 circuit is measured in the repository (94{,}438 constraints, 3.9~s proving, 128-byte proof); the on-chain verifier is not deployed. EVM precompile costs are measured locally with Foundry. Two benchmarks are deferred: the recursive SNARK proving time (not used by the adopted design) and the Teleporter latency, both requiring infrastructure not available in this paper.
+The protocol is verified numerically for the reputation dynamics, the tensor representation, the collusion detection, the payment rule, the data layer, and the bootstrap transition. The zero-knowledge threshold proof is analysed: the original circuit is shown unsound, and the delivered V3/Groth16 circuit is measured in the repository (94{,}438 constraints, 3.9~s proving, 128-byte proof); the on-chain verifier is not deployed with a ceremony key, although a development-key verifier runs on the Fuji testnet; EVM precompile costs are measured locally with Foundry. Two benchmarks are deferred: the recursive SNARK proving time (not used by the adopted design) and the Teleporter latency, both requiring infrastructure not available in this paper.
 \end{abstract}
 
 \tableofcontents
@@ -1330,6 +1330,8 @@ The gas of the Fuji deployment is measured and reported in Table~\ref{tab:fuji-g
 
 Fuji phase 1 is a deployment and gas test, not an incentive test. It demonstrates contract creation, role wiring, the deployment gas of Table~\ref{tab:fuji-gas}, the \texttt{verifier = address(0)} guard, and the C-Chain block-time sample. It does not demonstrate incentive compatibility, real economic value at risk, challenge latency, the Teleporter transport, or the real verifier. Teleporter cross-subnet latency remains deferred to Phase~4.
 
+Fuji phase 2 adds three things and no fourth. It re-deploys the registry, the vault and the manager with a 2-of-3 Safe as \texttt{slashAuthority} (Table~\ref{tab:fuji-gas}, 2026-10-23); it repeats the \texttt{verifier = address(0)} guard on the new registry; and on 2026-10-24 it deploys a \texttt{Groth16Verifier} and announces it through the registry's guardian rotation (Section~\ref{sec:limitations}). The announcement is a proposal, not an installation: the registry accepts \texttt{executeVerifierChange} only after \texttt{CHANGE\_DELAY} (172\,800~s), and until then \texttt{verifier()} still reads zero. The key behind that verifier is the committed development setup of the repository, not a ceremony, so the deployment answers whether the wired admission path can be reached at all, not whether the proof system is sound. It is not reached yet: with no epoch posted, \texttt{verifyThreshold} reverts \texttt{UnknownEpoch} before it consults the verifier, so what remains missing is a posted commitment and a proof, and installing the verifier is a precondition for that test rather than a substitute for it. The two transactions, their receipts and the reads after them are in \spath{integrations/avalanche/scripts/fuji_20261024/}.
+
 \subsection{Summary of the Section}
 Table~\ref{tab:sec9-summary} lists the claims of this section with their status and their source.
 \begin{table}[H]
@@ -1392,7 +1394,7 @@ The protocol assumes a rational, profit-maximizing adversary. Every security arg
 
 \textbf{The number in the leaf is attributed by the publisher, not proved.} The admission circuit certifies that a leaf $\mathrm{Poseidon}(i,r)$ is in the epoch's root and that $0 \leq r < 1$; it does not certify that $r$ is the validator's true reputation, because the epoch's entries are written by the sequencer from the ingestion of Section~\ref{sec:datalayer} and the circuit never sees the events. The map from consensus events to $T(i)$ is an off-chain computation. Three consequences follow that the protocol does not close on-chain: the epoch may hold the same address more than once with different norms, and the prover then proves the leaf that favours it; the certificate binds an entry, not a validator's tenure, so a validator that acquires a good leaf by any off-chain means is admitted; and the Frobenius norm of the epoch is not what admission prices, so no on-chain quantity measures the reputation of the whole state. Closing the first requires a uniqueness constraint on the epoch and in the circuit; closing the third requires the commitment itself as a circuit input, which is the construction of Section~\ref{sec:zk} that the delivered circuit does not use.
 
-\textbf{The contract batch is tested offline, not fully exercised on-chain.} M9a--M9c (registry authority, full-stake slash, and ejection surcharge) are implemented and pass the offline test suite. The Fuji deployment was made with \texttt{verifier = address(0)}, so \texttt{verifyThreshold} reverts \texttt{VerifierNotSet} until a real verifier is installed. A complete on-chain exercise of the admission, slash, and ejection paths therefore requires the real verifier and is Phase~2 work; the offline suite is the evidence for the contract logic in this paper.
+\textbf{The contract batch is tested offline, not fully exercised on-chain.} M9a--M9c (registry authority, full-stake slash, and ejection surcharge) are implemented and pass the offline test suite. The phase-2 registry was deployed with \texttt{verifier = address(0)}; a development-key \texttt{Groth16Verifier} was deployed and announced on 2026-10-24, but the registry installs it only after \texttt{CHANGE\_DELAY}, and no epoch has been posted, so \texttt{verifyThreshold} reverts either way --- \texttt{VerifierNotSet} until the change lands, \texttt{UnknownEpoch} after it --- and no admission has been certified on chain. A complete on-chain exercise of the admission, slash, and ejection paths therefore remains open work; the offline suite is the evidence for the contract logic in this paper.
 
 These assumptions are standard in the cryptoeconomic literature but they are not universal. The protocol's guarantees do not extend to adversaries that violate them.
 
@@ -1494,7 +1496,7 @@ The methodological limitations (calibration on synthetic data, specific model ch
 \label{sec:conclusion}
 
 \subsection{Summary}
-The Diamond Framework replaces a fraction of the financial stake required of a proof-of-stake validator with verifiable, non-transferable reputation. The protocol is built from seven components; six are verified numerically in this paper. The zero-knowledge proof is analysed: the original circuit is shown unsound, and the delivered V3 circuit is measured, although its on-chain verifier is not deployed:
+The Diamond Framework replaces a fraction of the financial stake required of a proof-of-stake validator with verifiable, non-transferable reputation. The protocol is built from seven components; six are verified numerically in this paper. The zero-knowledge proof is analysed: the original circuit is shown unsound, and the delivered V3 circuit is measured, although no ceremony-key verifier is deployed (a development-key one is live on the Fuji testnet):
 
 \begin{enumerate}[leftmargin=*]
 \item \textbf{Reputation dynamics} (Section~\ref{sec:reputation}). The process is a CIR diffusion with multiplicative downward jumps. It remains in its positive domain by construction. The exact mean first-passage time is computed by numerical integration and confirmed by two independent simulation methods.
@@ -1551,7 +1553,7 @@ Component & Status & Evidence \\
 \midrule
 Reputation dynamics & Verified & \spath{stochastics/} \\
 Tensor compression & Verified & \spath{tensor/} \\
-ZK threshold proof & V3 measured; verifier not deployed & \spath{src/zk/}, \spath{zk/} \\
+ZK threshold proof & V3 measured; dev-key verifier on Fuji, no ceremony key & \spath{src/zk/}, \spath{zk/} \\
 Collusion detection & Verified (synthetic ER); heavy-tailed negative & \spath{rmt/} \\
 Payment rule & Verified & \spath{mechanism/} \\
 Data layer & Verified (conditional model) & \spath{data-layer/} \\
@@ -1565,7 +1567,7 @@ Testnet benchmarks & Open & --- \\
 \end{tabular}}
 \end{table}
 
-The protocol is ready for external audit of the cryptographic components. The V3 circuit is measured, but the on-chain verifier is not deployed and the recursive option is deferred. The remaining open problems are stated in Section~\ref{sec:limitations} and listed in Section~\ref{sec:conclusion}.
+The protocol is ready for external audit of the cryptographic components. The V3 circuit is measured and a development-key verifier runs on the testnet, but no ceremony key is deployed and the recursive option is deferred. The remaining open problems are stated in Section~\ref{sec:limitations} and listed in Section~\ref{sec:conclusion}.
 
 \appendix
 

@@ -1,0 +1,66 @@
+# Fuji — Groth16 verifier deployment and the guardian's announcement, 2026-10-24.
+#
+# `fuji_verifier.txt` and `fuji_verifier_proposal.txt` are the forge transcripts
+# (`--broadcast`). This file is the chain side of the same two transactions, read
+# back from the RPC so that the record does not rest on the operator's terminal.
+#
+# What this closes: the phase-2 registry was deployed with `verifier = address(0)`
+# (see `../fuji_20261023/fuji_phase2_chain.txt`), so `verifyThreshold` had no
+# verifier to consult. A `Groth16Verifier` is now deployed and announced. The
+# announcement is *pending*: the registry installs it in `executeVerifierChange()`
+# once `CHANGE_DELAY` (172800 s = 2 days) has elapsed, permissionlessly.
+#
+# What this does not establish: soundness. The key is the committed development
+# setup from `test/fixtures/M4dGroth16Fixtures.sol` — no ceremony, seed in the
+# repository — and no proof has been accepted on chain. See the tail of this file.
+
+# ---- transactions (cast receipt <hash>) ----
+registry 0x8DE8C8436D0cc9ED85ea630D5324B8A580EAd69a
+verifier 0x125f2054EaCFbd9e34F991cF7A437b3dC95E3eCa
+sender   0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb   # deployer EOA, also the registry guardian
+
+  deploy  tx=0xa4c0760be19dd10368ebafe97fd520106738417b180adb6aeb443d5aa859a3fb
+          status=1 block=59962296 gasUsed=2273291 effectiveGasPrice=160
+          event VerifyingKeySet(digest=0x018ce1b832c244ea2697e03f964c5f7e393bd88e2624ad6cd72de5a9dd3a319d,
+                                numPublicInputs=4)
+  propose tx=0x184a8e6eff8c80515981a0f66264694658c2c95a0035d85d8b92f31cc696eff7
+          status=1 block=59962546 gasUsed=46299 effectiveGasPrice=160
+          event VerifierProposed(verifier=0x125f2054EaCFbd9e34F991cF7A437b3dC95E3eCa, eta=1793035395)
+# 2319590 gas in total, 0.0000000003711344 AVAX at 160 wei/gas
+
+# eta = 1793035395 = 2026-10-26T17:22:54Z; observation block 59962870 at
+# 1792863215, i.e. 172180 s (1 day 23 h 49 m 40 s) before the change lands.
+
+# ---- post-deploy reads (RPC, after block 59962546) ----
+code.verifier=5517 bytes
+verifier.verifyingKeyDigest=0x018ce1b832c244ea2697e03f964c5f7e393bd88e2624ad6cd72de5a9dd3a319d
+verifier.numPublicInputs=4                  # statementRoot, epoch, validator, certifiedNorm
+verifier.icLength=5                         # four inputs plus the constant term
+registry.verifier=0x0000000000000000000000000000000000000000
+registry.pendingVerifier=0x125f2054EaCFbd9e34F991cF7A437b3dC95E3eCa
+registry.verifierChangeEta=1793035395
+registry.guardian=0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb
+registry.CHANGE_DELAY=172800
+
+# The digest above is the one the fixture computes in Rust from the ABI layout,
+# reproduced by the contract's constructor; `test_verifierScript_installsTheDevelopmentKey`
+# asserts they agree, so the deployed bytecode holds the key the test measures.
+
+# ---- the admission path is still closed, and not by the verifier ----
+cast call $REGISTRY 'verifyThreshold(uint256,address,uint256,bytes)(bool)' 0 0x..01 0 0x
+  revert 0x80cfe5170000...0000     # UnknownEpoch(0)
+
+# `verifyThreshold` checks the epoch before the verifier (`AVIPRegistry.sol:427-431`):
+# with no commitment posted, it reverts `UnknownEpoch` whether or not a verifier is
+# installed. Installing the verifier is a precondition for a certified admission,
+# not a demonstration of one. Exercising the path needs a posted epoch *and* a proof
+# the key accepts, and the development key certifies nothing worth publishing.
+
+# ---- what a reader should conclude ----
+# 1. The `VerifierNotSet` gap described in the phase-2 record is closable without a
+#    contract change: the deployed registry already carries the proposal pair.
+# 2. The two-transaction rotation is what the paper describes: propose, wait out
+#    `CHANGE_DELAY`, execute permissionlessly. The guardian cannot swap a verifier
+#    inside a block, and a compromised guardian is visible for two days.
+# 3. Replacing the development key with a ceremony key is the same operation —
+#    `proposeVerifier` again with the ceremony verifier address. No redeploy.

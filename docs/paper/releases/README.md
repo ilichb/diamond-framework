@@ -6,8 +6,8 @@ its bytes, once published, never change.
 
 ## Files
 
-- `diamond-framework-2026-10-24.pdf` — 43 pages, 589458 bytes (v0.2.2, **current**).
-  `sha256 91f5486f13657545285e5a6309f477414a490c7f366d7b87f2f54c49d3cd5186`
+- `diamond-framework-2026-10-24.pdf` — 43 pages, 591880 bytes (v0.2.2, **current**).
+  `sha256 5651a2f31707d26c9ff9ca1009e385d046e7004e7dd5397226577670e4f3dd16`
 - `diamond-framework-2026-10-20.pdf` — 41 pages, 579260 bytes.
   `sha256 1aa1cb6c52593203116a600eec11f980ab92a64945f480efd8e6cb856b864da5`
 - `diamond-framework-2026-10-19.pdf` — 40 pages, 569259 bytes (v0.2.0, historical).
@@ -34,8 +34,15 @@ derivable, not memorized:
   composition), and the financial floor (a minimum admission cost, not a
   guarantee). The collusion detector now declares `W` as an external input and
   the on-chain alert as a non-sanction. See [`v0.2.2-notes.md`](v0.2.2-notes.md).
-- Release asset `diamond-framework-2026-10-24.pdf`: 43 pages, 589458 bytes,
-  sha256 `91f5486f13657545285e5a6309f477414a490c7f366d7b87f2f54c49d3cd5186`.
+- Release asset `diamond-framework-2026-10-24.pdf`: 43 pages, 591880 bytes,
+  sha256 `5651a2f31707d26c9ff9ca1009e385d046e7004e7dd5397226577670e4f3dd16`.
+- **The verifier left `address(0)` the same day, and the text followed.** A
+  development-key `Groth16Verifier` was deployed on Fuji and announced through the
+  registry's two-day rotation after the first export of this snapshot; the four
+  passages that said it was not deployed were corrected and the PDF re-exported
+  before any tag or DOI existed. No ceremony key and no certified admission — see
+  `v0.2.2-notes.md` §"The verifier leaves `address(0)`" and
+  `integrations/avalanche/scripts/fuji_20261024/`.
 - GitHub Release: **not tagged yet**; the tag follows the commit that adds this
   file.
 - Zenodo version DOI: **none yet.** `.zenodo.json` is set to `version: 0.2.2` /

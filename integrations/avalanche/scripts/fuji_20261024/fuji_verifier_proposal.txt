@@ -1,0 +1,41 @@
+No files changed, compilation skipped
+Script ran successfully.
+
+== Return ==
+0: struct ProposeVerifier.Announcement Announcement({ registry: 0x8DE8C8436D0cc9ED85ea630D5324B8A580EAd69a, verifier: 0x125f2054EaCFbd9e34F991cF7A437b3dC95E3eCa, previous: 0x0000000000000000000000000000000000000000, pending: 0x125f2054EaCFbd9e34F991cF7A437b3dC95E3eCa, eta: 1793035374 [1.793e9] })
+
+== Logs ==
+  [m9a] script=ProposeVerifier
+  [m9a] chain=43113
+  [m9a] chain.name=fuji
+  [m9a] sender=0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb
+  [m9a] registry=0x8DE8C8436D0cc9ED85ea630D5324B8A580EAd69a
+  [m9a] verifier.previous=0x0000000000000000000000000000000000000000
+  [m9a] verifier.pending=0x125f2054EaCFbd9e34F991cF7A437b3dC95E3eCa
+  [m9a] verifier.eta=1793035374
+  [m9a] next=executeVerifierChange() after eta (permissionless)
+  [m9a] status=ok
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 43113
+
+Estimated gas price: 0.00000017 gwei
+
+Estimated total gas used for script: 67711
+
+Estimated amount required: 0.00000000001151087 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /home/ilich/Escritorio/diamond-framework/integrations/avalanche/broadcast/ProposeVerifier.s.sol/43113/run-latest.json
+
+Sensitive values saved to: /home/ilich/Escritorio/diamond-framework/integrations/avalanche/cache/ProposeVerifier.s.sol/43113/run-latest.json
+

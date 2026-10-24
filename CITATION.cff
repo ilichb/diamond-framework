@@ -35,7 +35,7 @@ preferred-citation:
       value: "10.5281/zenodo.23268374"
       description: "v0.1.0 (2026-10-12)"
 # The artifact of v0.2.2 is docs/paper/releases/diamond-framework-2026-10-24.pdf
-# (43 pp, sha256 91f5486f13657545285e5a6309f477414a490c7f366d7b87f2f54c49d3cd5186).
+# (43 pp, sha256 5651a2f31707d26c9ff9ca1009e385d046e7004e7dd5397226577670e4f3dd16).
 # It has no Zenodo DOI yet: the deposit is the next step, and the version DOI is
 # added here in a follow-up commit. Until then the published version is v0.1.0
 # (DOI 10.5281/zenodo.23268374) and the preferred citation below points at it.

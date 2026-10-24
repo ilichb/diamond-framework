@@ -1412,3 +1412,53 @@ con `ots upgrade` cuando los calendarios agreguen.
 **Estado.** R-14 se commitea como descendiente de `c3be11f`; no se enmienda.
 No se toca `integrations/` ni los contratos: el NatSpec de `S_f*`
 (`0.2 + 0.2/(1+r)` por `0.2 + 0.8/(1+r)`) queda para el lote de código.
+
+## R-15 — v0.2.2: el verificador deja `address(0)` y el texto lo sigue (2026-10-24)
+
+Fecha: `2026-10-24T17:53:06Z` (sello de `fase0_anchor.sh`), tras R-14 del mismo
+día. Motivo: R-14 exportó el PDF afirmando en cuatro sitios que el verificador
+on-chain no está desplegado; el mismo día se desplegó uno (clave de desarrollo,
+Fuji) y se anunció al registro. La afirmación pasó a ser falsa en la cadena, así
+que se corrigió el texto y se re-exportó el snapshot **antes** de que existiera
+etiqueta o DOI: `diamond-framework-2026-10-24.pdf` es todavía la única cadena de
+bytes publicable de v0.2.2, y la exportación que sustituye queda en el historial de
+git sin citarse.
+
+**Cadena de custodia.** `bash verification/fase0_anchor.sh` →
+`output_manifest.sha256` (38 pares, idéntico byte a byte) y `audit_manifest.sha256`
+nuevos; `--check` → exit 0 (38 pares, 11 pares y HEAD `f2d3993` idénticos).
+`bash verification/audit-gate.sh` → **PASS=11 FAIL=0 SKIP=0**. El par que cambia es
+`main.tex`; los otros diez del root no se tocan, así que la diferencia entre el root
+anterior y el nuevo es exactamente la del documento.
+
+| campo | valor |
+|---|---|
+| Artefacto sellado | `verification/anchor_root.sha256` (11 pares) |
+| SHA-256 del artefacto | `ca83694715739ac2ce8eb24874f3c33c1df69bbb4852b802e85dac899b23b020` (el de R-14 era `38ee9e57…`) |
+| Recibo | `verification/anchor_root.sha256.ots`, **840 bytes** |
+| SHA-256 del recibo | `be59309eacdbca8dd9e1257a1e51efb85b77303e5fcde95d32a2d819e21f24c8` |
+| Atestaciones | **4 `PendingAttestation`** (`finney.calendar.eternitywall.com`, `alice` y `bob` de `btc.calendar.opentimestamps.org`, `btc.calendar.catallaxy.com`), **0 `BitcoinBlockHeaderAttestation`** — derivado de `ots info` |
+
+**PDF.** `docs/paper/releases/diamond-framework-2026-10-24.pdf`, 43 páginas,
+591.880 bytes, sha256 `5651a2f3…`. `pdflatex` ×3 → 0 errores, 0 undefined,
+0 overfull/underfull. Las notas del release llevan la sección *The verifier leaves
+`address(0)`*, que nombra los cuatro pasajes corregidos.
+
+**Preservación.** El `.ots` pendiente de R-14 (`86939565…`, 910 bytes) sellaba el
+root `38ee9e57…`, que ya no existe: se conserva en
+`verification/ots-history/anchor_root-38ee9e57.sha256.ots` y **no se cita como
+evidencia** —un sello pendiente sobre un artefacto que ya no es el artefacto no
+prueba nada—. Fuera del repositorio sigue `~/p9/anchor_root.sha256.5ff84501_pre_R14`
+y el recibo promovido de R-13 (`278e4596…`, 3 atestaciones Bitcoin), que cubren un
+root anterior y tampoco se citan para este.
+
+**Alcance.** Tocados y sellados: `main.tex` (contenido), `audit_manifest.sha256` y
+`anchor_root.sha256` (derivados), el `.ots`. No sellados: `releases/README.md`,
+`v0.2.2-notes.md`, `.zenodo.json`, `CITATION.cff`, este recibo, y el lote de código
+—`AVIPValidatorManager.sol` (NatSpec de `S_f*`), `DeployVerifier.s.sol`,
+`ProposeVerifier.s.sol`, `DeployScripts.t.sol` y `scripts/fuji_20261024/`—, que no
+forma parte de la cadena de custodia del paper.
+
+**Estado.** R-15 se commitea como descendiente de `f2d3993`; no se enmienda. La
+promoción del recibo (`ots upgrade`) queda pendiente de que los calendarios agreguen
+en Bitcoin, como en R-14.

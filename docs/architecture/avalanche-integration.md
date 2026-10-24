@@ -50,7 +50,13 @@ to a live network, and none of it had been audited.
 > **nothing has been audited**.
 > Phase 1 of §6 is deployed — registry, vault and manager, with the token and
 > sink as inputs and `verifier = address(0)`, so the registry refuses to certify
-> (`VerifierNotSet`). The Teleporter/AWM transport and the Subnet L1 (phase 4)
+> (`VerifierNotSet`). Phase 2 re-deploys the three contracts with the 2-of-3 Safe as
+> `slashAuthority` and, on 2026-10-24, deploys and announces a development-key
+> `Groth16Verifier` (`integrations/avalanche/scripts/fuji_20261024/`). Because
+> `verifyThreshold` checks the epoch before the verifier, the refusal on the phase-2
+> registry is `UnknownEpoch` until a commitment is posted, and `VerifierNotSet` is
+> what an epoch would meet until the announced change lands. Either way the
+> admission path has still not been exercised on chain. The Teleporter/AWM transport and the Subnet L1 (phase 4)
 > remain pending, and M9a–M9c are implemented and tested offline but have not
 > been exercised on-chain. The phase-1 broadcast was a manual run with a funded
 > key and a live endpoint; no milestone automates it.

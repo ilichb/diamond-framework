@@ -16,7 +16,7 @@ import {IAVIPValidatorManager} from "./interfaces/IAVIPValidatorManager.sol";
 ///        `C_R(r)  = C_R^inf * r / (1 + r)`, `C_R^inf = 0.8`, `r = T(i)`
 ///
 ///      With `Theta = 1.0` and `C_R^inf = 0.8`, `Theta - C_R(r) =
-///      0.2 + 0.2/(1 + r) > S_min = 0.2` for every finite `r`: the floor is
+///      0.2 + 0.8/(1 + r) > S_min = 0.2` for every finite `r`: the floor is
 ///      **inert** and `S_f*` is the first term. The `max` is kept because it is
 ///      what the paper specifies, and because it would start to bind if `S_min`
 ///      were ever raised above `Theta - C_R^inf` (§5.2.4).
