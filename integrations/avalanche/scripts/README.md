@@ -162,9 +162,10 @@ move. Against the live deployment it prints `PASS=11 FAIL=0` with a 2-of-3 Safe,
 
 The order, once the preflight is green:
 
-1. Create the Safe with `CreateSafe.s.sol` (below). Owners and threshold are a
-   governance decision; the preflight only requires that the address has code
-   and that its threshold is at least 2.
+1. Create the Safe with `CreateSafe.s.sol` (below) — **done on 2026-10-23**:
+   `0x673F7725CF17A481299c7073486F8Fb222a66813`, 2-of-3. Owners and threshold are
+   a governance decision; the preflight only requires that the address has code
+   and that its threshold is at least 2, and it now has both.
 2. Run the preflight with that Safe as `SLASH_AUTHORITY`; `FAIL=0` or stop.
 3. `DeployFujiPhase1` with `--rpc-url … --broadcast`, from
    `~/.config/avip/deployer.json` (0.5 AVAX at the time of writing, roughly 6M
@@ -217,6 +218,41 @@ a contract: on live Fuji state, with throwaway keys, two signatures execute a
 transaction and advance the nonce, and one signature reverts. It skips itself
 when `FUJI_RPC_URL` is unset, so the offline suite stays green (`294 passed, 1
 skipped`); run it with `FUJI_RPC_URL=... forge test --match-path test/SafeFork.t.sol`.
+
+### The deployed Safe (2-of-3, 2026-10-23)
+
+| field | value |
+|---|---|
+| address | `0x673F7725CF17A481299c7073486F8Fb222a66813` |
+| threshold | 2 |
+| owners | `0x27923A94B9F45D0917eC998a7fBF32b12B990A01`, `0x8022bbC2Abd0406A97569dFd2b852a4E01e44ce9`, `0xDaa59b402C66D885059D2e5B81bCffF6FF5C0E47` |
+| deployer (gas only, not an owner) | `0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb` |
+| transaction | `0x3c39a83e6acdf38a87789d1dbd90c11317329139e9623e85ac7175fa09772112`, block 59932344, 305835 gas |
+| evidence | `scripts/fuji_20261023/fuji_safe.txt`, `scripts/fuji_20261023/safe.json` |
+
+Reading the policy back needs no key:
+
+```shell
+SAFE=0x673F7725CF17A481299c7073486F8Fb222a66813
+cast call $SAFE 'getThreshold()(uint256)' --rpc-url "$FUJI_RPC_URL"   # 2
+cast call $SAFE 'getOwners()(address[])'  --rpc-url "$FUJI_RPC_URL"   # the three above
+cast call $SAFE 'VERSION()(string)'       --rpc-url "$FUJI_RPC_URL"   # "1.4.1"
+cast call $SAFE 'nonce()(uint256)'        --rpc-url "$FUJI_RPC_URL"   # 0
+```
+
+The proxy is deliberately **not** verified on Snowtrace: its bytecode is the
+factory's, not this repository's, so there is no source here to compile and
+compare against; publishing something would be a claim nothing in the repo
+supports. Correctness is the read-back above plus `getcontractcreation`, which
+names `0x4e1DCf7A…` as the factory and the deployer as the creator. The deployer
+is not an owner, so no single key decides a slash. The deployment address is also
+reproducible: the same owners, threshold and `saltNonce=0` from that deployer
+predict it by CREATE2, which is what the dry run prints.
+
+What the chain cannot show is that the three owner addresses are held by three
+different people. That is a governance fact, audited in the explorer and in the
+Safe's configuration, not in a `getOwners()` call — and it is why P-39 is closed
+by the *redeployment* below, not by the Safe existing.
 
 ### The dry run
 

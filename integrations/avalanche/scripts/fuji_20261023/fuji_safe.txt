@@ -1,0 +1,123 @@
+# Safe deployment — Avalanche Fuji, 2026-10-23.
+#
+# Command (operator terminal, verbatim below):
+#   cd integrations/avalanche
+#   export FUJI_RPC_URL='https://api.avax-test.network/ext/bc/C/rpc'
+#   export DEPLOYER=0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb
+#   export SAFE_OWNER_1=0x8022bbC2Abd0406A97569dFd2b852a4E01e44ce9
+#   export SAFE_OWNER_2=0x27923A94B9F45D0917eC998a7fBF32b12B990A01
+#   export SAFE_OWNER_3=0xDaa59b402C66D885059D2e5B81bCffF6FF5C0E47
+#   export SAFE_THRESHOLD=2
+#   forge script scripts/CreateSafe.s.sol:CreateSafe \
+#       --rpc-url "$FUJI_RPC_URL" --broadcast --account deployer
+#
+# Deployer pays gas and is not an owner. No owner key was used: `setup` runs
+# inside the proxy constructor and checks no signature.
+# The same environment without `--broadcast` printed the same address, which is
+# what a CREATE2 address with saltNonce 0 is supposed to do.
+
+No files changed, compilation skipped
+Script ran successfully.
+
+== Return ==
+0: struct CreateSafe.Deployment Deployment({ deployer: 0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb, safe: 0x673F7725CF17A481299c7073486F8Fb222a66813, owners: [0x27923A94B9F45D0917eC998a7fBF32b12B990A01, 0x8022bbC2Abd0406A97569dFd2b852a4E01e44ce9, 0xDaa59b402C66D885059D2e5B81bCffF6FF5C0E47], threshold: 2, saltNonce: 0 })
+
+== Logs ==
+  [safe] script=CreateSafe
+  [safe] chain=43113
+  [safe] chain.name=fuji
+  [safe] sender=0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb
+  [safe] safe=0x673F7725CF17A481299c7073486F8Fb222a66813
+  [safe] threshold=2
+  [safe] owners.count=3
+  [safe] owners.0=0x27923A94B9F45D0917eC998a7fBF32b12B990A01
+  [safe] owners.1=0x8022bbC2Abd0406A97569dFd2b852a4E01e44ce9
+  [safe] owners.2=0xDaa59b402C66D885059D2e5B81bCffF6FF5C0E47
+  [safe] singleton=0x41675C099F32341bf84BFc5382aF534df5C7461a
+  [safe] factory=0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67
+  [safe] fallbackHandler=0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99
+  [safe] multiSendCallOnly=0x40A2aCCbd92BCA938b02010E17A5b8929b49130D
+  [safe] check.VERSION=1.4.1
+  [safe] check.nonce=0
+  [safe] saltNonce=0
+  [safe] status=ok
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 43113
+
+Estimated gas price: 0.00000017 gwei
+
+Estimated total gas used for script: 447283
+
+Estimated amount required: 0.00000000007603811 ETH
+
+==========================
+Enter keystore password:
+
+##### fuji
+✅  [Success] Hash: 0x3c39a83e6acdf38a87789d1dbd90c11317329139e9623e85ac7175fa09772112
+Block: 59932344
+Paid: 0.0000000000489336 ETH (305835 gas * 0.00000016 gwei)
+
+✅ Sequence #1 on fuji | Total Paid: 0.0000000000489336 ETH (305835 gas * avg 0.00000016 gwei)
+                                                                                
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /home/ilich/Escritorio/diamond-framework/integrations/avalanche/broadcast/CreateSafe.s.sol/43113/run-latest.json
+
+Sensitive values saved to: /home/ilich/Escritorio/diamond-framework/integrations/avalanche/cache/CreateSafe.s.sol/43113/run-latest.json
+
+# ---- post-deploy reads against Fuji (RPC), block 59932344 ----
+# cast code 0x673F7725CF17A481299c7073486F8Fb222a66813
+code=0x608060405273ffffff…                                  # proxy bytecode, non-empty
+# cast call <safe> 'getThreshold()(uint256)'
+getThreshold()=2
+# cast call <safe> 'getOwners()(address[])'
+getOwners()=[0x27923A94B9F45D0917eC998a7fBF32b12B990A01, 0x8022bbC2Abd0406A97569dFd2b852a4E01e44ce9, 0xDaa59b402C66D885059D2e5B81bCffF6FF5C0E47]
+# cast call <safe> 'VERSION()(string)'
+VERSION()="1.4.1"
+# cast call <safe> 'nonce()(uint256)'
+nonce()=0
+# cast storage <safe> 0
+slot0=0x00000000000000000000000041675c099f32341bf84bfc5382af534df5c7461a   # singleton
+# cast storage <safe> keccak256("fallback_manager.handler.address")
+handler.slot=0x000000000000000000000000fd0732dc9e303f09fcef3a7388ad10a83459ec99
+
+# ---- receipt of 0x3c39a83e…2112 ----
+status=1 (success)
+from=0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb        # deployer, the only signer
+to=0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67          # canonical SafeProxyFactory 1.4.1
+blockNumber=59932344
+gasUsed=305835
+# event ProxyCreation(factory 0x4e1DCf7A…, safe 0x673F7725…, singleton 0x41675C09…)
+# event Setup(safe 0x673F7725…): threshold=2, to=0x0, handler=0xfd0732Dc…, owners=[0x27923A94…, 0x8022bbC2…, 0xDaa59b40…]
+
+# ---- same reads through the explorer's API (api-testnet.snowtrace.io) ----
+# module=contract&action=getcontractcreation&contractaddresses=0x673F7725…
+contractAddress=0x673f7725cf17a481299c7073486f8fb222a66813
+contractCreator=0x12458cd567c9f01cba220fe3f2af97034f9635bb
+contractFactory=0x4e1dcf7ad4e460cfd30791ccc4f9c8a4f820ec67
+txHash=0x3c39a83e6acdf38a87789d1dbd90c11317329139e9623e85ac7175fa09772112
+# module=proxy&action=eth_getCode&address=0x673F7725…
+eth_getCode=0x608060405273ffffffffffffffffffffffffffffffffffffffff600054167fa619486e00000000000000
+# module=proxy&action=eth_call, selector 0xe75235b8 (getThreshold)
+eth_call=getThreshold -> 0x…02
+# selector 0xa0e67e2b (getOwners)
+eth_call=getOwners -> 0x…03 then 0x27923a94…, 0x8022bbc2…, 0xdaa59b40…
+# selector 0xffa1ad74 (VERSION)
+eth_call=VERSION -> 0x…05 "1.4.1"
+# selector 0xaffed0e0 (nonce)
+eth_call=nonce -> 0x…00
+
+# ---- verdict ----
+# A 2-of-3 Safe at 0x673F7725CF17A481299c7073486F8Fb222a66813, canonical 1.4.1
+# singleton and factory, owners sorted ascending, deployer not an owner, nonce 0.
+# The proxy is not verified on Snowtrace and should not be: its bytecode is the
+# factory's, not this repository's. The evidence is the read-back policy above
+# plus `getcontractcreation` naming the canonical factory.

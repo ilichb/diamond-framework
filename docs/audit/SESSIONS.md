@@ -33,6 +33,7 @@ hay `session-log.md` en este repositorio: no inventar uno.
 | S-020 | 2026-10-22 | P-39/P-40 y el despliegue del transporte M7d | este commit | 5ff84501… | cerrada; 294 tests, 15 casos de dry run, ancla intacta |
 | S-021 | 2026-10-22 | Fase 2: preflight, y el transcript de fase 1 que no verificaba | este commit | 5ff84501… | cerrada; 17 casos de dry run, ancla intacta; el despliegue espera al Safe |
 | S-022 | 2026-10-23 | CreateSafe: el multisig sin llaves, y P11 | este commit | 5ff84501… | cerrada; 294 + 1 skip, dry run intacto; el Safe espera owners y umbral |
+| S-023 | 2026-10-23 | El Safe 2-de-3 en Fuji: una política, no una llave | este commit | 5ff84501… | cerrada; Safe `0x673F77…` vivo (305835 gas); la fase 2 espera el preflight |
 
 S-016 cubre `triage-mapa-2026-10-22.md`, el acta
 `checklist-matriz-evidencia-2026-10-22.md` y la v2
@@ -241,3 +242,45 @@ En cuanto el Safe exista: preflight con esa dirección (`PASS=11`), `DeployFujiP
 el ancla: los 11 ficheros siguen igual, `fase0_anchor.sh --check` sale 0 y el gate
 en `PASS=11 FAIL=0 SKIP=0` sobre `5ff84501…`. El transporte (I-1.4) sigue igual:
 el script existe, los peers de la otra cadena no.
+
+S-023 ejecuta el paso que S-022 dejó escrito, desde el terminal del operador y no
+desde este: el Safe existe en Fuji en `0x673F7725CF17A481299c7073486F8Fb222a66813`,
+2-de-3, en la transacción `0x3c39a83e…2112`, bloque 59932344, 305835 gas. Los
+owners son `0x27923A94…`, `0x8022bbC2…` y `0xDaa59b40…`, ordenados ascendentemente
+porque el script ordena antes de codificar; el deployer —`0x12458CD5…`, el mismo
+de fase 1— firmó y pagó, y **no** figura entre ellos. La simulación previa imprimió
+esa misma dirección, que es lo que un CREATE2 con `saltNonce=0` tiene que hacer, y
+el script aborta si la creada no coincide con la predicha; no hubo ninguna llave de
+owner en el proceso.
+
+La prueba no es el `Success` de forge, es la relectura: `getThreshold()` = 2,
+`getOwners()` = los tres, `VERSION()` = `1.4.1`, `nonce()` = 0, el singleton
+`0x41675C09…` en el slot 0 del proxy y el handler `0xfd0732Dc…` en
+`keccak256("fallback_manager.handler.address")`. El recibo añade los dos eventos:
+`ProxyCreation` de la factory canónica `0x4e1DCf7A…` y `Setup` del propio Safe con
+umbral 2, `to=0x0`, el handler y los tres owners. Y las cuatro lecturas se repiten
+por la API de Snowtrace (`eth_getCode`, `eth_call` con los selectores `0xe75235b8`,
+`0xa0e67e2b`, `0xffa1ad74`, `0xaffed0e0`), con `getcontractcreation` nombrando la
+factory como `contractFactory` y al deployer como `contractCreator`: la misma
+política leída desde fuera del RPC.
+
+Dos cosas que esta evidencia **no** dice, y conviene escribirlas. Que la dirección
+tenga código no prueba un umbral —por eso P11 lee `getThreshold()`—, y que el
+umbral sea 2 no prueba que las tres llaves estén en manos distintas: eso se audita
+en el explorador y en la configuración del Safe, no en una llamada. Y el proxy no
+se verifica en Snowtrace a propósito: su bytecode es el de la factory, no el de
+este repositorio, así que no hay fuente que compilar y comparar; publicarla sería
+afirmar algo que nada del repo sostiene. La reproducibilidad se demuestra de otra
+forma: mismos owners, mismo umbral, mismo `saltNonce` y mismo deployer dan la misma
+dirección, que es justo lo que imprime el dry run.
+
+El estado no cambia todavía: `slashAuthority` del manager de fase 1 sigue siendo
+la EOA `0xcdFBb0c0…2ec7`, porque el rol es inmutable y el arreglo es el
+redespliegue. Lo que cambia es que el preflight ya tiene su entrada: con esta
+dirección como `SLASH_AUTHORITY` debe salir `PASS=11 FAIL=0`, y entonces
+`DeployFujiPhase1 --broadcast` y `verify_fuji.sh <transcript> --require-multisig`
+cierran P-39 y P-40 a la vez. La evidencia queda versionada en
+`scripts/fuji_20261023/fuji_safe.txt` —la salida del operador más las lecturas y
+la respuesta del explorador— y `scripts/fuji_20261023/safe.json`, copia del run de
+forge, porque `broadcast/` está en `.gitignore` y ahí el recibo se pierde con el
+próximo `forge clean`. Ancla y gate intactos: `PASS=11 FAIL=0 SKIP=0`.

@@ -82,7 +82,7 @@ allí.
 | P-36 | Bibliografía: Bauer–Jost está mal citado (CPAM 2012 → *Comm. Anal. Geom.* 21(4):787–845, 2013) y faltan referencias para Kesten–Stigum, Feller y EIP-196/197 | Baja (paper) | Confirmado con Crossref/arXiv | Sí (tercera lectura) |
 | P-37 | La permutación Poseidon reproduce los vectores t=3 de circomlib; el digest usa `state[1]` (rate) y no el `state[0]` (capacidad) de circomlib. Es una convención de esponja válida, no un defecto del circuito; sólo limita la interoperabilidad con primitivas de 2 entradas | Baja (interoperabilidad; no soundness) | Confirmado con sonda: 2 vectores t=3, absorción 1–10/500 y ambigüedad de longitud documentada | Sí (sonda de cierre; nota de documentación) |
 | P-38 | La prueba de admisión tiene todo el statement público y su testigo es el camino de Merkle: sólo oculta la posición de la hoja. No aporta zero-knowledge sobre la norma ni ahorra gas frente a `verifyEntry` | Media (diseño y honestidad del artefacto; no soundness) | Confirmado por lectura (`admission.rs:212-276`) y por medición: 306,275 gas fríos frente a una inclusión keccak de pocos miles | Sí (adenda M4d) |
-| P-39 | El `slashAuthority` del despliegue de Fuji es una EOA y el rol es inmutable: una sola clave decide todo slash del stake registrado | **Alta** (custodia/operacional) | Confirmado on-chain: `cast code` = `0x` (2026-10-22); los scripts de despliegue lo rechazan y P11 rechaza un Safe con umbral < 2; la creación del Safe ya no exige llaves de owner (`CreateSafe.s.sol`, S-022). Sigue abierto hasta que la fase 2 se despliegue con ese Safe | Sí (S-020, S-021, S-022) |
+| P-39 | El `slashAuthority` del despliegue de Fuji es una EOA y el rol es inmutable: una sola clave decide todo slash del stake registrado | **Alta** (custodia/operacional) | Confirmado on-chain: `cast code` = `0x` (2026-10-22); los scripts de despliegue lo rechazan y P11 rechaza un Safe con umbral < 2; la creación del Safe ya no exige llaves de owner (`CreateSafe.s.sol`, S-022), y el Safe 2-de-3 está desplegado en Fuji en `0x673F7725…6813` (S-023). Sigue abierto hasta que la fase 2 se despliegue con ese Safe: el rol del manager vivo sigue en la EOA | Sí (S-020, S-021, S-022, S-023) |
 | P-40 | El despliegue de Fuji es de un build anterior a M-15: `sourceChainId()` y `formulaDigest()` revierten en el registry desplegado, y su transcript no tiene las claves `origin.*` que `verify_fuji.sh` exige | Media (trazabilidad; operacional) | Confirmado on-chain: ambos getters revierten; `sequencer()` y `TENSOR_SIZE()` responden | Sí (S-020, S-021) |
 
 **Remediación posterior a este worksheet.** M4d (plan §5.5.11) cierra **P-01** y
@@ -2985,6 +2985,16 @@ exige un vault nuevo; el registry entra en el redespliegue por P-40.
    `PASS=11 FAIL=0 SKIP=0`; 1-de-1 da `FAIL P11 … one signature still decides
    every slash (P-39)` con salida 1; la EOA de fase 1 da `SKIP P11` porque P5 ya
    la rechaza.
+7. Hecho en S-023: el Safe está desplegado en Fuji. `0x673F7725CF17A481299c7073486F8Fb222a66813`,
+   umbral 2, owners `0x27923A94…`, `0x8022bbC2…` y `0xDaa59b40…`; el deployer
+   (`0x12458CD5…`) pagó los 305835 gas de la transacción `0x3c39a83e…2112` y no es
+   owner. La prueba es la relectura de la política —umbral, owners, `VERSION() =
+   1.4.1`, `nonce() = 0`, singleton en el slot 0, handler en su slot— y el
+   `getcontractcreation` de Snowtrace, que nombra la factory canónica
+   `0x4e1DCf7A…`. Evidencia versionada en
+   `integrations/avalanche/scripts/fuji_20261023/fuji_safe.txt` y `safe.json`.
+   El punto 3 sigue pendiente: mientras el manager de fase 1 siga vivo, el rol es
+   la EOA.
 
 **Lo que sigue sin poder afirmarse.** Que la address sea un contrato no prueba un
 umbral por sí solo, y un Safe anterior a 1.1.0 no expone `getThreshold()`; con un
