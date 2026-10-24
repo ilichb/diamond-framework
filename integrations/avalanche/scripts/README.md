@@ -270,7 +270,10 @@ Steps 1 and 2 were run on 2026-10-24 and are recorded in
 46 299 to announce, `eta = 1793035395` (2026-10-26T17:22:54Z). Step 3 is pending by
 construction; the record says which account may send it (any) and what to read
 afterwards (`registry.verifier()` non-zero, `pendingVerifier()` zero,
-`verifierChangeEta()` zero).
+`verifierChangeEta()` zero). Calling it early is refused by the delay itself: at
+block 59,962,870, 169,860 s before the `eta`, it reverted
+`ChangeNotReady(1793035395, 1792865535)` — for the guardian as well, since the
+check is on `block.timestamp` and not on the sender.
 
 What this does **not** show is an admission. With no epoch posted, `verifyThreshold`
 reverts `UnknownEpoch` before it ever reaches the verifier

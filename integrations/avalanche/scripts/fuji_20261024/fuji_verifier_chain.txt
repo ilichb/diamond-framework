@@ -56,6 +56,12 @@ cast call $REGISTRY 'verifyThreshold(uint256,address,uint256,bytes)(bool)' 0 0x.
 # not a demonstration of one. Exercising the path needs a posted epoch *and* a proof
 # the key accepts, and the development key certifies nothing worth publishing.
 
+# ---- the delay is enforced, not merely recorded ----
+cast call $REGISTRY 'executeVerifierChange()' --from $sender
+  revert 0xaac2d7db0000...6adf8c83 0000...6adcf4fd    # ChangeNotReady(1793035395, 1792865535)
+# 169,860 s early at that block. The proposal is visible for two days and cannot be
+# executed by the guardian either: the check is on `block.timestamp`, not on the sender.
+
 # ---- what a reader should conclude ----
 # 1. The `VerifierNotSet` gap described in the phase-2 record is closable without a
 #    contract change: the deployed registry already carries the proposal pair.
