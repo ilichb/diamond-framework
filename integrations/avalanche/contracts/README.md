@@ -179,7 +179,11 @@ and [`docs/architecture/avalanche-integration.md`](../../../docs/architecture/av
   (`DeployCommon.SlashAuthorityIsEOA`). The phase-1 Fuji deployment predates that
   guard: `cast code` returns `0x` for its `0xcdFB…2ec7`. Because both the role and
   the vault's `bindManager` are one-shot, replacing it is a redeployment (phase 2),
-  not a setter call.
+  not a setter call. **Phase 2 is deployed (2026-10-23)**: the manager at
+  `0x88e60aA2…0317` has `slashAuthority = 0x673F7725…6813`, a 2-of-3 Safe whose
+  `getThreshold()` reads 2, and `verify_fuji.sh --require-multisig` passes against
+  its transcript. The phase-1 manager and vault are still on chain and are what
+  P-39 describes; the live pair is now the phase-2 one.
 - **Not covered here**: token custody/transfer and fund movement (M8, the Treasury
   Module), removal from the validator set, weight recomputation and reward
   distribution (M6/M7).

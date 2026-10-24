@@ -1,0 +1,41 @@
+# Phase 2 on Avalanche Fuji — chain-side evidence, 2026-10-23.
+#
+# `fuji_phase2.txt` is the forge transcript. It does not contain the per-transaction
+# lines because forge writes those to stderr and the operator's `tee` captured
+# stdout only; the three hashes below are the ones its terminal printed, re-read
+# from the chain here.
+#
+# `verify_fuji.sh fuji_phase2.txt --require-multisig` returned OK twice: right after
+# the broadcast, and again against this versioned copy.
+
+# ---- receipts (cast receipt <hash>) ----
+registry 0x8DE8C8436D0cc9ED85ea630D5324B8A580EAd69a
+  tx=0x0152dc3abc9289c634970a4007df01452b536d0bb68da77b0c571ea32743bebd
+  status=1 block=59935785 gasUsed=2447430
+vault 0xD560F40BfEd79D8a3b39279fc5Cd8149f71b7e60
+  tx=0x25e4ff4d0e96f222a4bd1722aad2204657d0d6d75074bed2a333632773b284aa
+  status=1 block=59935786 gasUsed=1948628
+manager 0x88e60aA2f031B35C823CE4b8994804c025B80317
+  tx=0x38f157a8940fbcc1917d7f25a2f4cdef4e87a8766184618fecd6c0c6b9f86d6e
+  status=1 block=59935786 gasUsed=1585517
+# total 5981575 gas, 0.000000000957052 AVAX at 160 wei/gas
+
+# ---- post-deploy reads (RPC, after block 59935786) ----
+code.registry=10833 bytes
+code.vault=8747 bytes
+code.manager=6586 bytes
+code.slashAuthority=171 bytes
+manager.slashAuthority=0x673F7725CF17A481299c7073486F8Fb222a66813   # the 2-of-3 Safe
+manager.registry=0x8DE8C8436D0cc9ED85ea630D5324B8A580EAd69a
+vault.manager=0x88e60aA2f031B35C823CE4b8994804c025B80317
+registry.sourceChainId=0xce12864578eb11634416932021724652c9a481fbf6a42ba77cde799fad091bc1
+registry.formulaDigest=0x403af787fee703ec18c440a91e8405b72dc55ea700ec557263baaab0e24a4cfc
+
+# ---- what this closes ----
+# P-39: the manager that matters now has a contract, not an EOA, deciding slashes,
+# and that contract answers getThreshold() = 2 over three owner addresses. The
+# phase-1 manager (`0x7C92D08B…`) is untouched and still points at `0xcdFB…2ec7`;
+# it is now a historical object, not the live deployment.
+# P-40: the registry in use exposes sourceChainId() and formulaDigest(), and the
+# two values above are the ones the transcript logs, so `verify_fuji.sh` checks
+# them against the chain instead of trusting the text.

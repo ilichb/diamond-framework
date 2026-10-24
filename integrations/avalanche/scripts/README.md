@@ -135,6 +135,10 @@ setter and no proposal pair (P-39); and its registry predates M-15, so it has no
 (P-40). The vault is bound to that manager and `bindManager` is one-shot, so the
 fix is a redeployment — registry, vault and manager — with a Safe as the slasher.
 
+**That redeployment is done (2026-10-23).** Registry `0x8DE8C843…`, vault
+`0xD560F40B…`, manager `0x88e60aA2…`, with the 2-of-3 Safe as slasher; the
+numbers and the chain-side evidence are in "The phase-2 deployment" below.
+
 `DeployFujiPhase1.s.sol` is that script: it deploys the current registry (origin
 included), the vault and the manager, and `_requireSlasher` refuses a slasher
 without code. What it cannot check is its own input, so `preflight_fase2.sh`
@@ -167,14 +171,59 @@ The order, once the preflight is green:
    a governance decision; the preflight only requires that the address has code
    and that its threshold is at least 2, and it now has both.
 2. Run the preflight with that Safe as `SLASH_AUTHORITY`; `FAIL=0` or stop.
+   *Done: `PASS=11 FAIL=0 SKIP=0`, with `P11` reading `2-of-3` off the chain.*
 3. `DeployFujiPhase1` with `--rpc-url … --broadcast`, from
-   `~/.config/avip/deployer.json` (0.5 AVAX at the time of writing, roughly 6M
-   gas for the three contracts).
+   the `deployer` keystore (0.5 AVAX at the time of writing; 5981575 gas for the
+   three contracts in the event).
+   *Done: 2026-10-23, see below.*
 4. `verify_fuji.sh <transcript> --require-multisig`. This is the first run that
    can check `origin.*` and the slasher's *kind* against the chain; the phase-1
    transcript cannot pass it, by design.
+   *Done: `OK`, twice — after the broadcast and against the versioned copy.*
 5. Only then the transport: `DeployTransport.s.sol` needs the peer endpoints of
    the other chain, which do not exist yet (`I-1.4`).
+
+### The phase-2 deployment (2026-10-23)
+
+The live Fuji deployment is now this one. The 2026-10-18 phase-1 objects remain on
+chain and are what P-39 and P-40 described; nothing below touches them.
+
+| role | address / value |
+|---|---|
+| registry | `0x8DE8C8436D0cc9ED85ea630D5324B8A580EAd69a` — tx `0x0152dc3a…bebd`, block 59935785, 2447430 gas |
+| vault | `0xD560F40BfEd79D8a3b39279fc5Cd8149f71b7e60` — tx `0x25e4ff4d…84aa`, block 59935786, 1948628 gas |
+| manager | `0x88e60aA2f031B35C823CE4b8994804c025B80317` — tx `0x38f157a8…86d6e`, block 59935786, 1585517 gas |
+| slashAuthority | `0x673F7725CF17A481299c7073486F8Fb222a66813` (the 2-of-3 Safe) |
+| sequencer | `0xFCD6b18B546e94e3289d514Ba89174531aFE101E` |
+| guardian | `0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb` (the deployer; an EOA) |
+| verifier | `0x0` |
+| token / sink | `0xf1db80d2…cA0C` / `0xE0297ab1…3fA4d`, reused from phase 1 |
+| `wadPerUnit` | 1 |
+| origin | `sourceChainId=0xce128645…091bc1`, `formulaDigest=0x403af787…a4cfc` |
+| gas | 5981575 in three transactions, ~0.00000000096 AVAX at 160 wei/gas |
+| evidence | `fuji_20261023/fuji_phase2.txt`, `fuji_phase2_chain.txt`, `phase2.json` |
+
+What the chain says afterwards, read rather than trusted:
+
+```shell
+cast call $MANAGER  'slashAuthority()(address)'   # 0x673F7725…6813, code 171 bytes
+cast call $SAFE     'getThreshold()(uint256)'     # 2
+cast call $VAULT    'manager()(address)'          # 0x88e60aA2…0317
+cast call $REGISTRY 'sourceChainId()(bytes32)'    # matches origin.sourceChainId
+cast call $REGISTRY 'formulaDigest()(bytes32)'    # matches origin.formulaDigest
+```
+
+`fuji_phase2.txt` is the forge transcript, and it carries no per-transaction lines:
+forge writes those to stderr while `tee` captured stdout. The three hashes, their
+receipts and the reads above are in `fuji_phase2_chain.txt`, so the transcript is
+not the only record. `verify_fuji.sh --require-multisig` re-run against the
+versioned transcript still prints `OK`.
+
+Two things this deliberately does not do. It does not rotate the guardian: it is
+the deployer's EOA, as in phase 1, because the initialiser takes it as a parameter
+and changing it changes all three addresses. And it cannot un-do phase 1: the old
+manager still points at `0xcdFB…2ec7` and always will, which is exactly why the
+flag exists — on that transcript `--require-multisig` fails.
 
 ### Creating the Safe itself (`CreateSafe.s.sol`)
 

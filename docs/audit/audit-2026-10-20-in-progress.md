@@ -82,8 +82,8 @@ allí.
 | P-36 | Bibliografía: Bauer–Jost está mal citado (CPAM 2012 → *Comm. Anal. Geom.* 21(4):787–845, 2013) y faltan referencias para Kesten–Stigum, Feller y EIP-196/197 | Baja (paper) | Confirmado con Crossref/arXiv | Sí (tercera lectura) |
 | P-37 | La permutación Poseidon reproduce los vectores t=3 de circomlib; el digest usa `state[1]` (rate) y no el `state[0]` (capacidad) de circomlib. Es una convención de esponja válida, no un defecto del circuito; sólo limita la interoperabilidad con primitivas de 2 entradas | Baja (interoperabilidad; no soundness) | Confirmado con sonda: 2 vectores t=3, absorción 1–10/500 y ambigüedad de longitud documentada | Sí (sonda de cierre; nota de documentación) |
 | P-38 | La prueba de admisión tiene todo el statement público y su testigo es el camino de Merkle: sólo oculta la posición de la hoja. No aporta zero-knowledge sobre la norma ni ahorra gas frente a `verifyEntry` | Media (diseño y honestidad del artefacto; no soundness) | Confirmado por lectura (`admission.rs:212-276`) y por medición: 306,275 gas fríos frente a una inclusión keccak de pocos miles | Sí (adenda M4d) |
-| P-39 | El `slashAuthority` del despliegue de Fuji es una EOA y el rol es inmutable: una sola clave decide todo slash del stake registrado | **Alta** (custodia/operacional) | Confirmado on-chain: `cast code` = `0x` (2026-10-22); los scripts de despliegue lo rechazan y P11 rechaza un Safe con umbral < 2; la creación del Safe ya no exige llaves de owner (`CreateSafe.s.sol`, S-022), y el Safe 2-de-3 está desplegado en Fuji en `0x673F7725…6813` (S-023). Sigue abierto hasta que la fase 2 se despliegue con ese Safe: el rol del manager vivo sigue en la EOA | Sí (S-020, S-021, S-022, S-023) |
-| P-40 | El despliegue de Fuji es de un build anterior a M-15: `sourceChainId()` y `formulaDigest()` revierten en el registry desplegado, y su transcript no tiene las claves `origin.*` que `verify_fuji.sh` exige | Media (trazabilidad; operacional) | Confirmado on-chain: ambos getters revierten; `sequencer()` y `TENSOR_SIZE()` responden | Sí (S-020, S-021) |
+| P-39 | El `slashAuthority` del despliegue de Fuji es una EOA y el rol es inmutable: una sola clave decide todo slash del stake registrado | **Alta** (custodia/operacional) | **Cerrado (S-024).** La fase 2 desplegó el manager `0x88e60aA2…0317` con `slashAuthority = 0x673F7725…6813`, el Safe 2-de-3: 171 bytes de código, `getThreshold() = 2`, y `verify_fuji.sh --require-multisig` devuelve `OK`. El manager de fase 1 sigue apuntando a la EOA `0xcdFB…2ec7` y queda como objeto histórico; el despliegue vivo es el de fase 2 | Sí (S-020, S-021, S-022, S-023, S-024) |
+| P-40 | El despliegue de Fuji es de un build anterior a M-15: `sourceChainId()` y `formulaDigest()` revierten en el registry desplegado, y su transcript no tiene las claves `origin.*` que `verify_fuji.sh` exige | Media (trazabilidad; operacional) | **Cerrado (S-024).** El registry de fase 2 (`0x8DE8C843…`) responde `sourceChainId()` = `0xce128645…091bc1` y `formulaDigest()` = `0x403af787…a4cfc`, los mismos valores que el transcript; `verify_fuji.sh` los coteja contra la cadena y devuelve `OK`. El registry de fase 1 sigue sin los getters y su transcript sellado sigue sin verificar, por diseño | Sí (S-020, S-021, S-024) |
 
 **Remediación posterior a este worksheet.** M4d (plan §5.5.11) cierra **P-01** y
 **P-16** y añade al circuito de admisión la cota de **P-33**: el statement pasa a
@@ -3004,6 +3004,16 @@ quienes deben ser, ni que sus llaves sigan bajo control distinto: eso se audita 
 el explorador y en la configuración del Safe. La comprobación separa "una clave"
 de "una política desplegada con umbral ≥ 2".
 
+**Cerrado (S-024).** La fase 2 se desplegó el 2026-10-23 con el Safe como
+`SLASH_AUTHORITY`: manager `0x88e60aA2…0317`, registry `0x8DE8C843…`, vault
+`0xD560F40B…`. `manager.slashAuthority()` devuelve `0x673F7725…6813`, una dirección
+con 171 bytes de código cuyo `getThreshold()` lee 2; el preflight dio `PASS=11` y
+`verify_fuji.sh --require-multisig` devuelve `OK` sobre el transcript versionado. El
+matiz de arriba sigue en pie y se cierra con él: la cadena acredita que el rol lo
+ejerce *una política con umbral ≥ 2*, no que las tres llaves estén en manos
+distintas — eso se audita fuera de la cadena. El manager de fase 1 no se toca:
+sigue con la EOA y es un objeto histórico, no el despliegue vivo.
+
 ---
 
 ## P-40 — El despliegue de Fuji es anterior a M-15: el origen no está en la cadena
@@ -3043,6 +3053,15 @@ morir con un `cast call failed` genérico. Con eso, el transcript de fase 1 sigu
 sin verificar —es correcto: no hay nada que verificar— y un redespliegue sí
 verificará. `preflight_fase2.sh` cierra el círculo desde el otro lado: falla si el
 artefacto a desplegar no expone los getters o si el script no los registra.
+
+**Cerrado (S-024).** El registry desplegado en fase 2 (`0x8DE8C843…`) responde a
+los dos getters con los valores que el transcript declara —`sourceChainId` =
+`0xce128645…091bc1`, `formulaDigest` = `0x403af787…a4cfc`—, y `verify_fuji.sh` los
+coteja contra la cadena en vez de fiarse del texto: es la primera corrida del
+verificador que ejerce esa comparación sobre un despliegue real, y devuelve `OK`.
+El registry de fase 1 sigue sin esos getters y su transcript sellado sigue sin
+verificar; eso no se arregla retroactivamente, porque es la evidencia de lo que se
+desplegó entonces.
 
 ---
 

@@ -34,6 +34,7 @@ hay `session-log.md` en este repositorio: no inventar uno.
 | S-021 | 2026-10-22 | Fase 2: preflight, y el transcript de fase 1 que no verificaba | este commit | 5ff84501… | cerrada; 17 casos de dry run, ancla intacta; el despliegue espera al Safe |
 | S-022 | 2026-10-23 | CreateSafe: el multisig sin llaves, y P11 | este commit | 5ff84501… | cerrada; 294 + 1 skip, dry run intacto; el Safe espera owners y umbral |
 | S-023 | 2026-10-23 | El Safe 2-de-3 en Fuji: una política, no una llave | este commit | 5ff84501… | cerrada; Safe `0x673F77…` vivo (305835 gas); la fase 2 espera el preflight |
+| S-024 | 2026-10-23 | Fase 2 desplegada: el slasher es una política (P-39/P-40) | este commit | 5ff84501… | cerrada; 5981575 gas, `verify --require-multisig` OK; P-39 y P-40 cerrados |
 
 S-016 cubre `triage-mapa-2026-10-22.md`, el acta
 `checklist-matriz-evidencia-2026-10-22.md` y la v2
@@ -284,3 +285,55 @@ cierran P-39 y P-40 a la vez. La evidencia queda versionada en
 la respuesta del explorador— y `scripts/fuji_20261023/safe.json`, copia del run de
 forge, porque `broadcast/` está en `.gitignore` y ahí el recibo se pierde con el
 próximo `forge clean`. Ancla y gate intactos: `PASS=11 FAIL=0 SKIP=0`.
+
+S-024 ejecuta la fase 2 y cierra **P-39** y **P-40** a la vez, aunque el trabajo de
+esta sesión sea sobre todo comprobar que se cerraron. Antes de firmar nada, el
+preflight con la Safe como `SLASH_AUTHORITY` dio `PASS=11 FAIL=0 SKIP=0`, con `P11`
+leyendo el umbral de la cadena (`2-of-3`) y no del entorno. La simulación sin
+`--broadcast` predijo las tres direcciones —registry `0x8DE8C843…`, vault
+`0xD560F40B…`, manager `0x88e60aA2…`— y el despliegue real creó exactamente esas:
+no es una coincidencia, es el nonce del deployer y el orden de las tres
+deployments. Tres transacciones, bloques 59935785 y 59935786, **5981575 gas** en
+total, 0,000000000957 AVAX a 160 wei/gas. `verify_fuji.sh --require-multisig`
+devolvió `OK` inmediatamente después y otra vez contra la copia versionada del
+transcript, que es la que queda en el repo.
+
+La verificación que importa no es la del script, es la de la cadena después:
+`manager.slashAuthority()` devuelve `0x673F7725…6813`, una dirección con **171
+bytes de código** —un proxy, no una EOA—, y su `getThreshold()` lee 2;
+`vault.manager()` devuelve el manager nuevo, así que el handshake es el del par
+recién desplegado; y `registry.sourceChainId()`/`formulaDigest()` responden
+`0xce128645…091bc1` y `0x403af787…a4cfc`, idénticos a las filas `origin.*` del
+transcript. Eso es lo que **P-40** pedía: el valor deja de estar sólo en el texto y
+el verificador lo coteja contra el contrato, que es la comparación que S-021 tuvo
+que escribir porque antes no existía.
+
+Un error propio, del tipo que sólo se ve al mirar lo guardado: el `tee` capturó
+sólo stdout, y forge escribe las líneas `✅ [Success] Hash: … Contract Address: …`
+por **stderr**. El transcript versionado, por tanto, no tenía ni un hash de
+transacción: verificaba —el verificador sólo necesita las filas `[fuji]`— pero como
+evidencia habría obligado a fiarse del terminal del operador. Se corrige con
+`fuji_phase2_chain.txt`, que guarda los tres hashes, sus recibos (`status=1`,
+bloque y gas de cada uno) y las lecturas de arriba, hechas contra la cadena
+después del despliegue. La lección es la de S-022 con el conteo de tests: lo que no
+está en el fichero no es evidencia, aunque uno lo haya visto pasar.
+
+**P-39** queda cerrado en su parte ejecutable y con dos matices escritos. El
+manager vivo ya no tiene una EOA en el rol inmutable, sino una política 2-de-3; el
+manager de fase 1 sigue en la cadena apuntando a `0xcdFB…2ec7` y seguirá siempre
+—es histórico, y por eso `--require-multisig` falla contra *aquel* transcript y no
+contra éste—. Y la cadena acredita que el rol lo ejerce un contrato con umbral ≥ 2,
+no que las tres llaves estén en manos distintas: eso se audita en el explorador y
+en la configuración del Safe, no en un `getOwners()`. El `guardian` sigue siendo la
+EOA del deployer, igual que en fase 1, porque el inicializador lo toma como
+parámetro y cambiarlo habría cambiado las tres direcciones; es una decisión de
+gobernanza pendiente, no un descuido, y ahora está dicha en el README.
+
+Con esto la fase 2 deja de estar pendiente en la documentación: `scripts/README.md`
+describe el despliegue vivo con sus hashes, `contracts/README.md` deja de hablar de
+la fase 2 como futuro, y las dos filas del audit dicen **cerrado** con la evidencia
+detrás. Ancla intacta —los 11 ficheros no se tocan, `fase0_anchor.sh --check` sale
+0— y gate en `PASS=11 FAIL=0 SKIP=0` sobre `5ff84501…`. Suite sin cambios: 294
+tests más el skip de `SafeFork` sin RPC. Lo que sigue abierto es el transporte
+(I-1.4, sin peers en la otra cadena), la rotación de `guardian` y el resto del
+roadmap.
