@@ -59,7 +59,7 @@ v1 does not remove trust; it places it in five roles, all of them visible in the
 ### Non-goals
 
 - **Not a finished protocol.** Sections 2 through 11 are written; each closes with a summary table and each claim is labelled Verified, Measured, Estimated, Design, or Deferred. The remaining open items are consolidated in §10: external audit, real-data calibration, testnet benchmarks, the on-chain verifier, and the deferred recursive option.
-- **Not audited.** No external security review has been performed, and there is no mainnet deployment. Fuji phase 2 (chain 43113) is a testnet deployment only.
+- **Not audited.** No external security review has been performed, and there is no mainnet deployment. Fuji phase 2 (chain 43113) is a testnet deployment only. The external audit is the one item the project cannot do for itself; the funding approach prepared for it, addressed to the Avalanche research programme, lives in [`docs/grants/`](docs/grants/) and is deliberately kept **out** of the paper and out of the anchor.
 - **Not formally verified.** All proofs are mathematical arguments, not machine-checked proofs.
 - **Not a production implementation.** The off-chain components under `src/` (`reputation/`,
   `rmt/`, `zk/`, `datalayer/`) are built and tested against their own design notes, but they
@@ -101,6 +101,7 @@ diamond-framework/
 ├── docs/
 │   ├── architecture/     # design notes (Avalanche integration, ACP-77, Teleporter/AWM)
 │   ├── audit/            # numerical verification log + falsification history
+│   ├── grants/           # funding ask for the external audit (outside the anchor)
 │   └── paper/            # theoretical paper (PDF / LaTeX)
 ├── integrations/
 │   └── avalanche/        # chain integration (Foundry, solc 0.8.33)
