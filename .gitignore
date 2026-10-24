@@ -42,6 +42,10 @@ Thumbs.db
 .env.local
 *.key
 *.pem
+# Operator notes kept at the repository root. `credenciales safe.txt` holds an
+# RPC endpoint's key in its path and the guardian addresses; it must never be
+# committed, and `git add -A` at the root is exactly how it would be.
+credenciales*.txt
 
 # Results (keep .md summaries, ignore raw dumps)
 verification/**/results/*.csv
