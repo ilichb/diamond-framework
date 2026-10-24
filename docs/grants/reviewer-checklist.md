@@ -10,7 +10,7 @@ check without trusting the applicant.
 | **Relevance** — validator economics, network security, non-inflationary rewards | Area 2 asks how validator incentives are structured, measured and optimised. The mechanism prices admission on non-transferable reputation; nothing pays a validator for existing. | Paper §5 (stake floor), §7 (slashing), §10 (open items) |
 | **Methodological rigour** | Every claim carries a label (Verified / Measured / Estimated / Design / Deferred); 22 documented self-falsifications; a gate with 11 guards that re-derive their own values. | `docs/audit/numerical-verification.md`, `verification/audit-gate.sh` |
 | **Novelty** | Admission is certified per validator on its **own** tensor entry — a proof of a global norm was removed because it is a bearer token. The coalition-cost result is derived, not simulated. | Paper §8 (zero-knowledge), §5.2 |
-| **Feasibility** | Not promised: deployed on Fuji, verified on Snowtrace, 300 tests with none failing, 100% line coverage on registry/vault/manager (branch coverage 96.43/95.45/100), CI green on every push. | Addresses in `evidence-appendix.md`; `forge test` |
+| **Feasibility** | Not promised: deployed on Fuji, verified on Snowtrace, 310 tests with none failing (including 9 stateful invariants over escrow), 100% line coverage on registry/vault/manager (branch coverage 96.43/95.45/100), CI green on every push. | Addresses in `evidence-appendix.md`; `forge test` |
 | **Researcher qualifications** | Sole author of paper and of all 250 commits; a public history where corrections are as visible as claims. No prior audit history — stated, not hidden. | `git log`, `docs/audit/sessions/` |
 | **Proposal format** — ≤10 pages, question, methodology, contributions, timeline, budget, CVs | Sections 1–10 of `avalanche-research-proposal.md`, in that order. | this directory |
 
@@ -19,9 +19,13 @@ check without trusting the applicant.
 ```shell
 # 1. The suite the proposal cites.
 cd integrations/avalanche && forge test
-#    expected: 0 failed, 300 total, 11 suites.
-#    299 run offline; SafeForkTest skips without FUJI_RPC_URL and passes with it,
-#    executing against the live 2-of-3 Safe on Fuji.
+#    expected: 0 failed, 310 total, 12 suites.
+#    309 run offline (300 unit/fork + 10 stateful-invariant); SafeForkTest skips
+#    without FUJI_RPC_URL and passes with it, executing against the live 2-of-3
+#    Safe on Fuji.
+
+# 1b. Only the stateful invariants (48 runs x 32 calls each, ~1 s).
+forge test --match-path 'test/invariant/*'
 
 # 2. Coverage per contract (the numbers in §4 of the proposal).
 forge coverage --report summary | grep -E 'contracts/AVIP|verifiers/'

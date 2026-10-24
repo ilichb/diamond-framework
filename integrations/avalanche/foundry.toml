@@ -36,6 +36,17 @@ optimizer = false
 line_length = 100
 tab_width = 4
 
+# Stateful invariants (test/invariant). `fail_on_revert = false` is safe here
+# because the handler checks every precondition before it calls: an unexpected
+# revert inside the contracts would surface as a broken invariant, not be
+# swallowed as a skipped call. Runs and depth are deliberately modest — 48 x 32
+# = 1,536 calls per invariant — so the suite stays inside a CI job while still
+# exploring orderings no unit test writes.
+[invariant]
+runs = 48
+depth = 32
+fail_on_revert = false
+
 [lint]
 # `asm-keccak256` suggests replacing `keccak256(abi.encodePacked(...))` with a
 # hand-written assembly loop. The inclusion-proof hashing is kept readable on

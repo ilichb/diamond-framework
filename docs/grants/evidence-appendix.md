@@ -73,12 +73,47 @@ registry.verifier()      →  0x0000…0000                                    #
 
 | Metric | Value |
 |---|---|
-| `forge test` (offline) | **299 passed, 0 failed, 1 skipped** (300 total) |
-| `forge test` with `FUJI_RPC_URL` | **300 passed, 0 failed, 0 skipped** — the extra one is `SafeForkTest`, a fork test of the live 2-of-3 Safe (468,956 gas) |
-| Suites | 11 |
-| Test code | 6,878 lines across 10 `.t.sol` files |
+| `forge test` (offline) | **309 passed, 0 failed, 1 skipped** (310 total) |
+| `forge test` with `FUJI_RPC_URL` | **310 passed, 0 failed, 0 skipped** — the extra one is `SafeForkTest`, a fork test of the live 2-of-3 Safe (468,956 gas) |
+| Suites | 12 |
+| Stateful invariants | **9**, over escrow conservation and admission consistency, 48 runs x 32 calls each (1,536 randomized calls per invariant) |
+| Test code | 7,278 lines across 11 `.t.sol` files |
 | Contract source | 3,956 lines, 20 files: **2,673 core** + 1,283 interfaces/verifiers |
 | Toolchain | solc 0.8.33, EVM `cancun`, optimizer off (paper's gas basis) |
+
+### 4.1 The stateful invariants
+
+`test/invariant/AVIPInvariants.t.sol` fuzzes **sequences**, not paths: five actors
+deposit, withdraw, get admitted, pay the fee and are slashed in random order, and
+nine invariants are checked after every call. The unit suite asserts one chosen
+ordering per property; this asserts the property over 1,536 of them.
+
+| Invariant | What it would catch |
+|---|---|
+| `conservationOfUnits` | `totalDeposited == totalEscrowedUnits + totalReleased + totalDebited` |
+| `vaultHoldsExactlyItsEscrow` | a unit counted twice, or escrow not backed by the token |
+| `aggregateIsTheSumOfValidators` | a per-validator update that forgets `totalEscrowedUnits` |
+| `everyValidatorIsBacked` | escrow not covering `stakeOf` — the M8 claim, over random orderings |
+| `admissionImpliesRequirement` | a slash that lowers the record without ejecting |
+| `unadmittedHasNoStake` | a record left behind after an ejection |
+| `ejectionsNeverDecrease` | a wiped ejection penalty |
+| `withdrawableIsWithinEscrow` | a withdrawal view that offers more than exists |
+| `sinkReceivedWhatLeftEscrow` | a debit or fee that does not reach the sink |
+
+**The invariants bite, and that is tested.** Two mutations of the shipped code
+were applied and reverted: removing the aggregate update in `withdraw` fails
+`conservationOfUnits` with `733334 != 1466667`, and removing the ejection in
+`slash` fails `admissionImpliesRequirement` with `0 < 733333333333328031`. A
+tenth test, `test_handlerReachesEveryPath`, asserts each handler path actually
+lands — it was added after the first run showed nine green invariants over a
+handler whose `admit` was silently reverting on a malformed proof.
+
+**What this does not prove.** `AcceptAllVerifier` accepts every proof, so nothing
+here says anything about §5.2 or the pairing check; `MockERC20` transfers exactly
+what it is asked, so the fee-on-transfer and reverting-token cases of M8 are not
+covered; and five actors with no routing between them is not a network. The
+invariants are evidence that the escrow accounting holds under fuzzing, not
+evidence that it is correct, and they are not the audit.
 
 Coverage per contract, from `forge coverage --report summary`. All four columns are
 reproduced because publishing only the first one would be true and misleading:

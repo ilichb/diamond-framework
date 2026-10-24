@@ -21,10 +21,12 @@ cd "${REPO}" || exit 2
 AV="integrations/avalanche"
 PDF="docs/paper/releases/diamond-framework-2026-10-24.pdf"
 
-# The claims, as the documents state them. The test count is 300 total: 299 run
-# offline and one (SafeForkTest) skips without FUJI_RPC_URL, so the invariant to
-# check is "0 failed, 300 total", not a fixed number of passes.
-CLAIM_TOTAL=300
+# The claims, as the documents state them. The test count is 310 total: 309 run
+# offline (300 unit/fork tests plus 10 stateful-invariant tests, of which the
+# 9 `invariant_` functions each run 48 x 32 calls) and one (SafeForkTest) skips
+# without FUJI_RPC_URL, so the invariant to check is "0 failed, 310 total", not a
+# fixed number of passes.
+CLAIM_TOTAL=310
 CLAIM_FAILED=0
 CLAIM_PDF_SHA=5651a2f31707d26c9ff9ca1009e385d046e7004e7dd5397226577670e4f3dd16
 CLAIM_PDF_BYTES=591880
@@ -32,6 +34,10 @@ CLAIM_PDF_PAGES=43
 CLAIM_ROOT=ca83694715739ac2ce8eb24874f3c33c1df69bbb4852b802e85dac899b23b020
 CLAIM_CORE_LINES=2673
 CLAIM_SCOPE_LINES=2856
+# Test code as the appendix states it: 11 .t.sol files, the ten at test/ plus the
+# stateful-invariant suite at test/invariant/.
+CLAIM_TEST_LINES=7278
+CLAIM_TEST_FILES=11
 CLAIM_GATE_PASS=11
 
 DRIFT=0
@@ -71,11 +77,16 @@ check "core sol lines" "$(wc -l "${AV}"/contracts/AVIP*.sol | tail -1 | awk '{pr
 check "scope sol lines" "$(wc -l "${AV}"/contracts/AVIP*.sol "${AV}"/contracts/verifiers/Bn254.sol | tail -1 | awk '{print $1}')" "${CLAIM_SCOPE_LINES}"
 say "all sol lines"  "$(wc -l "${AV}"/contracts/*.sol "${AV}"/contracts/*/*.sol | tail -1 | awk '{print $1}')"
 say "sol files"      "$(ls "${AV}"/contracts/*.sol "${AV}"/contracts/*/*.sol | wc -l)"
-say "test lines"     "$(wc -l "${AV}"/test/*.sol | tail -1 | awk '{print $1}')"
-say "test files"     "$(ls "${AV}"/test/*.t.sol | wc -l)"
+TEST_LINES=$(wc -l "${AV}"/test/*.t.sol "${AV}"/test/invariant/*.t.sol | tail -1 | awk '{print $1}')
+TEST_FILES=$(ls "${AV}"/test/*.t.sol "${AV}"/test/invariant/*.t.sol | wc -l)
+check "test lines"   "${TEST_LINES}" "${CLAIM_TEST_LINES}"
+check "test files"   "${TEST_FILES}" "${CLAIM_TEST_FILES}"
 
 # ---- the tests --------------------------------------------------------------
-OUT="$(cd "${AV}" && forge test 2>&1 | tail -1)"
+# --force: Forge's incremental cache went stale on this machine and reported
+# "300 total tests" for a tree that had 310 (the new suite was not in `out/`).
+# A drift check that can read a cached summary is not a drift check.
+OUT="$(cd "${AV}" && forge test --force 2>&1 | tail -1)"
 say "forge test" "${OUT}"
 check "tests failed" "$(printf '%s' "${OUT}" | awk '{for (i=1;i<=NF;i++) if ($i=="failed,") {print $(i-1); exit}}')" "${CLAIM_FAILED}"
 check "tests total"  "$(printf '%s' "${OUT}" | sed -n 's/.*(\([0-9]*\) total tests).*/\1/p')" "${CLAIM_TOTAL}"
