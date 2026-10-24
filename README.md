@@ -10,7 +10,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23268373.svg)](https://doi.org/10.5281/zenodo.23268373)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](verification)
 [![Solidity 0.8.33](https://img.shields.io/badge/solidity-0.8.33-blue)](integrations/avalanche)
-[![Paper: v0.2.1](https://img.shields.io/badge/paper-v0.2.1-orange)](docs/paper/releases/)
+[![Paper: v0.2.2 release candidate](https://img.shields.io/badge/paper-v0.2.2%20release%20candidate-orange)](docs/paper/releases/)
 
 [Overview](#overview) · [Status](#status) · [Repository layout](#repository-layout) ·
 [Reproducibility](#reproducibility) · [Falsification log](#falsification-log) ·
@@ -26,7 +26,7 @@ The **Diamond Framework** is a cryptoeconomic protocol that replaces a fraction 
 financial stake required to become a Proof-of-Stake validator with **verifiable,
 non-transferable reputation**. The goal is to lower the entry barrier for honest but
 capital-constrained validators by discounting the stake the rule requires. Whether this
-preserves the network's **Cost of Attack** is an open question in v0.2.1 (paper §6.3 and
+preserves the network's **Cost of Attack** is an open question in v0.2.2 (paper §6.3 and
 §10), not a claim of this release.
 
 The core insight is an opportunity-cost argument:
@@ -281,29 +281,39 @@ Two licenses, because the code and the paper are reused differently:
 
 ## Citation
 
-The latest **DOI-published** version is **v0.1.0** (2026-10-12).
-**v0.2.1** (2026-10-20) is published as a GitHub Release; its version DOI
-will be assigned after the Zenodo deposit. **v0.2.0** was tagged but not
-deposited: it is superseded by v0.2.1 and must not be cited. Cite the
-version DOI when it exists, or the concept DOI that always resolves to the
-latest version:
+**The latest published version remains v0.1.0** (2026-10-12). **v0.2.2 is the
+release candidate; DOI pending deposit.**
 
-- Concept DOI (all versions): [10.5281/zenodo.23268373](https://doi.org/10.5281/zenodo.23268373)
-- v0.1.0 (2026-10-12): [10.5281/zenodo.23268374](https://doi.org/10.5281/zenodo.23268374)
-- v0.2.1 (2026-10-20): DOI pending Zenodo deposit
-- v0.2.1 GitHub Release: [v0.2.1](https://github.com/ilichb/diamond-framework/releases/tag/v0.2.1)
+The artifact of record for v0.2.2 is
+[`docs/paper/releases/diamond-framework-2026-10-24.pdf`](docs/paper/releases/diamond-framework-2026-10-24.pdf)
+— 43 pages, sha256 `5651a2f3…` — frozen from the current source. It carries no
+DOI yet: the deposit is the next step, and the version DOI is added here in the
+commit that follows it. Until then the DOI-backed version is v0.1.0, and the
+concept DOI resolves to it.
 
-Machine-readable metadata lives in [`CITATION.cff`](CITATION.cff).
+**v0.2.1** (2026-10-20) is a historical GitHub Release that was never deposited,
+because its §6.2 validator binding was not implemented (P-01); v0.2.2 rewrites
+that section and is the deposit candidate. **v0.2.0** was tagged, has no release
+and no deposit, and must not be cited.
+
+- Concept DOI (all versions, resolves to the latest deposit): [10.5281/zenodo.23268373](https://doi.org/10.5281/zenodo.23268373)
+- v0.1.0 (2026-10-12): [10.5281/zenodo.23268374](https://doi.org/10.5281/zenodo.23268374) — the only DOI-backed version
+- v0.2.2 (2026-10-24): release candidate, DOI pending Zenodo deposit
+- v0.2.1 (2026-10-20): [GitHub Release](https://github.com/ilichb/diamond-framework/releases/tag/v0.2.1), never deposited, superseded
+
+Machine-readable metadata lives in [`CITATION.cff`](CITATION.cff) and
+[`.zenodo.json`](.zenodo.json). Neither contains a v0.2.2 DOI, because none
+exists yet.
 
 ```bibtex
 @software{blanco2026diamond,
   author  = {Blanco, Ilich},
   title   = {Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation},
   year    = {2026},
-  version = {0.2.1},
+  version = {0.2.2},
   doi     = {10.5281/zenodo.23268373},
-  url     = {https://github.com/ilichb/diamond-framework/releases/tag/v0.2.1},
-  note    = {Concept DOI; resolves to v0.1.0 until the v0.2.1 version DOI is assigned}
+  url     = {https://github.com/ilichb/diamond-framework},
+  note    = {Release candidate v0.2.2 (2026-10-24); version DOI pending Zenodo deposit. The concept DOI resolves to the latest deposit, v0.1.0}
 }
 ```
 

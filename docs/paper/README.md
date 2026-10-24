@@ -42,11 +42,13 @@ The page count follows the content, so it is read from the build:
 
     cd docs/paper && pdflatex -interaction=nonstopmode -halt-on-error main.tex && pdfinfo main.pdf | grep Pages
 
-The current source is 41 pages (`Pages: 41`, three `pdflatex` passes, 0 errors, 0 undefined, 0 overfull or underfull boxes).
+The current source is 43 pages (`Pages: 43`, three `pdflatex` passes, 0 errors, 0 undefined, 0 overfull or underfull boxes).
 Release snapshots are archived under
-`releases/`; the latest is `releases/diamond-framework-2026-10-20.pdf`
-(41 pages, 579260 bytes, SHA-256 `1aa1cb6c…`), frozen from the v0.2.1 source —
-the very source whose `main.tex` the anchor root seals. The earlier snapshots stay
+`releases/`; the latest is `releases/diamond-framework-2026-10-24.pdf`
+(43 pages, 591880 bytes, SHA-256 `5651a2f3…`), frozen from the v0.2.2 source —
+the very source whose `main.tex` (`7058d6e6…`) the anchor root seals. That
+snapshot is the v0.2.2 release candidate; it has no DOI yet, and the
+DOI-backed version is still v0.1.0 (see the repository `README`). The earlier snapshots stay
 as published and are no longer
 the artifact of record. Snapshots are frozen documents: they are not
 re-exported when the source advances, so a rebuild of the current source
