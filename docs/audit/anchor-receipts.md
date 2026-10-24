@@ -1328,6 +1328,22 @@ fuera del root nuevo: `~/p9/anchor_root.sha256.adfd08d2_pre_R13` (sha256
 `0696e024…`. `ots verify` → exit 0 con las cuatro en «Pending confirmation in
 Bitcoin blockchain». `ots upgrade` queda pendiente de confirmación.
 
+**OTS — promoción (2026-10-24).** `ots upgrade` sobre ese `.ots` de 840 bytes
+devolvió `Success! Timestamp complete`: el recibo pasa a **4 056 bytes**, sha256
+`278e4596…`, y contiene **3 `BitcoinBlockHeaderAttestation`** —bloques
+**972674**, **972682** y **972749**— además de las 4 `PendingAttestation` de los
+calendarios que aún no han agregado. El bloque 972674 tiene timestamp
+`2026-10-22T23:52:22Z` (merkle root `7a7fea70…`), así que el root `5ff84501…`
+existía antes de esa hora, con la misma salvedad de *median-time-past* que
+§R-1.2. La comprobación es cruzada: el merkle root que el propio `.ots` cita para
+esa altura y el que devuelve el explorador para `972674` son el mismo valor.
+`ots verify` sale **1** por la misma razón que en R-1 —no hay nodo Bitcoin local,
+`Cookie file unusable`— y **no** dice `File does not match`: el compromiso dentro
+del recibo es el del fichero. El primer intento abortó porque `ots` no
+sobreescribe un `.bak` existente; el que había era una copia del 11 de octubre y
+se apartó fuera del repositorio. El `.ots` no está entre los once pares del root,
+así que la promoción no mueve el ancla: `--check` sigue en 0.
+
 **PDF.** El artefacto de registro sigue siendo
 `docs/paper/releases/diamond-framework-2026-10-20.pdf` (579 260 bytes, sha256
 `1aa1cb6c…`), generado de `main.tex 37ebdc73…`: **no** contiene la corrección
