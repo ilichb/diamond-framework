@@ -1358,3 +1358,57 @@ release decide cuándo se emite el siguiente; queda como T-6.
 
 **Estado.** R-13 se commitea como descendiente de `84e6837` (regla D7-b); no se
 enmienda `84e6837`. No se toca `integrations/` ni los contratos.
+## R-14 — v0.2.2: el texto dice lo que el código hace (2026-10-24)
+
+**Qué cierra.** `P-25` (gas y las cuatro erratas del paper), `P-27`,
+`P-28` y `P-29`, más la frase de §6 que la errata de v0.2.1 sólo podía
+retirar en prosa. `SESSIONS.md` registra este lote como S-026.
+
+**Por qué este recibo es del paper y no del código.** M4d cerró el binding
+(enunciado de cuatro palabras con `validator` público) y `ea75594` lo
+describió, pero el PDF de v0.2.1 seguía conteniendo la frase que la errata
+retiraba, `~206k` en seis lugares y el piso `0.2Θ` presentado como garantía.
+El artefacto publicable no podía citarse. Este lote sustituye las
+afirmaciones en el texto: no es una lista de erratas.
+
+**Gas.** La cifra canónica es la ruta fría de `AVIPRegistry.verifyThreshold`,
+**286.144** (223.403 en caliente; `manager.admit` completo 376.588). De ahí
+`g* = 781` gwei en frío (594 en admisión completa), 31× a 25 gwei y 2,4× en la
+comparación con la transmisión del tensor. `~206k` queda etiquetado como lo que
+es —composición con la clave del verificador inline— y sólo se usa para comparar
+opciones de circuito entre sí. No se mezclan alcances y el 1,59× sigue sin
+citarse.
+
+**Pares.** `main.tex` `2a3605ee…` → `ee6f416c…`; `claim-registry.csv`
+`7ecf17d4…` → `df8bca68…` (fila 165 `684064/206000 = 3.32` →
+`684064/286144 = 2.39`, y dos filas medidas nuevas); `audit_manifest.sha256`
+`84e6837b…`/`2026-10-22T23:24:52Z` → `c3be11f6…`/`2026-10-24T16:14:55Z`;
+`output_manifest.sha256` `79da1f64…` **sin cambios**, porque la evidencia no se
+tocó; `anchor_root.sha256` `5ff84501…` → `38ee9e57…`.
+
+**Ancla.** Sello UTC `2026-10-24T16:14:55Z`, HEAD `c3be11f`.
+`bash verification/fase0_anchor.sh --check` → exit 0 (38 pares, 11 pares y HEAD
+idénticos); `bash verification/audit-gate.sh` → **PASS=11 FAIL=0 SKIP=0**.
+
+**PDF.** `docs/paper/releases/diamond-framework-2026-10-24.pdf`, 43 páginas,
+589.458 bytes, sha256 `91f5486f…`. `pdflatex` ×3 → 0 errores, 0 undefined,
+0 overfull/underfull. Las notas del release están en `v0.2.2-notes.md`.
+
+**OTS.** `ots stamp verification/anchor_root.sha256` → 4 envíos, 4
+`PendingAttestation`, 0 `BitcoinBlockHeaderAttestation`. `.ots` de **910 bytes**,
+sha256 `86939565…`. Es el estado normal de un sello del mismo día: se promueve
+con `ots upgrade` cuando los calendarios agreguen.
+
+**Preservación.** Fuera del repositorio: `~/p9/anchor_root.sha256.5ff84501_pre_R14`
+(sha256 `5ff84501…`), `~/p9/anchor_root.sha256.ots.5ff84501_R13_final`
+(sha256 `278e4596…`, el recibo promovido con 3 atestaciones Bitcoin) y
+`~/p9/anchor_root.sha256.ots.840B_2026-10-22` (el `.ots` pendiente original).
+
+**Alcance.** Sellados tocados: `main.tex` y `claim-registry.csv` (contenido),
+`audit_manifest.sha256` y `anchor_root.sha256` (derivados) y el `.ots`.
+`output_manifest.txt` y `output_manifest.sha256` no cambian. No sellados:
+`README.md` (P-29), `v0.2.2-notes.md`, `SESSIONS.md` y este recibo.
+
+**Estado.** R-14 se commitea como descendiente de `c3be11f`; no se enmienda.
+No se toca `integrations/` ni los contratos: el NatSpec de `S_f*`
+(`0.2 + 0.2/(1+r)` por `0.2 + 0.8/(1+r)`) queda para el lote de código.

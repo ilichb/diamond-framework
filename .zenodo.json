@@ -1,12 +1,12 @@
 {
   "title": "Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation",
-  "description": "Paper and repository for the Diamond Framework, v0.2.1. Includes: the paper source and PDF (41 pp), a 38-script verification suite with byte-identical reruns, a falsification log (22 entries), an Avalanche Fuji phase-1 deployment with on-chain wiring verified, an 11-file anchor root, and OpenTimestamps receipts. Key updates since v0.1.0: R-7 (Fase 4: DEC-1 to DEC-5), R-8 (Fuji gas), R-9 (F-022 block time), R-10 (N-3, N-7, N-8 to N-15, M9 declared), R-11 (P0 pre-v0.2.0), plus session logs S-001 to S-015. v0.2.1 corrects the ZK paper-code mismatch (measured V3/Groth16 circuit, 94,438 constraints; recursion deferred), the Cost of Attack claim, the audit-table interpretation, the tensor domain and the mean/median labels. Verification: 262 Foundry tests, 170 Rust tests (2 ignored), 11/11 audit gate. The anchor root covers eleven files; the on-chain verifier, the recursive option and Teleporter cross-subnet latency are declared deferred in Section 10. The repository code is MIT; the manuscript and frozen PDF are CC BY 4.0.",
+  "description": "Paper and repository for the Diamond Framework, v0.2.2. Includes: the paper source and PDF (43 pp, sha256 91f5486f...), a 38-script verification suite with byte-identical reruns, a falsification log (22 entries), an Avalanche Fuji phase-1 deployment with on-chain wiring verified, an 11-file anchor root, and OpenTimestamps receipts (the receipt over root 5ff84501 is Bitcoin-attested in blocks 972674, 972682 and 972749). v0.2.2 is a text release: it removes the statements that v0.2.1 could only correct in an errata sheet. Section 6 now describes the validator-bound statement that M4d delivers (Poseidon leaf with the validator address as a public input); the verification cost is the measured cold path, 286,144 gas (781 gwei break-even, 31x margin at 25 gwei) instead of the ~206k composition with an inlined key; the collusion detector declares W as an external input (D-7) and the on-chain alert as a non-sanction; the financial floor is stated as a minimum admission cost, not a guarantee; and the README lists the five roles v1 trusts. Earlier releases: v0.2.1 corrected the ZK paper-code mismatch (measured V3/Groth16 circuit, 94,438 constraints; recursion deferred); v0.1.0 was the first deposit. Verification: the offline Foundry and Rust suites plus the 38-script evidence harness, 11/11 audit gate. The anchor root covers eleven files; the on-chain verifier (verifier = address(0) in the Fuji phase-2 deployment), the recursive option and Teleporter cross-subnet latency are declared deferred in Section 10. The repository code is MIT; the manuscript and frozen PDF are CC BY 4.0.",
   "upload_type": "publication",
   "publication_type": "article",
   "access_right": "open",
   "license": "cc-by-4.0",
-  "version": "0.2.1",
-  "publication_date": "2026-10-20",
+  "version": "0.2.2",
+  "publication_date": "2026-10-24",
   "language": "eng",
   "creators": [
     {

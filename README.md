@@ -39,10 +39,22 @@ The core insight is an opportunity-cost argument:
 
 | Principle | What it means in the protocol |
 |-----------|-------------------------------|
-| **Non-transferable** | Reputation cannot be bought, sold, or delegated. It accrues to a validator's own verifiable history, so it cannot be rented from the capital market. |
-| **Verifiable** | Possession is designed to be proven with V3/Groth16 threshold proofs (measured circuit; the on-chain verifier is not deployed), not by trusting a committee or a centralized registry. |
+| **Non-transferable** | Reputation cannot be bought, sold, or delegated in the reputation state. It accrues to a validator's own verifiable history. v1 assumes an identity layer rather than providing one: selling a signing key would transfer the income stream even though the token cannot be transferred (paper §10). |
+| **Verifiable** | Possession is proven with V3/Groth16 threshold proofs in the delivered circuit (measured; the on-chain verifier is not deployed in phase 2), and the statement binds the validator address, so a proof cannot be replayed for another address. Proving it does not remove trust in the roles below. |
 | **Partial** | Reputation never replaces stake entirely. A capital floor remains, so the financial component is bounded below by capital; the full Cost of Attack is not established in this version. |
 | **Out of the security path by default** | Research tooling that only reduces cost (e.g. tensor compression) never decides admission or slashing. |
+
+### Trust assumptions in v1
+
+v1 does not remove trust; it places it in five roles, all of them visible in the contracts (paper §10.2):
+
+| Role | What it can do | Why it is a trust anchor |
+|------|----------------|--------------------------|
+| `sequencer` | The only address that may publish commitments. The root that `admit` reads is the one this role posts. | Admission is only as sound as the published root. |
+| `guardian` | The only address that may propose a change of `sequencer` or of `verifier`; the change takes effect after `CHANGE_DELAY = 2 days`, and executing it is permissionless. | A compromised guardian can install a verifier that returns `true` for any proof. The guardian is immutable and there is no rotation path yet. |
+| `slashAuthority` | The only address that may slash, and a slash debits the validator's whole recorded stake. | The debit is not adjudicated by an on-chain court; it is authorised by this role. In the Fuji phase-2 deployment it is a 2-of-3 Safe. |
+| `NOTIFIER` of the slashing channel | The only address that may request a cross-chain slash. | The destination executes without re-checking the fraud; the reference M7d report uses an EOA. |
+| `verifier` | Verifies the admission statement for a given validator. | It is mutable by design, so a circuit defect does not force a registry redeploy. In the Fuji phase-2 deployment it is `address(0)`, and `verifyThreshold` reverts `VerifierNotSet` until one is installed. |
 
 ### Non-goals
 

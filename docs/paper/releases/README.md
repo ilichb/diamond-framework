@@ -6,6 +6,8 @@ its bytes, once published, never change.
 
 ## Files
 
+- `diamond-framework-2026-10-24.pdf` — 43 pages, 589458 bytes (v0.2.2, **current**).
+  `sha256 91f5486f13657545285e5a6309f477414a490c7f366d7b87f2f54c49d3cd5186`
 - `diamond-framework-2026-10-20.pdf` — 41 pages, 579260 bytes.
   `sha256 1aa1cb6c52593203116a600eec11f980ab92a64945f480efd8e6cb856b864da5`
 - `diamond-framework-2026-10-19.pdf` — 40 pages, 569259 bytes (v0.2.0, historical).
@@ -23,7 +25,27 @@ derivable, not memorized:
 
     ls docs/paper/releases/*.pdf | tail -1
 
-## Publication status (v0.2.1)
+## Publication status (v0.2.2)
+
+- **No errata sheet.** The three statements v0.2.1 could only correct in prose are
+  rewritten in the paper: the validator binding (§6, now the M4d statement with
+  the validator address as a public input), the gas figure (`286,144` cold path;
+  `g* = 781` gwei; 31× at 25 gwei; `~206k` kept only as the inline-key
+  composition), and the financial floor (a minimum admission cost, not a
+  guarantee). The collusion detector now declares `W` as an external input and
+  the on-chain alert as a non-sanction. See [`v0.2.2-notes.md`](v0.2.2-notes.md).
+- Release asset `diamond-framework-2026-10-24.pdf`: 43 pages, 589458 bytes,
+  sha256 `91f5486f13657545285e5a6309f477414a490c7f366d7b87f2f54c49d3cd5186`.
+- GitHub Release: **not tagged yet**; the tag follows the commit that adds this
+  file.
+- Zenodo version DOI: **none yet.** `.zenodo.json` is set to `version: 0.2.2` /
+  `publication_date: 2026-10-24`, so a deposit publishes this artifact and not
+  the v0.1.0 one. Until the DOI exists, cite the published v0.1.0 DOI
+  `10.5281/zenodo.23268374` or the concept DOI `10.5281/zenodo.23268373`.
+- arXiv: the bundle is `main.tex` alone and it no longer carries the retired
+  statements; the submission is pending an account and an endorsement.
+
+## Publication status (v0.2.1, historical)
 
 - **Errata (2026-10-20):** the published PDF's §6.2 validator-binding sentence
   and its `~206k` gas figure are corrected in
@@ -37,11 +59,11 @@ derivable, not memorized:
 - Release asset `diamond-framework-2026-10-20.pdf`: 579260 bytes,
   sha256 `1aa1cb6c52593203116a600eec11f980ab92a64945f480efd8e6cb856b864da5`
   (downloaded and re-hashed).
-- Zenodo version DOI: **no v0.2.1 deposit is planned.** The release is not
-  deposited because §6.2's validator binding is not implemented (P-01); a
-  corrected v0.2.2 can be deposited after P-01/P-16. Until then, cite the
-  published v0.1.0 DOI `10.5281/zenodo.23268374` or the concept DOI
-  `10.5281/zenodo.23268373`.
+- Zenodo version DOI: **no v0.2.1 deposit was made.** The reason recorded here at
+  the time — §6.2's validator binding was not implemented (P-01) — was resolved
+  by M4d and the text was corrected in v0.2.2, which is the deposit candidate.
+  Until a DOI exists, cite the published v0.1.0 DOI `10.5281/zenodo.23268374` or
+  the concept DOI `10.5281/zenodo.23268373`.
 - v0.2.0 has no GitHub Release and no Zenodo deposit; it is superseded
   by v0.2.1 and must not be cited.
 
@@ -55,7 +77,21 @@ derivable, not memorized:
 - These are the only PDFs git tracks: `.gitignore` carries `*.pdf` with
   the single negation `!docs/paper/releases/*.pdf`.
 
-## Provenance of the 2026-10-20 snapshot (the current one)
+## Provenance of the 2026-10-24 snapshot (the current one)
+
+`diamond-framework-2026-10-24.pdf` is frozen from the v0.2.2 source, the release
+that rewrites in the paper what v0.2.1 had only been able to correct in an
+errata sheet (P-25 gas and minor errata, P-27, P-28, P-29 and the §6 validator
+binding). Three `pdflatex` passes over that source produce it: 43 pages,
+589458 bytes, 0 errors, 0 undefined references, and 0 overfull or underfull
+boxes. The two extra pages are the new paragraphs of §5 and §10.
+
+    git rev-parse --short HEAD                             # the commit that added this file
+    sha256sum docs/paper/main.tex                          # ee6f416c…62a3, entry #1 of the root 38ee9e57…
+    head -1 verification/anchor_root.sha256                # the same hash
+    sha256sum releases/diamond-framework-2026-10-24.pdf    # 91f5486f…5186
+
+## Provenance of the 2026-10-20 snapshot (historical)
 
 `diamond-framework-2026-10-20.pdf` is frozen from the v0.2.1 source: the
 revision that corrects the ZK paper↔code mismatch, the Cost of Attack
@@ -270,11 +306,12 @@ shipped in TeX Live as `cm-super`).
 
 ## Deposit
 
-For v0.2.1 neither destination is used: no Zenodo deposit (P-01) and no arXiv
-submission with the uncorrected statement/metrics. The notes below describe the
-eventual deposit of a corrected version; neither needs a code change (plan §11,
-P7b). The licence both carry is the one the paper already has: **CC BY 4.0**
-(`../LICENSE`, the same legal code the paper's `main.tex` sits next to).
+For v0.2.2 both destinations are open: the PDF no longer carries the statement
+that blocked v0.2.1 (the validator binding is implemented by M4d and described in
+§6), and the gas figure is the measured deployed path. Neither delivery needs a
+code change (plan §11, P7b); both need an account. The licence both carry is the
+one the paper already has: **CC BY 4.0** (`../LICENSE`, the same legal code the
+paper's `main.tex` sits next to).
 
 **Zenodo.** The metadata is written, in `.zenodo.json` at the repository root
 (title, creators, `cc-by-4.0`, keywords, description), so the deposit is the

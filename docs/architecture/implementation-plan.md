@@ -2911,21 +2911,22 @@ stable — the same reason the protection phase is last.
 | **P8 (done — M9)** | **M9, the trust-amendment batch** — `M9a` registry authority (DEC-2), `M9b` full-stake slash (DEC-4), `M9c` ejection surcharge (DEC-5), delivered in §5.13. Contracts, scripts and tests only | **none** — nothing under `integrations/` is in the sealed list |
 | **P10 / P10b (done — F-022)** | Gas of the five Fuji phase-1 creations and Fuji C-Chain block time in the paper, with `F-022`; receipts **R-8** and **R-9**. Detail in `docs/audit/anchor-receipts.md` | **re-anchored** by R-8/R-9; no new anchor risk |
 | **A6-doc (done)** | Documentation consistency sweep after Fuji phase 1 (this commit): no document claims the tree is undeployed; phase 1 is recorded with `verifier = address(0)` and the transport/phase-4 L1 as pending. **A6 in §2.2 remains reputation dynamics (M6).** | **none** — README/architecture only |
-| **P9 (next)** | **Fase 4 + Fase 5 as one sealed batch** — the paper text under DEC-1/DEC-2/DEC-4/DEC-5 plus DEC-3 declared (§7.3, §7.4, §7.5, §9.4, §10.2, abstract, §1.2), `N-7` and the three remaining FASE 0 objectives, `M-05` with the **count manifest**, then **one** re-anchor. Detail in §12.1 | **re-anchored once**; `main.tex` is line 1 of the root |
-| P7b | *now blocked by P9* — the Zenodo deposit and the arXiv submission (both need an account, not code). Release `D-3` forbids submitting before the batch above lands | none |
+| **P9 (done — S-008, R-7)** | **Fase 4 + Fase 5 as one sealed batch** — the paper text under DEC-1/DEC-2/DEC-4/DEC-5 plus DEC-3 declared, `N-7` and the three remaining FASE 0 objectives, `M-05` with the **count manifest**, one re-anchor (`d46349c`, root `943dc96a…`). Label corrected on 2026-10-24: it still read "next" after S-008 had shipped it | **re-anchored once**; `main.tex` is line 1 of the root |
+| P7b | **unblocked by R-14 (2026-10-24)** — the Zenodo deposit and the arXiv submission (both need an account, not code). Release `D-3` forbade submitting before the batch landed; the batch landed in R-7, and R-14 replaced the artifact that carried the retired statements (`v0.2.2`, 43 pages, sha256 `91f5486f…`) | none |
 
-**Next step: P9** — P8 (`M9`: DEC-2 + DEC-4 + DEC-5; contracts, scripts and
-tests only) and P10/P10b (`F-022`) are done. P9 is the paper batch (Fase 4 +
-Fase 5) that closes DEC-1…DEC-5 in §7.3/§7.4/§7.5/§9.4/§10.2, the abstract and
-§1.2, repairs `N-7`, adds `M-05` with the count manifest, and re-anchors
-**once**. It is specified in §12.1 below.
+**Next step: P7b** — the paper batch (P9) closed in S-008 and its artifact was
+brought up to date in R-14 (`v0.2.2`). What is left is publication, not code: the
+Zenodo deposit (`.zenodo.json` is written, so the upload is metadata and not a
+retyping) and the arXiv submission (`main.tex` alone, no figures, inline
+bibliography).
 
-**P7b is blocked by P9**: the Zenodo deposit (`.zenodo.json` is written, so the
-upload is metadata and not a retyping) and the arXiv submission (`main.tex`
-alone) wait for that re-anchor, because release `D-3` forbids submitting before
-the batch lands. Fuji phase 1 is already deployed (chain 43113,
-`2026-10-19T01:46:52Z` UTC); what remains outside P9 is the phase-4 Subnet L1
-and the transport deployment.
+**P7b is no longer blocked by P9**: release `D-3` forbade submitting before the
+batch landed, and it landed in R-7. R-14 is the second precondition — it removes
+from the PDF the three statements a reader would have cited as implemented facts
+(the validator-binding sentence, `~206k` as the deployed verification cost, and
+the financial floor as a guarantee). Fuji phase 1 is deployed (chain 43113,
+`2026-10-19T01:46:52Z` UTC); what remains outside publication is the phase-4
+Subnet L1, the transport deployment and the real verifier.
 
 ## 12.1 The one batch: M9 (system) → Fase 4 (text) → Fase 5 (sealed + re-anchor)
 

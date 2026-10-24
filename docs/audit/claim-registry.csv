@@ -13,7 +13,7 @@ id,line,section,token,class,verified,evidence
 161,534,Repair Options,1.08,UNIT,1080501 / 1e6 = 1.08,soundness_zk_check_output.txt:20 (thousands separators)
 163,538,Repair Options,6.5,UNIT,6500000 / 1e6 = 6.5,succinctness_comparison_output.txt:39
 164,544,Recursive Verification,6.5,UNIT,6500000 / 1e6 = 6.5,succinctness_comparison_output.txt:39
-165,560,Succinctness and the Cost of Ingesting the Tensor,3.3,ANALIT,684064 / 206000 = 3.32,succinctness_comparison_output.txt:28 and :36; cited fref GasBenchmarks.sol lacks it
+165,560,Succinctness and the Cost of Ingesting the Tensor,2.4,ANALIT,684064 / 286144 = 2.39,succinctness_comparison_output.txt:28 and :36; cited fref GasBenchmarks.sol lacks it
 167,560,Succinctness and the Cost of Ingesting the Tensor,6.5,UNIT,6500000 / 1e6 = 6.5,succinctness_comparison_output.txt:39; cited fref GasBenchmarks.sol lacks it
 171,583,Summary of the Section,1.08,UNIT,1080501 / 1e6 = 1.08,soundness_zk_check_output.txt:20
 174,587,Summary of the Section,6.5,UNIT,6500000 / 1e6 = 6.5,succinctness_comparison_output.txt:39
@@ -26,3 +26,5 @@ id,line,section,token,class,verified,evidence
 486,1303,Summary of the Section,6.5,UNIT,6500000 / 1e6 = 6.5,succinctness_comparison_output.txt:39
 510,1408,Summary of the Section,10.2,REF,subsections 10.1-10.10 exist under Limitations (section 10),main.tex:1228-1304
 511,1409,Summary of the Section,10.2,REF,subsection 10.2 = Summary of the Section,main.tex:1304
+512,1301,Evaluation,781,ANALIT,k*omega*0.2236*1e18 / 286144 = 781.4 gwei,gas-table.csv:5; logs/gas_break_even.txt:9
+513,1292,Evaluation,286144,UNIT,cold path of verifyThreshold = 286144 gas (warm 223403),logs/gas_break_even.txt:8; gas_break_even.py:38

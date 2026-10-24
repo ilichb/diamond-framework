@@ -36,6 +36,7 @@ hay `session-log.md` en este repositorio: no inventar uno.
 | S-023 | 2026-10-23 | El Safe 2-de-3 en Fuji: una política, no una llave | este commit | 5ff84501… | cerrada; Safe `0x673F77…` vivo (305835 gas); la fase 2 espera el preflight |
 | S-024 | 2026-10-23 | Fase 2 desplegada: el slasher es una política (P-39/P-40) | este commit | 5ff84501… | cerrada; 5981575 gas, `verify --require-multisig` OK; P-39 y P-40 cerrados |
 | S-025 | 2026-10-24 | Snowtrace: los tres contratos verificados, la Safe como política | este commit | 5ff84501… | cerrada; 3 verificados (solc 0.8.33, optimizer 0), informe reproducible |
+| S-026 | 2026-10-24 | R-14: v0.2.2 (gas, P-27/P-28/P-29) y OTS de R-13 | este commit | 38ee9e57… | cerrada; PDF 43 pp; Zenodo y arXiv desbloqueados |
 
 S-016 cubre `triage-mapa-2026-10-22.md`, el acta
 `checklist-matriz-evidencia-2026-10-22.md` y la v2
