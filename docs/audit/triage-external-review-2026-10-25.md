@@ -70,12 +70,14 @@ Sus dos errores son concretos y comprobables: dice que no hay fuzzing (hay 7
 `testFuzz` y 9 invariantes stateful) y sitúa la pregunta abierta en §6.3, que es
 "La matriz de modularidad"; la pregunta está en §7 y §10.
 
-Sus dos aportaciones útiles son huecos reales, no errores de lectura:
+Sus tres aportaciones útiles son reales, no errores de lectura:
 
 1. **`src/README.md` mentía.** Decía "Status: **skeleton**. The subdirectories
    below are placeholders; no code has been written yet" (l. 3–4) con 88 ficheros
    trackeados y cuatro crates compilando. Corregido el 2026-10-25; ver §3.1.
-2. **ACP-77 no aparece en el paper.** Cero ocurrencias en `main.tex`. Ver §3.3.
+2. **`THETA_R` sigue siendo una conjetura sin argumento.** Cierto, aunque está
+   etiquetada en el código y en el paper, no escondida. Ver §3.2.
+3. **ACP-77 no aparece en el paper.** Cero ocurrencias en `main.tex`. Ver §3.3.
 
 ## 1. Método
 
