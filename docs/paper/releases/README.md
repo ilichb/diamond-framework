@@ -49,6 +49,9 @@ derivable, not memorized:
   `publication_date: 2026-10-24`, so a deposit publishes this artifact and not
   the v0.1.0 one. Until the DOI exists, cite the published v0.1.0 DOI
   `10.5281/zenodo.23268374` or the concept DOI `10.5281/zenodo.23268373`.
+  The deposit itself is written out, file by file and field by field, in
+  [`v0.2.2-zenodo-deposit.md`](v0.2.2-zenodo-deposit.md); that file is the record
+  of what was and was not deposited.
 - arXiv: the bundle is `main.tex` alone and it no longer carries the retired
   statements; the submission is pending an account and an endorsement.
 

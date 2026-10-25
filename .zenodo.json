@@ -2,7 +2,7 @@
   "title": "Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation",
   "description": "Paper and repository for the Diamond Framework, v0.2.2. Includes: the paper source and PDF (43 pp, sha256 5651a2f3...), a 38-script verification suite with byte-identical reruns, a falsification log (22 entries), an Avalanche Fuji phase-1 deployment with on-chain wiring verified, an 11-file anchor root (sha256 ca83694715739ac2ce8eb24874f3c33c1df69bbb4852b802e85dac899b23b020), and an OpenTimestamps receipt over that root whose Bitcoin attestation is still pending (four pending attestations, zero Bitcoin confirmations when the version was sealed on 2026-10-24); an earlier receipt does carry three Bitcoin attestations, but it covers a superseded root (5ff84501) and is not cited for this version. v0.2.2 is a text release: it removes the statements that v0.2.1 could only correct in an errata sheet. Section 6 now describes the validator-bound statement that M4d delivers (Poseidon leaf with the validator address as a public input); the verification cost is the measured cold path, 286,144 gas (781 gwei break-even, 31x margin at 25 gwei) instead of the ~206k composition with an inlined key; the collusion detector declares W as an external input (D-7) and the on-chain alert as a non-sanction; the financial floor is stated as a minimum admission cost, not a guarantee; and the README lists the five roles v1 trusts. Earlier releases: v0.2.1 corrected the ZK paper-code mismatch (measured V3/Groth16 circuit, 94,438 constraints; recursion deferred); v0.1.0 was the first deposit. Verification: the offline Foundry and Rust suites plus the 38-script evidence harness, 11/11 audit gate. The anchor root covers eleven files. On the Fuji testnet a Groth16 verifier built from the repository's committed development key is deployed and announced through the registry's two-day guardian rotation: it carries no ceremony, records no certified admission, and the ceremony-key verifier, the recursive option and Teleporter cross-subnet latency remain declared deferred. The repository code is MIT; the manuscript and the frozen PDF are CC BY 4.0.",
   "upload_type": "publication",
-  "publication_type": "article",
+  "publication_type": "preprint",
   "access_right": "open",
   "license": "cc-by-4.0",
   "version": "0.2.2",
@@ -11,7 +11,8 @@
   "creators": [
     {
       "name": "Blanco, Ilich",
-      "affiliation": "Andromeda Computer"
+      "affiliation": "Andromeda Computer",
+      "orcid": "0009-0002-0857-6824"
     }
   ],
   "related_identifiers": [
@@ -28,15 +29,41 @@
     {
       "identifier": "https://github.com/ilichb/diamond-framework",
       "relation": "isSupplementTo",
-      "scheme": "url"
+      "scheme": "url",
+      "resource_type": "software"
     }
   ],
   "keywords": [
-    "proof-of-stake",
+    "Diamond Framework",
+    "ZK-compressed reputation",
+    "Proof-of-Stake",
+    "Avalanche",
+    "Subnets",
     "reputation",
     "zero-knowledge proofs",
-    "cryptoeconomics",
-    "Avalanche",
     "OpenTimestamps"
+  ],
+  "references": [
+    "Z. Bai and J. W. Silverstein. Spectral Analysis of Large Dimensional Random Matrices. Springer Series in Statistics. Springer, 2nd edition, 2010",
+    "F. Bauer and J. Jost. Bipartite and neighborhood graphs and the spectrum of the normalized graph Laplacian. Communications on Pure and Applied Mathematics, 2012",
+    "E. Ben-Sasson, A. Chiesa, E. Tromer, and M. Virza. Scalable zero knowledge via cycles of elliptic curves. In Advances in Cryptology – CRYPTO 2014, LNCS 8617, pages 276–294. Springer, 2014",
+    "S. Bowe, J. Grigg, and D. Hopwood. Recursive proof composition without a trusted setup. Cryptology ePrint Archive, Report 2019/1021, 2019",
+    "F. Chung and L. Lu. The average distances in random graphs with given expected degrees. Proceedings of the National Academy of Sciences, 99(25):15879–15882, 2002",
+    "A. Coja-Oghlan. Graph partitioning via adaptive spectral techniques. Combinatorics, Probability and Computing, 19(2):227–284, 2010",
+    "L. W. Cong, Y. Li, and N. Wang. Tokenomics: Dynamic adoption and valuation. The Review of Financial Studies, 34(3):1105–1155, 2021",
+    "S. Goldwasser, S. Micali, and C. Rackoff. The knowledge complexity of interactive proof systems. SIAM Journal on Computing, 18(1):186–208, 1989",
+    "J. Goodman. Tezos: A self-amending crypto-ledger position paper. Position paper, 2014",
+    "J. Groth. On the size of pairing-based non-interactive arguments. In Advances in Cryptology – EUROCRYPT 2016, pages 305–326. Springer, 2016",
+    "S. D. Kamvar, M. T. Schlosser, and H. Garcia-Molina. The EigenTrust algorithm for reputation management in P2P networks. In Proceedings of the 12th International Conference on World Wide Web (WWW), pages 640–651, 2003",
+    "A. Kothapalli, S. Setty, and I. Tzialla. Nova: Recursive zero-knowledge arguments from folding schemes. In Advances in Cryptology – CRYPTO 2022, LNCS 13510, pages 359–388. Springer, 2022",
+    "D. Larimer. Delegated proof-of-stake (DPoS). BitShares whitepaper, 2014",
+    "R. B. Myerson. Optimal auction design. Mathematics of Operations Research, 6(1):58–73, 1981",
+    "B. Øksendal and A. Sulem. Applied Stochastic Control of Jump Diffusions. Universitext. Springer, Berlin, 2007",
+    "T. Roughgarden. Transaction fee mechanism design. In Proceedings of the 22nd ACM Conference on Economics and Computation (EC), pages 792–792, 2021",
+    "F. Saleh. Blockchain without waste: Proof-of-stake. The Review of Financial Studies, 34(3):1156–1190, 2021",
+    "C. A. Tracy and H. Widom. Level-spacing distributions and the Airy kernel. Communications in Mathematical Physics, 159(1):151–174, 1994",
+    "L. R. Tucker. Some mathematical notes on three-mode factor analysis. Psychometrika, 31(3):279–311, 1966",
+    "E. P. Wigner. On the distribution of the roots of certain symmetric matrices. Annals of Mathematics, 67(2):325–327, 1958",
+    "L. Xiong and L. Liu. PeerTrust: Supporting reputation-based trust for peer-to-peer electronic communities. IEEE Transactions on Knowledge and Data Engineering, 16(7):843–857, 2004"
   ]
 }
