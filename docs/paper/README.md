@@ -44,9 +44,9 @@ The page count follows the content, so it is read from the build:
 
 The current source is 43 pages (`Pages: 43`, three `pdflatex` passes, 0 errors, 0 undefined, 0 overfull or underfull boxes).
 Release snapshots are archived under
-`releases/`; the latest is `releases/diamond-framework-2026-10-24.pdf`
-(43 pages, 591880 bytes, SHA-256 `5651a2f3…`), frozen from the v0.2.2 source —
-the very source whose `main.tex` (`7058d6e6…`) the anchor root seals. That
+`releases/`; the latest is `releases/diamond-framework-2026-10-25.pdf`
+(43 pages, 591875 bytes, SHA-256 `89e71837…`), frozen from the v0.2.2 source —
+the very source whose `main.tex` (`2a6384d2…`) the anchor root seals. That
 snapshot is the v0.2.2 release candidate; it has no DOI yet, and the
 DOI-backed version is still v0.1.0 (see the repository `README`). The earlier snapshots stay
 as published and are no longer

@@ -82,7 +82,7 @@ The loop is enforced mechanically, not by discipline:
 - `verification/fase0_anchor.sh` derives a SHA-256 root over the research record
   (paper, falsification log, claim registry, gate itself, CI config, count
   manifests) and `--check` re-derives it byte for byte. Root:
-  `ca836947…` (11 pairs). The root is timestamped with OpenTimestamps, so the
+  `abe9c553…` (11 pairs). The root is timestamped with OpenTimestamps, so the
   record is witnessed by something the project does not control.
 
 ### 3.3 What is already on chain (the feasibility argument)

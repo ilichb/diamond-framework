@@ -32,8 +32,8 @@ written on the day the call reopens.
 2. **Export** `avalanche-research-proposal.md` to PDF (the ten-page limit is about
    the body; this file is ~2,300 words, about five pages). Do not include the
    appendix in the uploaded PDF; link it.
-3. **Attach:** CV · `diamond-framework-2026-10-24.pdf` (43 pp, sha256
-   `5651a2f3…`) · the frozen commit hash · the Fuji addresses table.
+3. **Attach:** CV · `diamond-framework-2026-10-25.pdf` (43 pp, sha256
+   `89e71837…`) · the frozen commit hash · the Fuji addresses table.
 4. **State the honest boundary in the first paragraph of the cover note:** testnet,
    unaudited, development key, call was closed when this was written.
 5. **Run `./figures.sh` immediately before sending.** If it prints DRIFT, the

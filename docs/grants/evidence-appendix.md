@@ -13,8 +13,8 @@ pages. Every figure here is re-derivable with `./figures.sh` or with a command f
 | Latest tag | `v0.2.1`; `v0.2.2` sealed and pending deposit |
 | Preprint | *Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation* |
 | Concept DOI | `10.5281/zenodo.23268373` (v0.1.0: `10.5281/zenodo.23268374`) |
-| Paper PDF | `docs/paper/releases/diamond-framework-2026-10-24.pdf`, 43 pp, 591,880 bytes |
-| PDF SHA-256 | `5651a2f31707d26c9ff9ca1009e385d046e7004e7dd5397226577670e4f3dd16` |
+| Paper PDF | `docs/paper/releases/diamond-framework-2026-10-25.pdf`, 43 pp, 591,875 bytes |
+| PDF SHA-256 | `89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9` |
 | Claim labels | Verified / Measured / Estimated / Design / Deferred, per section |
 | Falsification log | `docs/audit/numerical-verification.md`, 22 entries (F-001 … F-022) |
 
@@ -25,11 +25,11 @@ not have to trust a commit date.
 
 | Item | Value |
 |---|---|
-| Root | `ca83694715739ac2ce8eb24874f3c33c1df69bbb4852b802e85dac899b23b020` |
+| Root | `abe9c5535eb1dd7e462b49f19b52b828a9cfe235ccbcd32819f5daa37fe56bf7` |
 | Pairs sealed | 11 |
 | Re-derivation | `fase0_anchor.sh --check` → exit 0, byte-identical |
 | Timestamp | OpenTimestamps, 4 calendars, `PendingAttestation` |
-| Bitcoin attestation | **none yet** — the receipt is young and is not cited as proof |
+| Bitcoin attestation | **none yet for this root** — the receipt is hours old and is not cited as proof. The receipt over the preceding root did complete (Bitcoin blocks 972956, 972959, 973014) and is archived under `verification/ots-history/`; it seals other bytes, so it is not cited either. |
 | Receipt | `docs/audit/anchor-receipts.md` R-15 (R-01 … R-15) |
 | Superseded seals | `verification/ots-history/` (kept, never cited) |
 

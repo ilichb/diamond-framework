@@ -6,7 +6,12 @@ its bytes, once published, never change.
 
 ## Files
 
-- `diamond-framework-2026-10-24.pdf` — 43 pages, 591880 bytes (v0.2.2, **current**).
+- `diamond-framework-2026-10-25.pdf` — 43 pages, 591875 bytes (v0.2.2, **current**).
+  `sha256 89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9`
+- `diamond-framework-2026-10-24.pdf` — 43 pages, 591880 bytes (v0.2.2, superseded
+  before publication: §9 said the Bulletproofs alternative costs `31×` the Groth16
+  verification while the paragraph had just declared the 206k inline-key base not
+  to be the deployed cost; the ratio over the deployed path is `23×`).
   `sha256 5651a2f31707d26c9ff9ca1009e385d046e7004e7dd5397226577670e4f3dd16`
 - `diamond-framework-2026-10-20.pdf` — 41 pages, 579260 bytes.
   `sha256 1aa1cb6c52593203116a600eec11f980ab92a64945f480efd8e6cb856b864da5`
@@ -34,8 +39,8 @@ derivable, not memorized:
   composition), and the financial floor (a minimum admission cost, not a
   guarantee). The collusion detector now declares `W` as an external input and
   the on-chain alert as a non-sanction. See [`v0.2.2-notes.md`](v0.2.2-notes.md).
-- Release asset `diamond-framework-2026-10-24.pdf`: 43 pages, 591880 bytes,
-  sha256 `5651a2f31707d26c9ff9ca1009e385d046e7004e7dd5397226577670e4f3dd16`.
+- Release asset `diamond-framework-2026-10-25.pdf`: 43 pages, 591875 bytes,
+  sha256 `89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9`.
 - **The verifier left `address(0)` the same day, and the text followed.** A
   development-key `Groth16Verifier` was deployed on Fuji and announced through the
   registry's two-day rotation after the first export of this snapshot; the four
@@ -46,7 +51,7 @@ derivable, not memorized:
 - GitHub Release: **not tagged yet**; the tag follows the commit that adds this
   file.
 - Zenodo version DOI: **none yet.** `.zenodo.json` is set to `version: 0.2.2` /
-  `publication_date: 2026-10-24`, so a deposit publishes this artifact and not
+  `publication_date: 2026-10-25`, so a deposit publishes this artifact and not
   the v0.1.0 one. Until the DOI exists, cite the published v0.1.0 DOI
   `10.5281/zenodo.23268374` or the concept DOI `10.5281/zenodo.23268373`.
   The deposit itself is written out, file by file and field by field, in
@@ -87,19 +92,28 @@ derivable, not memorized:
 - These are the only PDFs git tracks: `.gitignore` carries `*.pdf` with
   the single negation `!docs/paper/releases/*.pdf`.
 
-## Provenance of the 2026-10-24 snapshot (the current one)
+## Provenance of the 2026-10-25 snapshot (the current one)
 
-`diamond-framework-2026-10-24.pdf` is frozen from the v0.2.2 source, the release
+`diamond-framework-2026-10-25.pdf` is frozen from the v0.2.2 source, the release
 that rewrites in the paper what v0.2.1 had only been able to correct in an
 errata sheet (P-25 gas and minor errata, P-27, P-28, P-29 and the §6 validator
 binding). Three `pdflatex` passes over that source produce it: 43 pages,
-589458 bytes, 0 errors, 0 undefined references, and 0 overfull or underfull
+591875 bytes, 0 errors, 0 undefined references, and 0 overfull or underfull
 boxes. The two extra pages are the new paragraphs of §5 and §10.
 
+It differs from the 2026-10-24 export by five bytes of text. §9 said the
+Bulletproofs alternative for `n = 500` costs `31×` the Groth16 verification,
+which is `6.5M / 206k`; the same paragraph had just declared that the 206k
+inline-key composition is *not* the deployed cost, and the deployed cold path
+is 286,144 gas, so the ratio over the deployed base is `6.5M / 286,144 = 22.7`,
+rounded to `23×`. §4.3 keeps `31×` because there the declared base *is* the
+206k composition. The 2026-10-24 file was never tagged, deposited or cited for
+an artifact, so it stays in the tree as history and this file is the artifact.
+
     git rev-parse --short HEAD                             # the commit that added this file
-    sha256sum docs/paper/main.tex                          # ee6f416c…62a3, entry #1 of the root 38ee9e57…
+    sha256sum docs/paper/main.tex                          # 2a6384d2…368c, entry #1 of the root abe9c553…
     head -1 verification/anchor_root.sha256                # the same hash
-    sha256sum releases/diamond-framework-2026-10-24.pdf    # 91f5486f…5186
+    sha256sum releases/diamond-framework-2026-10-25.pdf    # 89e71837…39b9
 
 ## Provenance of the 2026-10-20 snapshot (historical)
 

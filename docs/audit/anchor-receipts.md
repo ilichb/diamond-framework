@@ -1462,3 +1462,58 @@ forma parte de la cadena de custodia del paper.
 **Estado.** R-15 se commitea como descendiente de `f2d3993`; no se enmienda. La
 promoción del recibo (`ots upgrade`) queda pendiente de que los calendarios agreguen
 en Bitcoin, como en R-14.
+
+## R-16 — v0.2.2: el ratio de §9 vuelve a su base desplegada (2026-10-25)
+
+Fecha: `2026-10-25T16:03:56Z` (sello de `fase0_anchor.sh`), tras R-15 del día
+anterior. Motivo: una lectura externa del PDF del 24 encontró un ratio calculado
+sobre la base que el mismo párrafo acababa de retirar. §9 decía que la alternativa
+Bulletproofs para `n = 500` cuesta `31×` la verificación Groth16; ese 31 es
+`6.5M / 206k`, y el párrafo abre afirmando que la composición de 206k con clave
+inline «is not the deployed cost» (286.144 gas en frío). Sobre la base desplegada el
+ratio es `6.5M / 286.144 = 22,7`, que se escribe `23×`. El `31×` de §4.3 se queda:
+allí el párrafo declara `~206k` como base una frase antes y los dos operandos
+concuerdan. El otro 31 de §9 —el margen `781 / 25` gwei a 25 gwei— es otra cantidad
+y no cambia. La conclusión tampoco: Option B sigue descartada a 23× igual que a 31×.
+
+**Cadena de custodia.** `bash verification/fase0_anchor.sh` →
+`output_manifest.sha256` (38 pares, idéntico byte a byte) y `audit_manifest.sha256`
+nuevos; `--check` → exit 0 (38 pares, 11 pares y HEAD `f642b8a` idénticos).
+`bash verification/audit-gate.sh` → **PASS=11 FAIL=0 SKIP=0**. El único par que
+cambia es `main.tex` (`7058d6e6…` → `2a6384d2…`); los otros diez del root no se
+tocan, así que la diferencia entre un root y el siguiente es exactamente la del
+documento.
+
+| campo | valor |
+|---|---|
+| Artefacto sellado | `verification/anchor_root.sha256` (11 pares) |
+| SHA-256 del artefacto | `abe9c5535eb1dd7e462b49f19b52b828a9cfe235ccbcd32819f5daa37fe56bf7` (el de R-15 era `ca836947…`) |
+| Recibo | `verification/anchor_root.sha256.ots`, **910 bytes** |
+| SHA-256 del recibo | `76578eb747cfef47f74fc25cea85638b5857b20ceee5b87145cb327664953af3` |
+| Atestaciones | **4 `PendingAttestation`**, **0 `BitcoinBlockHeaderAttestation`** — derivado de `ots info` |
+
+**PDF.** `docs/paper/releases/diamond-framework-2026-10-25.pdf`, 43 páginas,
+591.875 bytes, sha256 `89e71837…`. `pdflatex` ×3 → 0 errores, 0 undefined,
+0 overfull/underfull. El PDF del 24 (`5651a2f3…`) queda en el árbol como export
+superado y no se cita como artefacto; no llegó a taggearse ni a depositarse.
+
+**Promoción del recibo de R-15.** El `.ots` de R-15 se promovió el mismo 25:
+`ots upgrade` devolvió **3 `BitcoinBlockHeaderAttestation`** en los bloques
+**972956, 972959 y 973014** (el cuarto calendario, `bob`, sigue pendiente). Cada
+bloque se comprobó contra su cabecera real —merkle root, proof of work y hash del
+bloque—, no solo contra la salida del CLI. Se conserva en
+`verification/ots-history/anchor_root-ca836947.sha256.ots`, **3.950 bytes**, sha256
+`12ba5f1c…`: prueba que los bytes del 24 existían, no que sean el artefacto, y no se
+cita como evidencia de esta versión.
+
+**Alcance.** Tocados y sellados: `main.tex` (contenido), `audit_manifest.sha256` y
+`anchor_root.sha256` (derivados), el `.ots` nuevo, y el recibo de R-15 archivado en
+`ots-history/` (fuera del root). No sellados: `releases/README.md`,
+`v0.2.2-notes.md`, `.zenodo.json`, `CITATION.cff`, `README.md`,
+`docs/paper/README.md`, `docs/grants/`, este recibo.
+
+**Estado.** R-16 se commitea como descendiente de `f642b8a`; no se enmienda. El
+depósito Zenodo debe hacerse antes de `2026-10-26T17:22:54Z`: a partir de esa hora
+`executeVerifierChange()` es permissionless y deja de ser cierto que `verifier()`
+sea cero.
+

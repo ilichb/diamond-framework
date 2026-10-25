@@ -3,7 +3,7 @@ message: "If you use this framework, please cite it as below."
 type: software
 title: "Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation"
 version: 0.2.2
-date-released: "2026-10-24"
+date-released: "2026-10-25"
 authors:
   - family-names: "Blanco"
     given-names: "Ilich"
@@ -34,8 +34,8 @@ preferred-citation:
     - type: doi
       value: "10.5281/zenodo.23268374"
       description: "v0.1.0 (2026-10-12)"
-# The artifact of v0.2.2 is docs/paper/releases/diamond-framework-2026-10-24.pdf
-# (43 pp, sha256 5651a2f31707d26c9ff9ca1009e385d046e7004e7dd5397226577670e4f3dd16).
+# The artifact of v0.2.2 is docs/paper/releases/diamond-framework-2026-10-25.pdf
+# (43 pp, sha256 89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9).
 # It has no Zenodo DOI yet: the deposit is the next step, and the version DOI is
 # added here in a follow-up commit. Until then the published version is v0.1.0
 # (DOI 10.5281/zenodo.23268374) and the preferred citation below points at it.

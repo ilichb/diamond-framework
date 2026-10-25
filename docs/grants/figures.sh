@@ -19,7 +19,7 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${REPO}" || exit 2
 
 AV="integrations/avalanche"
-PDF="docs/paper/releases/diamond-framework-2026-10-24.pdf"
+PDF="docs/paper/releases/diamond-framework-2026-10-25.pdf"
 
 # The claims, as the documents state them. The test count is 310 total: 309 run
 # offline (300 unit/fork tests plus 10 stateful-invariant tests, of which the
@@ -28,10 +28,10 @@ PDF="docs/paper/releases/diamond-framework-2026-10-24.pdf"
 # fixed number of passes.
 CLAIM_TOTAL=310
 CLAIM_FAILED=0
-CLAIM_PDF_SHA=5651a2f31707d26c9ff9ca1009e385d046e7004e7dd5397226577670e4f3dd16
-CLAIM_PDF_BYTES=591880
+CLAIM_PDF_SHA=89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9
+CLAIM_PDF_BYTES=591875
 CLAIM_PDF_PAGES=43
-CLAIM_ROOT=ca83694715739ac2ce8eb24874f3c33c1df69bbb4852b802e85dac899b23b020
+CLAIM_ROOT=abe9c5535eb1dd7e462b49f19b52b828a9cfe235ccbcd32819f5daa37fe56bf7
 CLAIM_CORE_LINES=2673
 CLAIM_SCOPE_LINES=2856
 # Test code as the appendix states it: 11 .t.sol files, the ten at test/ plus the

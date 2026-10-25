@@ -59,7 +59,7 @@ v1 does not remove trust; it places it in five roles, all of them visible in the
 ### Non-goals
 
 - **Not a finished protocol.** Sections 2 through 11 are written; each closes with a summary table and each claim is labelled Verified, Measured, Estimated, Design, or Deferred. The remaining open items are consolidated in §10: external audit, real-data calibration, testnet benchmarks, the on-chain verifier, and the deferred recursive option.
-- **Not audited.** No external security review has been performed, and there is no mainnet deployment. Fuji phase 2 (chain 43113) is a testnet deployment only. The external audit is the one item the project cannot do for itself; the funding approach prepared for it, addressed to the Avalanche research programme, lives in [`docs/grants/`](docs/grants/) and is deliberately kept **out** of the paper and out of the anchor.
+- **Not audited.** No external security review has been performed, and there is no mainnet deployment. Fuji phase 2 (chain 43113) is a testnet deployment only. The external audit is the one item the project cannot do for itself; the funding approach prepared for it, addressed to the Avalanche research programme, lives in [`docs/grants/`](docs/grants/) — the programme's call closed on 2026-10-24, so the package stands as the record of the ask, ready to send unchanged if it reopens — and is deliberately kept **out** of the paper and out of the anchor.
 - **Not formally verified.** All proofs are mathematical arguments, not machine-checked proofs.
 - **Not a production implementation.** The off-chain components under `src/` (`reputation/`,
   `rmt/`, `zk/`, `datalayer/`) are built and tested against their own design notes, but they
@@ -285,8 +285,8 @@ Two licenses, because the code and the paper are reused differently:
 release candidate; DOI pending deposit.**
 
 The artifact of record for v0.2.2 is
-[`docs/paper/releases/diamond-framework-2026-10-24.pdf`](docs/paper/releases/diamond-framework-2026-10-24.pdf)
-— 43 pages, sha256 `5651a2f3…` — frozen from the current source. It carries no
+[`docs/paper/releases/diamond-framework-2026-10-25.pdf`](docs/paper/releases/diamond-framework-2026-10-25.pdf)
+— 43 pages, sha256 `89e71837…` — frozen from the current source. It carries no
 DOI yet: the deposit is the next step, and the version DOI is added here in the
 commit that follows it. Until then the DOI-backed version is v0.1.0, and the
 concept DOI resolves to it.
@@ -298,7 +298,7 @@ and no deposit, and must not be cited.
 
 - Concept DOI (all versions, resolves to the latest deposit): [10.5281/zenodo.23268373](https://doi.org/10.5281/zenodo.23268373)
 - v0.1.0 (2026-10-12): [10.5281/zenodo.23268374](https://doi.org/10.5281/zenodo.23268374) — the only DOI-backed version
-- v0.2.2 (2026-10-24): release candidate, DOI pending Zenodo deposit
+- v0.2.2 (2026-10-25): release candidate, DOI pending Zenodo deposit
 - v0.2.1 (2026-10-20): [GitHub Release](https://github.com/ilichb/diamond-framework/releases/tag/v0.2.1), never deposited, superseded
 
 Machine-readable metadata lives in [`CITATION.cff`](CITATION.cff) and
@@ -313,7 +313,7 @@ exists yet.
   version = {0.2.2},
   doi     = {10.5281/zenodo.23268373},
   url     = {https://github.com/ilichb/diamond-framework},
-  note    = {Release candidate v0.2.2 (2026-10-24); version DOI pending Zenodo deposit. The concept DOI resolves to the latest deposit, v0.1.0}
+  note    = {Release candidate v0.2.2 (2026-10-25); version DOI pending Zenodo deposit. The concept DOI resolves to the latest deposit, v0.1.0}
 }
 ```
 
