@@ -14,6 +14,9 @@ url: "https://github.com/ilichb/diamond-framework"
 license: MIT
 identifiers:
   - type: doi
+    value: "10.5281/zenodo.23651484"
+    description: "v0.2.2 (2026-10-25)"
+  - type: doi
     value: "10.5281/zenodo.23268374"
     description: "v0.1.0 (2026-10-12)"
   - type: doi
@@ -28,14 +31,15 @@ preferred-citation:
       given-names: "Ilich"
   license: CC-BY-4.0
   status: preprint
-  version: 0.1.0
-  date-released: "2026-10-12"
+  version: "0.2.2"
+  date-released: "2026-10-25"
   identifiers:
     - type: doi
-      value: "10.5281/zenodo.23268374"
-      description: "v0.1.0 (2026-10-12)"
+      value: "10.5281/zenodo.23651484"
+      description: "v0.2.2 (2026-10-25)"
 # The artifact of v0.2.2 is docs/paper/releases/diamond-framework-2026-10-25.pdf
-# (43 pp, sha256 89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9).
-# It has no Zenodo DOI yet: the deposit is the next step, and the version DOI is
-# added here in a follow-up commit. Until then the published version is v0.1.0
-# (DOI 10.5281/zenodo.23268374) and the preferred citation below points at it.
+# (43 pp, sha256 89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9),
+# deposited 2026-10-25 as 10.5281/zenodo.23651484, a version of the concept
+# 10.5281/zenodo.23268373. v0.1.0 (10.5281/zenodo.23268374) stays citable: its
+# bytes never change. The preferred citation above is the one that resolves to
+# the deposited v0.2.2.

@@ -48,15 +48,18 @@ derivable, not memorized:
   before any tag or DOI existed. No ceremony key and no certified admission — see
   `v0.2.2-notes.md` §"The verifier leaves `address(0)`" and
   `integrations/avalanche/scripts/fuji_20261024/`.
-- GitHub Release: **not tagged yet**; the tag follows the commit that adds this
-  file.
-- Zenodo version DOI: **none yet.** `.zenodo.json` is set to `version: 0.2.2` /
-  `publication_date: 2026-10-25`, so a deposit publishes this artifact and not
-  the v0.1.0 one. Until the DOI exists, cite the published v0.1.0 DOI
-  `10.5281/zenodo.23268374` or the concept DOI `10.5281/zenodo.23268373`.
-  The deposit itself is written out, file by file and field by field, in
-  [`v0.2.2-zenodo-deposit.md`](v0.2.2-zenodo-deposit.md); that file is the record
-  of what was and was not deposited.
+- Zenodo version DOI: **`10.5281/zenodo.23651484`** — deposited 2026-10-25 as
+  <https://zenodo.org/records/23651484>, version 2 of the concept
+  `10.5281/zenodo.23268373`. The deposit holds exactly two files, `main.tex` and
+  the PDF above, and both are byte-identical to the copies in this repository
+  (md5 `3e8bfe26ad048e19a418a6dc8366dbc0` for the PDF,
+  `68b04622d42a50f3e5e3e7bcc81bf929` for the source; re-hashed after download).
+  v0.1.0 keeps its own frozen DOI `10.5281/zenodo.23268374`. The checklist that
+  was executed is [`v0.2.2-zenodo-deposit.md`](v0.2.2-zenodo-deposit.md), now
+  marked as deposited, including the one place where the published record
+  departs from the plan.
+- GitHub Release: tagged by the commit that carries this file, so the tag
+  contains the DOI that names it.
 - arXiv: the bundle is `main.tex` alone and it no longer carries the retired
   statements; the submission is pending an account and an endorsement.
 
@@ -76,9 +79,8 @@ derivable, not memorized:
   (downloaded and re-hashed).
 - Zenodo version DOI: **no v0.2.1 deposit was made.** The reason recorded here at
   the time — §6.2's validator binding was not implemented (P-01) — was resolved
-  by M4d and the text was corrected in v0.2.2, which is the deposit candidate.
-  Until a DOI exists, cite the published v0.1.0 DOI `10.5281/zenodo.23268374` or
-  the concept DOI `10.5281/zenodo.23268373`.
+  by M4d and the text was corrected in v0.2.2, which is the version now deposited
+  as `10.5281/zenodo.23651484`.
 - v0.2.0 has no GitHub Release and no Zenodo deposit; it is superseded
   by v0.2.1 and must not be cited.
 
@@ -330,19 +332,24 @@ shipped in TeX Live as `cm-super`).
 
 ## Deposit
 
-For v0.2.2 both destinations are open: the PDF no longer carries the statement
-that blocked v0.2.1 (the validator binding is implemented by M4d and described in
-§6), and the gas figure is the measured deployed path. Neither delivery needs a
-code change (plan §11, P7b); both need an account. The licence both carry is the
-one the paper already has: **CC BY 4.0** (`../LICENSE`, the same legal code the
-paper's `main.tex` sits next to).
+Zenodo is done for v0.2.2 — **`10.5281/zenodo.23651484`** (2026-10-25), version 2 of
+the concept `10.5281/zenodo.23268373`. arXiv is still open: it needs an account and
+an endorsement.
 
-**Zenodo.** The metadata is written, in `.zenodo.json` at the repository root
-(title, creators, `cc-by-4.0`, keywords, description), so the deposit is the
-frozen PDF plus that file: Zenodo derives the publication date from the deposit
-and mints the DOI. The DOI goes into `CITATION.cff` (`identifiers`) and into
-`.zenodo.json` (`related_identifiers`) once it exists — until then neither file
-asserts one.
+The PDF no longer carries the statement that blocked v0.2.1 (the validator binding
+is implemented by M4d and described in §6), and the gas figure is the measured
+deployed path. Neither delivery needed a code change (plan §11, P7b). The licence
+both carry is the one the paper already has: **CC BY 4.0** (`../LICENSE`, the same
+legal code the paper's `main.tex` sits next to).
+
+**Zenodo.** Deposited by hand as a *new version* of the v0.1.0 record, so the
+concept DOI stayed stable and v0.1.0 kept its own frozen DOI. The record holds two
+files — `diamond-framework-2026-10-25.pdf` and `main.tex` — and the metadata came
+from `.zenodo.json` (title, creators with ORCID, `Preprint`, `cc-by-4.0`,
+keywords, 21 references, `isSupplementTo` the repository). The DOI was minted at
+publish and is now asserted in `CITATION.cff` (`identifiers` and
+`preferred-citation`) and in `.zenodo.json` (`related_identifiers`,
+`isIdenticalTo`).
 
 **arXiv.** The bundle is `main.tex` alone: it loads no `\includegraphics` and its
 bibliography is an inline `thebibliography`, so there is no `.bbl` and no figure
@@ -350,7 +357,7 @@ directory to send, and every package it loads comes from TeX Live's
 base/recommended/extra collections.
 
 Caveat of provenance: `docs/paper/LICENSE` and `.zenodo.json` are as old as P7a
-and are not in the sealed ten, so a later edit to either one moves no anchor —
+and are not in the sealed eleven, so a later edit to either one moves no anchor —
 but it does move what a deposit claims.
 
 ## Verifying
