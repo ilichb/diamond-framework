@@ -14,9 +14,10 @@ audit the whole fund lifecycle; `DeployMockToken.s.sol` and
 **Phase 2 is the live deployment** (chain 43113, `2026-10-23`): registry
 `0x8DE8C843…`, vault `0xD560F40B…`, manager `0x88e60aA2…`, with the 2-of-3 Safe
 `0x673F7725…` as `slashAuthority` and `verifier = address(0)` at creation. A
-development-key `Groth16Verifier` was deployed and announced on 2026-10-24; the
-registry installs it after `CHANGE_DELAY`, so `verifier()` still reads zero until
-2026-10-26T17:22:54Z (see *Installing the verifier* below). Phase 1
+development-key `Groth16Verifier` was deployed and announced on 2026-10-24 and the
+registry installed it on 2026-10-26, once `CHANGE_DELAY` had elapsed (see
+*Installing the verifier* below); the path still reverts `UnknownEpoch` until an
+epoch is posted. Phase 1
 (`2026-10-19`, `fuji_20261018/`) stays on chain without `sourceChainId()` and with
 an EOA slasher: it is what P-39 and P-40 recorded, and why both are closed by the
 redeployment rather than by patching it. On Snowtrace the three phase-2 contracts
@@ -203,7 +204,7 @@ chain and are what P-39 and P-40 described; nothing below touches them.
 | slashAuthority | `0x673F7725CF17A481299c7073486F8Fb222a66813` (the 2-of-3 Safe) |
 | sequencer | `0xFCD6b18B546e94e3289d514Ba89174531aFE101E` |
 | guardian | `0x12458CD567C9f01cbA220Fe3f2Af97034f9635bb` (the deployer; an EOA) |
-| verifier | `0x0` at deployment; `0x125f2054EaCFbd9e34F991cF7A437b3dC95E3eCa` announced 2026-10-24, installable from 2026-10-26T17:22:54Z |
+| verifier | `0x0` at deployment; `0x125f2054EaCFbd9e34F991cF7A437b3dC95E3eCa` announced 2026-10-24 (eta 2026-10-26T17:22:54Z) and installed 2026-10-26T18:37:46Z |
 | token / sink | `0xf1db80d2…cA0C` / `0xE0297ab1…3fA4d`, reused from phase 1 |
 | `wadPerUnit` | 1 |
 | origin | `sourceChainId=0xce128645…091bc1`, `formulaDigest=0x403af787…a4cfc` |
@@ -247,7 +248,7 @@ REGISTRY=0x8DE8C8436D0cc9ED85ea630D5324B8A580EAd69a \
 VERIFIER=<address from step 1> \
 forge script scripts/ProposeVerifier.s.sol:ProposeVerifier --rpc-url "$FUJI_RPC_URL" --broadcast
 
-# 3. after CHANGE_DELAY (2 days), permissionless: any account, 46 299 gas in the run below
+# 3. after CHANGE_DELAY (2 days), permissionless: any account, 50 967 gas in the run below
 cast send $REGISTRY 'executeVerifierChange()' --rpc-url "$FUJI_RPC_URL" --private-key ...
 ```
 
@@ -265,15 +266,22 @@ script reads `registry.guardian()` first and reverts `WiringMismatch` if the key
 being used is not that account — the alternative is a broadcast that fails on chain
 after paying gas, or worse, one sent from a key the operator assumed was the guardian.
 
-Steps 1 and 2 were run on 2026-10-24 and are recorded in
+Steps 1 and 2 were run on 2026-10-24 and step 3 on 2026-10-26, all recorded in
 `fuji_20261024/fuji_verifier_chain.txt`: `0x125f2054…3eCa`, 2 273 291 gas to deploy,
-46 299 to announce, `eta = 1793035395` (2026-10-26T17:22:54Z). Step 3 is pending by
-construction; the record says which account may send it (any) and what to read
-afterwards (`registry.verifier()` non-zero, `pendingVerifier()` zero,
-`verifierChangeEta()` zero). Calling it early is refused by the delay itself: at
-block 59,962,870, 169,860 s before the `eta`, it reverted
-`ChangeNotReady(1793035395, 1792865535)` — for the guardian as well, since the
-check is on `block.timestamp` and not on the sender.
+46 299 to announce, `eta = 1793035395` (2026-10-26T17:22:54Z), and 50 967 to install
+— 2 370 557 gas for the whole rotation, 0.00000000037928912 AVAX at 160 wei/gas. The
+third transaction landed in block 60,067,820 at 18:37:46Z, 4 471 s after the `eta`;
+the record says which account sent it and repeats that any account could have, and
+what to read afterwards: `registry.verifier()` non-zero,
+`pendingVerifier()` zero, `verifierChangeEta()` zero.
+
+The delay is a floor exposed to the chain, not an intention. Calling it early is
+refused by the delay itself: at block 59,962,870, 169,860 s before the `eta`, it
+reverted `ChangeNotReady(1793035395, 1792865535)` — for the guardian as well, since
+the check is on `block.timestamp` and not on the sender. Missing the `eta` costs
+nothing: nothing expires, the proposal waits until someone sends the transaction.
+That is what happened here, and the two halves — the early revert and the late
+success — are the same rule read from the chain rather than from the source.
 
 What this does **not** show is an admission. With no epoch posted, `verifyThreshold`
 reverts `UnknownEpoch` before it ever reaches the verifier
@@ -568,7 +576,7 @@ run to run and not Fuji addresses.
 | `DeployValidatorManager.s.sol` | Deploy `AVIPValidatorManager`, with `CUSTODY` optional | 1 | dry run + tests (M7a, amended by M8); phase 1 uses `DeployFujiPhase1` |
 | `DeployStakeVault.s.sol` | Deploy `AVIPStakeVault`, the custody the manager binds | 1 | dry run + tests (M8); phase 1 uses `DeployFujiPhase1` |
 | `DeployVerifier.s.sol` | Deploy `Groth16Verifier` from the committed development key and self-check its digest | 1.5 | **deployed on Fuji** (chain 43113, 2026-10-24, `0x125f2054…3eCa`) |
-| `ProposeVerifier.s.sol` | Announce that verifier through the M9a pair; asserts the key is the registry guardian | 1.5 | **broadcast on Fuji** (2026-10-24, eta 2026-10-26T17:22:54Z; `executeVerifierChange` pending) |
+| `ProposeVerifier.s.sol` | Announce that verifier through the M9a pair; asserts the key is the registry guardian | 1.5 | **broadcast on Fuji** (2026-10-24, eta 2026-10-26T17:22:54Z); installed 2026-10-26T18:37:46Z by `executeVerifierChange` |
 | `DeployMockToken.s.sol` | Deploy the burnable test token used by phase 1 | 1 | deployed on Fuji (mock token, 18 decimals) |
 | `DeployBurnSink.s.sol` | Deploy the reference `AVIPBurnSink` | 1 | deployed on Fuji (reference sink) |
 | `DeployFujiPhase1.s.sol` | Deploy registry, vault and manager in one broadcast session | 1 | **deployed on Fuji** (chain 43113, 2026-10-19T01:46:52Z UTC) |
