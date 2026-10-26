@@ -58,8 +58,9 @@ derivable, not memorized:
   was executed is [`v0.2.2-zenodo-deposit.md`](v0.2.2-zenodo-deposit.md), now
   marked as deposited, including the one place where the published record
   departs from the plan.
-- GitHub Release: tagged by the commit that carries this file, so the tag
-  contains the DOI that names it.
+- GitHub Release: the tag `v0.2.2` is pushed and carries this DOI; the Release
+  entry itself is the one step that needs a host with an authenticated `gh`
+  (`gh release create v0.2.2 --notes-file docs/paper/releases/v0.2.2-notes.md`).
 - arXiv: the bundle is `main.tex` alone and it no longer carries the retired
   statements; the submission is pending an account and an endorsement.
 
