@@ -51,7 +51,7 @@ de runtimes del README), y `IMP-D-3` (layout de Foundry) con el `D-7` del paper.
 | `R4-D` | `triage-external-review-2026-10-25.md:141-151` | `D1`…`D11` | 11 | congelada | `grep -cE '^\| D[0-9]+ \|'` |
 | «D-7 del paper» | `docs/paper/main.tex` §6 | — | 1 | se cita con nombre, no con número | — |
 | `MPA-M-` | `triage-mapa-2026-10-22.md:61` | `M-01`… | 18 | **local**: no cruza de carril | `grep -cE '^\| M-[0-9]+'` |
-| `V-` | — | — | 0 | **no existe** (§3.5) | `grep -rn 'V-8' docs/` → 0 |
+| `V-` | — | — | 0 | **no existe** (§3.5) | `grep -rn 'V-8' docs/ --exclude=open-items.md` → 0 |
 
 `P-` tiene 51 filas y 40 IDs: las 11 de más son la tabla de disposición de
 `:3246`, indexada por los mismos IDs. No es una colisión.
@@ -94,7 +94,8 @@ es el mapa de renumeración que este fichero toma como precedente (§5).
 
 ### 3.5 IDs nuevos, y `V-8`
 
-`V-8` no existe en el repo (`grep -rn 'V-8' docs/` → 0). Es un ID externo, y el
+`V-8` no existe en el repo (`grep -rn 'V-8' docs/ --exclude=open-items.md` → 0;
+sin el `--exclude`, este mismo fichero lo cuenta). Es un ID externo, y el
 plan lo usaba para dos cosas distintas: extender el gate y anotar `SafeFork`.
 Resolución: los dos son acciones de trabajo, así que entran en la serie `B-` por
 el final, y este fichero los define:
