@@ -73,11 +73,11 @@ registry.verifier()      →  0x0000…0000                                    #
 
 | Metric | Value |
 |---|---|
-| `forge test` (offline) | **309 passed, 0 failed, 1 skipped** (310 total) |
-| `forge test` with `FUJI_RPC_URL` | **310 passed, 0 failed, 0 skipped** — the extra one is `SafeForkTest`, a fork test of the live 2-of-3 Safe (468,956 gas) |
+| `forge test` (offline) | **310 passed, 0 failed, 1 skipped** (311 total) |
+| `forge test` with `FUJI_RPC_URL` | **311 passed, 0 failed, 0 skipped** — the extra one is `SafeForkTest`, a fork test of the live 2-of-3 Safe (468,956 gas) |
 | Suites | 12 |
 | Stateful invariants | **9**, over escrow conservation and admission consistency, 48 runs x 32 calls each (1,536 randomized calls per invariant) |
-| Test code | 7,278 lines across 11 `.t.sol` files |
+| Test code | 7,328 lines across 11 `.t.sol` files |
 | Contract source | 3,956 lines, 20 files: **2,673 core** + 1,283 interfaces/verifiers |
 | Toolchain | solc 0.8.33, EVM `cancun`, optimizer off (paper's gas basis) |
 

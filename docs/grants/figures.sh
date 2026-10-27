@@ -21,12 +21,12 @@ cd "${REPO}" || exit 2
 AV="integrations/avalanche"
 PDF="docs/paper/releases/diamond-framework-2026-10-25.pdf"
 
-# The claims, as the documents state them. The test count is 310 total: 309 run
+# The claims, as the documents state them. The test count is 311 total: 310 run
 # offline (300 unit/fork tests plus 10 stateful-invariant tests, of which the
 # 9 `invariant_` functions each run 48 x 32 calls) and one (SafeForkTest) skips
-# without FUJI_RPC_URL, so the invariant to check is "0 failed, 310 total", not a
+# without FUJI_RPC_URL, so the invariant to check is "0 failed, 311 total", not a
 # fixed number of passes.
-CLAIM_TOTAL=310
+CLAIM_TOTAL=311
 CLAIM_FAILED=0
 CLAIM_PDF_SHA=89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9
 CLAIM_PDF_BYTES=591875
@@ -36,7 +36,7 @@ CLAIM_CORE_LINES=2673
 CLAIM_SCOPE_LINES=2856
 # Test code as the appendix states it: 11 .t.sol files, the ten at test/ plus the
 # stateful-invariant suite at test/invariant/.
-CLAIM_TEST_LINES=7278
+CLAIM_TEST_LINES=7328
 CLAIM_TEST_FILES=11
 CLAIM_GATE_PASS=11
 

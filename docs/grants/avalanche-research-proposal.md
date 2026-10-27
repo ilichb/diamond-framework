@@ -117,10 +117,11 @@ equilibrium's endogeneity, the freshness bound where `γ·k ≥ 1` constrains no
 and those negative results are, for a reader, worth more than the positive one.
 
 **To engineering.** A specification precise enough to be audited: 2,673 lines of
-core Solidity and **310 tests in 12 suites** with none failing — 309 offline (300
-unit and fork tests plus 10 stateful-invariant tests: 9 invariants over the
-escrow, each run against 1,536 randomized calls) plus `SafeForkTest`, which reads
-the live 2-of-3 Safe on Fuji and skips when no RPC is configured — and **line**
+core Solidity and **311 tests in 12 suites** with none failing — 310 run offline
+(300 unit and fork tests plus 10 stateful-invariant tests, of which 9 invariants
+over the escrow each run against 1,536 randomized calls) and `SafeForkTest`
+reads the live 2-of-3 Safe on Fuji, skipping when no RPC is configured — and
+**line**
 coverage of 100% on the registry (114/114), the vault (95/95) and the manager
 (61/61), with branch coverage of 96.43% (27/28), 95.45% (21/22) and 100% (17/17)
 respectively; 93.55% lines and 61.54% branches on the endpoint, 95.24% lines and
@@ -187,7 +188,7 @@ Rates are estimates for a mid-tier firm and are the part of this proposal most
 open to being wrong; `budget.md` §2 shows the arithmetic and the fallback if the
 quotes come in higher.
 
-**No line pays for work already done.** The paper, the 310 tests, the Fuji
+**No line pays for work already done.** The paper, the 311 tests, the Fuji
 deployment, the gate and the anchor were produced without funding.
 
 ## 8. Researcher qualifications
