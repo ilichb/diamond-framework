@@ -339,3 +339,15 @@ Antes: 310 funciones, 309 ejecutadas, 1 omitida. Después de
 `M4dRealKey.t.sol`): 311 funciones, **310 ejecutadas**, 1 omitida. La omitida
 sigue siendo la misma y sigue siendo deliberada: `SafeForkTest.setUp()` llama
 `vm.skip(true)` cuando no hay `FUJI_RPC_URL`.
+
+### A-5. El depósito, después del snapshot
+
+Lo anterior se verificó contra `b9cffb0` el 2026-10-25, y §3 (líneas 44–46) lo
+dice con precisión: entonces el concepto tenía una sola versión publicada y
+`23650061` no resolvía. `b32ddbf` (tag `v0.2.2`) publicó la segunda:
+`10.5281/zenodo.23651484`, versión 2 del concepto `23268373`, comprobada contra
+la API antes de escribirla. El `23650061` sigue sin existir porque era una
+reserva que Zenodo nunca acuñó: la advertencia de §3 era correcta, y el
+identificador que la sustituye es el que transcribe
+`docs/paper/releases/v0.2.2-zenodo-deposit.md` con los dos ficheros cuyo md5
+coincide con este árbol.

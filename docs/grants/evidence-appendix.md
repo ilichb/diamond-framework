@@ -10,9 +10,9 @@ pages. Every figure here is re-derivable with `./figures.sh` or with a command f
 |---|---|
 | Repository | `github.com/ilichb/diamond-framework` (MIT) |
 | Commits | 250 |
-| Latest tag | `v0.2.1`; `v0.2.2` sealed and pending deposit |
+| Latest tag | `v0.2.2`, deposited 2026-10-25 |
 | Preprint | *Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation* |
-| Concept DOI | `10.5281/zenodo.23268373` (v0.1.0: `10.5281/zenodo.23268374`) |
+| Concept DOI | `10.5281/zenodo.23268373` — v0.2.2: `10.5281/zenodo.23651484`; v0.1.0: `10.5281/zenodo.23268374` |
 | Paper PDF | `docs/paper/releases/diamond-framework-2026-10-25.pdf`, 43 pp, 591,875 bytes |
 | PDF SHA-256 | `89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9` |
 | Claim labels | Verified / Measured / Estimated / Design / Deferred, per section |
