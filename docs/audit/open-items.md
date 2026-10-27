@@ -41,20 +41,21 @@ de runtimes del README), y `IMP-D-3` (layout de Foundry) con el `D-7` del paper.
 
 | Serie | Fuente | Rango | Filas | Numeración | Re-derivar |
 |---|---|---|---|---|---|
-| `P-` | `audit-2026-10-20-in-progress.md:45` | `P-01`…`P-40` | 40 | **congelada** | `grep -oE '^\| P-[0-9]+' … \| sort -u \| wc -l` |
-| `P-` disposición | `audit-2026-10-20-in-progress.md:3246` | `P-27`…`P-37` | 11 | misma numeración | `sed -n '3246,$p' … \| grep -cE '^\| P-[0-9]+'` |
-| `B-` | `triage-external-review-2026-10.md:677` | `B-1`…`B-7` | 7 | congelada; se amplía en §3.5 | `grep -cE '^\| B-[0-9]'` |
-| `A-` | `triage-external-review-2026-10.md:153-158, 530-660` | `A-1`…`A-22` + `-bis`/`16a`/`16b` | 26 | congelada; mapa en `:805-821` | `grep -oE 'A-[0-9]+(-bis\|[ab])?' \| sort -uV` |
+| `P-` | `audit-2026-10-20-in-progress.md:45` | `P-01`…`P-40` | 40 | **congelada** | `grep -oE '^\| P-[0-9]+' docs/audit/audit-2026-10-20-in-progress.md \| sort -u \| wc -l` |
+| `P-` disposición | `audit-2026-10-20-in-progress.md:3246` | `P-27`…`P-37` | 11 | misma numeración | `sed -n '3246,$p' docs/audit/audit-2026-10-20-in-progress.md \| grep -cE '^\| P-[0-9]+'` |
+| `B-` | `triage-external-review-2026-10.md:677` | `B-1`…`B-7` | 7 | congelada; se amplía en §3.5 | `grep -cE '^\| B-[0-9]+ \|' docs/audit/triage-external-review-2026-10.md` |
+| `A-` | `triage-external-review-2026-10.md:153-158, 530-660` | `A-1`…`A-22`, 4 con sufijo | 25 | congelada; mapa en `:805-821` | `grep -oE 'A-[0-9]+(-bis\|[ab])?' docs/audit/triage-external-review-2026-10.md \| sort -uV \| wc -l` |
 | `C-` | `content-audit-pending.md` | `### C-` | 50 | congelada (`C-log`) | `grep -c '^### C-'` |
 | `IMP-D-` | `implementation-plan.md:2874-2880` | `D-1`…`D-7` | 7 | congelada | `grep -cE '^\| D-[1-7] '` |
-| `R3-D-` | `triage-external-review-2026-10.md` | `D-1`…`D-4` | 4 | congelada | idem |
+| `R3-D-` | `triage-external-review-2026-10.md:728-754` (viñetas, no tabla) | `D-1`…`D-4` | 4 | congelada | `grep -cE '^- \*\*D-[0-9]' docs/audit/triage-external-review-2026-10.md` |
 | `R4-D` | `triage-external-review-2026-10-25.md:141-151` | `D1`…`D11` | 11 | congelada | `grep -cE '^\| D[0-9]+ \|'` |
 | «D-7 del paper» | `docs/paper/main.tex` §6 | — | 1 | se cita con nombre, no con número | — |
 | `MPA-M-` | `triage-mapa-2026-10-22.md:61` | `M-01`… | 18 | **local**: no cruza de carril | `grep -cE '^\| M-[0-9]+'` |
 | `V-` | — | — | 0 | **no existe** (§3.5) | `grep -rn 'V-8' docs/ --exclude=open-items.md` → 0 |
 
 `P-` tiene 51 filas y 40 IDs: las 11 de más son la tabla de disposición de
-`:3246`, indexada por los mismos IDs. No es una colisión.
+`:3246`, indexada por los mismos IDs. No es una colisión. Igual con `A-`: son 25
+tokens y no 26 porque `A-16` sólo existe como `A-16a` y `A-16b`.
 
 ## 3. Colisiones y resolución
 
