@@ -6,6 +6,7 @@ import {AVIPRegistry} from "../contracts/AVIPRegistry.sol";
 import {IAVIPRegistry} from "../contracts/interfaces/IAVIPRegistry.sol";
 import {Groth16Verifier} from "../contracts/verifiers/Groth16Verifier.sol";
 import {M4dGroth16Fixtures as F} from "./fixtures/M4dGroth16Fixtures.sol";
+import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
 
 /// WHAT IS TESTED
 /// --------------
@@ -26,6 +27,9 @@ import {M4dGroth16Fixtures as F} from "./fixtures/M4dGroth16Fixtures.sol";
 /// 4. **The key digest crosses implementations.** `KEY_DIGEST` is
 ///    `keccak256(abi.encode(vk))` computed in Rust from the ABI layout; the test
 ///    compares it with the contract's own `verifyingKeyDigest()`.
+/// 5. **The encoding bound, from both sides.** `2^64 - 1` reaches the verifier
+///    and `2^64` is refused by the registry's own domain check (P-04, P-13,
+///    P-33), so `MAX_NORM` is pinned by a pair of tests rather than by one.
 ///
 /// WHAT IS NOT TESTED, AND WHY THAT IS THE HONEST BOUNDARY
 /// ------------------------------------------------------
@@ -46,6 +50,10 @@ contract M4dRealKeyTest is Test {
     uint256 internal constant WAD = 1e18;
 
     /// @dev Largest norm the framework encodes (`CERTIFIED_BOUND_BITS = 64`).
+    ///      Duplicated from `AVIPRegistry.MAX_NORM`, which is `internal` and so
+    ///      not readable from here; exposing it would change the bytecode of a
+    ///      contract already deployed on Fuji. The two declarations cannot drift
+    ///      unnoticed: the boundary is pinned from both sides below.
     uint256 internal constant MAX_NORM = 1 << 64;
 
     /// @dev Order of the BN254 scalar field `r`, the field the circuit lives in.
@@ -175,6 +183,48 @@ contract M4dRealKeyTest is Test {
         // `WAD` is in range: `< WAD` belongs to the circuit, not to the registry,
         // so the word reaches the pairing and fails as a verdict.
         assertFalse(registry.verifyThreshold(0, validator, WAD, proof()));
+    }
+
+    /// @notice The accepted side of the same boundary (P-04, P-13, P-33): the
+    ///         largest norm the framework encodes is not refused by the
+    ///         registry, it reaches the verifier.
+    ///
+    /// @dev Why the M2 double and not the frozen key: `Groth16Verifier` holds a
+    ///      proof for one leaf of the fixture, whose norm is `F.STATEMENT_NORM`,
+    ///      not `2^64 - 1`. The frontier under test is the registry's
+    ///      `certifiedNorm >= MAX_NORM` guard, not the pairing, so the registry
+    ///      is pointed at `MockThresholdVerifier` through the guardian's
+    ///      propose/execute path that M9a requires. The double is not a rubber
+    ///      stamp: it reverts unless it receives exactly `a[0]` from the blob and
+    ///      exactly `[root, epoch, validator, norm]` built by the registry from
+    ///      its own storage, so a registry that forwarded a different norm fails
+    ///      here.
+    ///
+    ///      With `test_aNormTheFrameworkCannotEncodeIsRejected` above, this pins
+    ///      `MAX_NORM` from both sides: `2^64 - 1` is in, `2^64` is out. Neither
+    ///      test does it alone -- a bound that shrinks leaves the rejection test
+    ///      green, and a bound that grows leaves this one green. Both mutations
+    ///      were run before the commit; the message records the counts.
+    function test_theLargestEncodableNormReachesTheVerifier() public {
+        uint256 largest = MAX_NORM - 1;
+
+        uint256[] memory expected = new uint256[](4);
+        expected[0] = uint256(F.STATEMENT_ROOT);
+        expected[1] = F.STATEMENT_EPOCH;
+        expected[2] = uint256(uint160(validator));
+        expected[3] = largest;
+
+        MockThresholdVerifier mock =
+            new MockThresholdVerifier(true, F.proofA()[0], abi.encode(expected));
+        vm.prank(guardian);
+        registry.proposeVerifier(address(mock));
+        vm.warp(block.timestamp + registry.CHANGE_DELAY());
+        registry.executeVerifierChange();
+
+        assertTrue(
+            registry.verifyThreshold(F.STATEMENT_EPOCH, validator, largest, proof()),
+            "2^64 - 1 is inside the framework's encoding domain"
+        );
     }
 
     /// @notice Each component of the statement, changed *alone*, flips the
