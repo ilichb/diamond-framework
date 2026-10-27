@@ -287,3 +287,55 @@ son la parte que valía la pena.
 
 Verificado contra el árbol en `b9cffb0`, 2026-10-25. Documento no sellado, por
 la misma razón que `anchor-receipts.md`: se corrige sin re-anclar.
+
+---
+
+## Apéndice (2026-10-27) — las cifras del suite, verificadas contra el árbol
+
+Este apéndice corrige tres cifras de un inventario interno fechado 2026-10-27
+que no se publicó en el repo. No modifica nada de lo anterior: la cifra correcta
+ya estaba en §C2 (línea 132) y en §5 (línea 221), y es la que queda.
+
+### A-1. Invariantes: **nueve**, más una prueba auxiliar
+
+`test/invariant/AVIPInvariants.t.sol` contiene 9 funciones `invariant_`
+(líneas 315–394, exactamente el rango que §C2 cita) y **una** función `test_`:
+`test_handlerReachesEveryPath()` (línea 286), que no es una invariante. Asserta
+que el handler alcanzó sus selectores; sin ella, un invariante podría pasar sin
+haber ejecutado nada.
+
+`forge` cuenta 10 tests en ese fichero; las invariantes son 9. Ambas cifras son
+ciertas y no son la misma. La formulación que ya usaba el repo
+(`docs/grants/avalanche-research-proposal.md:121`) es la buena: «10
+stateful-invariant tests: 9 invariants over the escrow».
+
+### A-2. Llamadas por invariante: **1.536 en total**, no por ejecución
+
+`foundry.toml` fija `runs = 48` y `depth = 32`. `forge` reporta
+`(runs: 48, calls: 1536, reverts: 0)`, y 48 × 32 = 1.536: el campo `calls` **ya
+incluye** las 48 ejecuciones. No se vuelve a multiplicar por 48; hacerlo da
+73.728 y es doble conteo.
+
+| Cantidad | Valor |
+|---|---|
+| llamadas por invariante | 1.536 (= 48 × 32) |
+| llamadas por las 9 invariantes | 13.824 |
+| llamadas de la prueba auxiliar | 1.536 |
+| llamadas del fichero completo | 15.360 |
+
+El «15.360» es el total del fichero, no una cifra «por invariante».
+
+### A-3. Selectores del handler: **cinco**
+
+`admit`, `deposit`, `payFee`, `slash`, `withdraw`. En
+`test_handlerReachesEveryPath()` el reparto es 298 + 300 + 310 + 314 + 314 =
+1.536. Son cinco, no seis: la lista del inventario era correcta y su encabezado
+no.
+
+### A-4. El conteo total, después del test de frontera
+
+Antes: 310 funciones, 309 ejecutadas, 1 omitida. Después de
+`test_theLargestEncodableNormReachesTheVerifier` (frontera de `MAX_NORM`,
+`M4dRealKey.t.sol`): 311 funciones, **310 ejecutadas**, 1 omitida. La omitida
+sigue siendo la misma y sigue siendo deliberada: `SafeForkTest.setUp()` llama
+`vm.skip(true)` cuando no hay `FUJI_RPC_URL`.
