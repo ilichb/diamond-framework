@@ -94,7 +94,6 @@ earlier plans named `V-8` (a series that does not exist anywhere in the reposito
 and to two items that had no ID at all. The registry is the authority on the
 mapping; this file only records what the draft and the ID block say.
 
-
 ## What the four milestones are, in one line each
 
 | Milestone | Shape | What it is not |
@@ -139,3 +138,12 @@ key ([`../paper/releases/v0.2.3-errata.md`](../paper/releases/v0.2.3-errata.md))
 - This file is evidence of a draft, not of a submission. Any document that cites it
   as "what was sent" is now wrong, and `SUBMISSION_STATUS: submitted-unverified` on
   line 1 is the machine-readable form of that caveat.
+
+## How to check this file
+
+```
+head -1 docs/grants/team1-mini-grant-application.md                  # submitted-unverified
+grep -c '\[verify\]' docs/grants/team1-mini-grant-application.md     # 3 in the draft, 1 in the note above
+grep -rn 'submitted copy could not be located' docs/grants/*.md      # this README and the lane
+grep -c '^| `T1-M' docs/grants/team1-reserved-work.md                # 4 rows, one per milestone
+```
