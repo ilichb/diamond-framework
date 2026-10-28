@@ -14,7 +14,9 @@ something, it is a proposal to try to break something that is already running.
 
 | File | What it is |
 |---|---|
-| `avalanche-research-proposal.md` | The submission itself, in the shape the call asks for: research question, methodology, contributions, timeline, budget, qualifications. Under 10 pages. |
+| `avalanche-research-proposal.md` | The submission itself, in the shape the call asks for: research question, methodology, contributions, timeline, budget, qualifications. Under 10 pages. **Not sent**: the call is closed. |
+| `team1-mini-grant-application.md` | The Team1 mini grant that *was* sent, verbatim in its milestone block plus the declared out-of-scope. Four milestones, no audit, no ceremony. |
+| `team1-reserved-work.md` | The lane switch and the two reserved lists: `T1-M1`…`T1-M4` (mini grant) and `G1`…`G5` (the $50k proposal), each behind its own status line. |
 | `budget.md` | The $50,000 line by line, with what the money does *not* buy. |
 | `reviewer-checklist.md` | Each published review criterion mapped to a command a reviewer can run. |
 | `evidence-appendix.md` | The artefact table: addresses, transactions, hashes, coverage. Supporting material, not counted in the 10 pages. |
@@ -41,9 +43,14 @@ written on the day the call reopens.
 6. **Keep the answer** — findings are appended to the falsification log whatever
    the outcome, including a rejection of this application.
 
-For Team1, the ask is different by design: the remediation tranche (line 2 and the
-fuzzing line), not the audit. It funds builders, and the building is done; asking it
-for an audit would be asking the wrong programme for the wrong thing.
+For Team1, the ask is different by design and is already sent: a mini grant for
+four milestones of contract, decision, redeploy and delivery work
+([`team1-mini-grant-application.md`](team1-mini-grant-application.md)). The audit
+and the ceremony are declared out of scope there — it funds builders, and asking
+a builder programme for an audit would be asking the wrong programme for the
+wrong thing. The steps above describe the $50k research proposal and do **not**
+apply to the mini grant; sending that one is done, and what it unlocks is
+[`team1-reserved-work.md`](team1-reserved-work.md).
 
 ## Programme status
 
@@ -52,7 +59,7 @@ Checked on **2026-10-24** against `build.avax.network/grants`:
 | Programme | Fits? | Status |
 |---|---|---|
 | [Avalanche Research Proposals](https://build.avax.network/grants/avalanche-research-proposals) — up to **$50,000**, academic research on the economics of cryptoassets and decentralised networks | **Yes.** Area 2, *Validator Economics and Network Security*: "how validator incentive systems are structured, measured, and optimised", "non-inflation-based reward mechanisms". This work is that, with a deployed implementation. | **Closed.** "We are not accepting new research proposal submissions at this time." |
-| [Team1 Mini Grants](https://build.avax.network/grants/team1-mini-grants) — fast, focused funding for builders | Partly: it funds building, and the building is done. Usable for the audit-remediation tranche, not for the audit itself. | Open, rolling. |
+| [Team1 Mini Grants](https://build.avax.network/grants/team1-mini-grants) — fast, focused funding for builders | **Yes.** It funds building, and what is left to build is the `T1-M1`–`T1-M4` list: contract fixes, the `P-12` decision, the redeploy, and the delivery surface. The audit and the ceremony are declared out of scope there. | Open, rolling. **Submitted** (recorded 2026-10-27). |
 | [Avalanche Bug Bounty](https://immunefi.com/bug-bounty/avalanche/) — up to $100,000 | **No.** It covers Avalanche network components, not third-party contracts deployed on Fuji. | Open, not applicable. |
 | Blizzard Fund | No: it invests in companies, and there is no company. | — |
 
@@ -63,8 +70,14 @@ delay is recorded rather than hidden.
 
 ## Two claims this directory does not make
 
-1. **No relationship with the Avalanche Foundation exists.** No grant has been
-   requested, awarded, or discussed. Nothing here is endorsed.
+1. **No relationship with the Avalanche Foundation exists.** Nothing here is
+   endorsed, and no award has been made. One application **has** been sent: the
+   Team1 mini grant recorded in
+   [`team1-mini-grant-application.md`](team1-mini-grant-application.md). The
+   earlier wording of this claim — "no grant has been requested" — was true when
+   it was written and stopped being true on submission; it is corrected here
+   rather than deleted, because a record that quietly rewrites itself is worth
+   nothing.
 2. **No co-funding percentage is asserted.** The pages consulted on 2026-10-24
    describe no audit subsidy and no percentage. If the Foundation co-funds
    audits from its own list of firms, that changes the request — `budget.md` §3
