@@ -154,7 +154,7 @@ commitment.
 | `L2` | `main.tex`: ACP-77 (`R4-D10`) and the `[CONJECTURE]` | **blocked by `P-36`** for the BBP citation, which is `T1-M4`. The conjecture is the detection frontier (`P-35`), not `Θ_r` |
 | `L3` | Detection-frontier research: sweep `density_factor ∈ {3,5,10}`, TPR at fixed `m`/`θ` with CI and `q99`; `R3-A-13-bis` | re-seal-gated: new scripts move G2 |
 | `L4` | Staging contracts for the `P-11`/`P-14`/`P-15` family | staging only; nothing reaches a deployed address from here |
-| `L5` | Design notes: `P-34`, recursion (`R3-A-10`), `B-9` | `B-9` is the `SafeForkTest` skip, documented rather than "fixed"; `T1-M4` is what makes the omission explicit in the delivery |
+| `L5` | Design notes: `P-34`, recursion (`R3-A-10`), `B-9`, and the two tree conventions (`R5-1`, `R5-2`) | `B-9` is the `SafeForkTest` skip, documented rather than "fixed"; `T1-M4` is what makes the omission explicit in the delivery. `R5-1`/`R5-2` were **discovered after the submission** — the grant does not name them, so they were free-lane work and are **closed 2026-10-28** (`open-items.md` §3.7, `p12-freshness-binding.md` §7) |
 | `L6` | Regenerate `claim-registry.csv` line numbers | re-seal-gated; no generator exists today, and `G4` does not check line numbers, so the script needs its own verification |
 
 ## 6. Decisions only the owner can take
@@ -167,9 +167,18 @@ commitment.
    above.
 3. **Ceremony ordering — decided 2026-10-27: never before `P-08`, never before
    the circuit is frozen.** Matches the chain in §3.
-4. **`P-12` option — open.** `L1` closes with the analysis; the owner chooses, and
-   `T1-M2` executes. Until then the circuit is not frozen and `G3` has nothing
-   safe to install.
+4. **`P-12` option — decided 2026-10-28 in shape, not in mechanism: (a) now,
+   then (b) or (c) at the *start of `T1-M2`*, not before.** `L1` closes with the
+   analysis. Only (b) binds freshness to the committed root — (c1) and (c2) are
+   sequencer attestations — and (b) needs a window, a bond and the bounty route
+   (`P-18`, also in `T1-M2`), so the choice belongs where those live. Until then
+   the circuit is not frozen and `G3` has nothing safe to install.
+5. **Which tree-bottom rule wins — decided 2026-10-28: the contract's.** The data
+   layer adopts `keccak256(Entry::leaf())` at the bottom (`R5-1`, closed) instead of
+   the contract dropping its hash: the contract is deployed, and changing it is
+   bytecode and a redeploy, while the ceremony freezes nothing in the keccak tree
+   (`p12-freshness-binding.md` §8). `R5-2` was fixed in the test fixture, not the
+   bytecode. Both are validated by mutation.
 
 ## 7. How to check this file
 

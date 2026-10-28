@@ -2017,11 +2017,19 @@ prover because it needs the prover's own commitments.
 statementRoot, uint256 epoch))`: three fixed-width words, so the encoding is
 unambiguous — the property `abi.encodePacked` does not have in general and does
 have for these types. Over the committed §5.5.6 fixture: `merkleRoot =
-0x187d08e633fb4f3895633e6d3be1075f9603923adb6d70c09f27b458c3917537`,
+0x335750970d80b983041b14e06bbae156732061f12882e0bdbe0d1b6d794044f7`,
 `statementRoot =
 14881564148789680950073164612164838307833922018127128489011700125541095929892`
 (`0x20e6aab4b9b3e21de8ba1d7f765f20508bce20314533dc5cca56f93ae81f7824`),
-`epoch = 0`, `link = 0xc4d35b0ac87daa8fe8647a6d2372e6dabe3e1c505e444455c20f9c8ff9073ba7`.
+`epoch = 0`, `link = 0x98dc2959892349bb23bf3c8321ed4107d4010c5a2c0505cf9d4dac8d533dadce`.
+
+> **2026-10-28 (`R5-1`).** Both values were recomputed. The fold now starts at
+> `keccak256(leaf)`, as `AVIPRegistry.verifyEntry` does; until `R5-1` the data layer
+> folded the leaf itself, one hash short, and the numbers here were
+> `merkleRoot = 0x187d08e6…c3917537` and `link = 0xc4d35b0a…f9073ba7`. The trees
+> differed only at the bottom step, and `docs/architecture/p12-freshness-binding.md`
+> §7 records the fix, the cross-language test that pins it
+> (`integrations/avalanche/test/DatalayerInclusion.t.sol`) and what else moved.
 
 **Neither root is restated, and that is the design.** The tree is built by folding
 `avip_datalayer::commitment`'s own `Epoch` through its `merkle_root`, so

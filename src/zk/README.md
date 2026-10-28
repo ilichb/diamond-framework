@@ -11,6 +11,7 @@ src/zk/scripts/m4a_report.sh                             # every M4a measurement
 src/zk/scripts/m4b_report.sh                             # both variants of §5.5.2 end to end -> scripts/m4b_output.txt
 src/zk/scripts/m4b_fixture.sh                            # historical M4b fixture, retained for the M7c bridge tests
 src/zk/scripts/m4d_fixture.sh                            # emit the admission key and inclusion proofs the contracts verify
+src/zk/scripts/merkle_fixture.sh                         # emit the data layer's inclusion vector the contracts verify (R5-1/R5-2)
 src/zk/scripts/m7c_report.sh                             # M7c: the statement's root tied to the registry's -> scripts/m7c_output.txt
 cargo test                                              # fast tests; the heavy proof is #[ignore]d
 cargo test --release -- --ignored                       # the 32,768-bit aggregated range proof
@@ -141,6 +142,15 @@ contracts; the ceremony is §11.
 4. `CmpGadget for [T]` in `ark-r1cs-std 0.6.0` does not compare correctly — its
    `∧ᵢ (aᵢ > bᵢ ∨ equal_up_to_i)` rejects `"10" ≥ "09"` — so no inequality in
    `native.rs` uses it; both are decided by a bound plus a difference.
+5. **The data layer's tree and the contract's `verifyEntry` were one hash apart**
+   (`R5-1`, audit 2026-10-28): `verifyEntry` starts at `keccak256(leaf)` while
+   `avip_datalayer::commitment` folded the leaf itself, so the contract rejected
+   every honest proof and no suite could see it (each side compared only against
+   itself). Fixed in the data layer (`bottom_node`), because the contract is
+   deployed; `merkle_fixture.sh` emits the vector that `test/DatalayerInclusion.t.sol`
+   now runs through the contract, and `tests/datalayer_inclusion.rs` guards the
+   emission. `R5-2` — the odd level, duplicated rather than promoted in the
+   Solidity fixture — was a test bug and is fixed there.
 
 ## M4c — V2′ against V3, and `D-M4-0` (plan §5.5.2, in §5.5.10)
 

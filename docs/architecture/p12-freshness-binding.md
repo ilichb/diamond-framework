@@ -1,6 +1,9 @@
 # P-12 — binding the freshness bound to something the chain can check
 
-**Status:** analysis only, closes `L1`. No code, no contract change, no re-seal.
+**Status:** analysis, closes `L1`. No contract change and no re-seal; the one code
+change it carries is the defect fix of §7 (`R5-1`, `R5-2`), because a memo that says
+"the fraud proof (b) describes would reject every honest proof" and leaves it there
+is a memo that hands `T1-M2` a broken precondition.
 **Decides:** which option `T1-M2` implements and `G3` waits for.
 **Question (audit `P-12`):** "la freshness `γN` sólo se comprueba sobre el delta
 declarado" — can the bound be closed *without* changing the circuit's statement?
@@ -16,8 +19,8 @@ three options differ in is who is trusted, not what is proved.
 | `TENSOR_SIZE = 500`, `MAX_DELTA_ENTRIES = 50` | `AVIPRegistry.sol:70-79` | the bound, `γ = 0.10` in basis points |
 | `postCommitment` | `AVIPRegistry.sol:320-370` | rejects `changedEntries > 50` (`:351-353`), requires `500` at genesis (`:349-350`), stores `root`, `statementRoot`, `changedEntries` (`:355-357`) |
 | `commitmentOf` / `changedEntriesOf` | `AVIPRegistry.sol:373-385` | read back the two per-epoch words |
-| `Epoch::changed_entries` | `src/datalayer/src/commitment.rs:205-220` | compares two `BTreeMap<validator, norm>`, counts added, removed and changed |
-| `Epoch::freshness_ok` | `src/datalayer/src/commitment.rs:225-232` | applies `<= 50`, or `== 500` at genesis |
+| `Epoch::changed_entries` | `src/datalayer/src/commitment.rs:229-243` | compares two `BTreeMap<validator, norm>`, counts added, removed and changed |
+| `Epoch::freshness_ok` | `src/datalayer/src/commitment.rs:249-256` | applies `<= 50`, or `== 500` at genesis |
 | `adjudicate` | `src/datalayer/src/ingestion.rs:251-268` | compares one published leaf with `f_c(events)`; it does not count a delta |
 
 The producer and the checker are the same party. The registry stores no tensor, so
@@ -83,24 +86,40 @@ needed to show a *change* rather than a value. Non-inclusion proofs are not
 required, which matters because the tree is unsorted and has no index — the
 address inside the leaf is the dedup key, and `old != new` is the change.
 
-**Measured, not estimated.** A temporary Foundry probe (deleted after the run;
-`integrations/avalanche/test/` is not in the anchor, so nothing was re-sealed)
-built a 500-leaf tensor with the registry's own convention and called the deployed
-`verifyEntry`:
+**Measured, not estimated — and decomposed this time.** A temporary Foundry probe
+(deleted after the run; `integrations/avalanche/test/` is not in the anchor, so
+nothing was re-sealed) called `verifyEntry` on the contract, over the 500-leaf tensor
+(depth 9, `500 -> 250 -> 125 -> ... -> 1`), from inside one transaction:
 
 | Measurement | Gas |
 |---|---|
-| one inclusion, depth 9 | **10,630** |
-| 102 inclusions (51 entries × 2 roots) | **1,227,747** |
-| average per inclusion | 12,036 |
-| for comparison: `verifyThreshold`, cold path (`main.tex:1294`) | 286,144 |
+| 102 verifications in one transaction (51 entries × 2 roots) | **1,631,531** |
+| the same loop with the verifications removed (the harness's own cost) | 94,202 |
+| 102 verifications, harness removed | 1,537,329 |
+| per inclusion, marginal and warm (all-in) | **15,072** |
+| one inclusion, the contract's own execution, depth 9 (`forge test --gas-report`) | 6,990 (max) |
+| for comparison: `verifyThreshold` with the **real** M4d key (`--gas-report`, median) | 293,293 |
 
-`1,227,747 / 286,144 = 4.29`: one freshness challenge costs a bit over four full
-Groth16 verifications. The measurement includes calldata for every proof (the
-calls were external, `bytes32[]` encoded each time) and the base cost of the
-contract call, under the project's own build (solc 0.8.33, legacy pipeline, no
-`viaIR`); with `viaIR` the same probe reported 5,341 and 686,597, which is why the
-number quoted is the one from the project's own settings.
+`1,631,531 / 293,293 = 5.56`: one freshness challenge costs about five and a half
+full Groth16 verifications, and one inclusion costs 5.1% of one. The ~8.1k between
+the contract's own 6,990 and the 15,072 the batch pays per inclusion is the caller's
+side of an external call — encoding a 9-word `bytes32[]` into memory, the `CALL`
+itself, the return copy — which a batch pays per inclusion as well. Nothing in that
+8.1k is the tree: the tree is built off-chain and only the path crosses the boundary.
+
+**Two numbers retracted.** An earlier revision of this section quoted "one inclusion
+= 10,630", "102 inclusions = 1,227,747" and "4.29× `verifyThreshold`'s 286,144". They
+do not reconcile — `102 × 10,630 = 1,084,260`, leaving 143,487 unaccounted — the
+probe that produced them was deleted before the decomposition was written down, and
+286,144 is not what `--gas-report` reproduces today (293,293 median over 18 calls of
+the same M4d key). They are withdrawn rather than re-explained. The table above is
+reproducible: build the tensor's 102 (leaf, root, proof) triples with the promote
+fold, measure `gasleft()` around a loop of 102 `verifyEntry` calls, and around the
+same loop with the calls removed; the two figures differ by the verifications alone.
+
+All of it is the project's own build (solc 0.8.33, legacy pipeline, no `viaIR`). The
+earlier revision also quoted `viaIR` figures (5,341 and 686,597); those came from the
+same withdrawn run and are not quoted here.
 
 **What (b) needs to exist.** A challenge entrypoint with a window, `commitmentOf`
 for both epochs (already public), a dedup rule by address, and a bounty — which is
@@ -157,50 +176,66 @@ The three options above leave the admission statement untouched:
 | (b) optimistic violation proof | no | none: it is a second entrypoint reading `commitmentOf` |
 | (c1)/(c2) attestation with bounded field | no | none |
 
-## 7. Precondition zero: the two trees do not share a bottom rule
+## 7. Precondition zero: the two trees did not share a bottom rule — closed
 
-(b) is the option that needs on-chain inclusion to work, and today it would not.
-`AVIPRegistry.verifyEntry` starts the fold at `keccak256(abi.encodePacked(leaf))`
-(`:410`), while the data layer's `merkle_root` folds `Entry::leaf()` directly
-(`commitment.rs:98-112`), and `verify_entry` says in its own comment that it is
-"the contract's `verifyEntry`" (`:114-117`). They differ by one hash at the
-bottom.
+(b) is the option that needs on-chain inclusion to work, and until 2026-10-28 it
+would not have. `AVIPRegistry.verifyEntry` starts the fold at
+`keccak256(abi.encodePacked(leaf))` (`:410`), while the data layer's `merkle_root`
+folded `Entry::leaf()` directly, and `verify_entry` called itself "the contract's
+`verifyEntry`" while doing it. They differed by one hash at the bottom.
 
 Measured against the repo's own pinned fixture — `keccak256_vectors.txt`, four
-entries, `cast keccak`-generated — with the deployed contract:
+entries, `cast keccak`-generated — with the contract:
 
 ```
 verifyEntry accepts the data layer's root/proof: false
 verifyEntry accepts the contract's own tree:      true
 contract root for the same four entries: 0x6d7dbeead031ce88ee6f534d9c2fef6063ab9471b1fe3cde38bd0b26555eed36
-(while root(4) in the fixture is         0xa708d90e3df263b03d823e688d8780c6d6f378b9a0696647b4ab2129adbeffd8)
+(while root(4) in the fixture was        0xa708d90e3df263b03d823e688d8780c6d6f378b9a0696647b4ab2129adbeffd8)
 ```
 
-Both sides are self-consistent; neither test suite can see it, because the Rust
-tests compare Rust with Rust (`independent_root`, `src/zk/src/bridge.rs:324-343`,
-repeats the missing step) and the Solidity tests compare Solidity with Solidity
-(`_buildTree`, `AVIPRegistry.t.sol:1046-1075`). It fails closed, and nothing
-on-chain consumes `verifyEntry` today, so no deployment is broken — but any fraud
-proof wired in the shape (b) describes would reject every honest proof, and
-`commitment.rs`'s claim to be "the parity check that the root M6 posts is
-verifiable by the deployed registry" (`:114-116`) is false as written.
+Both sides were self-consistent; neither suite could see it, because the Rust tests
+compared Rust with Rust (`independent_root` repeated the missing step) and the
+Solidity tests compared Solidity with Solidity (`_buildTree`). It failed closed, and
+nothing on-chain consumed `verifyEntry`, so no deployment was broken — but any fraud
+proof in the shape (b) describes would have rejected every honest proof.
 
-There is a second, smaller divergence in the same area: at an odd level the
-fixture duplicates the last node and hashes it with itself
-(`AVIPRegistry.t.sol:1071-1072`), while the specified rule — and the data layer —
-promote it unchanged (`implementation-plan.md:2033`, `:2065`: "ordered pair, odd
-node promoted, 500 → 250 → 125 → … so the promoted-node branch is on the path").
-For `N = 500` the two rules give different roots (measured: two distinct digests
-for the same 500 leaves), so the 500-leaf Solidity test cannot serve as a
-cross-language vector.
+**Resolved, contract's rule wins (`R5-1`).** The data layer gained the bottom hash
+(`commitment::bottom_node`), because the contract is deployed and changing it would
+be bytecode and a redeploy, while the ceremony freezes nothing in the keccak tree
+(§8). `root(4)` is now the contract's `0x6d7dbeea…` above, and it is asserted three
+ways: `cast`-generated in the fixture, by the Rust suite, and — the cross-language
+part — by `integrations/avalanche/test/DatalayerInclusion.t.sol`, which runs the
+contract's `verifyEntry` over payloads, leaves and proofs that
+`src/zk/scripts/merkle_fixture.sh` emitted from the data layer. `verifyEntry` also
+rejects the retired root on-chain, so the two conventions cannot be confused again.
+`commitment.rs`'s comment now says what the code does.
 
-**Whose rule wins, and why it is not this memo's decision:** the deployed
-contract's bottom hash is what decides the shape of a valid proof, so either the
-data layer gains `keccak(abi.encodePacked(leaf))` at the bottom, or `verifyEntry`
-drops it. Both are reserved-lane changes to the fold convention; neither touches
-the admission statement (§8). **The decision must land before `T1-M3`**, because
-the fold convention is deployed, and a change after the ceremony-and-redeploy pair
-means redeploying again.
+**Second divergence, also closed (`R5-2`).** At an odd level the test fixture
+duplicated the last node and hashed it with itself, while the specified rule — and
+the data layer — promote it unchanged (`implementation-plan.md:2033`, `:2065`). For
+`N = 500` the two rules give different roots (measured: `0x33575097…` promoted vs
+`0xcb53a6ce…` duplicated on the same leaves), so the 500-leaf Solidity test could not
+serve as a cross-language vector. It was a bug in `AVIPRegistry.t.sol`'s `_buildTree`
+and nothing else: the contract never duplicated anything, the fixture did. Fixed in
+the test helper, with the tensor's own leaves now folding to the data layer's
+`TENSOR_ROOT` — which is the assertion that fails if duplication comes back.
+
+**What moved when the convention changed**, so nothing is discovered later: every
+root the data layer publishes. Concretely — `root(4)` and the M6 transcript's
+`root`/`digest` (`src/reputation/scripts/m6_output.txt`, regenerated), M7c's
+`MERKLE_ROOT` and `LINK` and its pinned table (`src/zk/scripts/m7c_output.txt`,
+regenerated; `M7cBridgeFixtures.sol` updated), M7d's `commit.merkleRoot` /
+`record.merkleRoot` (`m7d_output.txt`, regenerated through `m7d_report.sh`, which
+checks M7c in both directions), and one abbreviated root in `m7b_output.txt`. **No
+sealed output moved**: the anchor's 38 files are all `verification/baseline_verified/`
+Python simulations, `fase0_anchor.sh --check` still exits 0, and nothing was
+re-sealed. The two documents that quote M7c's root (`implementation-plan.md`,
+`audit-2026-10-20-in-progress.md`) were updated with a dated note.
+
+The fold convention is deployed, so a *further* change after the ceremony-and-redeploy
+pair means redeploying again; that is why this had to land before `T1-M3` rather than
+after it.
 
 ## 8. What is frozen for the ceremony, and what is not
 
@@ -222,16 +257,19 @@ the statement root — that separation (`P-16`) is what makes this section short
 
 ## 9. Recommendation, and what would change it
 
-1. **Do (a) and §7 first, as defect fixes, not as the closure of `P-12`.** They are
-   both cheaper than any of the three options and both are prerequisites: (a)
-   makes the address the identity of an entry, §7 makes an inclusion proof mean
-   the same thing on both sides of the wire. Neither has an alternative.
-2. **Then pick the mechanism.** If the commitment's trust anchor is a quorum whose
-   signature the destination already checks, (a) + (c1) is enough and (b) is
-   belt-and-braces. If the sequencer is a single key — which is what `sequencer` is
-   today (`AVIPRegistry.sol:109`) — then (b) is the only option that removes the
-   trust rather than recording it, at 1.23M gas per challenge and one open
-   dependency (`P-18`).
+1. **(a) is a defect fix and goes now, not as part of the `P-12` decision.** (§7 has
+   already landed: it was the other prerequisite, and it was a defect, not an
+   option.) (a) makes the address the identity of an entry; §7 makes an inclusion
+   proof mean the same thing on both sides of the wire. Neither has an alternative.
+2. **Then pick the mechanism, at the start of `T1-M2`.** If the commitment's trust
+   anchor is a quorum whose signature the destination already checks, (a) + (c1) is
+   enough and (b) is belt-and-braces. If the sequencer is a single key — which is
+   what `sequencer` is today (`AVIPRegistry.sol:109`) — then (b) is the only option
+   that removes the trust rather than recording it, at 1.63M gas per 102-inclusion
+   challenge and one open dependency (`P-18`, the bounty route, which is also
+   `T1-M2`). Only (b) *binds* freshness to the committed root; (c1) and (c2) are the
+   sequencer's attestations, so a promise of the form "freshness is bound to the
+   root" is (b) or it is not that promise.
 3. **(c2) is a legitimate fallback** if a challenge window is unacceptable, and it
    is the one option that needs no bounty, no window and no bond: it pays ~67k gas
    every epoch instead.
@@ -240,40 +278,53 @@ the statement root — that separation (`P-16`) is what makes this section short
    fraudulent leaf survives. Replacing the `[CONJECTURE]` in `main.tex` is gated
    on `P-36` (`T1-M4`), not on this memo.
 
-What would change the recommendation: a measured cost showing that 4.29 Groth16
+What would change the recommendation: a measured cost showing that 5.6 Groth16
 verifications per challenge is unaffordable on the target chain; or a decision to
 make the sequencer's commitment quorum-signed, which moves the trust anchor and
 makes (b) redundant.
 
 The ceremony is not blocked by any of this. It is blocked by the *decision* — which
-is what `T1-M2` exists for — and by §7 landing before `T1-M3`.
+is what `T1-M2` exists for — and by §7, which has landed.
 
 ## 10. How to check this memo
 
-The gas figures came from a temporary probe in
-`integrations/avalanche/test/`, deleted after the run exactly as the audit's own
-PoCs were (`audit-2026-10-20-in-progress.md:880`, `:952`): a test file in that
-directory is not in the anchor, so nothing had to be re-sealed, and leaving it
-behind would have added a spec the delivery has not decided. To reproduce:
+The gas figures came from a temporary probe in `integrations/avalanche/test/`,
+deleted after the run exactly as the audit's own PoCs were
+(`audit-2026-10-20-in-progress.md:880`, `:952`): a test file in that directory is not
+in the anchor, so nothing had to be re-sealed, and leaving it behind would have added
+a spec the delivery has not decided. To reproduce, the probe is three tests sharing
+one `setUp` that builds the 102 (leaf, root, proof) triples over the 500-leaf tensor
+with the promote fold:
 
 ```
-cd integrations/avalanche && forge test --match-contract <probe> -vv
-# probe: 500 leaves, bottom = keccak(leaf), pairs sorted, odd node promoted;
-# one inclusion of depth 9, then 102 of them (51 entries x 2 roots).
+cd integrations/avalanche && forge test --match-path test/<probe>.t.sol -vv
+# 102 verifyEntry calls inside one test, timed with gasleft();
+# the same loop with the calls removed;
+# one call, and three, to check the marginal is linear.
 ```
 
-The divergence in §7 needs no probe; it is two greps and one fixture line:
+For the numbers the contract itself reports, no probe is needed:
 
 ```
-grep -n 'keccak256(abi.encodePacked(leaf))' integrations/avalanche/contracts/AVIPRegistry.sol
-sed -n '96,127p' src/datalayer/src/commitment.rs
-grep -n 'root(4)' src/datalayer/fixtures/keccak256_vectors.txt
+cd integrations/avalanche
+forge test --match-path test/AVIPRegistry.t.sol --gas-report | grep verifyEntry      # max 6,990
+forge test --match-path 'test/M4dRealKey.t.sol' --gas-report | grep verifyThreshold  # median 293,293
 ```
 
-What this memo does not decide: which bottom rule wins (§7), whether (b) or (c2)
-becomes the mechanism, and whether `P-18`'s bounty gets a payment route. It also
-does not touch the paper: the freshness paragraph in `main.tex:1006` says the
-bound holds, and until an option lands it is a claim about the design, not about
-the deployed contract — the contract's own docstring already says so
+§7 used to need three greps; now it needs the checks that keep it closed:
+
+```
+grep -n 'bottom_node' src/datalayer/src/commitment.rs            # the two-hash bottom
+grep -n 'root(4)' src/datalayer/fixtures/keccak256_vectors.txt    # the contract's own root
+cd integrations/avalanche && forge test --match-path test/DatalayerInclusion.t.sol
+cd src/zk && cargo test --offline --test datalayer_inclusion      # the drift guard
+bash src/zk/scripts/merkle_fixture.sh                             # regenerate the vector
+```
+
+What this memo does not decide: whether (b) or (c2) becomes the mechanism (owner,
+at the start of `T1-M2` — see §9), and whether `P-18`'s bounty gets a payment route.
+It also does not touch the paper: the freshness paragraph in `main.tex:1006` says the
+bound holds, and until an option lands it is a claim about the design, not about the
+deployed contract — the contract's own docstring already says so
 (`AVIPRegistry.sol:25-30`), and the paper's `[CONJECTURE]` sentence is `P-21`/`L2`.
 

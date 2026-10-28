@@ -1141,9 +1141,15 @@ No hay dos slots ni un compromiso que ligue ambos. El fixture M7c demuestra que
 las dos raíces del **mismo** tensor son distintas:
 
 ```text
-MERKLE_ROOT   = 0x187d08e633fb4f3895633e6d3be1075f9603923adb6d70c09f27b458c3917537
+MERKLE_ROOT   = 0x335750970d80b983041b14e06bbae156732061f12882e0bdbe0d1b6d794044f7
 STATEMENT_ROOT = 14881564148789680950073164612164838307833922018127128489011700125541095929892
 ```
+
+> Nota (2026-10-28, `R5-1`): `MERKLE_ROOT` es el valor recalculado con la regla del
+> contrato — `keccak256(leaf)` en el fondo del árbol. El valor medido el 2026-10-20
+> para este mismo bloque era `0x187d08e6…c3917537`, un hash por debajo del que
+> `verifyEntry` acepta; ver `docs/architecture/p12-freshness-binding.md` §7. La
+> conclusión del apartado — dos raíces distintas para el mismo tensor — no cambia.
 
 `M4bRealKey.t.sol:124` postea el valor Poseidon como `commitmentOf(0)` para que
 la admisión funcione; `M7dTransport.t.sol:310,318` evita el conflicto usando **dos

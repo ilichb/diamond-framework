@@ -53,7 +53,7 @@ de runtimes del README), y `IMP-D-3` (layout de Foundry) con el `D-7` del paper.
 | «D-7 del paper» | `docs/paper/main.tex` §6 | — | 1 | se cita con nombre, no con número | — |
 | `MPA-M-` | `triage-mapa-2026-10-22.md:61` | `M-01`… | 18 | **local**: no cruza de carril | `grep -cE '^\| M-[0-9]+'` |
 | `V-` | — | — | 0 | **no existe** (§3.5) | `grep -rn 'V-8' docs/ --exclude=open-items.md` → 0 |
-| `R5-` | aquí §3.7 (no tienen otro hogar todavía) | `R5-1`, `R5-2` | 2 | nueva, abierta | `grep -cE '^\| R5-[0-9] ' docs/audit/open-items.md` |
+| `R5-` | aquí §3.7 (no tienen otro hogar todavía) | `R5-1`, `R5-2` | 2 | nueva; **cerrada** 2026-10-28 | `grep -cE '^\| .R5-[0-9]. ' docs/audit/open-items.md` |
 
 `P-` tiene 51 filas y 40 IDs: las 11 de más son la tabla de disposición de
 `:3246`, indexada por los mismos IDs. No es una colisión. Igual con `A-`: son 25
@@ -119,21 +119,25 @@ criterio de cierre**. Los carriles no inventan criterios: importan esos. Si un
 carril cierra un `P-27`…`P-37` sin cumplir la columna «Cierre verificable», no lo
 ha cerrado.
 
-### 3.7 `R5-`: dos divergencias de convención, medidas
+### 3.7 `R5-`: dos divergencias de convención, medidas y cerradas
 
-Ninguna de las dos rompe un despliegue hoy, y por eso importan: las dos fallan
-cerrado y ninguna suite las puede ver, porque cada lado se compara consigo mismo.
+Ninguna de las dos rompía un despliegue, y por eso importaban: las dos fallaban
+cerrado y ninguna suite las podía ver, porque cada lado se comparaba consigo mismo.
+Las dos estaban **fuera de la solicitud** (descubiertas después del envío) y por eso
+son carril libre, no reservado.
 
-| ID | Qué es | Carril |
-|---|---|---|
-| `R5-1` | el fondo del árbol keccak no coincide: `AVIPRegistry.verifyEntry:410` empieza en `keccak256(abi.encodePacked(leaf))` y `commitment.rs:98-112` pliega `Entry::leaf()` sin ese hash. Medido con el fixture del propio repo (`keccak256_vectors.txt`): `verifyEntry` **rechaza** la raíz y la prueba del data layer y **acepta** su propio árbol para las mismas cuatro entradas. `commitment.rs:114-116` afirma lo contrario | reservado; sin hito asignado por la solicitud → decisión del owner (familia de `P-26`) |
-| `R5-2` | el fixture `AVIPRegistry.t.sol:1071-1072` duplica y hashea el nodo impar, mientras la regla especificada (`implementation-plan.md:2033,2065`) y `commitment.rs:106` lo promocionan sin hashear. Para `N = 500` el nivel 125 es impar: dos raíces distintas para las mismas 500 hojas | libre (`L5`), es un vector de test |
+| ID | Qué era | Carril | Estado |
+|---|---|---|---|
+| `R5-1` | el fondo del árbol keccak no coincidía: `AVIPRegistry.verifyEntry:410` empieza en `keccak256(abi.encodePacked(leaf))` y `commitment.rs:98-112` plegaba `Entry::leaf()` sin ese hash. Medido con el fixture del propio repo (`keccak256_vectors.txt`): `verifyEntry` **rechazaba** la raíz y la prueba del data layer y **aceptaba** su propio árbol para las mismas cuatro entradas. `commitment.rs:114-116` afirmaba lo contrario | libre (`L5`), descubierto tras el envío | **cerrado 2026-10-28**: gana el contrato — el data layer adopta `bottom_node` = `keccak256(Entry::leaf())`, `root(4)` pasa a `0x6d7dbeea…` (el valor que el contrato ya calculaba) y el comentario dice lo que el código hace. Vector cruzado real en `integrations/avalanche/test/DatalayerInclusion.t.sol`, emitido desde Rust por `src/zk/scripts/merkle_fixture.sh` |
+| `R5-2` | el fixture `AVIPRegistry.t.sol:1043-1050` duplicaba y hasheaba el nodo impar, mientras la regla especificada (`implementation-plan.md:2033,2065`) y `commitment.rs` lo promocionan sin hashear. Para `N = 500` el nivel 125 es impar: dos raíces distintas para las mismas 500 hojas | libre (`L5`), descubierto tras el envío | **cerrado 2026-10-28**: era un bug del helper de test, no del contrato. `_buildTree` promociona; el tensor del data layer (`TENSOR_ROOT`) es ahora la aserción que falla si vuelve la duplicación |
 
-`R5-1` es precondición de cualquier prueba de inclusión on-chain — es decir, de la
-remediación 1 de `P-12`, que es la opción (b) del memo. `R5-2` no cambia ninguna
-raíz publicada, pero deja al test de 500 hojas sin poder servir de vector
-cruzado. Las dos se documentan con su medición en
-`docs/architecture/p12-freshness-binding.md` §7, que es donde se reproduce.
+Por qué gana el contrato: ya está desplegado, y cambiarlo es bytecode y redespliegue;
+cambiar Rust cuesta menos y no toca nada de lo que congela la ceremonia. La decisión
+no era del memo de `L1`; la tomó el owner el 2026-10-28 y por eso `R5-1` deja de ser
+precondición pendiente de la opción (b) de `P-12` — sigue siendo precondición, pero
+ya está cumplida. La medición y el razonamiento están en
+`docs/architecture/p12-freshness-binding.md` §7, y las dos están validadas por
+mutación: revertir cualquiera de los dos arreglos hace fallar un test.
 
 ## 4. Los 52 ítems accionables y su carril
 
@@ -144,8 +148,13 @@ libre, `—` sin carril. Las etiquetas `R1`…`R4` están retiradas: la solicitu
 las sustituyó por los cuatro hitos, y el mapa es `R1`→`T1-M1`, `R2`→`T1-M2`,
 `R3`→`T1-M3`, `R4`→`T1-M4`.
 
-`—` es una respuesta, no un olvido: 31 de los 52 no están asignados, y asignarlos
+`—` es una respuesta, no un olvido: 30 de los 52 no están asignados, y asignarlos
 «porque sí» es lo que produjo la lista de 15 que no coincidía con lo financiado.
+Se re-deriva con
+`sed -n '/^## 4\./,/^## 5\./p' docs/audit/open-items.md | grep -cE '^\| (P-|B-|R5-)'`
+para el total (52) y el mismo rango con `grep -E '^\| (P-|B-|R5-)' | grep -cE '\| — \|$'`
+para los no asignados (30; `R5-1` contaba como `—` y pasó a `L5` al cerrarse el
+2026-10-28).
 
 | ID | Resumen (paráfrasis; el texto manda) | Carril |
 |---|---|---|
@@ -199,8 +208,8 @@ las sustituyó por los cuatro hitos, y el mapa es `R1`→`T1-M1`, `R2`→`T1-M2`
 | B-8 | extender el gate (antes `V-8`) | `T1-M4` |
 | B-9 | `SafeForkTest` se salta sin `FUJI_RPC_URL`: documentar la omisión | `L5` |
 | B-10 | getter de `MAX_NORM` | `T1-M4` |
-| R5-1 | el fondo del árbol keccak no coincide entre contrato y data layer (`§3.7`) | — (reservado, sin hito: la solicitud no lo nombra) |
-| R5-2 | el fixture duplica el nodo impar en vez de promocionarlo (`§3.7`) | `L5` |
+| R5-1 | el fondo del árbol keccak no coincidía entre contrato y data layer (`§3.7`) | `L5` — libre, cerrado 2026-10-28 |
+| R5-2 | el fixture duplicaba el nodo impar en vez de promocionarlo (`§3.7`) | `L5` — libre, cerrado 2026-10-28 |
 
 Notas que no caben en una celda:
 
@@ -221,11 +230,14 @@ Notas que no caben en una celda:
    símbolos distintos y el argumento de uno no sustituye al otro.
 6. **`B-8` y `B-10` no son «libres» por ser pequeños**: tocan el gate y el
    contrato, así que son re-seal-gated tanto como los ítems grandes.
-7. **`R5-1` es precondición de la opción (b) de `P-12`.** Sin unificar el fondo
-   del árbol, cualquier prueba de inclusión on-chain rechaza la prueba honesta, y
-   la remediación 1 del audit es exactamente esa prueba. `R5-2` no se arregla
-   tocando sólo el fixture: es el mismo sitio, y arreglar el fixture sin decidir
-   `R5-1` deja el vector apuntando a la convención equivocada.
+7. **`R5-1` era precondición de la opción (b) de `P-12`, y ya está cumplida.**
+   Sin unificar el fondo del árbol, cualquier prueba de inclusión on-chain rechazaba
+   la prueba honesta, y la remediación 1 del audit es exactamente esa prueba. Gana la
+   regla del contrato (`keccak256(leaf)` en el fondo) porque el contrato está
+   desplegado; `R5-2` se arregló en el mismo movimiento, en el helper de test, y el
+   tensor del data layer es ahora su vector cruzado. Queda como precondición
+   *cumplida*, no como pendiente: la opción (b) sigue necesitando ventana, bond y
+   ruta de pago (`P-18`).
 8. **El carril reservado se nombra por el hito que lo paga** (`T1-M1`…`T1-M4`),
    no por un ordinal interno: un carril sin pagador no se puede auditar, y las
    etiquetas `R1`…`R4` de la primera versión sobrevivieron justo hasta que se
