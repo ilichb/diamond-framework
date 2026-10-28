@@ -17,6 +17,7 @@ pub mod admission;
 pub mod bridge;
 pub mod fixture;
 pub mod groth16;
+pub mod merkle_fixture;
 pub mod native;
 pub mod range_proof;
 pub mod report;

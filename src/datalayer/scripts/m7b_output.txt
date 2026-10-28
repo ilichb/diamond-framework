@@ -103,7 +103,7 @@ NOTAS
      score((40, 7, 3)) .......... 138673557278208440 WAD = 0.138674
    the fraud proof, on an epoch committed at f_c's own value:
      the committed value is f_c(events) .............. Consistent
-     re-hashed at value + 1 (root 0x80328681..) ...... Fraud: published 138673557278208441, f_c 138673557278208440
+     re-hashed at value + 1 (root 0xf3955a7b..) ...... Fraud: published 138673557278208441, f_c 138673557278208440
      the honest witness against the lying root ....... Unproven (never a slash)
      one value, one leaf: a second opening of the ... same position does not verify
    The paper phrases the proof as two inclusion proofs against one root with

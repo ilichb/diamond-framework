@@ -318,11 +318,15 @@ mod tests {
         token
     }
 
-    /// The contract's fold, rewritten from its rule — `keccak256` of the
-    /// *ordered* pair, odd node promoted — so that "the tree is the registry's"
-    /// is checked against a second implementation instead of assumed.
+    /// The contract's fold, rewritten from its rule — `keccak256(leaf)` at the
+    /// bottom, `keccak256` of the *ordered* pair above it, odd node promoted — so
+    /// that "the tree is the registry's" is checked against a second
+    /// implementation instead of assumed.
     fn independent_root(leaves: &[[u8; 32]]) -> [u8; 32] {
-        let mut level = leaves.to_vec();
+        let mut level: Vec<[u8; 32]> = leaves
+            .iter()
+            .map(|leaf| Keccak256::digest(leaf).into())
+            .collect();
         while level.len() > 1 {
             level = level
                 .chunks(2)

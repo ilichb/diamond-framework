@@ -97,6 +97,16 @@ path = "src/m4b_fixture.rs"
 name = "m4d-fixture"
 path = "src/m4d_fixture.rs"
 
+# The inclusion fixture emitter (R5-1/R5-2): writes the data layer's payloads,
+# leaves, roots and proofs into
+# `integrations/avalanche/test/fixtures/DatalayerInclusion.sol`, so the deployed
+# `verifyEntry` can be run against them. Run through `scripts/merkle_fixture.sh`,
+# which follows it with `forge fmt`.
+[[bin]]
+name = "merkle-fixture"
+path = "src/bin/merkle_fixture.rs"
+
+
 [[bench]]
 name = "m4a"
 harness = false

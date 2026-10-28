@@ -32,6 +32,15 @@ payload 3 = 0x333333333333333333333333333333333333333300000000000000000000000000
 leaf 3 = 0x5a117684997e985aaf22918bc5311f6a4ec8d5d0386526fdec83ef84273d2996
 payload 4 = 0x444444444444444444444444444444444444444400000000000000000000000000000000000000000000000029a2241af62c0000
 leaf 4 = 0xf7e4b6755e0beba52cfe72fea88ad1768b8720366e4d2821aa2f4db1de37f5b6
-pair 1 = 0xd7014306c0868b5c791402c44b88f4d7c8a58ffcf15766c8dd0d64e85286aef5
-pair 2 = 0xf450c600a7872ee70ec01d9192372b43005b1d810c8a97a9a23bb0edccfd7153
-root(4) = 0xa708d90e3df263b03d823e688d8780c6d6f378b9a0696647b4ab2129adbeffd8
+# `verifyEntry` takes a `bytes32 leaf` and starts from `keccak256(leaf)`, so the
+# tree's level 0 is the leaf hashed once more (R5-1). The `node` lines below are
+# that step; `pair` and `root(4)` fold them, ordered by 32-byte value: the whole
+# tree is the deployed contract's, not a re-description of it. Checked on-chain by
+# `integrations/avalanche/test/DatalayerInclusion.t.sol`.
+node 1 = 0x2a861ec9a3b7eb21e57b232ddb1ee116be398984e45202a21b087e97ad1a9ab9
+node 2 = 0x22f6118fc1cbf03bdaf44716bc6c4e7ec7503c429073f15651d10db5ba718e85
+node 3 = 0x33b6339fe83d290cb853922cd6ad863500dd4e8bd77a167f6fe6e9dc1c4a7d2b
+node 4 = 0xb32c6e09f805d0dad8b8d8752f256aad2abe8c8d6610adeae48d4e4a8b8689fa
+pair 1 = 0x4fa66eb2247538cc57b12f41cdbafd9b9d80b919291e88feac7e2c7ec31dcb8c
+pair 2 = 0xb9aab794dc1dab0083721ce1d51b46d49790b31fb240c645ed90202853e8be27
+root(4) = 0x6d7dbeead031ce88ee6f534d9c2fef6063ab9471b1fe3cde38bd0b26555eed36

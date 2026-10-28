@@ -6,6 +6,7 @@ import {AVIPRegistry} from "../contracts/AVIPRegistry.sol";
 import {IAVIPRegistry} from "../contracts/interfaces/IAVIPRegistry.sol";
 import {Bn254} from "../contracts/verifiers/Bn254.sol";
 import {MockThresholdVerifier} from "./mocks/MockThresholdVerifier.sol";
+import {DatalayerInclusion} from "./fixtures/DatalayerInclusion.sol";
 
 /// WHAT IS TESTED
 /// --------------
@@ -807,8 +808,58 @@ contract AVIPRegistryTest is Test {
         assertFalse(registry.verifyEntry(root, eight[3], proofs[4]));
     }
 
-    // ------------------------------------------------------ norm certification
+    /// R5-2: an odd level **promotes** its last node, it does not duplicate it.
+    ///
+    /// The vector is the data layer's own 500 leaves (`DatalayerInclusion`, emitted
+    /// by `src/zk/scripts/merkle_fixture.sh`): 500 → 250 → **125** → …, so level 125
+    /// is odd and the two rules give two different roots. Only the promoted one is
+    /// the root the data layer publishes, and only a promoted fold is described by
+    /// a proof `verifyEntry` accepts — with duplication the last node of an odd
+    /// level needs a sibling argument that does not exist.
+    ///
+    /// This file's `_buildTree` used to duplicate (R5-2). `forge test` fails here if
+    /// it goes back.
+    function test_verifyEntry_oddLevelIsPromotedNotDuplicated() public view {
+        bytes32[] memory leaves = DatalayerInclusion.tensorLeaves();
+        assertEq(leaves.length, N, "the vector is the full tensor");
 
+        (bytes32 root, bytes32[][] memory proofs) = _buildTree(leaves);
+        assertEq(root, DatalayerInclusion.TENSOR_ROOT, "promotion, not duplication");
+        assertTrue(
+            root != _duplicatedRoot(leaves), "at N = 500 the two rules must give different roots"
+        );
+
+        // The leaves around the odd level, including the node that has no sibling.
+        uint256[6] memory boundary = [uint256(0), 124, 125, 249, 250, N - 1];
+        for (uint256 i = 0; i < boundary.length; ++i) {
+            uint256 index = boundary[i];
+            assertTrue(
+                registry.verifyEntry(root, leaves[index], proofs[index]),
+                "the promoted proof must verify"
+            );
+        }
+    }
+
+    /// @dev The retired rule, spelled out: hash the pair even when the level has no
+    ///      right sibling, i.e. duplicate the last node and fold it with itself.
+    function _duplicatedRoot(bytes32[] memory leaves) internal pure returns (bytes32) {
+        bytes32[] memory level = new bytes32[](leaves.length);
+        for (uint256 i = 0; i < leaves.length; ++i) {
+            level[i] = _hashLeaf(leaves[i]);
+        }
+        while (level.length > 1) {
+            bytes32[] memory next = new bytes32[]((level.length + 1) / 2);
+            for (uint256 p = 0; p < next.length; ++p) {
+                bytes32 left = level[2 * p];
+                bytes32 right = (2 * p + 1 < level.length) ? level[2 * p + 1] : left;
+                next[p] = _hashPair(left, right);
+            }
+            level = next;
+        }
+        return level[0];
+    }
+
+    // ------------------------------------------------------ norm certification
     function test_verifyThreshold_buildsTheStatementFromItsOwnState() public {
         _setVerifier(true, STATEMENT_ROOT, 0, NORM);
 
@@ -1040,9 +1091,13 @@ contract AVIPRegistryTest is Test {
             : keccak256(abi.encodePacked(right, left));
     }
 
-    /// @dev Full binary tree over `leaves`. Odd levels duplicate their last node
-    ///      (the same rule the inclusion proof of `AVIPRegistry` assumes).
-    ///      `proofs[i]` is the inclusion proof of leaf `i`.
+    /// @dev Full binary tree over `leaves`. An odd level **promotes** its last node
+    ///      unchanged — the rule `AVIPRegistry.verifyEntry` accepts a proof for, and
+    ///      the one `avip_datalayer::commitment` folds with (R5-2: this helper used
+    ///      to duplicate the node and hash the pair, which gives a different root as
+    ///      soon as a level is odd, as it is at 125 nodes for the 500-leaf tensor).
+    ///      `proofs[i]` is the inclusion proof of leaf `i`: one sibling per level
+    ///      where the node has one, so its length varies with the leaf.
     function _buildTree(bytes32[] memory leaves)
         internal
         pure
@@ -1067,9 +1122,9 @@ contract AVIPRegistryTest is Test {
             uint256 size = current.length;
             bytes32[] memory next = new bytes32[]((size + 1) / 2);
             for (uint256 p = 0; p < next.length; ++p) {
-                bytes32 left = current[2 * p];
-                bytes32 right = (2 * p + 1 < size) ? current[2 * p + 1] : left;
-                next[p] = _hashPair(left, right);
+                next[p] = (2 * p + 1 < size)
+                    ? _hashPair(current[2 * p], current[2 * p + 1])
+                    : current[2 * p];
             }
             levels[d + 1] = next;
         }
@@ -1078,14 +1133,20 @@ contract AVIPRegistryTest is Test {
         proofs = new bytes32[][](n);
         for (uint256 i = 0; i < n; ++i) {
             bytes32[] memory path = new bytes32[](depth);
+            uint256 used = 0;
             uint256 pos = i;
             for (uint256 d = 0; d < depth; ++d) {
-                bytes32[] memory current = levels[d];
                 uint256 sibling = pos ^ 1;
-                path[d] = (sibling < current.length) ? current[sibling] : current[pos];
+                if (sibling < levels[d].length) {
+                    path[used++] = levels[d][sibling];
+                }
                 pos /= 2;
             }
-            proofs[i] = path;
+            bytes32[] memory trimmed = new bytes32[](used);
+            for (uint256 k = 0; k < used; ++k) {
+                trimmed[k] = path[k];
+            }
+            proofs[i] = trimmed;
         }
     }
 }

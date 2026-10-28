@@ -134,8 +134,8 @@ Mode:   statistical - the IDE table, the WAD vectors and the floor are exact; th
      leaf 2 = 0xf21a9ea7c1f0ebe8dcba8abd2626cbde8e9815f185c5a200ce01e17788193c7a  (validator 0x2222222222222222222222222222222222222222, norm 500000000000000000)
      leaf 3 = 0x5a117684997e985aaf22918bc5311f6a4ec8d5d0386526fdec83ef84273d2996  (validator 0x3333333333333333333333333333333333333333, norm 2000000000000000000)
      leaf 4 = 0xf7e4b6755e0beba52cfe72fea88ad1768b8720366e4d2821aa2f4db1de37f5b6  (validator 0x4444444444444444444444444444444444444444, norm 3000000000000000000)
-     root        = 0xa708d90e3df263b03d823e688d8780c6d6f378b9a0696647b4ab2129adbeffd8
-     digest      = keccak256(epoch || root) = 0xcca617622457c273c8d1fb773a15dc5a29eb158104213797603dc24fbe14e9d5
+     root        = 0x6d7dbeead031ce88ee6f534d9c2fef6063ab9471b1fe3cde38bd0b26555eed36
+     digest      = keccak256(epoch || root) = 0xfa2219b7e19c1a815bf56d84ff96e3560f842ea22b62c09c699e5935320836a1
      verifyEntry for all 4 entries (deployed contract's own rule) ... PASS
      a one-bit payload change is rejected ......................... PASS
      an unrelated root is rejected ................................ PASS

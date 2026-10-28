@@ -35,7 +35,7 @@ library M7cBridgeFixtures {
     /// @notice M1's Merkle root over that tensor: the `merkleRoot` a commitment
     ///         announcement carries.
     bytes32 internal constant MERKLE_ROOT =
-        0x187d08e633fb4f3895633e6d3be1075f9603923adb6d70c09f27b458c3917537;
+        0x335750970d80b983041b14e06bbae156732061f12882e0bdbe0d1b6d794044f7;
 
     /// @notice The V3 statement's `root` for the same tensor, as `uint256`.
     uint256 internal constant STATEMENT_ROOT =
@@ -49,5 +49,5 @@ library M7cBridgeFixtures {
 
     /// @notice The tie: `bridge::link_digest(MERKLE_ROOT, STATEMENT_ROOT, EPOCH)`.
     bytes32 internal constant LINK =
-        0xc4d35b0ac87daa8fe8647a6d2372e6dabe3e1c505e444455c20f9c8ff9073ba7;
+        0x98dc2959892349bb23bf3c8321ed4107d4010c5a2c0505cf9d4dac8d533dadce;
 }

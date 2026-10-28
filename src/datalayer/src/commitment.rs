@@ -20,6 +20,16 @@
 //!   published per epoch is `keccak256(abi.encodePacked(uint256 epoch, bytes32
 //!   root))`.
 //!
+//! The bottom step has **two** hashes and that is not a design choice either:
+//! `verifyEntry` takes a `bytes32 leaf` and starts from `keccak256(leaf)`, so the
+//! tree's level 0 is [`Entry::leaf`] passed through [`bottom_node`], not the leaf
+//! itself. Until R5-1 the fold started at the leaf, making every root this module
+//! produced *unverifiable* by the deployed contract — the two sides hashed the same
+//! payload one hash apart. `fixtures/keccak256_vectors.txt` pins the contract's
+//! value (`root(4)`, cross-checked on-chain by
+//! `integrations/avalanche/test/DatalayerInclusion.t.sol`), so the convention
+//! cannot drift back silently.
+//!
 //! Freshness is M1's own bound: `γ·N = (500 · 1000)/10_000 = 50` entries per epoch
 //! (`eq:freshness`), which [`Epoch::freshness_ok`] enforces the same way
 //! `commitEpoch` does.
@@ -72,7 +82,17 @@ impl Entry {
     }
 }
 
-/// `verifyEntry`'s bottom step: `keccak256(abi.encodePacked(leaf))`.
+/// `verifyEntry`'s bottom step: `keccak256(abi.encodePacked(leaf))`, where `leaf`
+/// is the 32-byte [`Entry::leaf`] — the contract hashes its `bytes32` argument
+/// once more. This is the tree's level 0 (R5-1).
+#[must_use]
+pub fn bottom_node(leaf: &[u8; 32]) -> [u8; 32] {
+    keccak256(leaf)
+}
+
+/// The digest of one entry's payload: `keccak256(payload)`, [`Entry::leaf`]. The
+/// tree hashes this once more ([`bottom_node`]); this function is the *first* of
+/// the two hashes, not the bottom node.
 #[must_use]
 pub fn leaf_hash(payload: &[u8]) -> [u8; 32] {
     keccak256(payload)
@@ -93,11 +113,12 @@ pub fn pair_hash(a: &[u8; 32], b: &[u8; 32]) -> [u8; 32] {
     keccak256(&buf)
 }
 
-/// The Merkle root of `leaves`: `verifyEntry`'s tree, odd node promoted.
+/// The Merkle root of `leaves`: `verifyEntry`'s tree, odd node promoted, bottom
+/// node [`bottom_node`] of each leaf.
 #[must_use]
 pub fn merkle_root(leaves: &[[u8; 32]]) -> [u8; 32] {
     assert!(!leaves.is_empty(), "an empty epoch has no root");
-    let mut level = leaves.to_vec();
+    let mut level: Vec<[u8; 32]> = leaves.iter().map(bottom_node).collect();
     while level.len() > 1 {
         level = level
             .chunks(2)
@@ -112,14 +133,15 @@ pub fn merkle_root(leaves: &[[u8; 32]]) -> [u8; 32] {
 }
 
 /// The contract's `verifyEntry`, for a proof produced by
-/// [`Epoch::inclusion_proof`] — the parity check that the root M6 posts is
-/// verifiable by the deployed registry without changing it.
+/// [`Epoch::inclusion_proof`]. The argument is the 52-byte *payload*, so this
+/// applies both bottom hashes: `keccak256(payload)` (the leaf) and then
+/// `keccak256(leaf)` ([`bottom_node`]), which is where the contract starts.
 #[must_use]
 pub fn verify_entry(root: &[u8; 32], payload: &[u8], proof: &[[u8; 32]]) -> bool {
     if root == &[0_u8; 32] {
         return false;
     }
-    let mut node = leaf_hash(payload);
+    let mut node = bottom_node(&leaf_hash(payload));
     for sibling in proof {
         node = pair_hash(&node, sibling);
     }
@@ -167,9 +189,11 @@ impl Epoch {
 
     /// The inclusion proof for leaf `index`, bottom-up, in `verifyEntry`'s order
     /// (each element is the sibling at that level; an odd node contributes none).
+    /// Level 0 is [`bottom_node`] of each leaf, so the first sibling is a hashed
+    /// leaf and not a raw one.
     #[must_use]
     pub fn inclusion_proof(&self, index: usize) -> Option<Vec<[u8; 32]>> {
-        let mut level = self.leaves();
+        let mut level: Vec<[u8; 32]> = self.leaves().iter().map(bottom_node).collect();
         if index >= level.len() {
             return None;
         }
@@ -342,13 +366,53 @@ mod tests {
         for (i, key) in ["leaf 1", "leaf 2", "leaf 3", "leaf 4"].iter().enumerate() {
             assert_eq!(leaves[i], digest32(key), "{key}");
         }
-        assert_eq!(pair_hash(&leaves[0], &leaves[1]), digest32("pair 1"));
-        assert_eq!(pair_hash(&leaves[2], &leaves[3]), digest32("pair 2"));
+        let nodes: Vec<[u8; 32]> = leaves.iter().map(bottom_node).collect();
+        for (i, key) in ["node 1", "node 2", "node 3", "node 4"].iter().enumerate() {
+            assert_eq!(nodes[i], digest32(key), "{key}");
+        }
+        assert_eq!(pair_hash(&nodes[0], &nodes[1]), digest32("pair 1"));
+        assert_eq!(pair_hash(&nodes[2], &nodes[3]), digest32("pair 2"));
         assert_eq!(epoch.root(), digest32("root(4)"));
         assert_eq!(
             merkle_root(&leaves),
             digest32("root(4)"),
             "the free function and the epoch agree"
+        );
+    }
+
+    /// R5-1, the regression: the two conventions are distinguishable, and the
+    /// fixture pins the contract's. `root(4)` is `cast`-computed from
+    /// `verifyEntry`'s own rule — `keccak256(leaf)` at the bottom — and the
+    /// Solidity half of it is asserted on-chain by
+    /// `integrations/avalanche/test/DatalayerInclusion.t.sol`. The leaf-first fold
+    /// (what this module did until R5-1) is a *different* root, so reverting
+    /// [`bottom_node`] out of the fold cannot pass unnoticed.
+    #[test]
+    fn the_root_starts_at_keccak_of_the_leaf_not_at_the_leaf() {
+        let epoch = Epoch::new(7, fixture_entries());
+        let leaves = epoch.leaves();
+
+        // The retired convention, spelled out: fold the leaves directly.
+        let mut old = leaves.clone();
+        while old.len() > 1 {
+            old = old
+                .chunks(2)
+                .map(|pair| match pair {
+                    [a, b] => pair_hash(a, b),
+                    [a] => *a,
+                    _ => unreachable!(),
+                })
+                .collect();
+        }
+        assert_ne!(
+            old[0],
+            digest32("root(4)"),
+            "the fixture pins the contract's root; the leaf-first fold must not reach it"
+        );
+        assert_eq!(
+            epoch.root(),
+            digest32("root(4)"),
+            "the contract's rule reaches it"
         );
     }
 
