@@ -33,6 +33,7 @@ ficheros, se cualifica:
 | `PC-` | `docs/audit/post-closure-audit.md` |
 | `IMP-` | `docs/architecture/implementation-plan.md` (decisiones de diseño) |
 | `MPA-` | `docs/audit/triage-mapa-2026-10-22.md` (serie `M-`) |
+| `R5-` | ronda 5: hallazgos de la revisión del 2026-10-27, definidos en §3.7 y desarrollados en `docs/architecture/p12-freshness-binding.md` |
 
 Así `R3-A-8` (baseline de succinctness) deja de confundirse con `PC-A-8` (tabla
 de runtimes del README), y `IMP-D-3` (layout de Foundry) con el `D-7` del paper.
@@ -52,6 +53,7 @@ de runtimes del README), y `IMP-D-3` (layout de Foundry) con el `D-7` del paper.
 | «D-7 del paper» | `docs/paper/main.tex` §6 | — | 1 | se cita con nombre, no con número | — |
 | `MPA-M-` | `triage-mapa-2026-10-22.md:61` | `M-01`… | 18 | **local**: no cruza de carril | `grep -cE '^\| M-[0-9]+'` |
 | `V-` | — | — | 0 | **no existe** (§3.5) | `grep -rn 'V-8' docs/ --exclude=open-items.md` → 0 |
+| `R5-` | aquí §3.7 (no tienen otro hogar todavía) | `R5-1`, `R5-2` | 2 | nueva, abierta | `grep -cE '^\| R5-[0-9] ' docs/audit/open-items.md` |
 
 `P-` tiene 51 filas y 40 IDs: las 11 de más son la tabla de disposición de
 `:3246`, indexada por los mismos IDs. No es una colisión. Igual con `A-`: son 25
@@ -117,13 +119,32 @@ criterio de cierre**. Los carriles no inventan criterios: importan esos. Si un
 carril cierra un `P-27`…`P-37` sin cumplir la columna «Cierre verificable», no lo
 ha cerrado.
 
-## 4. Los 50 ítems accionables y su carril
+### 3.7 `R5-`: dos divergencias de convención, medidas
 
-Carriles: `G` financiado por la propuesta (`G1`…`G5` en
-`team1-reserved-work.md`), `R1`…`R4` reservado y bloqueado, `L0`…`L6` carril
-libre, `—` sin carril.
+Ninguna de las dos rompe un despliegue hoy, y por eso importan: las dos fallan
+cerrado y ninguna suite las puede ver, porque cada lado se compara consigo mismo.
 
-`—` es una respuesta, no un olvido: 30 de los 50 no están asignados, y asignarlos
+| ID | Qué es | Carril |
+|---|---|---|
+| `R5-1` | el fondo del árbol keccak no coincide: `AVIPRegistry.verifyEntry:410` empieza en `keccak256(abi.encodePacked(leaf))` y `commitment.rs:98-112` pliega `Entry::leaf()` sin ese hash. Medido con el fixture del propio repo (`keccak256_vectors.txt`): `verifyEntry` **rechaza** la raíz y la prueba del data layer y **acepta** su propio árbol para las mismas cuatro entradas. `commitment.rs:114-116` afirma lo contrario | reservado; sin hito asignado por la solicitud → decisión del owner (familia de `P-26`) |
+| `R5-2` | el fixture `AVIPRegistry.t.sol:1071-1072` duplica y hashea el nodo impar, mientras la regla especificada (`implementation-plan.md:2033,2065`) y `commitment.rs:106` lo promocionan sin hashear. Para `N = 500` el nivel 125 es impar: dos raíces distintas para las mismas 500 hojas | libre (`L5`), es un vector de test |
+
+`R5-1` es precondición de cualquier prueba de inclusión on-chain — es decir, de la
+remediación 1 de `P-12`, que es la opción (b) del memo. `R5-2` no cambia ninguna
+raíz publicada, pero deja al test de 500 hojas sin poder servir de vector
+cruzado. Las dos se documentan con su medición en
+`docs/architecture/p12-freshness-binding.md` §7, que es donde se reproduce.
+
+## 4. Los 52 ítems accionables y su carril
+
+Carriles: `G` financiado por la propuesta de $50k (`G1`…`G5` en
+`team1-reserved-work.md`, gobernado por `RESEARCH_PROPOSAL_STATUS`), `T1-M1`…`T1-M4`
+reservado y bloqueado por el mini grant de Team1 (`GRANT_STATUS`), `L0`…`L6` carril
+libre, `—` sin carril. Las etiquetas `R1`…`R4` están retiradas: la solicitud enviada
+las sustituyó por los cuatro hitos, y el mapa es `R1`→`T1-M1`, `R2`→`T1-M2`,
+`R3`→`T1-M3`, `R4`→`T1-M4`.
+
+`—` es una respuesta, no un olvido: 31 de los 52 no están asignados, y asignarlos
 «porque sí» es lo que produjo la lista de 15 que no coincidía con lo financiado.
 
 | ID | Resumen (paráfrasis; el texto manda) | Carril |
@@ -132,72 +153,83 @@ libre, `—` sin carril.
 | P-02 | `f_c` no ata el score a un validador ni a la procedencia de eventos | — |
 | P-03 | tres semánticas incompatibles de `T` (paper, data layer, bridge) | — |
 | P-04 | `certifiedNorm` del prover limitado a `< 2^64` (18.4467 WAD) | — |
-| P-05 | `bindManager` del vault es una carrera de despliegue | `R1` |
+| P-05 | `bindManager` del vault es una carrera de despliegue | `T1-M1` |
 | P-06 | el fee por época no se enforcea on-chain | — |
 | P-07 | paper/plan/README afirman un binding que el código no tiene | — |
-| P-08 | `Groth16Verifier` acepta una clave degenerada | `R1` |
-| P-09 | con token de 0 decimales, `debit` redondea el slash a 0 | `R1` |
+| P-08 | `Groth16Verifier` acepta una clave degenerada | `T1-M1` |
+| P-09 | con token de 0 decimales, `debit` redondea el slash a 0 | `T1-M1` |
 | P-10 | el guardian puede proponerse a sí mismo como sequencer | — |
 | P-11 | `requiredStake` queda obsoleto tras una eyección | — |
-| P-12 | la freshness `γN` sólo se comprueba sobre el delta declarado | `L1`+`R2` |
+| P-12 | la freshness `γN` sólo se comprueba sobre el delta declarado | `L1`+`T1-M2` |
 | P-13 | el verifier acepta `certifiedNorm + r` (input no canónico) | — |
 | P-14 | `AVIPSlashingChannel` descarta `epoch`, `ingestionDigest` y los WAD | — |
 | P-15 | `AVIPBurnSink.receiveFunds` es permissionless | — |
 | P-16 | un solo `_roots[epoch]` no puede ser a la vez raíz de V3 y de la capa | — |
-| P-17 | la admisión se evalúa una vez: sin recertificación ni reprecio | `R2` |
-| P-18 | el bounty `B` no tiene ruta de pago | `R2` |
+| P-17 | la admisión se evalúa una vez: sin recertificación ni reprecio | `T1-M2` |
+| P-18 | el bounty `B` no tiene ruta de pago | `T1-M2` |
 | P-19 | el agregador Frobenius permite pasar `Θ_r` con una sola celda | — |
-| P-20 | §2.4: los momentos tabulados son el límite `λ = 0` | `R4` |
+| P-20 | §2.4: los momentos tabulados son el límite `λ = 0` | `T1-M4` |
 | P-21 | §7.5: `γ` acota entradas cambiadas, no la duración del fraude | `L1` |
 | P-22 | §2.5: `π(r)` se despeja de la `C_R` elegida (consistencia circular) | — |
 | P-23 | §8: el bootstrap usa otro `C_R` que el mapeo de §2 | — |
 | P-24 | `F0* = 0.05` se calcula en `T = 0`, fuera del dominio admisible | — |
 | P-25 | erratas y sobreafirmaciones menores | — |
-| P-26 | los guards de despliegue no son fail-closed fuera del runbook | `R1` |
+| P-26 | los guards de despliegue no son fail-closed fuera del runbook | `T1-M1` |
 | P-27 | el detector de colusión no está conectado al estado de reputación | — |
 | P-28 | el «piso financiero» `0.2Θ` se presenta como garantía de seguridad | — |
 | P-29 | el README promete una confianza mínima que v1 no tiene | — |
 | P-30 | `π_val`, `ω` y `k` no tienen unidad temporal | — |
 | P-31 | la premisa PoW de la introducción no tiene cita | — |
-| P-32 | `admit` usa siempre `latestEpoch()` e invalida proofs en vuelo | `R1` |
+| P-32 | `admit` usa siempre `latestEpoch()` e invalida proofs en vuelo | `T1-M1` |
 | P-33 | el circuito no impone `T ∈ [0,1]` (`ENTRY_BITS = 60`) | — |
 | P-34 | el slash cross-chain se ejecuta sobre la palabra del `NOTIFIER` | `L5` |
 | P-35 | la frontera de detección no es Kesten–Stigum y sólo se probó a 10× | `L2`+`L3` |
-| P-36 | bibliografía: Bauer–Jost mal citado (CPAM 2012 → CAG 2013) | `R4` |
+| P-36 | bibliografía: Bauer–Jost mal citado (CPAM 2012 → CAG 2013) | `T1-M4` |
 | P-37 | la permutación Poseidon usa `state[1]` (rate 2) | — |
 | P-38 | la prueba de admisión publica el statement completo: sin ZK | — |
 | P-39 | el `slashAuthority` de Fuji es una EOA y el rol es inmutable | — |
 | P-40 | el despliegue de Fuji es anterior a M-15 (`sourceChainId()`) | — |
-| B-1 | `bindManager` → dirección en el constructor | `R1` |
+| B-1 | `bindManager` → dirección en el constructor | `T1-M1` |
 | B-2 | escribir `DeployFujiPhase1.s.sol` | — |
 | B-3 | escribir `DeployBurnSink.s.sol` | — |
-| B-4 | cola de salida / retardo de retirada | `R2` |
-| B-5 | comparar `token.decimals()` en el script de despliegue | `R1` |
+| B-4 | cola de salida / retardo de retirada | `T1-M2` |
+| B-5 | comparar `token.decimals()` en el script de despliegue | `T1-M1` |
 | B-6 | slash de liveness con token pausable/blacklisted | — |
-| B-7 | el docstring de `DeployCommon` llama «public, valueless» a anvil | `R1` |
-| B-8 | extender el gate (antes `V-8`) | `R4` |
+| B-7 | el docstring de `DeployCommon` llama «public, valueless» a anvil | `T1-M1` |
+| B-8 | extender el gate (antes `V-8`) | `T1-M4` |
 | B-9 | `SafeForkTest` se salta sin `FUJI_RPC_URL`: documentar la omisión | `L5` |
-| B-10 | getter de `MAX_NORM` | `R4` |
+| B-10 | getter de `MAX_NORM` | `T1-M4` |
+| R5-1 | el fondo del árbol keccak no coincide entre contrato y data layer (`§3.7`) | — (reservado, sin hito: la solicitud no lo nombra) |
+| R5-2 | el fixture duplica el nodo impar en vez de promocionarlo (`§3.7`) | `L5` |
 
 Notas que no caben en una celda:
 
 1. **P-08 es precondición de `G3`.** Una ceremonia que instale un verifier nuevo
    sin cerrar P-08 instala la misma aceptación de clave degenerada. El orden no
-   es preferencia: `R1(P-08)` → decisión de `P-12` → circuito congelado → `G3`.
+   es preferencia: `T1-M1(P-08)` → decisión de `P-12` → circuito congelado → `G3`.
 2. **P-12 tiene dos trabajos**: el memo de opciones (`L1`, sin tocar código) y la
-   implementación de la opción elegida (`R2`). `L1` cierra con una recomendación,
+   implementación de la opción elegida (`T1-M2`). `L1` cierra con una recomendación,
    no con un cambio.
 3. **P-21 es el gemelo de paper de P-12** y estaba huérfano. Va en `L1` junto al
    memo, porque un memo que no dice qué se puede seguir afirmando en §7.5 no ha
    terminado.
-4. **`L2` depende de `R4`.** Sustituir el `[CONJECTURE]` de `main.tex:796` exige
-   citar el resultado de BBP, y la bibliografía es `P-36` = `R4`. Un carril libre
+4. **`L2` depende de `T1-M4`.** Sustituir el `[CONJECTURE]` de `main.tex:796` exige
+   citar el resultado de BBP, y la bibliografía es `P-36` = `T1-M4`. Un carril libre
    que se bloquea a sí mismo no es libre: se declara bloqueado.
 5. **`L2` no es `θ_r`.** El `[CONJECTURE]` es la frontera de detección (§7,
    `P-35`); `Θ_r` (`main.tex:471`) es el umbral de norma para admisión. Son dos
    símbolos distintos y el argumento de uno no sustituye al otro.
 6. **`B-8` y `B-10` no son «libres» por ser pequeños**: tocan el gate y el
    contrato, así que son re-seal-gated tanto como los ítems grandes.
+7. **`R5-1` es precondición de la opción (b) de `P-12`.** Sin unificar el fondo
+   del árbol, cualquier prueba de inclusión on-chain rechaza la prueba honesta, y
+   la remediación 1 del audit es exactamente esa prueba. `R5-2` no se arregla
+   tocando sólo el fixture: es el mismo sitio, y arreglar el fixture sin decidir
+   `R5-1` deja el vector apuntando a la convención equivocada.
+8. **El carril reservado se nombra por el hito que lo paga** (`T1-M1`…`T1-M4`),
+   no por un ordinal interno: un carril sin pagador no se puede auditar, y las
+   etiquetas `R1`…`R4` de la primera versión sobrevivieron justo hasta que se
+   envió la solicitud.
 
 ## 5. Cómo se actualiza
 
