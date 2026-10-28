@@ -41,9 +41,13 @@ derivable, not memorized:
   the on-chain alert as a non-sanction. See [`v0.2.2-notes.md`](v0.2.2-notes.md).
 - **v0.2.3 has one.** [`v0.2.3-errata.md`](v0.2.3-errata.md) registers `E-01`
   (2026-10-28): the `286,144` cold path that this section calls the deployed one is
-  V3's three-input key, and the key the registry installs is M4d's (`306,275` cold).
-  Nothing is applied; the fix edits `main.tex`, which is sealed, so it belongs to
-  the re-seal and not to this directory.
+  V3's three-input key, and the key the registry installs is M4d's (`306,253` cold,
+  measured 2026-10-28; `306,275` on the earlier toolchain). Nothing is applied yet,
+  and the *shape* is decided: v0.2.3 prints the installed key's figure as the
+  deployed one and keeps `286,144` as V3's. The edit touches `main.tex`, which is
+  sealed, so it belongs to the re-seal rather than to this directory — and since
+  2026-10-28 that re-seal is free-lane and self-funded: **v0.2.3 does not wait for
+  the grant** (`../grants/team1-reserved-work.md` §6, decision 6).
 - Release asset `diamond-framework-2026-10-25.pdf`: 43 pages, 591875 bytes,
   sha256 `89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9`.
 - **The verifier left `address(0)` the same day, and the text followed.** A

@@ -40,8 +40,8 @@ If this file is missing, renamed, or a line holds any other value, that lane is
 
 | Lane | May touch | Gate expectation |
 |---|---|---|
-| Reserved (`T1-M1`…`T1-M4`, `G1`…`G5`) | contracts, circuit, gate, `main.tex`, sealed files | blocked until the switch that governs the row says otherwise |
-| Free (`L0`–`L6`) | new unsealed docs and notes; the paper only on a branch | 11/11 on `main` |
+| Reserved (`T1-M1`…`T1-M4`, `G1`…`G5`) | contracts, circuit, gate, sealed files | blocked until the switch that governs the row says otherwise |
+| Free (`L0`–`L7`) | new unsealed docs and notes; the paper, its errata and its re-seal | 11/11 on `main` |
 
 The free lane is not free of consequences, and pretending otherwise is how two
 lanes collide:
@@ -50,8 +50,11 @@ lanes collide:
   the sealed key `scripts 38` in `verification/count_manifest.txt`, cross-checked
   against the `## Running` block of `verification/README.md`;
 - editing `docs/audit/claim-registry.csv` edits a sealed pair (anchor pair 8);
-- publishing a paper revision means `main.tex` and the re-seal, i.e. the reserved
-  lane.
+- publishing a paper revision means `main.tex` and the re-seal. **As of 2026-10-28
+  that is free-lane, self-funded work** (decision 6 in §6): v0.2.3 ships whether or
+  not the mini grant is awarded, and `T1-M4` keeps only `P-20` and `P-36`. Until that
+  date this bullet read "i.e. the reserved lane"; the change is recorded here rather
+  than applied quietly, because it moves work between two people.
 
 **Accepting a red branch, decided 2026-10-27.** A branch that edits an anchored
 file fails G11 by construction, because G11 re-derives the anchor from the
@@ -86,7 +89,13 @@ what makes it close.
 | `T1-M1` | `P-08`, `P-32`, `P-05`/`B-1`, `P-26`, `P-09` with `B-5` and `B-7`, guardian rotation, pause | each item has a fix and a test that fails before it and passes after; the guardian rotation and the pause are exercised by tests, not only by the delay logic that already exists |
 | `T1-M2` | `P-18`, `P-12` (the option chosen), `P-17`, `B-4` | the `P-12` option is chosen in writing, `P-18`/`P-17` are closed or explicitly deferred against it, and `B-4` is resolved. Until this closes, the circuit is not frozen |
 | `T1-M3` | Redeploy; verifier announcement with its 2-day delay; an epoch, a proof, an admission; deploy script and pinned artefact; `MAX_NORM` getter (`B-10`) | the operator and the verifier are redeployed, `postCommitment` → `verifyThreshold` → `admit` runs end to end on the new deployment, the script and its artefact are pinned in the repo, and `B-10`'s getter is live |
-| `T1-M4` | Gate over contracts and charge (`B-8`), `SafeFork` as an explicit omission (`B-9`), `P-20`, `P-36`, re-seal and release, mutation campaign with tooling | the gate runs over the contracts and the charge path, the `SafeFork` skip is documented as an omission rather than silenced, the two paper items are closed, the anchor is re-derived green after the re-seal, and the mutation campaign runs from a committed harness |
+| `T1-M4` | Gate over contracts and charge (`B-8`), `SafeFork` as an explicit omission (`B-9`), `P-20`, `P-36`, mutation campaign with tooling | the gate runs over the contracts and the charge path, the `SafeFork` skip is documented as an omission rather than silenced, the two paper items are closed, and the mutation campaign runs from a committed harness |
+
+`re-seal and release` sat in `T1-M4` until 2026-10-28 and is **no longer a row
+item**: v0.2.3 ships with `E-01` and without the grant (§6, decision 6), so a
+re-seal does not wait for this lane. What `T1-M4` keeps of the paper is its two
+content items, `P-20` and `P-36`; when they land, their edit rides in whichever
+release is current, funded or not.
 
 Declared out of scope by the application, and therefore in no row: **the full
 audit and the ceremony.** `T1-M3` needs the ceremony to have happened, and the
@@ -160,6 +169,7 @@ commitment.
 | `L4` | Staging contracts for the `P-11`/`P-14`/`P-15` family | staging only; nothing reaches a deployed address from here |
 | `L5` | Design notes: `P-34`, recursion (`R3-A-10`), `B-9`, and the two tree conventions (`R5-1`, `R5-2`) | `B-9` is the `SafeForkTest` skip, documented rather than "fixed"; `T1-M4` is what makes the omission explicit in the delivery. `R5-1`/`R5-2` were **discovered after the submission** — the grant does not name them, so they were free-lane work and are **closed 2026-10-28** (`open-items.md` §3.7, `p12-freshness-binding.md` §7) |
 | `L6` | Regenerate `claim-registry.csv` line numbers | re-seal-gated; no generator exists today, and `G4` does not check line numbers, so the script needs its own verification |
+| `L7` | **v0.2.3 without the grant**: `E-01` (the paper calls V3's 286,144 "the deployed figure"; the installed key measures 306,253) | **decided 2026-10-28**: ships self-funded, re-seal included. Registered in [`../paper/releases/v0.2.3-errata.md`](../paper/releases/v0.2.3-errata.md). `P-20` and `P-36` are carved out and stay reserved (`T1-M4`), so `L2`'s ACP-77 paragraph and `[CONJECTURE]` are **not** in this row and still wait |
 
 ## 6. Decisions only the owner can take
 
@@ -183,6 +193,14 @@ commitment.
    bytecode and a redeploy, while the ceremony freezes nothing in the keccak tree
    (`p12-freshness-binding.md` §8). `R5-2` was fixed in the test fixture, not the
    bytecode. Both are validated by mutation.
+6. **v0.2.3 ships without the grant — decided 2026-10-28.** `E-01` is applied
+   self-funded, with the free-lane paper work and its re-seal, and `T1-M4` keeps only
+   `P-20` and `P-36`. The reason is in the errata's header: a wrong *label* in a
+   deposited paper was waiting on money nobody has granted, and the correction now
+   has a measurement, a script and a probe
+   (`docs/audit/evidence/2026-10-28-v3-vs-m4d-gas/`). This is the only decision here
+   that moves work **out** of the reserved lane, and it does not make any `T1-` row
+   cheaper: it removes a re-seal from `T1-M4` and nothing else.
 
 ## 7. How to check this file
 
@@ -192,6 +210,8 @@ bash verification/audit-gate.sh                              # expect 11/11
 bash verification/fase0_anchor.sh --check                    # expect exit 0
 grep -cE '`R[1-4]`' docs/grants/team1-reserved-work.md    # expect 0: the R1–R4 labels are retired
 grep -n 'No line pays' docs/grants/team1-reserved-work.md    # expect only §4
+grep -n 'L7' docs/grants/team1-reserved-work.md              # the grant-free v0.2.3 row
+grep -c 're-seal and release' docs/grants/team1-reserved-work.md  # expect 2: the note that it left T1-M4, and this line
 ```
 
 The registry that resolves the IDs used above is `docs/audit/open-items.md`,

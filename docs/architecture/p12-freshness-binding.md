@@ -132,11 +132,15 @@ a defect of the *label* rather than of the number — a three-input key cannot b
 installed at all, since the registry passes four public inputs and the verifier
 reverts `PublicInputsMismatch(3, 4)`. That is registered as `E-01` in
 [`../paper/releases/v0.2.3-errata.md`](../paper/releases/v0.2.3-errata.md) with its
-measurement in [`../audit/evidence/2026-10-28-v3-vs-m4d-gas/`](../audit/evidence/2026-10-28-v3-vs-m4d-gas/README.md),
-and it belongs to v0.2.3 and the re-seal, not here. And 306,275 is today's contract
-with the installed key, not a like-for-like re-measurement of V3's: of the
-20,131-gas gap, 8,873 is the extra `ic` point and the rest is `AVIPRegistry`'s
-growth since 2026-10-20, which this memo does not decompose further.
+measurement in [`../audit/evidence/2026-10-28-v3-vs-m4d-gas/`](../audit/evidence/2026-10-28-v3-vs-m4d-gas/README.md).
+Since 2026-10-28 it ships in v0.2.3 as free-lane, self-funded work rather than in the
+reserved lane, and the shape is decided: the installed key's figure is the deployed
+one. That figure is **306,253** on today's toolchain (306,275 on the earlier one),
+measured cold with the four-input key — not a like-for-like re-measurement of V3's.
+Of the 20,109-gas gap, 8,873 is the extra `ic` point and the rest is `AVIPRegistry`'s
+growth since 2026-10-20, which this memo does not decompose further. The full
+admission path is now measured too: `manager.admit` is 395,255 cold with that key,
+against the V3-era 376,588.
 
 The table above is reproducible: build the tensor's 102 (leaf, root, proof) triples
 with the promote fold, measure `gasleft()` around a loop of 102 `verifyEntry` calls,

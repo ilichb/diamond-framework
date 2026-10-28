@@ -120,9 +120,11 @@ is out of scope (the last line of the draft), it is not paid for by this grant, 
 `T1-M3` is blocked until it happens. That distinction is the difference between a
 plan that assumes someone else's work and one that pretends to have bought it.
 
-Note that `T1-M3`'s redeploy also has to publish the *corrected* gas figure if
-`E-01` has landed by then: the paper currently prices the deployed path with V3's
-key ([`../paper/releases/v0.2.3-errata.md`](../paper/releases/v0.2.3-errata.md)).
+Note that `T1-M3`'s redeploy also has to publish the *corrected* gas figure:
+`E-01` no longer waits for this grant — v0.2.3 ships it self-funded
+([`../paper/releases/v0.2.3-errata.md`](../paper/releases/v0.2.3-errata.md),
+`team1-reserved-work.md` §6 decision 6) — so by the time `T1-M3` runs, the figure
+the paper carries is the installed key's, **306,253 cold**, not V3's 286,144.
 
 ## What this changes in the rest of the directory
 

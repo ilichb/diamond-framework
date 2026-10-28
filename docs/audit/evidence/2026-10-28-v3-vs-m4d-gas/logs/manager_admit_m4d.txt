@@ -1,0 +1,47 @@
+# manager.admit with the installed (M4d) key
+# commit be49336 (contracts), forge 1.5.1-stable, solc 0.8.33, optimizer=false, evm_version=cancun
+# cmd: forge test --offline --match-path test/TmpManagerAdmitM4d.t.sol -vv
+
+Compiling 1 files with Solc 0.8.33
+Solc 0.8.33 finished in 955.13ms
+Compiler run successful!
+
+Ran 3 tests for test/TmpManagerAdmitM4d.t.sol:TmpMirrorNoManagerTest
+[PASS] test_mirrorWithCallerMemory() (gas: 309549)
+Logs:
+  padded mirror: verifyThreshold cold: 306221
+
+[PASS] test_mirrorWithHelper() (gas: 309120)
+Logs:
+  helper mirror: verifyThreshold cold: 306253
+
+[PASS] test_mirrorWithoutManager() (gas: 309108)
+Logs:
+  no-manager mirror: verifyThreshold cold: 306218
+
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 12.02ms (15.41ms CPU time)
+
+Ran 4 tests for test/TmpManagerAdmitM4d.t.sol:TmpManagerAdmitM4dTest
+[PASS] test_admitColdThenWarm() (gas: 745321)
+Logs:
+  manager.admit (cold) gas: 395220
+  manager.admit stake (WAD): 680317507197900649
+  manager.admit (warm, other validator) gas: 329682
+
+[PASS] test_admitColdWithHelper() (gas: 406819)
+Logs:
+  manager.admit (cold, helper convention) gas: 395255
+
+[PASS] test_mirrorTheM4dCostTest() (gas: 795003)
+Logs:
+  mirror: verifyThreshold cold: 306218
+  mirror: verifyThreshold warm: 247176
+  mirror: Groth16Verifier.verify: 234284
+
+[PASS] test_verifyThresholdCold() (gas: 309086)
+Logs:
+  verifyThreshold (4 inputs, cold) gas: 306218
+
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 19.42ms (19.74ms CPU time)
+
+Ran 2 test suites in 22.54ms (31.44ms CPU time): 7 tests passed, 0 failed, 0 skipped (7 total tests)

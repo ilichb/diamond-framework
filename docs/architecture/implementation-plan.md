@@ -1359,12 +1359,15 @@ P-03; the answer has to land in both places and in `main.tex` at once.
 clock is not). On chain, `Groth16Verifier.verify` with five `ic` points is
 **234,284 gas**; `AVIPRegistry.verifyThreshold` is **306,275** on the cold path
 (the convention the v0.2.1 note uses for V3's 286,144) and **247,233** warm
-(`test/M4dRealKey.t.sol` logs and bounds all three). A v0.2.2 that describes M4d
+(`test/M4dRealKey.t.sol` logs and bounds all three; a 2026-10-28 re-run on forge
+1.5.1 logs 306,253 / 247,211 — the 22 gas is the toolchain, not the contract). A v0.2.2 that describes M4d
 has to use these figures: the paper's 94,438 constraints and 3.9 s, and the
 note's 286,144 gas, describe V3. The note's **2.39×** and **1.82×** ratios also
 move with them, and the full `manager.admit` path (376,588 gas for V3) is **not**
-re-measured here, so neither ratio can be restated until that path is measured
-again.
+re-measured in this section: it is measured, with the installed key and this
+toolchain, in [`../audit/evidence/2026-10-28-v3-vs-m4d-gas/`](../audit/evidence/2026-10-28-v3-vs-m4d-gas/README.md)
+(**395,255** cold). Errata `E-01` states what that moves, and refuses to attribute
+the part of the difference the manager's own changes own.
 
 **Artefacts.** `src/zk/scripts/m4d_fixture.sh` emits
 `integrations/avalanche/test/fixtures/M4dGroth16Fixtures.sol` with the admission

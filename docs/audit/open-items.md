@@ -145,7 +145,7 @@ mutación: revertir cualquiera de los dos arreglos hace fallar un test.
 
 Carriles: `G` financiado por la propuesta de $50k (`G1`…`G5` en
 `team1-reserved-work.md`, gobernado por `RESEARCH_PROPOSAL_STATUS`), `T1-M1`…`T1-M4`
-reservado y bloqueado por el mini grant de Team1 (`GRANT_STATUS`), `L0`…`L6` carril
+reservado y bloqueado por el mini grant de Team1 (`GRANT_STATUS`), `L0`…`L7` carril
 libre, `—` sin carril. Las etiquetas `R1`…`R4` están retiradas: la solicitud enviada
 las sustituyó por los cuatro hitos, y el mapa es `R1`→`T1-M1`, `R2`→`T1-M2`,
 `R3`→`T1-M3`, `R4`→`T1-M4`.
@@ -259,7 +259,9 @@ Notas que no caben en una celda:
 - Las correcciones de `docs/paper/main.tex` que esperan a v0.2.3 **no** son ítems
   de este registro: viven en `docs/paper/releases/v0.2.3-errata.md`, cada una con
   su medida. La primera es `E-01` (2026-10-28): el paper llama «desplegada» a la
-  cifra de gas de V3 (286,144) cuando la clave instalada es la de M4d (306,275 en
-  frío), y una clave de tres inputs ya no puede instalarse
-  (`PublicInputsMismatch(3, 4)`). Es carril reservado: aplicarla es editar
-  `main.tex` y re-sellar.
+  cifra de gas de V3 (286,144) cuando la clave instalada es la de M4d (306,253 en
+  frío, medido el 2026-10-28), y una clave de tres inputs ya no puede instalarse
+  (`PublicInputsMismatch(3, 4)`). Aplicarla es editar `main.tex` y re-sellar; desde
+  el 2026-10-28 eso es **carril libre y autofinanciado**, no reservado: v0.2.3 sale
+  con o sin la mini beca, y `T1-M4` conserva sólo `P-20` y `P-36`
+  (`team1-reserved-work.md` §6, decisión 6).
