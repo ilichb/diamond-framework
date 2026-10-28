@@ -1405,6 +1405,14 @@ out why those are two different numbers — and `m8` reads this fixture's
 requires the norm the report admitted to be that value, then still reproduces the
 admission before the fee, slash and conservation sections.
 
+> **Note, 2026-10-28.** The counts above are M4d's snapshot and are left as they
+> stood. Today's tree is larger: `forge test --offline` → **316 passed, 0 failed,
+> 1 skipped** over thirteen suites (`AVIPRegistry.t.sol` is 53, `DatalayerInclusion.t.sol`
+> is 5), `cargo test` in `src/zk` → **50 passed, 1 ignored**, and `src/datalayer` plus
+> `src/reputation` add **40** and **53**. The same run reproduces `verifyThreshold`'s
+> M4d cold path at **306,253** and warm at **247,211**, 22 gas below the 306,275 /
+> 247,233 recorded above — see `docs/architecture/p12-freshness-binding.md` §7.
+
 Still open: the ceremony and an external audit (§11), and the paper-literal
 recursive construction (§5.5.7). P-01's *off-chain* half — whether the certified
 norm tracks events rather than the tensor — remains §7's problem, as the audit

@@ -110,7 +110,7 @@ block or comment:
 
 ```shell
 cd integrations/avalanche
-forge test --offline            # 274 tests
+forge test --offline            # 317 tests (316 passed, 1 skipped)
 forge test --offline -vv --match-path 'test/DeployScripts*'
 forge test --offline --match-path 'test/M7dTransport*'
 forge test --offline --match-path 'test/M8StakeVault*'

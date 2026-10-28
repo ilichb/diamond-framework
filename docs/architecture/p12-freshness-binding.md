@@ -107,15 +107,29 @@ side of an external call — encoding a 9-word `bytes32[]` into memory, the `CAL
 itself, the return copy — which a batch pays per inclusion as well. Nothing in that
 8.1k is the tree: the tree is built off-chain and only the path crosses the boundary.
 
-**Two numbers retracted.** An earlier revision of this section quoted "one inclusion
-= 10,630", "102 inclusions = 1,227,747" and "4.29× `verifyThreshold`'s 286,144". They
-do not reconcile — `102 × 10,630 = 1,084,260`, leaving 143,487 unaccounted — the
-probe that produced them was deleted before the decomposition was written down, and
-286,144 is not what `--gas-report` reproduces today (293,293 median over 18 calls of
-the same M4d key). They are withdrawn rather than re-explained. The table above is
-reproducible: build the tensor's 102 (leaf, root, proof) triples with the promote
-fold, measure `gasleft()` around a loop of 102 `verifyEntry` calls, and around the
-same loop with the calls removed; the two figures differ by the verifications alone.
+**Two numbers retracted, and one divisor that was never a divisor.** An earlier
+revision of this section quoted "one inclusion = 10,630", "102 inclusions =
+1,227,747" and "4.29× `verifyThreshold`'s 286,144". They do not reconcile —
+`102 × 10,630 = 1,084,260`, leaving 143,487 unaccounted — and the probe that
+produced them was deleted before the decomposition was written down. They are
+withdrawn rather than re-explained.
+
+The `286,144` needs its own sentence, because it is **not** a wrong number: it is
+V3's cold-path verification cost, the figure §5.5.9's circuit and the paper's
+release notes quote, and it is correct there. What was wrong is that this section
+borrowed it as the denominator of a *freshness* ratio. The key that admits
+validators today is M4d's, not V3's. Measured 2026-10-28: `verifyThreshold` costs
+**306,253 cold / 247,211 warm** with that key (`test_theAdmissionVerificationCostsFiveIcPoints`;
+§5.5.11 records 306,275 / 247,233 — the same test, 22 gas more, so a toolchain drift
+and not a different quantity), and `--gas-report` aggregates 18 calls at **293,293**
+median / **305,706** max. The ratio below divides by the median because the batch it
+divides is warm. The retraction is of the comparison, not of the paper: `4.29×` was
+one key's cost divided by another key's cost.
+
+The table above is reproducible: build the tensor's 102 (leaf, root, proof) triples
+with the promote fold, measure `gasleft()` around a loop of 102 `verifyEntry` calls,
+and around the same loop with the calls removed; the two figures differ by the
+verifications alone.
 
 All of it is the project's own build (solc 0.8.33, legacy pipeline, no `viaIR`). The
 earlier revision also quoted `viaIR` figures (5,341 and 686,597); those came from the
