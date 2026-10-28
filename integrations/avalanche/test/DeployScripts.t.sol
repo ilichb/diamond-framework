@@ -636,7 +636,9 @@ contract DeployScriptsTest is Test {
         assertEq(address(registry.verifier()), address(0), "no verifier yet");
 
         ProposeVerifier.Announcement memory a = proposeScript.propose(
-            ProposeVerifier.Plan({guardian: ANVIL_3, registry: address(registry), verifier: verifier})
+            ProposeVerifier.Plan({
+                guardian: ANVIL_3, registry: address(registry), verifier: verifier
+            })
         );
 
         assertEq(a.previous, address(0), "nothing was installed before");
@@ -646,9 +648,7 @@ contract DeployScriptsTest is Test {
 
         // The delay is the protection: the change cannot land early.
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IAVIPRegistry.ChangeNotReady.selector, a.eta, block.timestamp
-            )
+            abi.encodeWithSelector(IAVIPRegistry.ChangeNotReady.selector, a.eta, block.timestamp)
         );
         registry.executeVerifierChange();
 
@@ -682,14 +682,15 @@ contract DeployScriptsTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                DeployCommon.WiringMismatch.selector, "guardian", uint256(uint160(ANVIL_3)), uint256(uint160(ANVIL_2))
+                DeployCommon.WiringMismatch.selector,
+                "guardian",
+                uint256(uint160(ANVIL_3)),
+                uint256(uint160(ANVIL_2))
             )
         );
         proposeScript.propose(
             ProposeVerifier.Plan({
-                guardian: ANVIL_2,
-                registry: address(registry),
-                verifier: verifier
+                guardian: ANVIL_2, registry: address(registry), verifier: verifier
             })
         );
     }
