@@ -6,8 +6,9 @@ RESEARCH_PROPOSAL_STATUS: closed
 Two different asks were written for two different programmes, and this file keeps
 them apart. Line 1 governs the **mini grant** that was sent to Team1
 ([`team1-mini-grant-application.md`](team1-mini-grant-application.md): four
-milestones, audit and ceremony out of scope). Line 2 governs the **$50k research
-proposal** ([`avalanche-research-proposal.md`](avalanche-research-proposal.md)),
+milestones, audit and ceremony out of scope; the submitted copy could not be
+located, so that file is a reconstructed draft and its `SUBMISSION_STATUS` says
+so). Line 2 governs the **$50k research proposal** ([`avalanche-research-proposal.md`](avalanche-research-proposal.md)),
 which was never sent because its call was closed. Merging the two is how a plan
 starts promising an audit it never asked anyone to pay for.
 
@@ -72,10 +73,13 @@ the sense that they need no grant money.
 
 ## 2. What the Team1 mini grant funds (`T1-M1`–`T1-M4`)
 
-The milestones are the four lines of
+The milestones are the four `T1-` lines of
 [`team1-mini-grant-application.md`](team1-mini-grant-application.md), in its own
-order. This table adds only what the application leaves implicit: what each row
-touches and what makes it close.
+order; two of them name an item the reconstructed draft does not (`B-10`, the
+`MAX_NORM` getter, and the mutation campaign), and that file's "Where the draft
+and the ID block disagree" table records both rather than picking one. This
+table adds only what the application leaves implicit: what each row touches and
+what makes it close.
 
 | Row | Items | Closes when |
 |---|---|---|

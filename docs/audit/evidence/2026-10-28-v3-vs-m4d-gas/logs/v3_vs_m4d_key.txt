@@ -1,0 +1,17 @@
+No files changed, compilation skipped
+
+Ran 1 test for test/TmpV3ColdPath.t.sol:TmpV3ColdPathTest
+[PASS] test_thePaperFigureIsV3sKeyAndNotTodays() (gas: 7407715)
+Logs:
+  V3 numPublicInputs: 3
+  V3 icLength: 4
+  M4d numPublicInputs: 4
+  M4d icLength: 5
+  V3 verify (3 inputs, cold) gas: 223137
+  V3 verify (3 inputs, warm) gas: 223137
+  M4d verify (4 inputs, cold) gas: 232010
+  M4d verify (4 inputs, warm) gas: 232010
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 21.26ms (20.78ms CPU time)
+
+Ran 1 test suite in 22.21ms (21.26ms CPU time): 1 tests passed, 0 failed, 0 skipped (1 total tests)

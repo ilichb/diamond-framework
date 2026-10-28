@@ -17,8 +17,10 @@ cuatro series `D`, dos `A-8`, dos `A-10` y dos `B-1…B-3` (§3). Con esos IDs,
 asignación. Un fichero de estado sellado obligaría a re-sellar el depósito por
 cada fila nueva.
 
-Estado verificado contra `9115ef5` (2026-10-27). Los conteos de §2 son medidas,
-no cifras tecleadas: el comando que los re-deriva va en la última columna.
+Estado verificado contra `9115ef5` (2026-10-27); §3.7 se actualizó el 2026-10-28
+al cerrar `R5-1`/`R5-2` y §5 al abrir el registro de erratas del paper, sin
+re-verificar el resto. Los conteos de §2 son medidas, no cifras tecleadas: el
+comando que los re-deriva va en la última columna.
 
 ## 1. Regla de nombrado
 
@@ -254,3 +256,10 @@ Notas que no caben en una celda:
   financiado es el motivo de que esta columna exista.
 - Este fichero no se sella. Si algún día se sella, cada reasignación de carril
   pedirá re-sellar el depósito, y el registro dejará de actualizarse.
+- Las correcciones de `docs/paper/main.tex` que esperan a v0.2.3 **no** son ítems
+  de este registro: viven en `docs/paper/releases/v0.2.3-errata.md`, cada una con
+  su medida. La primera es `E-01` (2026-10-28): el paper llama «desplegada» a la
+  cifra de gas de V3 (286,144) cuando la clave instalada es la de M4d (306,275 en
+  frío), y una clave de tres inputs ya no puede instalarse
+  (`PublicInputsMismatch(3, 4)`). Es carril reservado: aplicarla es editar
+  `main.tex` y re-sellar.

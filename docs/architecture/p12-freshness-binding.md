@@ -116,15 +116,27 @@ withdrawn rather than re-explained.
 
 The `286,144` needs its own sentence, because it is **not** a wrong number: it is
 V3's cold-path verification cost, the figure §5.5.9's circuit and the paper's
-release notes quote, and it is correct there. What was wrong is that this section
-borrowed it as the denominator of a *freshness* ratio. The key that admits
-validators today is M4d's, not V3's. Measured 2026-10-28: `verifyThreshold` costs
+release notes quote. What was wrong is that this section borrowed it as the
+denominator of a *freshness* ratio. The key that admits validators today is M4d's,
+not V3's. Measured 2026-10-28: `verifyThreshold` costs
 **306,253 cold / 247,211 warm** with that key (`test_theAdmissionVerificationCostsFiveIcPoints`;
 §5.5.11 records 306,275 / 247,233 — the same test, 22 gas more, so a toolchain drift
 and not a different quantity), and `--gas-report` aggregates 18 calls at **293,293**
 median / **305,706** max. The ratio below divides by the median because the batch it
 divides is warm. The retraction is of the comparison, not of the paper: `4.29×` was
 one key's cost divided by another key's cost.
+
+Two caveats on "not of the paper", both owned elsewhere and both open. The paper
+does call 286,144 "the deployed figure" (`main.tex:537`, `:559`, `:1294`), which is
+a defect of the *label* rather than of the number — a three-input key cannot be
+installed at all, since the registry passes four public inputs and the verifier
+reverts `PublicInputsMismatch(3, 4)`. That is registered as `E-01` in
+[`../paper/releases/v0.2.3-errata.md`](../paper/releases/v0.2.3-errata.md) with its
+measurement in [`../audit/evidence/2026-10-28-v3-vs-m4d-gas/`](../audit/evidence/2026-10-28-v3-vs-m4d-gas/README.md),
+and it belongs to v0.2.3 and the re-seal, not here. And the 306,275 is itself a
+V3-era contract's successor: 8,873 of the 20,131-gas gap is the extra `ic` point,
+the rest is `AVIPRegistry`'s growth since 2026-10-20, which this memo does not
+decompose further.
 
 The table above is reproducible: build the tensor's 102 (leaf, root, proof) triples
 with the promote fold, measure `gasleft()` around a loop of 102 `verifyEntry` calls,
