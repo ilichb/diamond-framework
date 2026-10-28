@@ -39,6 +39,11 @@ derivable, not memorized:
   composition), and the financial floor (a minimum admission cost, not a
   guarantee). The collusion detector now declares `W` as an external input and
   the on-chain alert as a non-sanction. See [`v0.2.2-notes.md`](v0.2.2-notes.md).
+- **v0.2.3 has one.** [`v0.2.3-errata.md`](v0.2.3-errata.md) registers `E-01`
+  (2026-10-28): the `286,144` cold path that this section calls the deployed one is
+  V3's three-input key, and the key the registry installs is M4d's (`306,275` cold).
+  Nothing is applied; the fix edits `main.tex`, which is sealed, so it belongs to
+  the re-seal and not to this directory.
 - Release asset `diamond-framework-2026-10-25.pdf`: 43 pages, 591875 bytes,
   sha256 `89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9`.
 - **The verifier left `address(0)` the same day, and the text followed.** A
