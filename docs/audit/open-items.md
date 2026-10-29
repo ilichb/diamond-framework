@@ -264,4 +264,7 @@ Notas que no caben en una celda:
   (`PublicInputsMismatch(3, 4)`). Aplicarla es editar `main.tex` y re-sellar; desde
   el 2026-10-28 eso es **carril libre y autofinanciado**, no reservado: v0.2.3 sale
   con o sin la mini beca, y `T1-M4` conserva sólo `P-20` y `P-36`
-  (`team1-reserved-work.md` §6, decisión 6).
+  (`team1-reserved-work.md` §6, decisión 6). **Aplicada en `wip/v0.2.3` el
+  2026-10-29** (sello `R-17`, PDF `diamond-framework-2026-10-29.pdf`, checklist de
+  depósito preparado): la rama no está fusionada y el depósito no está hecho, así
+  que lo que sigue abierto es la decisión del owner, no el trabajo.

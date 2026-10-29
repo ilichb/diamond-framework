@@ -1517,3 +1517,60 @@ depósito Zenodo debe hacerse antes de `2026-10-26T17:22:54Z`: a partir de esa h
 `executeVerifierChange()` es permissionless y deja de ser cierto que `verifier()`
 sea cero.
 
+## R-17 — v0.2.3: la cifra «desplegada» pasa a ser la de la clave instalada (2026-10-29)
+
+Fecha: `2026-10-29T17:11:47Z` (sello de `fase0_anchor.sh`), tras R-16 del 25.
+Motivo: `E-01` (`releases/v0.2.3-errata.md`). El paper imprimía `286,144` como
+coste desplegado de `AVIPRegistry.verifyThreshold`; esa cifra es la clave de tres
+entradas de V3, y la clave que el registro instala tiene cuatro
+(`PublicInputsMismatch(3, 4)`: una clave de tres entradas no se puede instalar
+hoy). v0.2.3 imprime la clave instalada, **306,253 en frío / 247,211 en caliente**
+(`M4dRealKey.t.sol`, test commiteado), y conserva `286,144` sólo donde el texto
+dice que es de V3.
+
+**Qué se edita, y con qué se calcula.** Las seis ediciones que la errata proponía
+se aplican en `main.tex:469`, `537`, `555`, `559`, `567`, `1294`, `1303` y `1349`;
+tres de ellas son consecuencia de las seis y no se podían dejar: el `23×` de
+`1294` pasa a `21×` (es `6.5M / 306,253`), el `306,275` de `469` —la medición del
+20 de octubre de la misma cantidad— pasa a `306,253` con el viejo entre paréntesis
+para que los 22 gas no se lean como un hallazgo, y `1303` cita la admisión
+completa (`manager.admit`, 395,255 en frío, primera admisión, clave instalada,
+`g* ≈ 566` gwei) porque el párrafo ya la citaba con `376,588`, que la errata
+declara no comparable y superado. Ninguna cifra se teclea: `recompute.py` escribe
+`paper_strings.txt` con las cadenas exactas que el paper imprime, y la edición las
+lee de ahí. El registro de claims cambia sólo en las filas afectadas (`165` 2.4→2.2,
+`512` 781→730, `513` 286144→306253, con la línea corregida) y gana dos filas con lo
+que el paper ahora imprime (`514` 395255, `515` 566): 31 filas, 0 huérfanas.
+
+**Cadena de custodia.** `bash verification/fase0_anchor.sh` →
+`output_manifest.sha256` (38 pares, idéntico byte a byte) y
+`audit_manifest.sha256` nuevos; `--check` → exit 0 (38 pares, 11 pares y HEAD
+`f9745a6` idénticos). `bash verification/audit-gate.sh` → **PASS=11 FAIL=0
+SKIP=0**. Cambian **dos** de los once pares del root y nueve no se tocan, así que
+la diferencia entre un root y el siguiente es exactamente el documento y el
+registro: `main.tex` (`2a6384d2…` → `80a7034f…`) y `claim-registry.csv`
+(`df8bca68…` → `a5bd6f23…`).
+
+| campo | valor |
+|---|---|
+| Artefacto sellado | `verification/anchor_root.sha256` (11 pares) |
+| SHA-256 del artefacto | `76e95f6dbc58d4341d5a7c5b24a8445241a536bdca06631197b43bae21744dbb` (el de R-16 era `abe9c553…`) |
+| `audit_manifest.sha256` | `b836cd3f7448b6f6e726333650cbe083546409d70a65f629df9e6bff9f26b41d` |
+| Recibo OpenTimestamps | **no se emite en este acto.** El `.ots` de 910 bytes que sigue en el árbol sella el root anterior —`ots info` lo dice: `File sha256 hash: abe9c553…`— y por tanto no es evidencia de estos bytes. Sellarlo fuera es acción del owner, y el `.ots` viejo se archiva en `ots-history/` antes de sustituirlo |
+
+**PDF.** `docs/paper/releases/diamond-framework-2026-10-29.pdf`, 43 páginas,
+592.894 bytes, sha256 `1468b5d744ab02d6236742cf4868377b6d6aa50464d485db24c8d6270ae478fd`.
+`pdflatex` ×3 → 0 errores, 0 undefined, 0 overfull/underfull. `main.tex` mide
+156.922 bytes (155.945 en v0.2.2): la corrección añade 977 bytes y ninguna página.
+
+**Alcance.** Tocados y sellados: `main.tex` (contenido), `claim-registry.csv`
+(entradas), y `audit_manifest.sha256` / `anchor_root.sha256` (derivados). No
+sellados: `releases/v0.2.3-errata.md`, `releases/v0.2.3-zenodo-deposit.md`,
+`releases/README.md`, el PDF, `.zenodo.json`, el directorio de evidencia
+`evidence/2026-10-28-v3-vs-m4d-gas/` y este recibo. Contratos y tests no se tocan:
+`git diff f9745a6 -- integrations test` está vacío.
+
+**Estado.** R-17 se commitea como descendiente de `f9745a6` en la rama
+`wip/v0.2.3`; no se enmienda, no se fusiona a `main` y no se deposita desde aquí.
+El diff y los hashes van al owner, que decide.
+

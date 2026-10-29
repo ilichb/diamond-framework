@@ -84,6 +84,34 @@ def gwei(G: int) -> Decimal:
     return quant(N_ETH * Decimal(10) ** 18 / Decimal(G) / Decimal(10) ** 9, "0.1")
 
 
+def printed(G: int) -> dict:
+    """The same figures, rounded the way `main.tex` rounds them.
+
+    The paper is edited from these strings and not from arithmetic typed into an
+    editor: the number a reader sees and the number this script prints are the
+    same object, so a later edit cannot move one without the other.
+    """
+    gas = Decimal(G)
+    return {
+        "gwei": quant(gwei(G), "1"),
+        "ingest": quant(R_USD / gas, "0.1"),
+        "bp": quant(BP_GAS / gas, "1"),
+        "margin": quant(gwei(G) / Decimal(25), "1"),
+        "cost25": quant(gas * Decimal(25) * Decimal(10) ** 9 / Decimal(10) ** 18, "0.00001"),
+        "cost160": quant(gas * Decimal(160) / Decimal(10) ** 18 * Decimal(10) ** 11, "0.01"),
+    }
+
+
+def sep(n: int) -> str:
+    """Thousands separator, as the prose writes it: 306,253."""
+    return f"{n:,}"
+
+
+def tex(n: int) -> str:
+    """Thousands separator inside math mode: 306{,}253."""
+    return f"{n:,}".replace(",", "{,}")
+
+
 def main() -> None:
     # The manager's own overhead must be convention-independent: if someone edits
     # one figure without the other, this fails instead of publishing a mismatch.
@@ -147,6 +175,27 @@ def main() -> None:
         "errata refuses to attribute the difference to the key without the original",
         "probe, which was deleted.",
         "",
+        "## What the paper prints",
+        "",
+        "The same quantities, rounded the way `main.tex` rounds them: gwei and",
+        "margins to the unit, ratios to one decimal, AVAX to five decimals, and",
+        "the 160-wei cost in units of 1e-11 AVAX. v0.2.3's edit of Sections 6 and 9",
+        "reads `paper_strings.txt` — written from this block — so the paper cannot",
+        "print a number this script does not compute.",
+        "",
+        "| G (gas) | Route | g* (gwei) | ingest | Bulletproofs | margin at 25 gwei "
+        "| cost at 25 gwei | cost at 160 wei |",
+        "|---:|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    for label, G, note in CASES:
+        p = printed(G)
+        out.append(
+            f"| {sep(G)} | {label} | {p['gwei']} | {p['ingest']}× | {p['bp']}× "
+            f"| {p['margin']}× | {p['cost25']} AVAX | {p['cost160']}e-11 AVAX |"
+        )
+
+    out += [
+        "",
         "## Checks this script performs on itself",
         "",
         f"- The manager's own overhead is `admit - verifyThreshold` = "
@@ -175,6 +224,43 @@ def main() -> None:
     target = Path(__file__).with_name("gas_recompute.txt")
     target.write_text(text, encoding="utf-8")
     print(f"escrito: {target}")
+
+    # The paper's own rounding, as key=value so that the edit of main.tex can
+    # read it instead of retyping it.
+    d = printed(306_253)
+    if (d["gwei"], d["ingest"], d["bp"], d["margin"]) != (
+        Decimal("730"),
+        Decimal("2.2"),
+        Decimal("21"),
+        Decimal("29"),
+    ):
+        raise SystemExit(f"the strings the errata quotes moved: {d}")
+
+    pairs = []
+    for label, G, note in CASES:
+        p = printed(G)
+        pairs += [
+            (f"gas.{G}.tex", tex(G)),
+            (f"gas.{G}.plain", sep(G)),
+            (f"gwei.{G}", str(p["gwei"])),
+            (f"ingest.{G}", str(p["ingest"])),
+            (f"bp.{G}", str(p["bp"])),
+            (f"margin.{G}", str(p["margin"])),
+            (f"cost25.{G}", str(p["cost25"])),
+            (f"cost160e11.{G}", str(p["cost160"])),
+        ]
+
+    target2 = Path(__file__).with_name("paper_strings.txt")
+    body = "\n".join(
+        [
+            "# The exact strings main.tex prints, computed here and read by the",
+            "# v0.2.3 edit; do not edit by hand. Written by recompute.py.",
+            "",
+        ]
+        + [f"{k}={v}" for k, v in pairs]
+    )
+    target2.write_text(body + "\n", encoding="utf-8")
+    print(f"escrito: {target2}")
 
 
 if __name__ == "__main__":

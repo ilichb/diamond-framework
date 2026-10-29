@@ -31,6 +31,23 @@ quantities on a contract that also changed between 2026-10-20 and today; the
 errata refuses to attribute the difference to the key without the original
 probe, which was deleted.
 
+## What the paper prints
+
+The same quantities, rounded the way `main.tex` rounds them: gwei and
+margins to the unit, ratios to one decimal, AVAX to five decimals, and
+the 160-wei cost in units of 1e-11 AVAX. v0.2.3's edit of Sections 6 and 9
+reads `paper_strings.txt` — written from this block — so the paper cannot
+print a number this script does not compute.
+
+| G (gas) | Route | g* (gwei) | ingest | Bulletproofs | margin at 25 gwei | cost at 25 gwei | cost at 160 wei |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 286,144 | V3 key, 3 inputs | 781 | 2.4× | 23× | 31× | 0.00715 AVAX | 4.58e-11 AVAX |
+| 306,253 | M4d key, installed | 730 | 2.2× | 21× | 29× | 0.00766 AVAX | 4.90e-11 AVAX |
+| 306,218 | M4d key, bare call | 730 | 2.2× | 21× | 29× | 0.00766 AVAX | 4.90e-11 AVAX |
+| 395,255 | manager.admit, M4d | 566 | 1.7× | 16× | 23× | 0.00988 AVAX | 6.32e-11 AVAX |
+| 329,682 | manager.admit, M4d, 2nd | 678 | 2.1× | 20× | 27× | 0.00824 AVAX | 5.27e-11 AVAX |
+| 376,588 | manager.admit, V3-era | 594 | 1.8× | 17× | 24× | 0.00941 AVAX | 6.03e-11 AVAX |
+
 ## Checks this script performs on itself
 
 - The manager's own overhead is `admit - verifyThreshold` = 89002 gas, and it is the same in both conventions:

@@ -6,7 +6,11 @@ its bytes, once published, never change.
 
 ## Files
 
-- `diamond-framework-2026-10-25.pdf` — 43 pages, 591875 bytes (v0.2.2, **current**).
+- `diamond-framework-2026-10-29.pdf` — 43 pages, 592894 bytes (v0.2.3, **current
+  in `wip/v0.2.3`, unsealed as a release: not tagged, not deposited**).
+  `sha256 1468b5d744ab02d6236742cf4868377b6d6aa50464d485db24c8d6270ae478fd`
+- `diamond-framework-2026-10-25.pdf` — 43 pages, 591875 bytes (v0.2.2, current
+  published artifact; the DOI names this file).
   `sha256 89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9`
 - `diamond-framework-2026-10-24.pdf` — 43 pages, 591880 bytes (v0.2.2, superseded
   before publication: §9 said the Bulletproofs alternative costs `31×` the Groth16
@@ -42,12 +46,14 @@ derivable, not memorized:
 - **v0.2.3 has one.** [`v0.2.3-errata.md`](v0.2.3-errata.md) registers `E-01`
   (2026-10-28): the `286,144` cold path that this section calls the deployed one is
   V3's three-input key, and the key the registry installs is M4d's (`306,253` cold,
-  measured 2026-10-28; `306,275` on the earlier toolchain). Nothing is applied yet,
-  and the *shape* is decided: v0.2.3 prints the installed key's figure as the
-  deployed one and keeps `286,144` as V3's. The edit touches `main.tex`, which is
-  sealed, so it belongs to the re-seal rather than to this directory — and since
-  2026-10-28 that re-seal is free-lane and self-funded: **v0.2.3 does not wait for
-  the grant** (`../grants/team1-reserved-work.md` §6, decision 6).
+  measured 2026-10-28; `306,275` on the earlier toolchain). **Applied on
+  `wip/v0.2.3` on 2026-10-29**: v0.2.3 prints the installed key's figure as the
+  deployed one and keeps `286,144` as V3's, in the eight lines the errata names, and
+  the anchor is re-sealed once (`R-17`). The branch is not merged and the release is
+  not deposited: the bytes and the metadata are in
+  [`v0.2.3-zenodo-deposit.md`](v0.2.3-zenodo-deposit.md), and the decision is the
+  owner's. The re-seal is free-lane and self-funded: **v0.2.3 does not wait for the
+  grant** (`../../grants/team1-reserved-work.md` §6, decision 6).
 - Release asset `diamond-framework-2026-10-25.pdf`: 43 pages, 591875 bytes,
   sha256 `89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9`.
 - **The verifier left `address(0)` the same day, and the text followed.** A
