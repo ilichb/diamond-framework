@@ -1556,7 +1556,18 @@ registro: `main.tex` (`2a6384d2…` → `80a7034f…`) y `claim-registry.csv`
 | Artefacto sellado | `verification/anchor_root.sha256` (11 pares) |
 | SHA-256 del artefacto | `76e95f6dbc58d4341d5a7c5b24a8445241a536bdca06631197b43bae21744dbb` (el de R-16 era `abe9c553…`) |
 | `audit_manifest.sha256` | `b836cd3f7448b6f6e726333650cbe083546409d70a65f629df9e6bff9f26b41d` |
-| Recibo OpenTimestamps | **no se emite en este acto.** El `.ots` de 910 bytes que sigue en el árbol sella el root anterior —`ots info` lo dice: `File sha256 hash: abe9c553…`— y por tanto no es evidencia de estos bytes. Sellarlo fuera es acción del owner, y el `.ots` viejo se archiva en `ots-history/` antes de sustituirlo |
+| Recibo OpenTimestamps | **sellado el 2026-10-29 22:33 −04** (`2026-10-30T02:33:50Z`): `verification/anchor_root.sha256.ots`, 945 B, sha256 `8cf8b7a6b73a39884910664148986079b82dad929f460d42e537b1228e27fa80`. `ots info` → `File sha256 hash: 76e95f6d…`, el root nuevo, y **cuatro** `PendingAttestation`; `ots verify` → `Pending confirmation in Bitcoin blockchain` en los cuatro calendarios. Sin confirmación Bitcoin todavía |
+
+**El sello externo, aparte del root.** El `.ots` no forma parte de lo sellado —ni
+entre los 11 pares del root ni entre los 38 outputs del manifiesto—, precisamente
+para no cerrar el ciclo «recibo que sella el fichero que lo contiene». Por eso sellar
+**no exigió un re-sellado** y el gate no se movió: tras `ots stamp`, `--check` sigue
+en exit 0 y `audit-gate.sh` en 11/11. El receipt anterior (910 B) sellaba
+`abe9c553…` y se archivó con `git mv` en
+`verification/ots-history/anchor_root-abe9c553.sha256.ots`, siguiendo el nombre de
+los dos que ya estaban ahí; no se borra, porque sigue atestiguando el root de R-16.
+Lo que falta es la confirmación de Bitcoin, que llega por horas y se recoge sin
+tocar nada más: `ots upgrade verification/anchor_root.sha256.ots`.
 
 **PDF.** `docs/paper/releases/diamond-framework-2026-10-29.pdf`, 43 páginas,
 592.894 bytes, sha256 `1468b5d744ab02d6236742cf4868377b6d6aa50464d485db24c8d6270ae478fd`.
