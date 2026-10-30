@@ -6,9 +6,9 @@ its bytes, once published, never change.
 
 ## Files
 
-- `diamond-framework-2026-10-29.pdf` — 43 pages, 592894 bytes (v0.2.3, **current
+- `diamond-framework-2026-10-29.pdf` — 43 pages, 601340 bytes (v0.2.3, **current
   in `wip/v0.2.3`, unsealed as a release: not tagged, not deposited**).
-  `sha256 1468b5d744ab02d6236742cf4868377b6d6aa50464d485db24c8d6270ae478fd`
+  `sha256 dd071071bf3b300d50b1355d3c094a84dcdd8ad708dfbf3d7b58a6a748d313d9`
 - `diamond-framework-2026-10-25.pdf` — 43 pages, 591875 bytes (v0.2.2, current
   published artifact; the DOI names this file).
   `sha256 89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9`
@@ -48,8 +48,11 @@ derivable, not memorized:
   V3's three-input key, and the key the registry installs is M4d's (`306,253` cold,
   measured 2026-10-28; `306,275` on the earlier toolchain). **Applied on
   `wip/v0.2.3` on 2026-10-29**: v0.2.3 prints the installed key's figure as the
-  deployed one and keeps `286,144` as V3's, in the eight lines the errata names, and
-  the anchor is re-sealed once (`R-17`). The branch is not merged and the release is
+  deployed one and keeps `286,144` as V3's, in the eight lines the errata names
+  (`R-17`); `R-18` (2026-10-30) then adds the provenance those lines lacked — V3's
+  measurement date (`2026-10-20`), its commit (`70f225c`) and the
+  `PublicInputsMismatch(3, 4)` that makes a three-input key uninstallable — again
+  without moving a figure. The branch is not merged and the release is
   not deposited: the bytes and the metadata are in
   [`v0.2.3-zenodo-deposit.md`](v0.2.3-zenodo-deposit.md), and the decision is the
   owner's. The re-seal is free-lane and self-funded: **v0.2.3 does not wait for the

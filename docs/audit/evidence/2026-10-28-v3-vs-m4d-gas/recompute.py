@@ -44,6 +44,11 @@ calldata are excluded — the same convention the paper uses for 286,144.
   376,588  full `manager.admit`, V3-era (2026-10-20), **not comparable**: it
            wraps a verification of a key nothing installs, on a manager that has
            changed since (see the errata's admission section)
+  286,144  `verifyThreshold` cold, V3 key, measured 2026-10-20 at commit
+           `70f225c` — `docs/audit/evidence/2026-10-20-pocs/RUN-LOG.md` records
+           that HEAD, and its `logs/gas_break_even.txt` row is "verifyThreshold,
+           frío (harness nuevo)". R-18 gives the paper that provenance instead of
+           an undated number.
 
 The break-even formula is the one `gas_break_even.py` (P-25) uses, and it is
 restated here rather than imported so that this file has no local dependency:
@@ -63,6 +68,15 @@ TOOLCHAIN = "forge 1.5.1-stable, solc 0.8.33, optimizer=false, evm_version=cancu
 N_ETH = Decimal("0.2236")
 R_USD = Decimal("684064")
 BP_GAS = Decimal("6500000")
+
+# Warm measurements of the same call under the same convention: the key is
+# already in storage, so these are the second-call numbers in one transaction.
+# They do not derive from G; they are measured beside it, and the paper prints
+# them next to the cold ones so that no cold figure travels alone.
+WARM = {
+    286_144: 223_403,  # V3 key, `M4bRealKey` harness, 2026-10-20
+    306_253: 247_211,  # M4d key, `M4dRealKey.t.sol`, logs 306,253 / 247,211
+}
 
 # (label, gas, note)
 CASES = [
@@ -122,6 +136,12 @@ def main() -> None:
             f"admit - verifyThreshold disagrees between conventions: "
             f"{overhead_helper} vs {overhead_bare}"
         )
+
+    # A warm call cannot cost more than the cold call it follows; if a warm
+    # figure is ever edited past its cold one, this fails before the paper does.
+    for cold, warm in WARM.items():
+        if not warm < cold:
+            raise SystemExit(f"warm {warm} is not below cold {cold}")
 
     out = [
         "# The paper's gas-derived figures, under V3's key and the installed one",
@@ -249,6 +269,11 @@ def main() -> None:
             (f"cost25.{G}", str(p["cost25"])),
             (f"cost160e11.{G}", str(p["cost160"])),
         ]
+        if G in WARM:
+            pairs += [
+                (f"gas.{G}.warm.tex", tex(WARM[G])),
+                (f"gas.{G}.warm.plain", sep(WARM[G])),
+            ]
 
     target2 = Path(__file__).with_name("paper_strings.txt")
     body = "\n".join(

@@ -1574,6 +1574,14 @@ tocar nada más: `ots upgrade verification/anchor_root.sha256.ots`.
 `pdflatex` ×3 → 0 errores, 0 undefined, 0 overfull/underfull. `main.tex` mide
 156.922 bytes (155.945 en v0.2.2): la corrección añade 977 bytes y ninguna página.
 
+*Nota de R-18, sin reescribir lo anterior:* el `.ots` de esta tabla (sha256
+`8cf8b7a6…`) ya no ocupa esa ruta — se archivó en
+`verification/ots-history/anchor_root-76e95f6d.sha256.ots` y la ruta actual la ocupa
+el recibo del root `6fe5884b…`. Los bytes del PDF y de `main.tex` citados aquí son los
+de R-17; R-18 los reemplaza y explica el delta (+1.141 B de `main.tex`, ninguna
+página).
+
+
 **Alcance.** Tocados y sellados: `main.tex` (contenido), `claim-registry.csv`
 (entradas), y `audit_manifest.sha256` / `anchor_root.sha256` (derivados). No
 sellados: `releases/v0.2.3-errata.md`, `releases/v0.2.3-zenodo-deposit.md`,
@@ -1584,4 +1592,104 @@ sellados: `releases/v0.2.3-errata.md`, `releases/v0.2.3-zenodo-deposit.md`,
 **Estado.** R-17 se commitea como descendiente de `f9745a6` en la rama
 `wip/v0.2.3`; no se enmienda, no se fusiona a `main` y no se deposita desde aquí.
 El diff y los hashes van al owner, que decide.
+
+
+## R-18 — v0.2.3: cada cifra de gas nombra su clave, su fecha y su commit (2026-10-30)
+
+Fecha: `2026-10-30T14:31:28Z` (sello de `fase0_anchor.sh`), al día siguiente de R-17.
+Motivo: R-17 hizo que la cifra desplegada fuera la de la clave instalada, pero las
+cifras seguían sin procedencia legible: `286,144` aparecía sin fecha, sin commit y
+sin decir **por qué** su clave ya no se puede instalar. Un re-medidor no podía
+distinguir «medición vieja» de «medición de otro contrato», que es justo el error
+que `E-01` corrigió. R-18 no mueve ninguna cifra: añade a cada mención su clave, la
+fecha y el commit de la medición, y el motivo de que la clave de V3 sea ininstalable
+hoy. La fuente de la fecha y el commit es una sola línea del log del 20 de octubre,
+`evidence/2026-10-20-pocs/RUN-LOG.md` («verifyThreshold, frío (harness nuevo)», HEAD
+`70f225c`), y el log que la acompaña, `logs/gas_break_even.txt` (filas 286144 y
+223403, caliente).
+
+**Qué se edita, línea por línea.** Ocho líneas reescritas y una añadida en
+`main.tex`, todas sobre el mismo hecho:
+
+- `469` — el `306,275` deja de competir con el `306,253`: pasa a «`$306,275$` in an
+  earlier measurement» bajo la misma clave instalada, para que los 22 gas no se lean
+  como un hallazgo.
+- `537` — los dos pares frío/caliente, cada uno con su clave: la instalada
+  (`306,253` / `247,211`, «the deployed figure»), y la de V3 (`286,144` / `223,403`)
+  con fecha, commit y la no-instalabilidad dentro del paréntesis.
+- `555` — `286,144` frío «under V3's own key», con fecha (`2026-10-20`), commit
+  (`70f225c`) y «the key declares three public inputs against the four the registry
+  passes», más el `306,253` de la clave instalada al lado.
+- `559` — `286,144` frío / `223,403` caliente con fecha y commit, y «a three-input
+  key the registry can no longer install, since it passes four public inputs».
+- `567` — el `2.2×` conserva la pareja (`306,253` instalada; `286,144` de V3) y ahora
+  fecha, commit y «not installable today» antes de la remisión a §9.
+- `1292` — los dos pares con las dos claves y la regla explícita: «the figure used
+  below is the installed key's cold path».
+- `1294` — el párrafo completo: `286,144` frío / `223,403` caliente, fecha, commit,
+  `PublicInputsMismatch(3,~4)` como motivo, el par instalado (`306,253` / `247,211`)
+  y «that is the deployed figure».
+- `1303` — los `781` gwei quedan bajo «V3's key», y el `376,588` de la admisión
+  V3-era se declara superado «since it was taken under a key nothing installs».
+- `1360` (nueva) — nota bajo la tabla de §9 que define «Under V3's» una sola vez para
+  toda la tabla: clave de tres entradas, `2026-10-20`, `70f225c`, tres inputs contra
+  cuatro y `PublicInputsMismatch(3,~4)`.
+
+**Ninguna cifra se teclea.** `recompute.py` gana un mapa `WARM`
+(`286,144 → 223,403`, `306,253 → 247,211`) con guarda `warm < cold`, y
+`paper_strings.txt` emite además `gas.*.warm.tex` / `gas.*.warm.plain`: las cifras
+calientes también salen del script, no del teclado. Las ediciones leen las cadenas
+exactas de `paper_strings.txt`; las anclas se comprueban únicas antes de escribir.
+El registro de claims gana dos filas con lo que el paper ya imprime —`516` (286144,
+`main.tex:1294`) y `517` (223403, `main.tex:1292`)—: **34 filas, 33 clasificadas,
+0 huérfanas** (G4). El diff es `9` líneas añadidas y `8` quitadas en `main.tex`; el
+registro, `+2`.
+
+**Cadena de custodia.** `bash verification/fase0_anchor.sh` → `output_manifest.sha256`
+(38 pares, idéntico byte a byte: `paper_strings.txt` y `recompute.py` no son outputs
+del manifiesto), `audit_manifest.sha256` y `anchor_root.sha256` nuevos; `--check` →
+exit 0 (38 pares, 11 pares y HEAD `d07a658` idénticos). `bash verification/audit-gate.sh`
+→ **PASS=11 FAIL=0 SKIP=0**. Cambian **dos** de los once pares: `main.tex`
+(`80a7034f…` → `21efaaf0…`) y `claim-registry.csv` (`a5bd6f23…` → `69de86e0…`);
+`output_manifest.sha256` sigue en `79da1f64…` y los otros nueve pares no se tocan.
+
+| campo | valor |
+|---|---|
+| Artefacto sellado | `verification/anchor_root.sha256` (11 pares) |
+| SHA-256 del artefacto | `6fe5884baeb214ebbee99a4ed14c6b0189bc8c6f2c73cadfafad7c772e13937b` (el de R-17 era `76e95f6d…`) |
+| `audit_manifest.sha256` | `9e40930354756cfc984d4ff55a74430d7e41bc1e78bceeec8b05929712c137d7` |
+| Recibo OpenTimestamps | **sellado el 2026-10-30 10:33 −04** (`2026-10-30T14:33:03Z`): `verification/anchor_root.sha256.ots`, 945 B, sha256 `1c44d68eac4ed6a6c090ca09600a4bed18152e05962a45af6baaf33ed7062224`. `ots info` → `File sha256 hash: 6fe5884b…`, el root nuevo, y **cuatro** `PendingAttestation`; `ots verify` → `Pending confirmation in Bitcoin blockchain` en los cuatro calendarios. Sin confirmación Bitcoin todavía |
+
+**Dos sellos en esta ronda, y por qué se conservan los dos.** El primer sello de R-18
+(`2026-10-30T14:06:48Z`) selló un root intermedio, `74415765…`, generado cuando las
+cifras ya llevaban clave y fecha pero antes del barrido final que añadió `567` y la
+nota `1360`. Ese root existió y su recibo lo atestigua, así que no se borra: queda en
+`verification/ots-history/anchor_root-74415765.sha256.ots` (980 B, sha256 `0b93b500…`,
+cuatro `PendingAttestation`). El `.ots` de R-17 se archivó igual, con `git mv`, en
+`verification/ots-history/anchor_root-76e95f6d.sha256.ots` (945 B, sha256 `8cf8b7a6…`).
+La lección queda escrita: el barrido de líneas va **antes** del sello, porque un
+retoque posterior obliga a sellar dos veces.
+
+**El sello externo, aparte del root.** El `.ots` sigue fuera de los 11 pares y de los
+38 outputs, así que sellar no exigió re-sellar y el gate no se movió: tras `ots stamp`,
+`--check` sigue en exit 0 y `audit-gate.sh` en 11/11. Lo que falta es la confirmación
+de Bitcoin: `ots upgrade verification/anchor_root.sha256.ots`.
+
+**PDF.** `docs/paper/releases/diamond-framework-2026-10-29.pdf`, 43 páginas,
+601.340 bytes, sha256 `dd071071bf3b300d50b1355d3c094a84dcdd8ad708dfbf3d7b58a6a748d313d9`,
+md5 `d1161633beb4dc244d102549a455e132`. `pdflatex` ×3 → 0 errores, 0 undefined,
+0 overfull/underfull; la nota `1360` cae en la página 34, bajo la tabla, alineada a la
+izquierda. `main.tex` mide 158.063 bytes (156.922 en R-17, 155.945 en v0.2.2): la
+procedencia añade 1.141 bytes y ninguna página.
+
+**Alcance.** Tocados y sellados: `main.tex` (contenido) y `claim-registry.csv`
+(entradas), más `audit_manifest.sha256` / `anchor_root.sha256` (derivados). No
+sellados: el PDF, `releases/*.md`, `docs/audit/open-items.md`, la evidencia
+(`recompute.py`, `paper_strings.txt`) y este recibo. Contratos y tests no se tocan:
+`git diff d07a658 -- integrations test src` está vacío.
+
+**Estado.** R-18 se commitea como descendiente de `d07a658` en la rama `wip/v0.2.3`;
+no se enmienda, no se fusiona a `main` y no se deposita desde aquí. Con este sello,
+`main.tex` y `claim-registry.csv` quedan congelados: cualquier edición posterior pide
+otro root.
 

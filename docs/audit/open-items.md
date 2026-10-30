@@ -267,4 +267,9 @@ Notas que no caben en una celda:
   (`team1-reserved-work.md` §6, decisión 6). **Aplicada en `wip/v0.2.3` el
   2026-10-29** (sello `R-17`, PDF `diamond-framework-2026-10-29.pdf`, checklist de
   depósito preparado): la rama no está fusionada y el depósito no está hecho, así
-  que lo que sigue abierto es la decisión del owner, no el trabajo.
+  que lo que sigue abierto es la decisión del owner, no el trabajo. `R-18`
+  (2026-10-30) cerró el hueco que `E-01` dejaba: cada cifra de gas lleva ahora su
+  clave, la fecha (`2026-10-20`) y el commit (`70f225c`) de la medición, más el
+  `PublicInputsMismatch(3, 4)` que hace ininstalable la clave de V3, sin mover
+  ninguna cifra (root `6fe5884b…`, PDF de 601340 B). `main.tex` y
+  `claim-registry.csv` quedan **congelados** en ese sello: tocarlos pide otro root.
