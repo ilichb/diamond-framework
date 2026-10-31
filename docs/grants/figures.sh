@@ -12,6 +12,13 @@
 #   docs/grants/figures.sh --coverage  # adds per-contract coverage (~2 min)
 #   docs/grants/figures.sh --full      # adds coverage and the audit gate
 #
+# PINNED SNAPSHOT. The CLAIM_* values below describe the 2026-10-25 submission:
+# PDF 591,875 B (89e71837…), 311 tests, root abe9c553…. The tree has since moved
+# to v0.2.3 (601,340 B / dd071071…, 316 tests, root 6fe5884b…), so a run at HEAD
+# reports drift on those three by design. Re-base the CLAIM_* lines in the same
+# commit that re-bases the proposal; until then the drift is the warning, not the
+# bug.
+#
 # Exit: 0 if every checked figure matches the claim, 1 on drift.
 set -u
 

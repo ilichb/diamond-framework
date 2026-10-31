@@ -3,6 +3,13 @@
 The call states five criteria. Each row below maps one to evidence a reviewer can
 check without trusting the applicant.
 
+**Snapshot, 2026-10-25.** This checklist is pinned to the proposal as prepared
+then: 311 tests over 12 suites, PDF of 2026-10-25, root `abe9c553…`. At today's
+tree the suite is **316 passed over 13 suites** and the paper is v0.2.3 (43 pp,
+601,340 B, `dd071071…`, root `6fe5884b…`). A run of §2's command at HEAD prints
+316, not 311; both are correct for their own commit, and `figures.sh` reports
+the drift rather than hiding it.
+
 ## 1. Published criteria → evidence
 
 | Criterion (as published) | How it is met | Where to check |

@@ -4,6 +4,15 @@ Supporting material for `avalanche-research-proposal.md`. Not counted in the ten
 pages. Every figure here is re-derivable with `./figures.sh` or with a command from
 `reviewer-checklist.md` §2; nothing is quoted from memory.
 
+**Snapshot, 2026-10-25** — these are the figures the proposal was prepared with:
+PDF `diamond-framework-2026-10-25.pdf` (591,875 B, `89e71837…`), 311 tests, root
+`abe9c553…`. The paper has since moved to v0.2.3 (601,340 B, `dd071071…`, 43 pp)
+and the tree to 316 tests over 13 suites, root `6fe5884b…`. Where the proposal
+prints 286,144, the current figure is **306,253 cold / 247,211 warm** on the
+installed key; the paper states it at `main.tex:1294` and the claim registry
+carries both pairs (rows 516–517). `figures.sh` is pinned to this snapshot and
+reports that drift on purpose.
+
 ## 1. The record
 
 | Item | Value |
