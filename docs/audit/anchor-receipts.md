@@ -1688,6 +1688,29 @@ sellados: el PDF, `releases/*.md`, `docs/audit/open-items.md`, la evidencia
 (`recompute.py`, `paper_strings.txt`) y este recibo. Contratos y tests no se tocan:
 `git diff d07a658 -- integrations test src` está vacío.
 
+**Nota de seguimiento (2026-10-31, sólo documentación).** Después del sello,
+`wip/v0.2.3` recibe tres commits que no tocan el paper: `1c2371e` (reflujo de la
+descripción del depósito tras el cambio de bytes), `1361dee` (los documentos de
+`docs/grants` que aún citaban 311 tests y la raíz `abe9c553…` quedan marcados como
+snapshot del 2026-10-25, y `figures.sh` explica su deriva en la cabecera) y esta
+nota. Ninguno toca un output del manifiesto: `--check` sigue en exit 0 (38 pares,
+11 pares idénticos byte a byte) y
+`git diff 1361dee -- integrations test src docs/paper/main.tex verification` sale
+vacío. El salto anterior, `d07a658..970af51`, sí toca `main.tex` y los artefactos
+del sello, porque `970af51` **es** el re-sello de R-18 —el segundo de esta ronda,
+el que añadió fecha, commit y clave a cada cifra— y no un cambio posterior a él.
+
+**La rama se reescribió una vez (2026-10-31).** `wip/v0.2.3` se reescribió sobre
+`970af51` para dejar fuera de un repositorio público material ajeno al paper.
+`d07a658` y `970af51` quedan intactos y siguen siendo ancestros del HEAD; ni
+`main.tex`, ni `claim-registry.csv`, ni el root `6fe5884b…`, ni el PDF cambian.
+Los hashes de los commits escritos entre `6b15690` y `36f66a7` pertenecen a la
+historia anterior y ya no están en la rama; los que sí se reaplicaron conservan
+contenido y orden, con hash nuevo (`6b15690` → `1c2371e`, `44cf41e` →
+`1361dee`), y `d1d2040` no se reaplicó. Quien los cite desde otro documento debe
+leerlos como historia, no como HEAD. El `.ots` sigue sin confirmación Bitcoin a
+la hora de esta nota: cuatro `PendingAttestation`, cero bloques.
+
 **Estado.** R-18 se commitea como descendiente de `d07a658` en la rama `wip/v0.2.3`;
 no se enmienda, no se fusiona a `main` y no se deposita desde aquí. Con este sello,
 `main.tex` y `claim-registry.csv` quedan congelados: cualquier edición posterior pide
