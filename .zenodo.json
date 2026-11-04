@@ -1,12 +1,12 @@
 {
   "title": "Diamond Framework: Reputation-Weighted Validator Selection via Verifiable Non-Transferable Reputation",
-  "description": "Paper and repository for the Diamond Framework, v0.2.2, deposited as 10.5281/zenodo.23651484 (version 2 of concept 10.5281/zenodo.23268373). Includes: the paper source and PDF (43 pp, sha256 89e71837...), a 38-script verification suite with byte-identical reruns, a falsification log (22 entries), an Avalanche Fuji phase-2 deployment with on-chain wiring verified (phase 1 of 2026-10-19 remains on chain as history), an 11-file anchor root (sha256 abe9c5535eb1dd7e462b49f19b52b828a9cfe235ccbcd32819f5daa37fe56bf7), and an OpenTimestamps receipt over that root which was still pending when the version was sealed on 2026-10-25 (four pending attestations, zero Bitcoin confirmations at seal time). The receipt over the preceding root (ca836947...) did complete: that seal is attested in Bitcoin blocks 972956, 972959 and 973014, and it covers the same eleven files but for one corrected ratio in Section 9, which is why it is archived under verification/ots-history/ and not cited for this version. The even earlier receipt over root 5ff84501 is superseded and is not cited either. v0.2.2 is a text release: it removes the statements that v0.2.1 could only correct in an errata sheet. Section 6 now describes the validator-bound statement that M4d delivers (Poseidon leaf with the validator address as a public input); the verification cost is the measured cold path, 286,144 gas (781 gwei break-even, 31x margin at 25 gwei) instead of the ~206k composition with an inlined key; the collusion detector declares W as an external input (D-7) and the on-chain alert as a non-sanction; the financial floor is stated as a minimum admission cost, not a guarantee; and the README lists the five roles v1 trusts. Earlier releases: v0.2.1 corrected the ZK paper-code mismatch (measured V3/Groth16 circuit, 94,438 constraints; recursion deferred); v0.1.0 was the first deposit. Verification: the offline Foundry and Rust suites plus the 38-script evidence harness, 11/11 audit gate. The anchor root covers eleven files. On the Fuji testnet a Groth16 verifier built from the repository's committed development key is deployed and announced through the registry's two-day guardian rotation: it carries no ceremony, records no certified admission, and the ceremony-key verifier, the recursive option and Teleporter cross-subnet latency remain declared deferred. The repository code is MIT; the manuscript and the frozen PDF are CC BY 4.0.",
+  "description": "<p>Proof-of-stake secures admission and deterrence with a single instrument, financial capital, and that is the source of its structural tension: high collateral requirements deter honest but capital-constrained validators, low requirements expose the network to Sybil attacks. The Diamond Framework replaces a fraction of the financial stake with verifiable, non-transferable reputation, so the admission barrier falls without claiming that the full Cost of Attack is preserved; that question is left open in the paper.</p>\n\n<p>This deposit is the frozen PDF snapshot of the manuscript, v0.2.3, with its source. v0.2.3 is an errata release and changes no contract and no test. The paper had printed 286,144 gas as the deployed verification cost; that figure belongs to V3's three-input verifying key, while the key the registry installs has four public inputs and measures 306,253 gas cold and 247,211 warm. The installed key's figure is now the deployed one (break-even 730 gwei, 29x margin at 25 gwei, the ingest at 2.2x the verification), and 286,144 is kept only where the text says it is V3's: measured on 2026-10-20 at commit 70f225c, with a three-input key the registry can no longer install. The full admission path is measured for the first time: manager.admit costs 395,255 gas cold for a first admission under the installed key (break-even 566 gwei). No conclusion of the paper moves: verification stays more than two orders of magnitude below the ingest and Bulletproofs stays roughly an order of magnitude above it.</p>\n\n<p>Artifact: diamond-framework-2026-10-29.pdf, 43 pages, 601340 bytes, SHA-256 dd071071bf3b300d50b1355d3c094a84dcdd8ad708dfbf3d7b58a6a748d313d9; source main.tex, 158063 bytes, SHA-256 21efaaf021407fe7ac513d96e8e83c1fc5682e6c3d3105ea265d0a1d0f97812c. The claim registry that binds each quantitative claim to the script reproducing it is sealed by an eleven-file anchor root (SHA-256 6fe5884baeb214ebbee99a4ed14c6b0189bc8c6f2c73cadfafad7c772e13937b). An OpenTimestamps receipt over that root was stamped on 2026-10-30 (four pending attestations, zero Bitcoin confirmations at seal time); the receipt over the preceding root (76e95f6d...) attests that root and is not cited as evidence for these bytes. The v0.2.2 record is not rewritten either; a metadata notice in that record points here.</p>\n\n<p>Verification is offline and reproducible: 316 Foundry tests (0 failed, 1 skipped), the numerical suite (38 scripts in the manifest, byte-identical reruns) and an 11/11 audit gate. Limits are declared rather than omitted: the Groth16 verifier deployed on the Avalanche Fuji testnet uses a committed development key, carries no ceremony and has recorded no certified admission; the recursive option and Teleporter cross-subnet latency remain deferred; and the external audit is pending. Bitcoin enters only as an external witness of the anchor, because a receipt sealed inside the root it witnesses would be circular.</p>",
   "upload_type": "publication",
   "publication_type": "preprint",
   "access_right": "open",
   "license": "cc-by-4.0",
-  "version": "0.2.2",
-  "publication_date": "2026-10-25",
+  "version": "0.2.3",
+  "publication_date": "2026-11-03",
   "language": "eng",
   "creators": [
     {
@@ -17,7 +17,7 @@
   ],
   "related_identifiers": [
     {
-      "identifier": "10.5281/zenodo.23651484",
+      "identifier": "10.5281/zenodo.23931553",
       "relation": "isIdenticalTo",
       "scheme": "doi"
     },
@@ -27,7 +27,7 @@
       "scheme": "doi"
     },
     {
-      "identifier": "10.5281/zenodo.23268374",
+      "identifier": "10.5281/zenodo.23651484",
       "relation": "references",
       "scheme": "doi"
     },

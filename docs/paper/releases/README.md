@@ -7,10 +7,12 @@ its bytes, once published, never change.
 ## Files
 
 - `diamond-framework-2026-10-29.pdf` — 43 pages, 601340 bytes (v0.2.3, **current
-  in `wip/v0.2.3`, unsealed as a release: not tagged, not deposited**).
+  published artifact, deposited 2026-11-03 as `10.5281/zenodo.23931553`; the DOI
+  names this file**).
   `sha256 dd071071bf3b300d50b1355d3c094a84dcdd8ad708dfbf3d7b58a6a748d313d9`
-- `diamond-framework-2026-10-25.pdf` — 43 pages, 591875 bytes (v0.2.2, current
-  published artifact; the DOI names this file).
+- `diamond-framework-2026-10-25.pdf` — 43 pages, 591875 bytes (v0.2.2, deposited
+  2026-10-25 as `10.5281/zenodo.23651484`; superseded by the 2026-10-29 snapshot,
+  still citable).
   `sha256 89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9`
 - `diamond-framework-2026-10-24.pdf` — 43 pages, 591880 bytes (v0.2.2, superseded
   before publication: §9 said the Bulletproofs alternative costs `31×` the Groth16
@@ -34,6 +36,29 @@ derivable, not memorized:
 
     ls docs/paper/releases/*.pdf | tail -1
 
+## Publication status (v0.2.3)
+
+- **Zenodo version DOI: `10.5281/zenodo.23931553`** — deposited 2026-11-03 as
+  <https://zenodo.org/records/23931553>, version 3 of the concept
+  `10.5281/zenodo.23268373` (the versions endpoint reports three, so the concept
+  resolves here now). The deposit holds exactly two files, `main.tex` and
+  `diamond-framework-2026-10-29.pdf`, byte-identical to the copies in this
+  repository: the record's checksums (`md5:d1161633…` for the PDF,
+  `md5:8608414b…` for the source) are what `md5sum` returns on those two paths.
+- The checklist that was executed is
+  [`v0.2.3-zenodo-deposit.md`](v0.2.3-zenodo-deposit.md). One departure from it is
+  recorded there: the record's publication date is **`2026-11-03`**, the day it was
+  published, not `2026-10-29`, the day the artifact was frozen.
+- The notice in the previous record was executed from
+  [`v0.2.3-errata.md`](v0.2.3-errata.md) §"Metadata notice for the v0.2.2 Zenodo
+  record": the v0.2.2 record's description carries the long form, its files and its
+  DOI are untouched, and no new version was created there.
+- [`v0.2.3-errata.md`](v0.2.3-errata.md) carries `ERRATA_STATUS: applied-v0.2.3`
+  with this DOI: `E-01` is in the paper, the paper is sealed (`R-17`, `R-18`) and
+  the bytes that carry it are the ones this record publishes.
+- GitHub Release and tag: **neither exists yet** — `v0.2.3` is not tagged, so this
+  DOI is the only citable target for these bytes.
+
 ## Publication status (v0.2.2)
 
 - **No errata sheet.** The three statements v0.2.1 could only correct in prose are
@@ -52,11 +77,11 @@ derivable, not memorized:
   (`R-17`); `R-18` (2026-10-30) then adds the provenance those lines lacked — V3's
   measurement date (`2026-10-20`), its commit (`70f225c`) and the
   `PublicInputsMismatch(3, 4)` that makes a three-input key uninstallable — again
-  without moving a figure. The branch is not merged and the release is
-  not deposited: the bytes and the metadata are in
-  [`v0.2.3-zenodo-deposit.md`](v0.2.3-zenodo-deposit.md), and the decision is the
-  owner's. The re-seal is free-lane and self-funded: **v0.2.3 does not wait for the
-  grant** (`../../grants/team1-reserved-work.md` §6, decision 6).
+  without moving a figure. The branch was merged to `main` by fast-forward on
+  2026-11-03 and deposited the same day as `10.5281/zenodo.23931553`: the bytes and
+  the metadata are in [`v0.2.3-zenodo-deposit.md`](v0.2.3-zenodo-deposit.md). The
+  re-seal was free-lane and self-funded: **v0.2.3 did not wait for the grant**
+  (`../../grants/team1-reserved-work.md` §6, decision 6).
 - Release asset `diamond-framework-2026-10-25.pdf`: 43 pages, 591875 bytes,
   sha256 `89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9`.
 - **The verifier left `address(0)` the same day, and the text followed.** A
@@ -352,8 +377,10 @@ shipped in TeX Live as `cm-super`).
 ## Deposit
 
 Zenodo is done for v0.2.2 — **`10.5281/zenodo.23651484`** (2026-10-25), version 2 of
-the concept `10.5281/zenodo.23268373`. arXiv is still open: it needs an account and
-an endorsement.
+the concept `10.5281/zenodo.23268373` — and for v0.2.3 —
+**`10.5281/zenodo.23931553`** (2026-11-03), version 3 of the same concept, which is
+the one the concept DOI resolves to today. arXiv is still open: it needs an account
+and an endorsement.
 
 The PDF no longer carries the statement that blocked v0.2.1 (the validator binding
 is implemented by M4d and described in §6), and the gas figure is the measured
@@ -368,7 +395,9 @@ from `.zenodo.json` (title, creators with ORCID, `Preprint`, `cc-by-4.0`,
 keywords, 21 references, `isSupplementTo` the repository). The DOI was minted at
 publish and is now asserted in `CITATION.cff` (`identifiers` and
 `preferred-citation`) and in `.zenodo.json` (`related_identifiers`,
-`isIdenticalTo`).
+`isIdenticalTo`). v0.2.3 was deposited the same way, as version 3 of the same
+concept and with the same two-file shape; its checklist records the bytes and the
+one departure from the plan.
 
 **arXiv.** The bundle is `main.tex` alone: it loads no `\includegraphics` and its
 bibliography is an inline `thebibliography`, so there is no `.bbl` and no figure
