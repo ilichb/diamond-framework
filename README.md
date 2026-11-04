@@ -81,7 +81,7 @@ v1 does not remove trust; it places it in five roles, all of them visible in the
 |-----------|--------|-----------------------|
 | Reputation dynamics | Positive under multiplicative jumps (0% violations) | [`verification/stochastics/`](verification/stochastics) |
 | Tensor compression | Tucker reduces storage by 70.8%; **not** used in the security path | [`verification/`](verification) |
-| ZK threshold proof | **Measured** — V3/Groth16: 94,438 constraints, 3.9 s proving, 128 B compressed proof (256 B on-chain); original circuit unsound; development-key verifier on Fuji, no ceremony key | [`src/zk/`](src/zk), [`verification/zk/`](verification/zk) |
+| ZK threshold proof | **Measured** — V3/Groth16: 94,438 constraints, 3.9 s proving, 128 B compressed proof (256 B on-chain); the circuit installed in the Fuji registry is M4d: 4,827 constraints, four public inputs (ic = 5); original circuit unsound; development-key verifier on Fuji, no ceremony key | [`src/zk/`](src/zk), [`verification/zk/`](verification/zk) |
 | RMT collusion detection | Modularity matrix; TPR characterized for cliques | [`verification/rmt/`](verification/rmt) |
 | Data layer / fraud proofs | Equilibrium `n* = floor(B/B*)`; attacker profit `-502` (seed-42 mean with `S_slash = 10`; model bookkeeping, not an executable loss) | [`verification/data-layer/`](verification/data-layer) |
 | Bootstrap dynamics | Verified — δ/g sweep: R_std peaks at δ/g = 1.5 (0.0424, five seeds); 1.0–2.0 form a plateau | [`verification/bootstrap/`](verification/bootstrap) |
