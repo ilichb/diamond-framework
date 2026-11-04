@@ -57,7 +57,13 @@ derivable, not memorized:
   with this DOI: `E-01` is in the paper, the paper is sealed (`R-17`, `R-18`) and
   the bytes that carry it are the ones this record publishes.
 - GitHub Release and tag: **neither exists yet** — `v0.2.3` is not tagged, so this
-  DOI is the only citable target for these bytes.
+  DOI is the only citable target for these bytes. The body is written and
+  committed, ready for `gh release create v0.2.3 --notes-file
+  docs/paper/releases/v0.2.3-notes.md`: [`v0.2.3-notes.md`](v0.2.3-notes.md)
+  states the defect, what the paper prints now, the seven figures that moved,
+  what did not change (the branch touches `docs/` and `verification/` only, and
+  the contracts are identical to the `v0.2.2` tag) and the three things a reader
+  must not conclude.
 
 ## Publication status (v0.2.2)
 
