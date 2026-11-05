@@ -17,11 +17,6 @@
   ],
   "related_identifiers": [
     {
-      "identifier": "10.5281/zenodo.23931553",
-      "relation": "isIdenticalTo",
-      "scheme": "doi"
-    },
-    {
       "identifier": "10.5281/zenodo.23268373",
       "relation": "isVersionOf",
       "scheme": "doi"

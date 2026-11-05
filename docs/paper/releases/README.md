@@ -56,17 +56,18 @@ derivable, not memorized:
 - [`v0.2.3-errata.md`](v0.2.3-errata.md) carries `ERRATA_STATUS: applied-v0.2.3`
   with this DOI: `E-01` is in the paper, the paper is sealed (`R-17`, `R-18`) and
   the bytes that carry it are the ones this record publishes.
-- GitHub Release and tag: **the tag exists, the Release does not.** `v0.2.3` is
-  tagged (annotated) on `acbda19`, the commit that writes
-  [`v0.2.3-notes.md`](v0.2.3-notes.md), rather than on `b31a2a9`, the commit that
-  propagates the DOI: the notes were written after it, and the two differ in
-  documentation only. Neither `main` nor the tag has been pushed, so the DOI is
-  still the only citable target for these bytes that anyone else can reach. The
-  body is ready for `gh release create v0.2.3 --notes-file
-  docs/paper/releases/v0.2.3-notes.md`: the file states the defect, what the paper
-  prints now, the seven figures that moved, what did not change (the branch touches
-  `docs/` and `verification/` only, and the contracts are identical to the `v0.2.2`
-  tag) and the three things a reader must not conclude.
+- GitHub Release and tag: **both exist.** `v0.2.3` is tagged (annotated, `79776f2`) on
+  `acbda19`, the commit that writes [`v0.2.3-notes.md`](v0.2.3-notes.md), rather than on
+  `b31a2a9`, the commit that propagates the DOI: the notes were written after it, and the
+  two differ in documentation only. Branch and tag were pushed 2026-11-05 — the `audit`
+  check is green on both `a83dabb` and `acbda19` — and the Release is published at
+  <https://github.com/ilichb/diamond-framework/releases/tag/v0.2.3> with
+  [`v0.2.3-notes.md`](v0.2.3-notes.md) as its body, byte-identical to the file. (No
+  Release exists for `v0.2.2`, whose tag is on `268d3fb`; the only earlier one is
+  `v0.2.1`.) The note states the defect, what the paper prints now, the seven figures
+  that moved, what did not change (the branch touches `docs/` and `verification/` only,
+  and the contracts are identical to the `v0.2.2` tag) and the three things a reader must
+  not conclude.
 
 ## Publication status (v0.2.2)
 
