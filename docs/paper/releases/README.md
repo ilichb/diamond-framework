@@ -68,6 +68,9 @@ derivable, not memorized:
   that moved, what did not change (the branch touches `docs/` and `verification/` only,
   and the contracts are identical to the `v0.2.2` tag) and the three things a reader must
   not conclude.
+- Release asset `diamond-framework-2026-10-29.pdf`: 43 pages, 601340 bytes, sha256
+  `dd071071bf3b300d50b1355d3c094a84dcdd8ad708dfbf3d7b58a6a748d313d9` — downloaded from
+  the Release and re-hashed on 2026-11-05, byte-identical to the file in the tree.
 
 ## Publication status (v0.2.2)
 
@@ -92,8 +95,15 @@ derivable, not memorized:
   the metadata are in [`v0.2.3-zenodo-deposit.md`](v0.2.3-zenodo-deposit.md). The
   re-seal was free-lane and self-funded: **v0.2.3 did not wait for the grant**
   (`../../grants/team1-reserved-work.md` §6, decision 6).
-- Release asset `diamond-framework-2026-10-25.pdf`: 43 pages, 591875 bytes,
-  sha256 `89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9`.
+- **No v0.2.2 GitHub Release exists, so there is no release asset to point at.** The tag
+  `v0.2.2` (`268d3fb`) was pushed; `GET /releases` lists two releases, `v0.2.3` and
+  `v0.2.1`, and no draft (authenticated as the owner, 2026-11-05). This paragraph used to
+  describe a "Release asset `diamond-framework-2026-10-25.pdf`": the file is real and is
+  in the tree (43 pages, 591875 bytes, sha256
+  `89e718373158285821ac04d1a9280c7ff85baa8c03dbc4b8df9a6da481dd39b9`) and in the Zenodo
+  record, but no Release carries it. Corrected rather than back-filled: v0.2.2 is the
+  version whose deployed gas figure is wrong (`E-01`), and attaching it to a Release
+  today would give the superseded artifact a download link it does not need.
 - **The verifier left `address(0)` the same day, and the text followed.** A
   development-key `Groth16Verifier` was deployed on Fuji and announced through the
   registry's two-day rotation after the first export of this snapshot; the four
